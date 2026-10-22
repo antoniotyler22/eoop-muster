@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-title" content="EOOP Muster">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#3b4a2c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%233b4a2c'/%3E%3Ctext x='32' y='42' font-family='Arial' font-weight='700' font-size='26' text-anchor='middle' fill='%23d4ae4f'%3EEO%3C/text%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%233b4a2c'/%3E%3Ctext x='32' y='42' font-family='Arial' font-weight='700' font-size='26' text-anchor='middle' fill='%23d4ae4f'%3EEO%3C/text%3E%3C/svg%3E">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
@@ -136,6 +138,31 @@ tr.key td{font-family:var(--display);font-size:17px;font-weight:800;background:v
 .wta{min-height:74px;width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);font:inherit;resize:vertical}
 .wsel{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);font:inherit}
 .m .w6{border:0;background:transparent;color:var(--brass);font-size:12px;font-weight:700;padding:2px 0 2px 12px}
+.bigbtns{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bigbtn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;text-align:left}
+.bigbtn b{font-family:var(--display);font-size:20px;letter-spacing:.05em}
+.bigbtn span{font-size:12px;color:var(--muted)}
+.bigbtn.hot{border-color:var(--warn)}.bigbtn.hot span.w{color:var(--warn);font-weight:700}
+.bigbtn.live{border-color:var(--s-onhand)}.bigbtn.live span{color:var(--s-onhand);font-weight:700}
+.mbar{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--hdr,110px));z-index:4;background:var(--bg);padding:8px 0;display:flex;gap:8px;align-items:center;justify-content:space-between}
+.mbar .ct{font-family:var(--display);font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+.mbar .ct small{font-family:var(--body);font-size:12px;font-weight:600;color:var(--muted);margin-left:4px}
+.mbar .un{color:var(--warn)}
+.mrow{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 10px;text-align:left;font-size:15px}
+.mrow .box{width:24px;height:24px;border-radius:6px;border:2px solid var(--line);flex-shrink:0;display:grid;place-items:center;font-weight:800;color:#fff}
+.mrow.on{border-color:var(--s-onhand)}.mrow.on .box{background:var(--s-onhand);border-color:var(--s-onhand)}
+.mrow .nm2{flex:1;min-width:0}
+.mgrp{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.mgrp h3{margin:0;display:flex;justify-content:space-between;align-items:center;font-family:var(--display);font-size:16px;letter-spacing:.05em}
+.mgrp h3 button{border:1px solid var(--line);background:var(--surface-2);border-radius:6px;padding:4px 8px;font-size:12px;font-weight:700}
+.alist{display:flex;flex-direction:column;gap:6px}
+.arow{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--sc,var(--line));border-radius:8px;padding:8px 10px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.arow .when{font-family:var(--display);font-weight:700;font-size:15px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ahead{display:flex;justify-content:space-between;align-items:baseline;margin:18px 0 8px}
+.ahead h2{margin:0}.ahead span{font-weight:700;font-size:13px;color:var(--muted)}
+.sync{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.sync h3{margin:0;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.hist{font-size:13px}.hist div{padding:6px 0;border-bottom:1px solid var(--line)}.hist div:last-child{border-bottom:0}
 .m select{max-width:44vw;padding:8px 6px;border-radius:7px;border:1px solid var(--line);background:var(--surface-2);font-weight:600;font-size:14px}
 .m .rm{border:0;background:transparent;color:var(--muted);font-size:12px;padding:2px 0;text-align:left}
 .m .rm.arm{color:var(--warn);font-weight:700}
@@ -209,13 +236,15 @@ let S={roster:sampleRoster(),source:"sample",loadedAt:"",recipients:"",names:fal
 let storageOK=true;
 try{const raw=localStorage.getItem(KEY); if(raw){const v=JSON.parse(raw); if(v&&Array.isArray(v.roster)) S=Object.assign(S,v);} }catch(e){storageOK=false}
 S.w6=Array.isArray(S.w6)?S.w6:[];
+S.hist=Array.isArray(S.hist)?S.hist:[];
+S.mus=Object.assign({open:false,seen:{},inc:["On Hand"],att:true,only:false,last:null},S.mus||{});
 S.pt=Object.assign({event:"Unit PT",when:"",inc:["On Hand"],att:true},S.pt||{});
 const dutyOf=m=>DUTIES.includes(m.duty)?m.duty:"Full Duty";
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));storageOK=true}catch(e){storageOK=false}}
 
 let view="board", armed=null, query="";
 const h0=(location.hash||"").slice(1).toLowerCase();
-if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data"].includes(h0)) view=h0;
+if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts"].includes(h0)) view=h0;
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -249,6 +278,7 @@ function renderTabs(){
   $("#tabs").innerHTML=items.map(([id,lbl,sub])=>`<button role="tab" data-v="${id}" aria-selected="${view===id}">${lbl}<small>${sub}</small></button>`).join("");
   $("#b6W").setAttribute("aria-pressed",view==="w6");$("#bPT").setAttribute("aria-pressed",view==="pt");$("#bText").setAttribute("aria-pressed",view==="text");$("#bData").setAttribute("aria-pressed",view==="data");
   $("#dtg").textContent="AS OF "+dtg();
+  {const tp=document.querySelector(".top");if(tp)document.documentElement.style.setProperty("--hdr",tp.offsetHeight+"px")}
 }
 function banner(){
   if(S.source==="sample") return `<div class="banner"><span>Showing <b>sample Marines</b>. Load your MOL detail list to start.</span><button data-go="data">Load roster</button></div>`;
@@ -264,6 +294,9 @@ function renderBoard(){
     <div class="tile on"><div class="lbl">On Hand</div><div class="num">${T["On Hand"]}</div></div>
     <div class="tile"><div class="lbl">Total Strength</div><div class="num">${T.total}</div></div>
     <div class="pct"><b>${P}%</b><div class="bar"><i style="width:${P}%"></i></div><span>Present ${present(T)} · Off deck ${T.total-present(T)}</span></div>
+    ${(()=>{const al=alerts();const M=S.mus;const pool=M.open?musPool():[];const sn=M.open?pool.filter(m=>M.seen[m.id]).length:0;
+      return `<div class="bigbtns"><button class="bigbtn${M.open?" live":""}" data-go="muster"><b>MUSTER</b><span>${M.open?"In progress · "+sn+"/"+pool.length:M.last?"Last "+dtg(new Date(M.last.t)).slice(0,7)+" · "+M.last.present+"/"+M.last.expected:"Start formation muster"}</span></button>
+      <button class="bigbtn${al.over.length?" hot":""}" data-go="alerts"><b>ALERTS</b><span>${al.over.length?`<span class="w">${al.over.length} overdue</span> · `:""}${al.ret.length} returning · ${al.dep.length} departing</span></button></div>`})()}
     <div class="dutyline">${dutyChips(S.roster.filter(m=>m.sec!=="ATT"))}<button class="chip" data-go="pt" style="cursor:pointer">PT roster ▸</button></div>
     <div class="att"><div><div class="lbl">Attached · not on our numbers</div><div class="big">${A.total}<small>${A["On Hand"]} on hand</small></div><div class="note">Total accounted for: <b>${T.total+A.total}</b> · Physically here: <b>${present(T)+present(A)}</b></div></div><button data-go="att">${A.total?"View":"Add"}</button></div>
   </div>`;
@@ -298,6 +331,8 @@ function renderSection(code){
     <select id="aDuty" class="full" aria-label="Duty status">${DUTIES.map(d=>`<option>${d}</option>`).join("")}</select>
     <select id="aStatus" class="full" aria-label="Status">${STATUSES.map(s=>`<option>${s}</option>`).join("")}</select>
     <button class="btn full" type="submit">Add Marine</button></form>`;
+  if(!isAtt&&o.total){const ut=sectionUpdateText(code);h+=`<div class="sync"><h3>Section leader: send ${code} update to OIC</h3><div class="note">Sends this section's statuses with a code line the OIC's app reads. Everyone not listed is On Hand, Full Duty.</div>
+    <div class="row2"><a class="btn" href="${esc(smsHref(ut))}">Text ${code} update</a><button class="btn alt" data-scopy="${code}">Copy</button></div></div>`}
   $("#main").innerHTML=h;
 }
 function reportText(){
@@ -311,6 +346,8 @@ function reportText(){
   for(const [k] of SECTIONS) L.push(k+" "+c[k]["On Hand"]+"/"+c[k].total);
   L.push("");
   for(const s of STATUSES.slice(1)) L.push(SHORT[s].toUpperCase()+": "+T[s]);
+  {const al=alerts();if(al.over.length||al.ret.length){L.push("");if(al.over.length)L.push("OVERDUE: "+al.over.length+(S.names?" ("+al.over.map(a=>a.m.rank+" "+a.m.name.split(",")[0]).join(", ")+")":""));if(al.ret.length)L.push("RETURNING 7 DAYS: "+al.ret.length)}}
+  if(S.chg!==false&&S.snap){L.push("");changeLines().forEach(x=>L.push(x))}
   if(A.total){L.push("");L.push("ATTACHED (NOT ON STRENGTH): "+A.total+" (ON HAND "+A["On Hand"]+")");L.push("TOTAL ACCOUNTED FOR: "+(T.total+A.total));
     if(S.names) sorted(S.roster.filter(m=>m.sec==="ATT")).forEach(m=>L.push("- "+m.rank+" "+m.name.split(",")[0]+(m.parent?" ("+m.parent+")":"")+" "+SHORT[m.status].toUpperCase()))}
   if(S.names){
@@ -328,10 +365,12 @@ function renderText(){
     <label for="rcp">Send to (phone numbers, comma separated)</label>
     <input type="tel" id="rcp" value="${esc(S.recipients)}" placeholder="808 555 0100, 808 555 0101">
     <label class="tog"><input type="checkbox" id="nm"${S.names?" checked":""}> Include last names of Marines off deck</label>
+    <label class="tog"><input type="checkbox" id="chg"${S.chg!==false?" checked":""}> Include changes since last report${S.snap?"":" (starts after your first send)"}</label>
     <textarea id="msg" readonly>${esc(t)}</textarea>
     <div class="row2"><a class="btn" id="sms" href="${esc(smsHref(t))}">Text it</a><button class="btn alt" id="copy">Copy text</button></div>
     ${navigator.share?'<button class="btn alt" id="share">Share to Signal, Teams, email…</button>':''}
-    <p class="note">"Text it" opens your Messages app with the numbers and recipients filled in. Review and hit send there.${S.names?" Names are in the text: send only over approved channels.":""}</p>
+    <button class="btn alt" id="markSent">Mark as sent (start a new change window)</button>
+    <p class="note">"Text it" opens your Messages app with the numbers and recipients filled in. Review and hit send there. Text it, Copy and Share also mark the report as sent, so the next report shows what changed since this one.${S.names?" Names are in the text: send only over approved channels.":""}</p>
   </div>`;
   $("#main").innerHTML=h;
 }
@@ -345,10 +384,16 @@ function renderData(){
     <button class="btn alt" id="exp" hidden>Export backup (.csv)</button>
     <button class="btn warn" id="reset">${armed==="reset"?"Tap again to clear the roster":"Clear roster and show sample"}</button>
   </div>
+  <h2>Apply section updates</h2><div class="panel">
+    <label for="syncIn">Paste one or more section leader texts</label>
+    <textarea id="syncIn" style="min-height:110px" placeholder="EOOP HE SECTION UPDATE ...&#10;#EOOP1|HE|34|..."></textarea>
+    <button class="btn" id="syncGo">Apply to board</button><div class="note" id="syncOut"></div></div>
+  <h2>Offline</h2><div class="panel"><div id="offStat" class="note">Checking…</div></div>
   <h2>How this app keeps data</h2><div class="panel"><ul class="plain">
     <li>The roster lives only in this phone's browser. Nothing is uploaded or shared.</li>
     <li>Each phone keeps its own copy. Export a backup and load it on another phone to hand off.</li>
     <li>Clearing website data or using a private tab wipes it. Export a backup after big changes.</li>
+    <li>Muster history, saved 6Ws and the last-report snapshot stay on this phone; they are not in the backup file.</li>
     <li>Light Duty / LIMDU settings carry over when you load a new MOL list (matched by name).</li>
     <li>Attached Marines (ATT tab) stay in the app when you load a new MOL list.</li>
     <li>MOL status mapping: Present for Duty → On Hand, Leave → Leave, TAD/FAP → TAD, Field Duty → Operation, Medical/SIQ → Appt On Base. EE section → HE; no section → HQ.</li>
@@ -358,6 +403,7 @@ function renderData(){
     <li><b>Android:</b> open in Chrome → ⋮ menu → Add to Home screen.</li>
   </ul></div>`;
   $("#main").innerHTML=h;
+  {const o=$("#offStat");if(o){const sw="serviceWorker" in navigator&&document.querySelector("link[rel=manifest]");o.textContent=!sw?"Offline mode works from the home-screen app at the GitHub link, not inside Claude.":navigator.serviceWorker.controller?"Ready: this app opens and works with no signal. Text reports once you have service.":"Setting up offline mode. Open the app once more with signal to finish."}}
   dl.then(d=>{const b=$("#exp");if(b&&d)b.hidden=false});
 }
 function ptGroups(){
@@ -438,8 +484,123 @@ function renderW(){
   $("#main").innerHTML=h;
 }
 function refreshW(){const t=wText(W);const a=$("#wMsg");if(a)a.value=t;const s=$("#wSms");if(s)s.href=smsHref(t)}
+
+/* ---------- dates ---------- */
+const MON=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+function parseD(s){if(!s)return null;s=String(s).trim().toUpperCase();let m=s.match(/^(\d{1,2}) ([A-Z]{3}) (\d{2,4})$/);
+  if(m){const y=+m[3]<100?2000+ +m[3]:+m[3];const mo=MON.indexOf(m[2]);if(mo<0)return null;return new Date(y,mo,+m[1])}
+  m=s.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);if(m)return new Date(+m[1],+m[2]-1,+m[3]);return null}
+function today0(){const d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate())}
+const dayDiff=d=>Math.round((d-today0())/86400000);
+const short=d=>String(d.getDate()).padStart(2,"0")+" "+MON[d.getMonth()];
+
+/* ---------- alerts: overdue, returning, departing ---------- */
+const AWAY=["Leave","TAD","Operation","Appointment off Base"];
+function alerts(){const over=[],ret=[],dep=[];
+  for(const m of S.roster){const e=parseD(m.end);
+    if(e){const dd=dayDiff(e);
+      if(m.sec==="ATT"){if(dd<0)over.push({m,dd,why:"Attachment ended "+short(e)})}
+      else if(AWAY.includes(m.status)){if(dd<0)over.push({m,dd,why:m.status+" ended "+short(e)});else if(dd<=7)ret.push({m,dd,why:m.status+" ends "+short(e)})}}
+    const x=parseD(m.edd);if(x&&m.sec!=="ATT"){const dd=dayDiff(x);if(dd<=90)dep.push({m,dd,why:"EDD "+short(x)+" "+String(x.getFullYear()).slice(2)})}}
+  over.sort((a,b)=>a.dd-b.dd);ret.sort((a,b)=>a.dd-b.dd);dep.sort((a,b)=>a.dd-b.dd);return {over,ret,dep}}
+function arow(a,label,col){const m=a.m;return `<div class="arow" style="--sc:var(${col})"><div style="min-width:0"><b>${esc(m.rank)}</b> ${esc(m.name)}<div class="note">${m.sec==="ATT"?"ATT":m.sec} · ${esc(a.why)}</div></div><div class="when">${label}</div></div>`}
+function alertsText(){const {over,ret,dep}=alerts();const L=["EOOP ALERTS "+dtg()];
+  const line=(a,t)=>"- "+(a.m.sec==="ATT"?"ATT":a.m.sec)+" "+a.m.rank+" "+a.m.name.split(",")[0]+": "+a.why+(t?" ("+t+")":"");
+  L.push("");L.push("OVERDUE ("+over.length+")");over.forEach(a=>L.push(line(a,(-a.dd)+"D")));
+  L.push("");L.push("RETURNING 7 DAYS ("+ret.length+")");ret.forEach(a=>L.push(line(a,a.dd?"IN "+a.dd+"D":"TODAY")));
+  L.push("");L.push("DEPARTING 90 DAYS ("+dep.length+")");dep.forEach(a=>L.push(line(a,a.dd<0?"PAST":a.dd+"D")));
+  return L.join("\n")}
+function renderAlerts(){const {over,ret,dep}=alerts();let h=banner();
+  h+=`<div class="ahead"><h2>Overdue</h2><span>${over.length}</span></div>`;
+  h+=over.length?`<div class="alist">${over.map(a=>arow(a,(-a.dd)+"d late","--warn")).join("")}</div>`:`<p class="note">No one is past their leave, TAD or attachment end date.</p>`;
+  h+=`<div class="ahead"><h2>Returning ≤ 7 days</h2><span>${ret.length}</span></div>`;
+  h+=ret.length?`<div class="alist">${ret.map(a=>arow(a,a.dd?"in "+a.dd+"d":"today","--s-aob")).join("")}</div>`:`<p class="note">No returns due this week.</p>`;
+  const b=[[ -9999,-1,"Past EDD"],[0,30,"Next 30 days"],[31,60,"31–60 days"],[61,90,"61–90 days"]];
+  h+=`<div class="ahead"><h2>Departing (EDD)</h2><span>${dep.length}</span></div>`;
+  if(!dep.length) h+=`<p class="note">No EDDs in the next 90 days. EDDs come from the MOL detail list.</p>`;
+  for(const [lo,hi,lab] of b){const g=dep.filter(a=>a.dd>=lo&&a.dd<=hi);if(!g.length)continue;
+    h+=`<div class="note" style="margin:8px 0 4px;font-weight:700">${lab} · ${g.length}</div><div class="alist">${g.map(a=>arow(a,a.dd<0?"past":a.dd+"d",a.dd<0?"--warn":"--s-duty")).join("")}</div>`}
+  h+=`<div class="row2" style="margin-top:14px"><a class="btn" id="alSms" href="${esc(smsHref(alertsText()))}">Text alerts</a><button class="btn alt" id="alCopy">Copy</button></div>
+    <p class="note">Overdue = status still Leave, TAD, Operation or Appt off base after the end date. Change their status in the section tab once they check in.</p>`;
+  $("#main").innerHTML=h}
+
+/* ---------- formation muster ---------- */
+function musPool(){const M=S.mus;return S.roster.filter(m=>(m.sec!=="ATT"||M.att)&&M.inc.includes(m.status))}
+function musText(rec){const L=["EOOP MUSTER "+dtg(new Date(rec.t))];
+  L.push("PRESENT: "+rec.present+"/"+rec.expected+(rec.expected?" ("+pct(rec.present,rec.expected)+"%)":""));
+  L.push("UNACCOUNTED: "+rec.un.length);rec.un.forEach(x=>L.push("- "+x));
+  L.push("");L.push("TOTAL STRENGTH "+rec.strength+" · ON HAND "+rec.onhand);return L.join("\n")}
+function renderMuster(){const M=S.mus;let h=banner();
+  if(!M.open){
+    const last=(S.hist||[]).filter(x=>x.type==="muster").slice(-5).reverse();
+    h+=`<h2>Formation muster</h2><div class="panel">
+      <div class="note">Who is expected at formation:</div>
+      <div class="evts">${["On Hand","Company Duties","Appointment on Base"].map(x=>`<label class="tog"><input type="checkbox" data-minc="${x}"${M.inc.includes(x)?" checked":""}> ${SHORT[x]}</label>`).join("")}<label class="tog"><input type="checkbox" id="mAtt"${M.att?" checked":""}> Attached</label></div>
+      <div><b>${musPool().length}</b> Marines expected</div>
+      <button class="btn" id="mStart">Start muster</button></div>`;
+    if(M.last){h+=`<h2>Last muster</h2><div class="panel"><textarea id="mMsg" readonly>${esc(musText(M.last))}</textarea>
+      <div class="row2"><a class="btn" id="mSms" href="${esc(smsHref(musText(M.last)))}">Text it</a><button class="btn alt" id="mCopy">Copy</button></div></div>`}
+    if(last.length) h+=`<h2>Muster history</h2><div class="panel hist">${last.map(x=>`<div><b>${dtg(new Date(x.t))}</b> · ${x.present}/${x.expected} present · ${x.un.length} unaccounted</div>`).join("")}</div>`;
+    $("#main").innerHTML=h;return}
+  const pool=musPool();const seen=pool.filter(m=>M.seen[m.id]).length;const un=pool.length-seen;
+  h+=`<div class="mbar"><div class="ct">${seen}/${pool.length}<small>present</small> <span class="un">${un}</span><small>unaccounted</small></div><button class="btn" id="mClose">Close out</button></div>
+    <label class="tog" style="margin:4px 0 6px"><input type="checkbox" id="mOnly"${M.only?" checked":""}> Show unaccounted only</label>`;
+  const groups=SECTIONS.map(s=>s[0]).concat("ATT").map(k=>[k,sorted(pool.filter(m=>m.sec===k))]).filter(g=>g[1].length);
+  for(const [k,ms] of groups){const left=ms.filter(m=>!M.seen[m.id]);const show=M.only?left:ms;if(!show.length)continue;
+    h+=`<div class="mgrp"><h3><span>${k} · ${ms.length-left.length}/${ms.length}</span>${left.length?`<button data-mall="${k}">All ${k} here</button>`:""}</h3>
+      ${show.map(m=>`<button class="mrow${M.seen[m.id]?" on":""}" data-mtog="${m.id}"><span class="box">${M.seen[m.id]?"✓":""}</span><span class="nm2"><b>${esc(m.rank)}</b> ${esc(m.name)}</span></button>`).join("")}</div>`}
+  if(M.only&&!un) h+=`<p class="note" style="margin-top:12px">Everyone expected is accounted for. Tap Close out.</p>`;
+  h+=`<button class="btn warn" id="mCancel" style="margin-top:16px;width:100%">${armed==="mcancel"?"Tap again to discard this muster":"Discard muster"}</button>`;
+  $("#main").innerHTML=h}
+function closeMuster(){const M=S.mus;const pool=musPool();const {T}=counts();
+  const un=sorted(pool.filter(m=>!M.seen[m.id])).map(m=>(m.sec==="ATT"?"ATT":m.sec)+" "+m.rank+" "+m.name);
+  const rec={type:"muster",t:Date.now(),expected:pool.length,present:pool.length-un.length,un,strength:T.total,onhand:T["On Hand"]};
+  S.hist=(S.hist||[]).concat(rec).slice(-60);M.last=rec;M.open=false;M.seen={};save();renderMuster();window.scrollTo(0,0)}
+
+/* ---------- what changed since last report ---------- */
+const nkey=m=>m.name.toUpperCase().replace(/\s+/g," ").trim();
+function snapNow(){const st={};S.roster.forEach(m=>{st[nkey(m)]={s:m.status,d:dutyOf(m),sec:m.sec,r:m.rank}});return {t:Date.now(),st}}
+function changeLines(){const sn=S.snap;if(!sn)return [];const cur={};S.roster.forEach(m=>cur[nkey(m)]=m);
+  const tr={};const add=(k,who)=>{(tr[k]=tr[k]||[]).push(who)};
+  for(const [k,m] of Object.entries(cur)){const o=sn.st[k];const who=(m.sec==="ATT"?"ATT":m.sec)+" "+m.rank+" "+m.name.split(",")[0];
+    if(!o){add("NEW: "+(m.sec==="ATT"?"ATTACHED":SHORT[m.status].toUpperCase()),who);continue}
+    if(o.s!==m.status) add(SHORT[o.s].toUpperCase()+" → "+SHORT[m.status].toUpperCase(),who);
+    if(o.d!==dutyOf(m)) add(o.d.toUpperCase()+" → "+dutyOf(m).toUpperCase(),who)}
+  for(const [k,o] of Object.entries(sn.st)) if(!cur[k]) add("REMOVED",(o.sec==="ATT"?"ATT":o.sec)+" "+o.r+" "+k.split(",")[0]);
+  const L=Object.entries(tr).map(([k,w])=>k+": "+w.length+(S.names?" ("+w.join(", ")+")":""));
+  return L.length?["CHANGES SINCE "+dtg(new Date(sn.t))+":"].concat(L):["NO CHANGES SINCE "+dtg(new Date(sn.t))]}
+function markSent(kind){S.snap=snapNow();S.hist=(S.hist||[]).concat({type:kind,t:S.snap.t}).slice(-60);save()}
+
+/* ---------- section leader rollup ---------- */
+const SCODE={"Appointment on Base":"AOB","Appointment off Base":"AOFF","Company Duties":"DUTY","Operation":"OP","TAD":"TAD","Leave":"LV"};
+const SDEC=Object.fromEntries(Object.entries(SCODE).map(([a,b])=>[b,a]));
+function tok(m){const [last,rest]=m.name.split(",");const first=((rest||"").trim().split(/\s+/)[0]||"").replace(/[^A-Z]/gi,"").slice(0,3);
+  return (m.rank+"."+(last||"").trim()+"."+first).toUpperCase().replace(/[;|=]/g,"")}
+function sectionUpdateText(code){const ms=sorted(S.roster.filter(m=>m.sec===code));const oh=ms.filter(m=>m.status==="On Hand").length;
+  const L=["EOOP "+code+" SECTION UPDATE "+dtg(),"STRENGTH "+ms.length+" · ON HAND "+oh];
+  const parts=[];
+  for(const [st,cd] of Object.entries(SCODE)){const g=ms.filter(m=>m.status===st);if(!g.length)continue;L.push(SHORT[st].toUpperCase()+": "+g.map(m=>m.rank+" "+m.name.split(",")[0]).join(", "));parts.push(cd+"="+g.map(tok).join(";"))}
+  const ld=ms.filter(m=>dutyOf(m)==="Light Duty"),lim=ms.filter(m=>dutyOf(m)==="LIMDU");
+  if(ld.length){L.push("LIGHT DUTY: "+ld.map(m=>m.rank+" "+m.name.split(",")[0]).join(", "));parts.push("LD="+ld.map(tok).join(";"))}
+  if(lim.length){L.push("LIMDU: "+lim.map(m=>m.rank+" "+m.name.split(",")[0]).join(", "));parts.push("LIM="+lim.map(tok).join(";"))}
+  L.push("");L.push("#EOOP1|"+code+"|"+ms.length+"|"+Date.now().toString(36)+(parts.length?"|"+parts.join("|"):""));
+  return L.join("\n")}
+function applySectionUpdates(text){const lines=String(text).split(/\r?\n/).map(x=>x.trim()).filter(x=>x.startsWith("#EOOP1|"));
+  if(!lines.length) throw new Error("No section update code found. Paste the whole text, including the line that starts with #EOOP1.");
+  const res=[];
+  for(const ln of lines){const p=ln.split("|");const code=p[1];if(!SECTIONS.some(s=>s[0]===code)){res.push(code+": unknown section");continue}
+    const ms=S.roster.filter(m=>m.sec===code);const byTok={},byLF={};
+    ms.forEach(m=>{const t=tok(m);byTok[t]=m;const lf=t.split(".").slice(1).join(".");(byLF[lf]=byLF[lf]||[]).push(m)});
+    const find=t=>byTok[t]||((byLF[t.split(".").slice(1).join(".")]||[]).length===1?byLF[t.split(".").slice(1).join(".")][0]:null);
+    const stSet={},dSet={};const miss=[];
+    for(const part of p.slice(4)){const [cd,list]=part.split("=");if(!list)continue;
+      for(const t of list.split(";")){const m=find(t);if(!m){miss.push(t.replace(/\./g," "));continue}
+        if(cd==="LD")dSet[m.id]="Light Duty";else if(cd==="LIM")dSet[m.id]="LIMDU";else if(SDEC[cd])stSet[m.id]=SDEC[cd]}}
+    let ch=0;ms.forEach(m=>{const ns=stSet[m.id]||"On Hand";const nd=dSet[m.id]||"Full Duty";if(m.status!==ns||dutyOf(m)!==nd)ch++;m.status=ns;m.duty=nd});
+    const sent=+p[2];res.push(code+": "+ch+" changed"+(miss.length?", "+miss.length+" not found ("+miss.join(", ")+")":"")+(sent!==ms.length?" · their strength "+sent+", yours "+ms.length:""))}
+  save();return res}
 function render(){renderTabs();
-  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());}
+  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());}
 
 /* ---------- CSV import ---------- */
 function parseCSV(text){const rows=[];let row=[],f="",q=false;
@@ -464,13 +625,13 @@ function importCSV(text){
   const own=col("section")>=0&&col("status")>=0;
   const out=[];let n=0;
   for(const r of rows.slice(hi+1)){const rank=(r[col("rank")]||"").toUpperCase();const name=r[col("name")]||"";if(!rank||!name)continue;
-    if(own) out.push({id:"m"+(++n),rank,name,sec:(SECTIONS.some(s=>s[0]===r[col("section")])||r[col("section")]==="ATT")?r[col("section")]:"HQ",parent:col("parent unit")>=0?(r[col("parent unit")]||""):"",duty:col("duty")>=0&&DUTIES.includes(r[col("duty")])?r[col("duty")]:"Full Duty",status:mapStatus(r[col("status")]),detail:r[col("detail")]||"",loc:r[col("location")]||"",start:r[col("start")]||"",end:r[col("end")]||""});
-    else{const det=r[col("duty status")]||"";out.push({id:"m"+(++n),rank,name,sec:mapSec(r[col("unit")]),status:mapStatus(det),detail:det,loc:r[col("location")]||"",start:fmtD(r[col("start date")]),end:fmtD(r[col("end date")])})}}
+    if(own) out.push({id:"m"+(++n),rank,name,sec:(SECTIONS.some(s=>s[0]===r[col("section")])||r[col("section")]==="ATT")?r[col("section")]:"HQ",parent:col("parent unit")>=0?(r[col("parent unit")]||""):"",duty:col("duty")>=0&&DUTIES.includes(r[col("duty")])?r[col("duty")]:"Full Duty",status:mapStatus(r[col("status")]),detail:r[col("detail")]||"",loc:r[col("location")]||"",edd:r[col("edd")]||"",start:r[col("start")]||"",end:r[col("end")]||""});
+    else{const det=r[col("duty status")]||"";out.push({id:"m"+(++n),rank,name,sec:mapSec(r[col("unit")]),status:mapStatus(det),detail:det,loc:r[col("location")]||"",start:fmtD(r[col("start date")]),end:fmtD(r[col("end date")]),edd:fmtD(r[col("edd")]||"")})}}
   if(!out.length)throw new Error("The file had a header but no Marines under it.");
   return {roster:out,own};
 }
 function exportCSV(){const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
-  return ["Rank,Name,Section,Status,Detail,Location,Start,End,Parent Unit,Duty"].concat(sorted(S.roster).map(m=>[m.rank,m.name,m.sec,m.status,m.detail,m.loc,m.start,m.end,m.parent||"",dutyOf(m)].map(q).join(","))).join("\n")}
+  return ["Rank,Name,Section,Status,Detail,Location,Start,End,Parent Unit,Duty,EDD"].concat(sorted(S.roster).map(m=>[m.rank,m.name,m.sec,m.status,m.detail,m.loc,m.start,m.end,m.parent||"",dutyOf(m),m.edd||""].map(q).join(","))).join("\n")}
 
 /* ---------- events ---------- */
 document.addEventListener("click",e=>{
@@ -485,6 +646,17 @@ document.addEventListener("click",e=>{
   if(e.target.id==="wNew"){W=newW("");renderW();window.scrollTo(0,0);return}
   const wo=e.target.closest("[data-wopen]");if(wo){const r=S.w6.find(x=>x.id===wo.dataset.wopen);if(r){W=Object.assign({},r);renderW();window.scrollTo(0,0)}return}
   const wd=e.target.closest("[data-wdel]");if(wd){const id=wd.dataset.wdel;if(armed===id){S.w6=S.w6.filter(r=>r.id!==id);armed=null;save();toast("6W deleted")}else armed=id;renderW();return}
+  if(e.target.id==="mStart"){S.mus.open=true;S.mus.seen={};S.mus.only=false;armed=null;save();renderMuster();return}
+  const mt=e.target.closest("[data-mtog]");if(mt){const id=mt.dataset.mtog;if(S.mus.seen[id])delete S.mus.seen[id];else S.mus.seen[id]=1;save();const y=window.scrollY;renderMuster();window.scrollTo(0,y);return}
+  const ma=e.target.closest("[data-mall]");if(ma){musPool().filter(m=>m.sec===ma.dataset.mall).forEach(m=>S.mus.seen[m.id]=1);save();const y=window.scrollY;renderMuster();window.scrollTo(0,y);return}
+  if(e.target.id==="mClose"){closeMuster();toast("Muster closed");return}
+  if(e.target.id==="mCancel"){if(armed==="mcancel"){S.mus.open=false;S.mus.seen={};armed=null;save();toast("Muster discarded")}else armed="mcancel";renderMuster();return}
+  if(e.target.id==="mCopy"&&S.mus.last){try{navigator.clipboard.writeText(musText(S.mus.last)).then(()=>toast("Muster copied"),()=>toast("Copy blocked here. Use Text it."))}catch(err){toast("Copy blocked here.")}return}
+  if(e.target.id==="alCopy"){try{navigator.clipboard.writeText(alertsText()).then(()=>toast("Alerts copied"),()=>toast("Copy blocked here. Use Text alerts."))}catch(err){toast("Copy blocked here.")}return}
+  const sc=e.target.closest("[data-scopy]");if(sc){const t=sectionUpdateText(sc.dataset.scopy);try{navigator.clipboard.writeText(t).then(()=>toast("Section update copied"),()=>toast("Copy blocked here. Use Text update."))}catch(err){toast("Copy blocked here.")}return}
+  if(e.target.id==="syncGo"){try{const r=applySectionUpdates($("#syncIn").value);$("#syncOut").textContent=r.join(" · ");renderTabs();toast("Section updates applied")}catch(err){$("#syncOut").textContent=err.message}return}
+  if(e.target.id==="markSent"){markSent("report");renderText();toast("Marked as sent");return}
+  if(e.target.closest("#sms")){setTimeout(()=>{markSent("report")},300)}
   if(e.target.closest("#bPT")){view=view==="pt"?"board":"pt";armed=null;render();window.scrollTo(0,0);return}
   const ev=e.target.closest("[data-evt]");if(ev){S.pt.event=ev.dataset.evt;save();renderPT();return}
   if(e.target.id==="ptCopy"){const t=ptText();try{navigator.clipboard.writeText(t).then(()=>toast("Roster copied"),()=>toast("Copy blocked here. Use Text list."))}catch(err){toast("Copy blocked here. Use Text list.")}return}
@@ -493,10 +665,10 @@ document.addEventListener("click",e=>{
   const rm=e.target.closest("[data-rm]");
   if(rm){const id=rm.dataset.rm;if(armed===id){S.roster=S.roster.filter(m=>m.id!==id);armed=null;save();toast("Marine removed")}else armed=id;render();return}
   if(e.target.id==="reset"){if(armed==="reset"){S.roster=sampleRoster();S.source="sample";S.loadedAt="";armed=null;save();toast("Roster cleared")}else armed="reset";render();return}
-  if(e.target.id==="copy"){const t=$("#msg").value;
+  if(e.target.id==="copy"){const t=$("#msg").value;setTimeout(()=>markSent("report"),300);
     const fallback=()=>{const ta=$("#msg");ta.removeAttribute("readonly");ta.select();ta.setSelectionRange(0,t.length);ta.setAttribute("readonly","");toast("Text selected. Tap Copy in the menu.")};
     try{navigator.clipboard.writeText(t).then(()=>toast("Copied. Paste into your text."),fallback)}catch(err){fallback()}return}
-  if(e.target.id==="share"){navigator.share({text:$("#msg").value}).catch(()=>{});return}
+  if(e.target.id==="share"){navigator.share({text:$("#msg").value}).then(()=>markSent("report")).catch(()=>{});return}
   if(e.target.id==="exp"){dl.then(d=>{if(!d)return;const day=new Date().toISOString().slice(0,10);
     d.save({filename:"EOOP_Muster_Backup_"+day+".csv",data:exportCSV()}).then(()=>toast("Backup saved")).catch(err=>{if(err&&err.code!=="declined")toast("Couldn't save the backup here.")})});return}
 });
@@ -507,6 +679,10 @@ document.addEventListener("change",e=>{
     const {c}=counts();const o=c[m.sec];const r=document.querySelector(".ratio");if(r)r.innerHTML=o["On Hand"]+"/"+o.total+"<small>"+(m.sec==="ATT"?"on hand / attached":"on hand / strength")+"</small>";
     const ch=document.querySelector(".chips");if(ch)ch.innerHTML=STATUSES.filter(s=>o[s]).map(s=>`<span class="chip"><span class="dot" style="background:var(${SVAR[s]})"></span>${SHORT[s]} ${o[s]}</span>`).join("")}
     return}
+  if(e.target.matches("input[data-minc]")){const v=e.target.dataset.minc;S.mus.inc=e.target.checked?Array.from(new Set(S.mus.inc.concat(v))):S.mus.inc.filter(x=>x!==v);save();renderMuster();return}
+  if(e.target.id==="mAtt"){S.mus.att=e.target.checked;save();renderMuster();return}
+  if(e.target.id==="mOnly"){S.mus.only=e.target.checked;save();renderMuster();return}
+  if(e.target.id==="chg"){S.chg=e.target.checked;save();renderText();return}
   if(e.target.id==="wMar"){W.mid=e.target.value;renderW();return}
   if(e.target.id==="wWhen"){W.when=e.target.value;refreshW();return}
   const ds=e.target.closest("select[data-duty]");
@@ -544,6 +720,7 @@ const dl=Promise.resolve({save:({filename,data})=>new Promise((res,rej)=>{try{co
   if(navigator.canShare&&navigator.canShare({files:[new File([b],filename,{type:"text/csv"})]})){navigator.share({files:[new File([b],filename,{type:"text/csv"})],title:filename}).then(()=>res({status:"saved"}),()=>rej({code:"declined"}));return}
   const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=filename;document.body.appendChild(a);a.click();a.remove();res({status:"saved"})}catch(e){rej({code:"unavailable"})}})});
 render();
+if("serviceWorker" in navigator&&document.querySelector("link[rel=manifest]")&&(location.protocol==="https:"||location.hostname==="localhost")){navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(()=>{const o=document.getElementById("offStat");if(o&&navigator.serviceWorker.controller)o.textContent="Ready: this app opens and works with no signal. Text reports once you have service."}).catch(()=>{})}
 setInterval(()=>{const d=$("#dtg");if(d)d.textContent="AS OF "+dtg()},30000);
 </script>
 </body></html>

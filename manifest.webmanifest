@@ -1,0 +1,14 @@
+{
+  "name": "EOOP Muster",
+  "short_name": "EOOP Muster",
+  "description": "EOOP accountability: on hand, total strength, muster, alerts and reports.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#3b4a2c",
+  "theme_color": "#3b4a2c",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
