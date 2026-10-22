@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="EOOP Muster">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#3b4a2c">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%233b4a2c'/%3E%3Ctext x='32' y='42' font-family='Arial' font-weight='700' font-size='26' text-anchor='middle' fill='%23d4ae4f'%3EEO%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%233b4a2c'/%3E%3Ctext x='32' y='42' font-family='Arial' font-weight='700' font-size='26' text-anchor='middle' fill='%23d4ae4f'%3EEO%3C/text%3E%3C/svg%3E">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+<title>EOOP Muster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: phone-first muster board — sticky tab strip (Board + five sections), big strength tiles, status grid, per-Marine status pickers */
+:root{
+  --bg:#f3f4ee; --surface:#ffffff; --surface-2:#e8eadf; --ink:#1d2219; --muted:#5f6656; --line:#cfd3c3;
+  --olive:#3b4a2c; --olive-ink:#ffffff; --brass:#a8842a; --brass-soft:#efe3c2;
+  --s-onhand:#2f7a3a; --s-aob:#2f6fa8; --s-aoff:#5a5fae; --s-duty:#a8842a; --s-op:#b8552c; --s-tad:#7b4f9a; --s-leave:#6c6f66;
+  --warn:#b3261e;
+  --display:"Saira Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Public Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#13160f; --surface:#1c2017; --surface-2:#262b1f; --ink:#e9ecdf; --muted:#a4ab95; --line:#363c2c;
+  --olive:#4c5f38; --olive-ink:#ffffff; --brass:#d4ae4f; --brass-soft:#3a3220;
+  --s-onhand:#5fbf6b; --s-aob:#62a6e0; --s-aoff:#8f94e6; --s-duty:#d4ae4f; --s-op:#e48558; --s-tad:#b98ad8; --s-leave:#a3a69c;
+  --warn:#ff8a80; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#13160f; --surface:#1c2017; --surface-2:#262b1f; --ink:#e9ecdf; --muted:#a4ab95; --line:#363c2c;
+  --olive:#4c5f38; --olive-ink:#ffffff; --brass:#d4ae4f; --brass-soft:#3a3220;
+  --s-onhand:#5fbf6b; --s-aob:#62a6e0; --s-aoff:#8f94e6; --s-duty:#d4ae4f; --s-op:#e48558; --s-tad:#b98ad8; --s-leave:#a3a69c;
+  --warn:#ff8a80; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.4;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 32px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--olive)}
+.wrap{max-width:560px;margin:0 auto}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+
+/* header + tabs */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--olive);color:var(--olive-ink);
+  margin:0 calc(-1 * max(16px,env(safe-area-inset-left,0px))) 0 calc(-1 * max(16px,env(safe-area-inset-right,0px)));
+  padding:10px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+.top-in{max-width:560px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.brand h1{font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:.04em;margin:0;line-height:1}
+.brand .dtg{font-family:var(--display);font-weight:600;font-size:14px;letter-spacing:.06em;opacity:.85}
+.acts{display:flex;gap:6px}
+.acts button{background:transparent;border:1px solid rgba(255,255,255,.45);color:var(--olive-ink);border-radius:6px;
+  padding:5px 10px;font-size:13px;font-weight:600;letter-spacing:.03em}
+.acts button[aria-pressed="true"]{background:var(--brass);border-color:var(--brass);color:#1d2219}
+.tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:2px;margin-top:10px}
+.tabs button{background:transparent;border:0;color:var(--olive-ink);padding:8px 0 9px;border-bottom:3px solid transparent;
+  font-family:var(--display);font-weight:700;font-size:16px;letter-spacing:.05em;line-height:1.05;opacity:.8}
+.tabs button small{display:block;font-family:var(--body);font-weight:500;font-size:10.5px;letter-spacing:0;opacity:.85}
+.tabs button[aria-selected="true"]{opacity:1;border-bottom-color:var(--brass)}
+
+.banner{margin:12px 0 0;padding:10px 12px;border-radius:8px;background:var(--brass-soft);font-size:13px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.banner button{border:0;background:var(--olive);color:var(--olive-ink);border-radius:6px;padding:6px 10px;font-weight:600;font-size:13px;white-space:nowrap}
+.note{color:var(--muted);font-size:12.5px}
+
+/* strength tiles */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.tile .lbl{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.tile .num{font-family:var(--display);font-weight:800;font-size:54px;line-height:1;font-variant-numeric:tabular-nums}
+.tile.on .num{color:var(--s-onhand)}
+.pct{grid-column:1/-1;display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.bar{flex:1;height:10px;border-radius:5px;background:var(--surface-2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--s-onhand)}
+.pct b{font-family:var(--display);font-size:26px;font-variant-numeric:tabular-nums}
+.pct span{font-size:12px;color:var(--muted);white-space:nowrap}
+
+/* grid */
+h2{font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:.06em;text-transform:uppercase;margin:22px 0 8px}
+.gridwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line);font-size:14px}
+th:first-child,td:first-child{text-align:left;padding-left:10px;white-space:nowrap}
+thead th{font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.05em;background:var(--surface-2)}
+thead th button{border:0;background:transparent;font:inherit;color:var(--olive);text-decoration:underline;text-underline-offset:3px;padding:2px 4px}
+:root[data-theme="dark"] thead th button{color:var(--brass)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) thead th button{color:var(--brass)}}
+td.z{color:var(--muted);opacity:.55}
+td.tot,th.tot{font-weight:700;background:var(--surface-2)}
+tr.sum td{font-weight:700;background:var(--surface-2)}
+tr.key td{font-family:var(--display);font-size:17px;font-weight:800;background:var(--olive);color:var(--olive-ink);border-bottom:0}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:1px}
+
+/* section list */
+.sechead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:16px}
+.sechead h2{margin:0}
+.sechead .ratio{font-family:var(--display);font-weight:800;font-size:22px;font-variant-numeric:tabular-nums}
+.sechead .ratio small{font-size:12px;font-family:var(--body);font-weight:600;color:var(--muted);margin-left:4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.chip{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
+.search{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);margin-bottom:8px}
+.list{display:flex;flex-direction:column;gap:6px}
+.m{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);
+  border-left:5px solid var(--sc,var(--line));border-radius:8px;padding:9px 10px}
+.m .who{min-width:0}
+.m .who b{font-family:var(--display);font-weight:700;letter-spacing:.04em;margin-right:6px}
+.m .who .nm{font-weight:600}
+.m .who .det{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m select{max-width:44vw;padding:8px 6px;border-radius:7px;border:1px solid var(--line);background:var(--surface-2);font-weight:600;font-size:14px}
+.m .rm{border:0;background:transparent;color:var(--muted);font-size:12px;padding:2px 0;text-align:left}
+.m .rm.arm{color:var(--warn);font-weight:700}
+.addbox{margin-top:14px;background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:12px;display:grid;grid-template-columns:90px 1fr;gap:8px}
+.addbox h3{grid-column:1/-1;margin:0;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.addbox input,.addbox select{padding:9px 8px;border:1px solid var(--line);border-radius:7px;background:var(--surface-2);min-width:0}
+.addbox .full{grid-column:1/-1}
+.btn{border:0;border-radius:8px;padding:11px 14px;font-weight:700;background:var(--olive);color:var(--olive-ink)}
+.btn.alt{background:var(--surface-2);color:var(--ink);border:1px solid var(--line)}
+.btn.warn{background:transparent;color:var(--warn);border:1px solid var(--warn)}
+
+/* text + data panels */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:14px;display:flex;flex-direction:column;gap:10px}
+.panel label{font-size:13px;font-weight:600}
+.panel input[type=text],.panel input[type=tel]{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
+textarea{width:100%;min-height:230px;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px;line-height:1.45;
+  padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tog{display:flex;align-items:center;gap:8px;font-size:14px}
+.tog input{width:20px;height:20px;accent-color:var(--olive)}
+a.btn{text-decoration:none;text-align:center;display:block}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);
+  padding:9px 14px;border-radius:8px;font-weight:600;font-size:13px;z-index:20}
+ul.plain{margin:0;padding-left:18px;font-size:13.5px}
+@media (prefers-reduced-motion: no-preference){ .bar i{transition:width .3s ease} }
+</style>
+</head><body>
+<div class="top"><div class="top-in">
+  <div class="brand">
+    <div><h1>EOOP MUSTER</h1><div class="dtg" id="dtg"></div></div>
+    <div class="acts">
+      <button id="bText" aria-pressed="false">TEXT</button>
+      <button id="bData" aria-pressed="false">DATA</button>
+    </div>
+  </div>
+  <div class="tabs" role="tablist" id="tabs"></div>
+</div></div>
+
+<main class="wrap" id="main"></main>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const STATUSES=["On Hand","Appointment on Base","Appointment off Base","Company Duties","Operation","TAD","Leave"];
+const SHORT={"On Hand":"On Hand","Appointment on Base":"Appt On Base","Appointment off Base":"Appt Off Base","Company Duties":"Co Duties","Operation":"Operation","TAD":"TAD","Leave":"Leave"};
+const SVAR={"On Hand":"--s-onhand","Appointment on Base":"--s-aob","Appointment off Base":"--s-aoff","Company Duties":"--s-duty","Operation":"--s-op","TAD":"--s-tad","Leave":"--s-leave"};
+const PRESENT=["On Hand","Appointment on Base","Company Duties"];
+const SECTIONS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
+const RANKS=["CWO5","CWO4","CWO3","CWO2","WO","MAJ","CAPT","1STLT","2NDLT","SGTMAJ","MGYSGT","1STSGT","MSGT","GYSGT","SSGT","SGT","CPL","LCPL","PFC","PVT"];
+const KEY="eoop-muster-v1";
+
+function sampleRoster(){
+  const spec=[["HQ",["MSGT","SGT","CPL","LCPL"],["On Hand","On Hand","TAD","Leave"]],
+    ["HE",["GYSGT","SGT","CPL","CPL","LCPL","LCPL","PFC"],["On Hand","On Hand","TAD","On Hand","Leave","On Hand","Company Duties"]],
+    ["CE",["SGT","CPL","LCPL","LCPL"],["On Hand","TAD","On Hand","Appointment off Base"]],
+    ["ORD",["SSGT","CPL","LCPL","PFC"],["Leave","On Hand","On Hand","On Hand"]],
+    ["UT",["GYSGT","SGT","CPL","LCPL","LCPL","PFC"],["On Hand","Operation","Operation","Appointment on Base","On Hand","TAD"]]];
+  const out=[];let n=1;
+  for(const [sec,ranks,sts] of spec) ranks.forEach((r,i)=>out.push({id:"s"+n,rank:r,name:"SAMPLE, MARINE "+String(n++).padStart(2,"0"),sec,status:sts[i],detail:"Sample row",loc:"",start:"",end:""}));
+  return out;
+}
+
+let S={roster:sampleRoster(),source:"sample",loadedAt:"",recipients:"",names:false};
+let storageOK=true;
+try{const raw=localStorage.getItem(KEY); if(raw){const v=JSON.parse(raw); if(v&&Array.isArray(v.roster)) S=Object.assign(S,v);} }catch(e){storageOK=false}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));storageOK=true}catch(e){storageOK=false}}
+
+let view="board", armed=null, query="";
+const h0=(location.hash||"").slice(1).toLowerCase();
+if(["board","hq","he","ce","ord","ut","text","data"].includes(h0)) view=h0;
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2200)}
+
+function counts(){
+  const c={};for(const [k] of SECTIONS){c[k]={total:0};STATUSES.forEach(s=>c[k][s]=0)}
+  for(const m of S.roster){if(!c[m.sec])continue;c[m.sec].total++;if(c[m.sec][m.status]!==undefined)c[m.sec][m.status]++}
+  const T={total:0};STATUSES.forEach(s=>T[s]=0);
+  for(const [k] of SECTIONS){T.total+=c[k].total;STATUSES.forEach(s=>T[s]+=c[k][s])}
+  return {c,T};
+}
+const present=o=>PRESENT.reduce((a,s)=>a+o[s],0);
+const pct=(a,b)=>b?Math.round(100*a/b):0;
+
+function zoneLetter(){const off=-new Date().getTimezoneOffset()/60;if(!Number.isInteger(off))return"";if(off===0)return"Z";
+  if(off>0&&off<=12)return"ABCDEFGHIKLM"[off-1];if(off<0&&off>=-12)return"NOPQRSTUVWXY"[-off-1];return""}
+function dtg(d=new Date()){const M=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+  const p=n=>String(n).padStart(2,"0");return p(d.getDate())+p(d.getHours())+p(d.getMinutes())+zoneLetter()+" "+M[d.getMonth()]+" "+String(d.getFullYear()).slice(2)}
+
+function rankIdx(r){const i=RANKS.indexOf(r);return i<0?99:i}
+function sorted(list){return list.slice().sort((a,b)=>rankIdx(a.rank)-rankIdx(b.rank)||a.name.localeCompare(b.name))}
+
+/* ---------- render ---------- */
+function renderTabs(){
+  const {c,T}=counts();
+  const items=[["board","BOARD",T["On Hand"]+"/"+T.total]].concat(SECTIONS.map(([k])=>[k.toLowerCase(),k,c[k]["On Hand"]+"/"+c[k].total]));
+  $("#tabs").innerHTML=items.map(([id,lbl,sub])=>`<button role="tab" data-v="${id}" aria-selected="${view===id}">${lbl}<small>${sub}</small></button>`).join("");
+  $("#bText").setAttribute("aria-pressed",view==="text");$("#bData").setAttribute("aria-pressed",view==="data");
+  $("#dtg").textContent="AS OF "+dtg();
+}
+function banner(){
+  if(S.source==="sample") return `<div class="banner"><span>Showing <b>sample Marines</b>. Load your MOL detail list to start.</span><button data-go="data">Load roster</button></div>`;
+  if(!storageOK) return `<div class="banner"><span>This browser isn't saving changes. Export a backup from DATA before closing.</span></div>`;
+  return "";
+}
+function renderBoard(){
+  const {c,T}=counts();const P=pct(T["On Hand"],T.total);
+  let h=banner();
+  h+=`<div class="tiles">
+    <div class="tile on"><div class="lbl">On Hand</div><div class="num">${T["On Hand"]}</div></div>
+    <div class="tile"><div class="lbl">Total Strength</div><div class="num">${T.total}</div></div>
+    <div class="pct"><b>${P}%</b><div class="bar"><i style="width:${P}%"></i></div><span>Present ${present(T)} · Off deck ${T.total-present(T)}</span></div>
+  </div>`;
+  h+=`<h2>By status</h2><div class="gridwrap"><table><thead><tr><th>Status</th>${SECTIONS.map(([k])=>`<th><button data-go="${k.toLowerCase()}">${k}</button></th>`).join("")}<th class="tot">Total</th></tr></thead><tbody>`;
+  for(const s of STATUSES){h+=`<tr><td><span class="dot" style="background:var(${SVAR[s]})"></span>${SHORT[s]}</td>${SECTIONS.map(([k])=>`<td class="${c[k][s]?"":"z"}">${c[k][s]}</td>`).join("")}<td class="tot">${T[s]}</td></tr>`}
+  h+=`<tr class="sum"><td>Present on deck</td>${SECTIONS.map(([k])=>`<td>${present(c[k])}</td>`).join("")}<td>${present(T)}</td></tr>`;
+  h+=`<tr class="sum"><td>% On hand</td>${SECTIONS.map(([k])=>`<td>${pct(c[k]["On Hand"],c[k].total)}%</td>`).join("")}<td>${P}%</td></tr>`;
+  h+=`<tr class="key"><td>On hand / strength</td>${SECTIONS.map(([k])=>`<td>${c[k]["On Hand"]}/${c[k].total}</td>`).join("")}<td>${T["On Hand"]}/${T.total}</td></tr>`;
+  h+=`</tbody></table></div><p class="note">Present on deck = On Hand + Appt On Base + Co Duties. Tap a section to update its Marines.${S.loadedAt?" Roster loaded "+esc(S.loadedAt)+".":""}</p>`;
+  $("#main").innerHTML=h;
+}
+function statusSelect(id,cur){return `<select data-id="${id}" aria-label="Status">${STATUSES.map(s=>`<option${s===cur?" selected":""}>${s}</option>`).join("")}</select>`}
+function renderSection(code){
+  const name=SECTIONS.find(s=>s[0]===code)[1];const {c}=counts();const o=c[code];
+  const list=sorted(S.roster.filter(m=>m.sec===code)).filter(m=>!query||(m.rank+" "+m.name).toLowerCase().includes(query));
+  let h=banner();
+  h+=`<div class="sechead"><h2>${code} · ${esc(name)}</h2><div class="ratio">${o["On Hand"]}/${o.total}<small>on hand / strength</small></div></div>`;
+  h+=`<div class="chips">${STATUSES.filter(s=>o[s]).map(s=>`<span class="chip"><span class="dot" style="background:var(${SVAR[s]})"></span>${SHORT[s]} ${o[s]}</span>`).join("")||'<span class="note">No Marines in this section yet.</span>'}</div>`;
+  if(o.total>8) h+=`<input class="search" id="q" type="search" placeholder="Find a Marine" value="${esc(query)}">`;
+  h+=`<div class="list">${list.map(m=>{
+    const det=[m.detail,m.end?("thru "+m.end):""].filter(Boolean).join(" · ");
+    return `<div class="m" style="--sc:var(${SVAR[m.status]})"><div class="who"><div><b>${esc(m.rank)}</b><span class="nm">${esc(m.name)}</span></div>
+      ${det?`<div class="det">${esc(det)}</div>`:""}<button class="rm${armed===m.id?" arm":""}" data-rm="${m.id}">${armed===m.id?"Tap again to remove":"Remove"}</button></div>${statusSelect(m.id,m.status)}</div>`}).join("")}</div>`;
+  h+=`<form class="addbox" id="addf"><h3>Add a Marine to ${code}</h3>
+    <select id="aRank" aria-label="Rank">${RANKS.map(r=>`<option${r==="LCPL"?" selected":""}>${r}</option>`).join("")}</select>
+    <input id="aName" placeholder="LAST, FIRST M." autocomplete="off" aria-label="Name" required>
+    <select id="aStatus" class="full" aria-label="Status">${STATUSES.map(s=>`<option>${s}</option>`).join("")}</select>
+    <button class="btn full" type="submit">Add Marine</button></form>`;
+  $("#main").innerHTML=h;
+}
+function reportText(){
+  const {c,T}=counts();const L=[];
+  L.push("EOOP ACCOUNTABILITY "+dtg());
+  L.push("TOTAL STRENGTH: "+T.total);
+  L.push("ON HAND: "+T["On Hand"]+" ("+pct(T["On Hand"],T.total)+"%)");
+  L.push("PRESENT ON DECK: "+present(T));
+  L.push("");
+  for(const [k] of SECTIONS) L.push(k+" "+c[k]["On Hand"]+"/"+c[k].total);
+  L.push("");
+  for(const s of STATUSES.slice(1)) L.push(SHORT[s].toUpperCase()+": "+T[s]);
+  if(S.names){
+    for(const s of STATUSES.slice(1)){const ms=sorted(S.roster.filter(m=>m.status===s));if(!ms.length)continue;
+      L.push("");L.push(SHORT[s].toUpperCase()+":");ms.forEach(m=>L.push("- "+m.sec+" "+m.rank+" "+m.name.split(",")[0]))}
+  }
+  return L.join("\n");
+}
+function smsHref(txt){const to=S.recipients.split(/[,;\s]+/).map(x=>x.replace(/[^\d+]/g,"")).filter(Boolean).join(",");
+  return "sms:"+to+"?&body="+encodeURIComponent(txt)}
+function renderText(){
+  const t=reportText();
+  let h=banner();
+  h+=`<h2>Text the numbers</h2><div class="panel">
+    <label for="rcp">Send to (phone numbers, comma separated)</label>
+    <input type="tel" id="rcp" value="${esc(S.recipients)}" placeholder="808 555 0100, 808 555 0101">
+    <label class="tog"><input type="checkbox" id="nm"${S.names?" checked":""}> Include last names of Marines off deck</label>
+    <textarea id="msg" readonly>${esc(t)}</textarea>
+    <div class="row2"><a class="btn" id="sms" href="${esc(smsHref(t))}">Text it</a><button class="btn alt" id="copy">Copy text</button></div>
+    ${navigator.share?'<button class="btn alt" id="share">Share to Signal, Teams, email…</button>':''}
+    <p class="note">"Text it" opens your Messages app with the numbers and recipients filled in. Review and hit send there.${S.names?" Names are in the text: send only over approved channels.":""}</p>
+  </div>`;
+  $("#main").innerHTML=h;
+}
+function renderData(){
+  const {T}=counts();
+  let h=`<h2>Roster data</h2><div class="panel">
+    <div><b>${T.total}</b> Marines loaded · ${S.source==="sample"?"sample data":S.source==="mol"?"from MOL detail list":"from backup"}${S.loadedAt?" · "+esc(S.loadedAt):""}</div>
+    <label for="file">Load MOL detail list (.csv) or a backup from this app</label>
+    <input type="file" id="file" accept=".csv,text/csv">
+    <p class="note">Loading replaces the current roster. EDIPI and sex columns are skipped and never stored.</p>
+    <button class="btn alt" id="exp" hidden>Export backup (.csv)</button>
+    <button class="btn warn" id="reset">${armed==="reset"?"Tap again to clear the roster":"Clear roster and show sample"}</button>
+  </div>
+  <h2>How this app keeps data</h2><div class="panel"><ul class="plain">
+    <li>The roster lives only in this phone's browser. Nothing is uploaded or shared.</li>
+    <li>Each phone keeps its own copy. Export a backup and load it on another phone to hand off.</li>
+    <li>Clearing website data or using a private tab wipes it. Export a backup after big changes.</li>
+    <li>MOL status mapping: Present for Duty → On Hand, Leave → Leave, TAD/FAP → TAD, Field Duty → Operation, Medical/SIQ → Appt On Base. EE section → HE; no section → HQ.</li>
+  </ul></div>
+  <h2>Put it on your home screen</h2><div class="panel"><ul class="plain">
+    <li><b>iPhone:</b> open this page's web address in Safari → Share → Add to Home Screen.</li>
+    <li><b>Android:</b> open in Chrome → ⋮ menu → Add to Home screen.</li>
+  </ul></div>`;
+  $("#main").innerHTML=h;
+  dl.then(d=>{const b=$("#exp");if(b&&d)b.hidden=false});
+}
+function render(){renderTabs();
+  if(view==="board")renderBoard();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());}
+
+/* ---------- CSV import ---------- */
+function parseCSV(text){const rows=[];let row=[],f="",q=false;
+  for(let i=0;i<text.length;i++){const ch=text[i];
+    if(q){if(ch==='"'){if(text[i+1]==='"'){f+='"';i++}else q=false}else f+=ch}
+    else if(ch==='"')q=true;else if(ch===","){row.push(f);f=""}
+    else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&text[i+1]==="\n")i++;row.push(f);rows.push(row);row=[];f=""}
+    else f+=ch}
+  if(f||row.length){row.push(f);rows.push(row)}
+  return rows.map(r=>r.map(x=>x.replace(/\t/g,"").trim()));
+}
+function mapStatus(d){d=d||"";if(STATUSES.includes(d))return d;const l=d.toLowerCase();
+  if(l.startsWith("leave"))return"Leave";if(l.startsWith("tad")||l.startsWith("fap"))return"TAD";
+  if(l.startsWith("field"))return"Operation";if(l.startsWith("medical")||l.includes("siq"))return"Appointment on Base";return"On Hand"}
+function mapSec(u){const t=(u||"").toUpperCase().split("-").pop();return {HQ:"HQ",EE:"HE",HE:"HE",CE:"CE",ORD:"ORD",UT:"UT"}[t]||"HQ"}
+function fmtD(s){if(!s)return"";const m=s.match(/(\d{4})[\/-](\d{2})[\/-](\d{2})/);if(!m)return s;
+  const M=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];return m[3]+" "+M[+m[2]-1]+" "+m[1].slice(2)}
+function importCSV(text){
+  const rows=parseCSV(text);const hi=rows.findIndex(r=>(r[0]||"").toLowerCase()==="rank");
+  if(hi<0)throw new Error("No header row starting with 'Rank' was found.");
+  const H=rows[hi].map(x=>x.toLowerCase());const col=n=>H.indexOf(n);
+  const own=col("section")>=0&&col("status")>=0;
+  const out=[];let n=0;
+  for(const r of rows.slice(hi+1)){const rank=(r[col("rank")]||"").toUpperCase();const name=r[col("name")]||"";if(!rank||!name)continue;
+    if(own) out.push({id:"m"+(++n),rank,name,sec:SECTIONS.some(s=>s[0]===r[col("section")])?r[col("section")]:"HQ",status:mapStatus(r[col("status")]),detail:r[col("detail")]||"",loc:r[col("location")]||"",start:r[col("start")]||"",end:r[col("end")]||""});
+    else{const det=r[col("duty status")]||"";out.push({id:"m"+(++n),rank,name,sec:mapSec(r[col("unit")]),status:mapStatus(det),detail:det,loc:r[col("location")]||"",start:fmtD(r[col("start date")]),end:fmtD(r[col("end date")])})}}
+  if(!out.length)throw new Error("The file had a header but no Marines under it.");
+  return {roster:out,own};
+}
+function exportCSV(){const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
+  return ["Rank,Name,Section,Status,Detail,Location,Start,End"].concat(sorted(S.roster).map(m=>[m.rank,m.name,m.sec,m.status,m.detail,m.loc,m.start,m.end].map(q).join(","))).join("\n")}
+
+/* ---------- events ---------- */
+document.addEventListener("click",e=>{
+  const go=e.target.closest("[data-v],[data-go]");
+  if(go){view=go.dataset.v||go.dataset.go;armed=null;query="";render();window.scrollTo(0,0);return}
+  if(e.target.closest("#bText")){view=view==="text"?"board":"text";armed=null;render();window.scrollTo(0,0);return}
+  if(e.target.closest("#bData")){view=view==="data"?"board":"data";armed=null;render();window.scrollTo(0,0);return}
+  const rm=e.target.closest("[data-rm]");
+  if(rm){const id=rm.dataset.rm;if(armed===id){S.roster=S.roster.filter(m=>m.id!==id);armed=null;save();toast("Marine removed")}else armed=id;render();return}
+  if(e.target.id==="reset"){if(armed==="reset"){S.roster=sampleRoster();S.source="sample";S.loadedAt="";armed=null;save();toast("Roster cleared")}else armed="reset";render();return}
+  if(e.target.id==="copy"){const t=$("#msg").value;
+    const fallback=()=>{const ta=$("#msg");ta.removeAttribute("readonly");ta.select();ta.setSelectionRange(0,t.length);ta.setAttribute("readonly","");toast("Text selected. Tap Copy in the menu.")};
+    try{navigator.clipboard.writeText(t).then(()=>toast("Copied. Paste into your text."),fallback)}catch(err){fallback()}return}
+  if(e.target.id==="share"){navigator.share({text:$("#msg").value}).catch(()=>{});return}
+  if(e.target.id==="exp"){dl.then(d=>{if(!d)return;const day=new Date().toISOString().slice(0,10);
+    d.save({filename:"EOOP_Muster_Backup_"+day+".csv",data:exportCSV()}).then(()=>toast("Backup saved")).catch(err=>{if(err&&err.code!=="declined")toast("Couldn't save the backup here.")})});return}
+});
+document.addEventListener("change",e=>{
+  const sel=e.target.closest("select[data-id]");
+  if(sel){const m=S.roster.find(x=>x.id===sel.dataset.id);if(m){m.status=sel.value;save();renderTabs();
+    const card=sel.closest(".m");card.style.setProperty("--sc","var("+SVAR[m.status]+")");
+    const {c}=counts();const o=c[m.sec];const r=document.querySelector(".ratio");if(r)r.innerHTML=o["On Hand"]+"/"+o.total+"<small>on hand / strength</small>";
+    const ch=document.querySelector(".chips");if(ch)ch.innerHTML=STATUSES.filter(s=>o[s]).map(s=>`<span class="chip"><span class="dot" style="background:var(${SVAR[s]})"></span>${SHORT[s]} ${o[s]}</span>`).join("")}
+    return}
+  if(e.target.id==="nm"){S.names=e.target.checked;save();renderText();return}
+  if(e.target.id==="file"){const f=e.target.files[0];if(!f)return;const rd=new FileReader();
+    rd.onload=()=>{try{const {roster,own}=importCSV(String(rd.result));S.roster=roster;S.source=own?"backup":"mol";
+      S.loadedAt=new Date().toLocaleString([], {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});save();view="board";render();toast(roster.length+" Marines loaded")}
+      catch(err){toast(err.message)}};
+    rd.onerror=()=>toast("Couldn't read that file.");rd.readAsText(f);return}
+});
+document.addEventListener("input",e=>{
+  if(e.target.id==="rcp"){S.recipients=e.target.value;save();const a=$("#sms");if(a)a.href=smsHref($("#msg").value);return}
+  if(e.target.id==="q"){query=e.target.value.toLowerCase();const pos=e.target.selectionStart;renderSection(view.toUpperCase());const q=$("#q");q.focus();q.setSelectionRange(pos,pos);return}
+});
+document.addEventListener("submit",e=>{
+  if(e.target.id!=="addf")return;e.preventDefault();
+  const name=$("#aName").value.trim().toUpperCase();if(!name){toast("Enter a name first.");return}
+  S.roster.push({id:"a"+Date.now(),rank:$("#aRank").value,name,sec:view.toUpperCase(),status:$("#aStatus").value,detail:"Added in app",loc:"",start:"",end:""});
+  save();render();toast(name+" added");
+});
+
+const dl=Promise.resolve({save:({filename,data})=>new Promise((res,rej)=>{try{const b=new Blob([data],{type:"text/csv"});
+  if(navigator.canShare&&navigator.canShare({files:[new File([b],filename,{type:"text/csv"})]})){navigator.share({files:[new File([b],filename,{type:"text/csv"})],title:filename}).then(()=>res({status:"saved"}),()=>rej({code:"declined"}));return}
+  const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=filename;document.body.appendChild(a);a.click();a.remove();res({status:"saved"})}catch(e){rej({code:"unavailable"})}})});
+render();
+setInterval(()=>{const d=$("#dtg");if(d)d.textContent="AS OF "+dtg()},30000);
+</script>
+</body></html>
