@@ -49,11 +49,11 @@ button{cursor:pointer}
   padding:10px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
 .top-in{max-width:560px;margin:0 auto}
 .brand{display:flex;align-items:center;gap:10px;justify-content:space-between}
-.brand h1{font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:.04em;margin:0;line-height:1}
+.brand h1{font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:.03em;margin:0;line-height:1;white-space:nowrap}
 .brand .dtg{font-family:var(--display);font-weight:600;font-size:14px;letter-spacing:.06em;opacity:.85}
 .acts{display:flex;gap:6px}
 .acts button{background:transparent;border:1px solid rgba(255,255,255,.45);color:var(--olive-ink);border-radius:6px;
-  padding:5px 10px;font-size:13px;font-weight:600;letter-spacing:.03em}
+  padding:5px 8px;font-size:12.5px;font-weight:600;letter-spacing:.03em}
 .acts button[aria-pressed="true"]{background:var(--brass);border-color:var(--brass);color:#1d2219}
 .tabs{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-top:10px}
 .tabs button{background:transparent;border:0;color:var(--olive-ink);padding:8px 0 9px;border-bottom:3px solid transparent;
@@ -113,6 +113,25 @@ tr.key td{font-family:var(--display);font-size:17px;font-weight:800;background:v
 .m .who b{font-family:var(--display);font-weight:700;letter-spacing:.04em;margin-right:6px}
 .m .who .nm{font-weight:600}
 .m .who .det{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m .pick{display:flex;flex-direction:column;gap:5px;align-items:stretch}
+.m select.duty{padding:5px 6px;font-size:12.5px;font-weight:600;background:var(--surface)}
+.m select.duty.ld{border-color:var(--s-duty);color:var(--s-duty)}
+.m select.duty.lim{border-color:var(--warn);color:var(--warn)}
+.tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:1px;border:1px solid}
+.tag.ld{color:var(--s-duty);border-color:var(--s-duty)}.tag.lim{color:var(--warn);border-color:var(--warn)}
+.dutyline{display:flex;flex-wrap:wrap;gap:6px;grid-column:1/-1}
+.pt-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pt-sum div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
+.pt-sum b{display:block;font-family:var(--display);font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+.pt-sum span{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.pt-sum .go b{color:var(--s-onhand)}
+.evts{display:flex;flex-wrap:wrap;gap:6px}
+.evts button{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:6px 12px;font-weight:600;font-size:13px}
+.evts button[aria-pressed="true"]{background:var(--olive);color:var(--olive-ink);border-color:var(--olive)}
+.grp{margin-top:12px}
+.grp h3{font-family:var(--display);font-size:16px;letter-spacing:.05em;margin:0 0 6px;display:flex;justify-content:space-between}
+.names{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14px;line-height:1.7}
+.names div{border-bottom:1px solid var(--line)}.names div:last-child{border-bottom:0}
 .m select{max-width:44vw;padding:8px 6px;border-radius:7px;border:1px solid var(--line);background:var(--surface-2);font-weight:600;font-size:14px}
 .m .rm{border:0;background:transparent;color:var(--muted);font-size:12px;padding:2px 0;text-align:left}
 .m .rm.arm{color:var(--warn);font-weight:700}
@@ -144,6 +163,7 @@ ul.plain{margin:0;padding-left:18px;font-size:13.5px}
   <div class="brand">
     <div><h1>EOOP MUSTER</h1><div class="dtg" id="dtg"></div></div>
     <div class="acts">
+      <button id="bPT" aria-pressed="false">PT</button>
       <button id="bText" aria-pressed="false">TEXT</button>
       <button id="bData" aria-pressed="false">DATA</button>
     </div>
@@ -161,6 +181,8 @@ const SVAR={"On Hand":"--s-onhand","Appointment on Base":"--s-aob","Appointment 
 const PRESENT=["On Hand","Appointment on Base","Company Duties"];
 const SECTIONS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
 const ATT=["ATT","Attached"];
+const DUTIES=["Full Duty","Light Duty","LIMDU"];
+const EVENTS=["Unit PT","Hike","Run","PFT","CFT","Field event"];
 const RANKS=["CWO5","CWO4","CWO3","CWO2","WO","MAJ","CAPT","1STLT","2NDLT","SGTMAJ","MGYSGT","1STSGT","MSGT","GYSGT","SSGT","SGT","CPL","LCPL","PFC","PVT"];
 const KEY="eoop-muster-v1";
 
@@ -174,17 +196,20 @@ function sampleRoster(){
   for(const [sec,ranks,sts] of spec) ranks.forEach((r,i)=>out.push({id:"s"+n,rank:r,name:"SAMPLE, MARINE "+String(n++).padStart(2,"0"),sec,status:sts[i],detail:"Sample row",loc:"",start:"",end:""}));
   out.push({id:"s"+n++,rank:"CPL",name:"SAMPLE, ATTACHED 01",sec:"ATT",parent:"CLB-3 (FAP in)",status:"On Hand",detail:"Working with HE",loc:"",start:"",end:"30 NOV 26"});
   out.push({id:"s"+n++,rank:"LCPL",name:"SAMPLE, ATTACHED 02",sec:"ATT",parent:"7th ESB (TAD to us)",status:"Appointment on Base",detail:"Working with UT",loc:"",start:"",end:"15 NOV 26"});
+  if(out[5])out[5].duty="Light Duty";if(out[13])out[13].duty="LIMDU";
   return out;
 }
 
-let S={roster:sampleRoster(),source:"sample",loadedAt:"",recipients:"",names:false};
+let S={roster:sampleRoster(),source:"sample",loadedAt:"",recipients:"",names:false,pt:{event:"Unit PT",when:"",inc:["On Hand"],att:true}};
 let storageOK=true;
 try{const raw=localStorage.getItem(KEY); if(raw){const v=JSON.parse(raw); if(v&&Array.isArray(v.roster)) S=Object.assign(S,v);} }catch(e){storageOK=false}
+S.pt=Object.assign({event:"Unit PT",when:"",inc:["On Hand"],att:true},S.pt||{});
+const dutyOf=m=>DUTIES.includes(m.duty)?m.duty:"Full Duty";
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));storageOK=true}catch(e){storageOK=false}}
 
 let view="board", armed=null, query="";
 const h0=(location.hash||"").slice(1).toLowerCase();
-if(["board","hq","he","ce","ord","ut","att","text","data"].includes(h0)) view=h0;
+if(["board","hq","he","ce","ord","ut","att","pt","text","data"].includes(h0)) view=h0;
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -216,7 +241,7 @@ function renderTabs(){
   const {c,T}=counts();
   const items=[["board","BOARD",T["On Hand"]+"/"+T.total]].concat(SECTIONS.map(([k])=>[k.toLowerCase(),k,c[k]["On Hand"]+"/"+c[k].total])).concat([["att","ATT","+"+c.ATT.total]]);
   $("#tabs").innerHTML=items.map(([id,lbl,sub])=>`<button role="tab" data-v="${id}" aria-selected="${view===id}">${lbl}<small>${sub}</small></button>`).join("");
-  $("#bText").setAttribute("aria-pressed",view==="text");$("#bData").setAttribute("aria-pressed",view==="data");
+  $("#bPT").setAttribute("aria-pressed",view==="pt");$("#bText").setAttribute("aria-pressed",view==="text");$("#bData").setAttribute("aria-pressed",view==="data");
   $("#dtg").textContent="AS OF "+dtg();
 }
 function banner(){
@@ -224,6 +249,8 @@ function banner(){
   if(!storageOK) return `<div class="banner"><span>This browser isn't saving changes. Export a backup from DATA before closing.</span></div>`;
   return "";
 }
+function dutyCounts(list){const d={"Full Duty":0,"Light Duty":0,"LIMDU":0};list.forEach(m=>d[dutyOf(m)]++);return d}
+function dutyChips(list){const d=dutyCounts(list);return `<span class="chip">Full Duty ${d["Full Duty"]}</span><span class="chip" style="color:var(--s-duty)">Light Duty ${d["Light Duty"]}</span><span class="chip" style="color:var(--warn)">LIMDU ${d["LIMDU"]}</span>`}
 function renderBoard(){
   const {c,T,A}=counts();const P=pct(T["On Hand"],T.total);
   let h=banner();
@@ -231,6 +258,7 @@ function renderBoard(){
     <div class="tile on"><div class="lbl">On Hand</div><div class="num">${T["On Hand"]}</div></div>
     <div class="tile"><div class="lbl">Total Strength</div><div class="num">${T.total}</div></div>
     <div class="pct"><b>${P}%</b><div class="bar"><i style="width:${P}%"></i></div><span>Present ${present(T)} · Off deck ${T.total-present(T)}</span></div>
+    <div class="dutyline">${dutyChips(S.roster.filter(m=>m.sec!=="ATT"))}<button class="chip" data-go="pt" style="cursor:pointer">PT roster ▸</button></div>
     <div class="att"><div><div class="lbl">Attached · not on our numbers</div><div class="big">${A.total}<small>${A["On Hand"]} on hand</small></div><div class="note">Total accounted for: <b>${T.total+A.total}</b> · Physically here: <b>${present(T)+present(A)}</b></div></div><button data-go="att">${A.total?"View":"Add"}</button></div>
   </div>`;
   h+=`<h2>By status</h2><div class="gridwrap"><table><thead><tr><th>Status</th>${SECTIONS.map(([k])=>`<th><button data-go="${k.toLowerCase()}">${k}</button></th>`).join("")}<th class="tot">Total</th></tr></thead><tbody>`;
@@ -241,6 +269,7 @@ function renderBoard(){
   h+=`</tbody></table></div><p class="note">Present on deck = On Hand + Appt On Base + Co Duties. Tap a section to update its Marines.${S.loadedAt?" Roster loaded "+esc(S.loadedAt)+".":""}</p>`;
   $("#main").innerHTML=h;
 }
+function dutySelect(id,cur){const k=cur==="Light Duty"?" ld":cur==="LIMDU"?" lim":"";return `<select class="duty${k}" data-duty="${id}" aria-label="Duty status">${DUTIES.map(d=>`<option${d===cur?" selected":""}>${d}</option>`).join("")}</select>`}
 function statusSelect(id,cur){return `<select data-id="${id}" aria-label="Status">${STATUSES.map(s=>`<option${s===cur?" selected":""}>${s}</option>`).join("")}</select>`}
 function renderSection(code){
   const isAtt=code==="ATT";const name=isAtt?ATT[1]:SECTIONS.find(s=>s[0]===code)[1];const {c}=counts();const o=c[code];
@@ -252,14 +281,15 @@ function renderSection(code){
   if(o.total>8) h+=`<input class="search" id="q" type="search" placeholder="Find a Marine" value="${esc(query)}">`;
   h+=`<div class="list">${list.map(m=>{
     const det=[m.parent?("From "+m.parent):"",m.detail,m.end?("thru "+m.end):""].filter(Boolean).join(" · ");
-    return `<div class="m" style="--sc:var(${SVAR[m.status]})"><div class="who"><div><b>${esc(m.rank)}</b><span class="nm">${esc(m.name)}</span></div>
-      ${det?`<div class="det">${esc(det)}</div>`:""}<button class="rm${armed===m.id?" arm":""}" data-rm="${m.id}">${armed===m.id?"Tap again to remove":"Remove"}</button></div>${statusSelect(m.id,m.status)}</div>`}).join("")}</div>`;
+    return `<div class="m" style="--sc:var(${SVAR[m.status]})"><div class="who"><div><b>${esc(m.rank)}</b><span class="nm">${esc(m.name)}</span>${dutyOf(m)==="Light Duty"?'<span class="tag ld">LD</span>':dutyOf(m)==="LIMDU"?'<span class="tag lim">LIMDU</span>':""}</div>
+      ${det?`<div class="det">${esc(det)}</div>`:""}<button class="rm${armed===m.id?" arm":""}" data-rm="${m.id}">${armed===m.id?"Tap again to remove":"Remove"}</button></div><div class="pick">${statusSelect(m.id,m.status)}${dutySelect(m.id,dutyOf(m))}</div></div>`}).join("")}</div>`;
   h+=`<form class="addbox" id="addf"><h3>${isAtt?"Add an attached Marine":"Add a Marine to "+code}</h3>
     <select id="aRank" aria-label="Rank">${RANKS.map(r=>`<option${r==="LCPL"?" selected":""}>${r}</option>`).join("")}</select>
     <input id="aName" placeholder="LAST, FIRST M." autocomplete="off" aria-label="Name" required>
     ${isAtt?`<input id="aParent" class="full" placeholder="Parent unit (e.g. CLB-3, 7th ESB)" autocomplete="off" aria-label="Parent unit" required>
     <select id="aWith" aria-label="Working with"><option value="">With…</option>${SECTIONS.map(([k])=>`<option>${k}</option>`).join("")}</select>
     <input id="aEnd" type="date" aria-label="Attached through" title="Attached through">`:""}
+    <select id="aDuty" class="full" aria-label="Duty status">${DUTIES.map(d=>`<option>${d}</option>`).join("")}</select>
     <select id="aStatus" class="full" aria-label="Status">${STATUSES.map(s=>`<option>${s}</option>`).join("")}</select>
     <button class="btn full" type="submit">Add Marine</button></form>`;
   $("#main").innerHTML=h;
@@ -270,6 +300,7 @@ function reportText(){
   L.push("TOTAL STRENGTH: "+T.total);
   L.push("ON HAND: "+T["On Hand"]+" ("+pct(T["On Hand"],T.total)+"%)");
   L.push("PRESENT ON DECK: "+present(T));
+  {const d=dutyCounts(S.roster.filter(m=>m.sec!=="ATT"));L.push("FULL DUTY "+d["Full Duty"]+" / LIGHT DUTY "+d["Light Duty"]+" / LIMDU "+d["LIMDU"]);}
   L.push("");
   for(const [k] of SECTIONS) L.push(k+" "+c[k]["On Hand"]+"/"+c[k].total);
   L.push("");
@@ -312,6 +343,7 @@ function renderData(){
     <li>The roster lives only in this phone's browser. Nothing is uploaded or shared.</li>
     <li>Each phone keeps its own copy. Export a backup and load it on another phone to hand off.</li>
     <li>Clearing website data or using a private tab wipes it. Export a backup after big changes.</li>
+    <li>Light Duty / LIMDU settings carry over when you load a new MOL list (matched by name).</li>
     <li>Attached Marines (ATT tab) stay in the app when you load a new MOL list.</li>
     <li>MOL status mapping: Present for Duty → On Hand, Leave → Leave, TAD/FAP → TAD, Field Duty → Operation, Medical/SIQ → Appt On Base. EE section → HE; no section → HQ.</li>
   </ul></div>
@@ -322,8 +354,39 @@ function renderData(){
   $("#main").innerHTML=h;
   dl.then(d=>{const b=$("#exp");if(b&&d)b.hidden=false});
 }
+function ptGroups(){
+  const pool=S.roster.filter(m=>m.sec!=="ATT"||S.pt.att);
+  const here=pool.filter(m=>S.pt.inc.includes(m.status));
+  const go=here.filter(m=>dutyOf(m)==="Full Duty");
+  const ld=here.filter(m=>dutyOf(m)==="Light Duty"), lim=here.filter(m=>dutyOf(m)==="LIMDU");
+  const out=pool.filter(m=>!S.pt.inc.includes(m.status));
+  return {go,ld,lim,out};
+}
+const secOf=m=>m.sec==="ATT"?"ATT":m.sec;
+function bySec(list){const g={};for(const m of sorted(list)){(g[secOf(m)]=g[secOf(m)]||[]).push(m)}return SECTIONS.map(s=>s[0]).concat("ATT").filter(k=>g[k]).map(k=>[k,g[k]])}
+function ptText(){const {go,ld,lim}=ptGroups();const L=[];
+  L.push((S.pt.event||"PT").toUpperCase()+" ROSTER "+(S.pt.when||dtg()));
+  L.push("AVAILABLE (FULL DUTY): "+go.length);
+  if(ld.length||lim.length) L.push("ON HAND, NOT PARTICIPATING: LIGHT DUTY "+ld.length+" / LIMDU "+lim.length);
+  for(const [k,ms] of bySec(go)){L.push("");L.push(k+" ("+ms.length+")");ms.forEach(m=>L.push("- "+m.rank+" "+m.name))}
+  if(ld.length||lim.length){L.push("");L.push("NOT PARTICIPATING");sorted(ld.concat(lim)).forEach(m=>L.push("- "+secOf(m)+" "+m.rank+" "+m.name.split(",")[0]+" ("+(dutyOf(m)==="LIMDU"?"LIMDU":"LD")+")"))}
+  return L.join("\n")}
+function renderPT(){
+  const {go,ld,lim,out}=ptGroups();
+  let h=banner();
+  h+=`<h2>Physical activity roster</h2><div class="panel"><div class="evts">${EVENTS.map(e=>`<button data-evt="${e}" aria-pressed="${S.pt.event===e}">${e}</button>`).join("")}</div>
+    <div class="row2"><div><label for="ptEvt">Event</label><input type="text" id="ptEvt" value="${esc(S.pt.event)}"></div><div><label for="ptWhen">When</label><input type="text" id="ptWhen" value="${esc(S.pt.when)}" placeholder="${dtg()}"></div></div>
+    <div class="note">Count Marines whose status is:</div><div class="evts">${STATUSES.filter(x=>["On Hand","Company Duties","Appointment on Base"].includes(x)).map(x=>`<label class="tog"><input type="checkbox" data-inc="${x}"${S.pt.inc.includes(x)?" checked":""}> ${SHORT[x]}</label>`).join("")}<label class="tog"><input type="checkbox" id="ptAtt"${S.pt.att?" checked":""}> Attached</label></div></div>`;
+  h+=`<div class="pt-sum" style="margin-top:12px"><div class="go"><b>${go.length}</b><span>Available</span></div><div><b>${ld.length+lim.length}</b><span>LD / LIMDU</span></div><div><b>${out.length}</b><span>Not here</span></div></div>`;
+  h+=`<div class="row2" style="margin-top:12px"><button class="btn" id="ptCopy">Copy list</button><a class="btn alt" id="ptSms" href="${esc(smsHref(ptText()))}">Text list</a></div>`;
+  for(const [k,ms] of bySec(go)) h+=`<div class="grp"><h3><span>${k}</span><span>${ms.length}</span></h3><div class="names">${ms.map(m=>`<div><b>${esc(m.rank)}</b> ${esc(m.name)}${m.sec==="ATT"&&m.parent?` <span class="note">(${esc(m.parent)})</span>`:""}</div>`).join("")}</div></div>`;
+  if(!go.length) h+=`<p class="note" style="margin-top:12px">No one is available with these settings.</p>`;
+  if(ld.length||lim.length) h+=`<div class="grp"><h3><span>On hand · not participating</span><span>${ld.length+lim.length}</span></h3><div class="names">${sorted(ld.concat(lim)).map(m=>`<div><b>${esc(m.rank)}</b> ${esc(m.name)} <span class="tag ${dutyOf(m)==="LIMDU"?"lim":"ld"}">${dutyOf(m)==="LIMDU"?"LIMDU":"LD"}</span> <span class="note">${secOf(m)}</span></div>`).join("")}</div></div>`;
+  h+=`<p class="note" style="margin-top:10px">Available = selected statuses + Full Duty. Set Light Duty or LIMDU on each Marine in the section tabs.</p>`;
+  $("#main").innerHTML=h;
+}
 function render(){renderTabs();
-  if(view==="board")renderBoard();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());}
+  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());}
 
 /* ---------- CSV import ---------- */
 function parseCSV(text){const rows=[];let row=[],f="",q=false;
@@ -348,18 +411,21 @@ function importCSV(text){
   const own=col("section")>=0&&col("status")>=0;
   const out=[];let n=0;
   for(const r of rows.slice(hi+1)){const rank=(r[col("rank")]||"").toUpperCase();const name=r[col("name")]||"";if(!rank||!name)continue;
-    if(own) out.push({id:"m"+(++n),rank,name,sec:(SECTIONS.some(s=>s[0]===r[col("section")])||r[col("section")]==="ATT")?r[col("section")]:"HQ",parent:col("parent unit")>=0?(r[col("parent unit")]||""):"",status:mapStatus(r[col("status")]),detail:r[col("detail")]||"",loc:r[col("location")]||"",start:r[col("start")]||"",end:r[col("end")]||""});
+    if(own) out.push({id:"m"+(++n),rank,name,sec:(SECTIONS.some(s=>s[0]===r[col("section")])||r[col("section")]==="ATT")?r[col("section")]:"HQ",parent:col("parent unit")>=0?(r[col("parent unit")]||""):"",duty:col("duty")>=0&&DUTIES.includes(r[col("duty")])?r[col("duty")]:"Full Duty",status:mapStatus(r[col("status")]),detail:r[col("detail")]||"",loc:r[col("location")]||"",start:r[col("start")]||"",end:r[col("end")]||""});
     else{const det=r[col("duty status")]||"";out.push({id:"m"+(++n),rank,name,sec:mapSec(r[col("unit")]),status:mapStatus(det),detail:det,loc:r[col("location")]||"",start:fmtD(r[col("start date")]),end:fmtD(r[col("end date")])})}}
   if(!out.length)throw new Error("The file had a header but no Marines under it.");
   return {roster:out,own};
 }
 function exportCSV(){const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
-  return ["Rank,Name,Section,Status,Detail,Location,Start,End,Parent Unit"].concat(sorted(S.roster).map(m=>[m.rank,m.name,m.sec,m.status,m.detail,m.loc,m.start,m.end,m.parent||""].map(q).join(","))).join("\n")}
+  return ["Rank,Name,Section,Status,Detail,Location,Start,End,Parent Unit,Duty"].concat(sorted(S.roster).map(m=>[m.rank,m.name,m.sec,m.status,m.detail,m.loc,m.start,m.end,m.parent||"",dutyOf(m)].map(q).join(","))).join("\n")}
 
 /* ---------- events ---------- */
 document.addEventListener("click",e=>{
   const go=e.target.closest("[data-v],[data-go]");
   if(go){view=go.dataset.v||go.dataset.go;armed=null;query="";render();window.scrollTo(0,0);return}
+  if(e.target.closest("#bPT")){view=view==="pt"?"board":"pt";armed=null;render();window.scrollTo(0,0);return}
+  const ev=e.target.closest("[data-evt]");if(ev){S.pt.event=ev.dataset.evt;save();renderPT();return}
+  if(e.target.id==="ptCopy"){const t=ptText();try{navigator.clipboard.writeText(t).then(()=>toast("Roster copied"),()=>toast("Copy blocked here. Use Text list."))}catch(err){toast("Copy blocked here. Use Text list.")}return}
   if(e.target.closest("#bText")){view=view==="text"?"board":"text";armed=null;render();window.scrollTo(0,0);return}
   if(e.target.closest("#bData")){view=view==="data"?"board":"data";armed=null;render();window.scrollTo(0,0);return}
   const rm=e.target.closest("[data-rm]");
@@ -379,21 +445,28 @@ document.addEventListener("change",e=>{
     const {c}=counts();const o=c[m.sec];const r=document.querySelector(".ratio");if(r)r.innerHTML=o["On Hand"]+"/"+o.total+"<small>"+(m.sec==="ATT"?"on hand / attached":"on hand / strength")+"</small>";
     const ch=document.querySelector(".chips");if(ch)ch.innerHTML=STATUSES.filter(s=>o[s]).map(s=>`<span class="chip"><span class="dot" style="background:var(${SVAR[s]})"></span>${SHORT[s]} ${o[s]}</span>`).join("")}
     return}
+  const ds=e.target.closest("select[data-duty]");
+  if(ds){const m=S.roster.find(x=>x.id===ds.dataset.duty);if(m){m.duty=ds.value;save();render()}return}
+  if(e.target.id==="ptAtt"){S.pt.att=e.target.checked;save();renderPT();return}
+  if(e.target.matches("input[data-inc]")){const v=e.target.dataset.inc;S.pt.inc=e.target.checked?Array.from(new Set(S.pt.inc.concat(v))):S.pt.inc.filter(x=>x!==v);save();renderPT();return}
   if(e.target.id==="nm"){S.names=e.target.checked;save();renderText();return}
   if(e.target.id==="file"){const f=e.target.files[0];if(!f)return;const rd=new FileReader();
-    rd.onload=()=>{try{const {roster,own}=importCSV(String(rd.result));const keep=own?[]:S.roster.filter(m=>m.sec==="ATT"&&S.source!=="sample");S.roster=roster.concat(keep);S.source=own?"backup":"mol";
+    rd.onload=()=>{try{const {roster,own}=importCSV(String(rd.result));const keep=own?[]:S.roster.filter(m=>m.sec==="ATT"&&S.source!=="sample");
+      if(!own&&S.source!=="sample"){const dm={};S.roster.forEach(m=>{if(m.duty&&m.duty!=="Full Duty")dm[m.name.toUpperCase()]=m.duty});roster.forEach(m=>{if(dm[m.name.toUpperCase()])m.duty=dm[m.name.toUpperCase()]})}
+      S.roster=roster.concat(keep);S.source=own?"backup":"mol";
       S.loadedAt=new Date().toLocaleString([], {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});save();view="board";render();toast(roster.length+" Marines loaded")}
       catch(err){toast(err.message)}};
     rd.onerror=()=>toast("Couldn't read that file.");rd.readAsText(f);return}
 });
 document.addEventListener("input",e=>{
+  if(e.target.id==="ptEvt"||e.target.id==="ptWhen"){S.pt[e.target.id==="ptEvt"?"event":"when"]=e.target.value;save();const a=$("#ptSms");if(a)a.href=smsHref(ptText());document.querySelectorAll("[data-evt]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.evt===S.pt.event));return}
   if(e.target.id==="rcp"){S.recipients=e.target.value;save();const a=$("#sms");if(a)a.href=smsHref($("#msg").value);return}
   if(e.target.id==="q"){query=e.target.value.toLowerCase();const pos=e.target.selectionStart;renderSection(view.toUpperCase());const q=$("#q");q.focus();q.setSelectionRange(pos,pos);return}
 });
 document.addEventListener("submit",e=>{
   if(e.target.id!=="addf")return;e.preventDefault();
   const name=$("#aName").value.trim().toUpperCase();if(!name){toast("Enter a name first.");return}
-  const sec=view.toUpperCase();const rec={id:"a"+Date.now(),rank:$("#aRank").value,name,sec,status:$("#aStatus").value,detail:"Added in app",loc:"",start:"",end:""};
+  const sec=view.toUpperCase();const rec={id:"a"+Date.now(),rank:$("#aRank").value,name,sec,status:$("#aStatus").value,duty:$("#aDuty").value,detail:"Added in app",loc:"",start:"",end:""};
   if(sec==="ATT"){const p=$("#aParent").value.trim();if(!p){toast("Enter the parent unit.");return}rec.parent=p.toUpperCase();const w=$("#aWith").value;rec.detail=w?"Working with "+w:"Attached";const d=$("#aEnd").value;rec.end=d?fmtD(d):""}
   S.roster.push(rec);
   save();render();toast(name+" added");
