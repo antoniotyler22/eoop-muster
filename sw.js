@@ -1,5 +1,5 @@
 // EOOP Muster offline cache. Network first for the app so updates arrive; cache as fallback with no signal.
-const CACHE = "eoop-muster-v5";
+const CACHE = "eoop-muster-v6";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-180.png", "./icon-192.png", "./icon-512.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));

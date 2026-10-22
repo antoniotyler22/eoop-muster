@@ -138,10 +138,10 @@ tr.key td{font-family:var(--display);font-size:17px;font-weight:800;background:v
 .wta{min-height:74px;width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);font:inherit;resize:vertical}
 .wsel{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);font:inherit}
 .m .w6{border:0;background:transparent;color:var(--brass);font-size:12px;font-weight:700;padding:2px 0 2px 12px}
-.bigbtns{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bigbtns{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .bigbtn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;text-align:left}
-.bigbtn b{font-family:var(--display);font-size:20px;letter-spacing:.05em}
-.bigbtn span{font-size:12px;color:var(--muted)}
+.bigbtn b{font-family:var(--display);font-size:18px;letter-spacing:.04em}
+.bigbtn span{font-size:11.5px;color:var(--muted);line-height:1.3}
 .bigbtn.hot{border-color:var(--warn)}.bigbtn.hot span.w{color:var(--warn);font-weight:700}
 .bigbtn.live{border-color:var(--s-onhand)}.bigbtn.live span{color:var(--s-onhand);font-weight:700}
 .mbar{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--hdr,110px));z-index:4;background:var(--bg);padding:8px 0;display:flex;gap:8px;align-items:center;justify-content:space-between}
@@ -163,6 +163,22 @@ tr.key td{font-family:var(--display);font-size:17px;font-weight:800;background:v
 .sync{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
 .sync h3{margin:0;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .hist{font-size:13px}.hist div{padding:6px 0;border-bottom:1px solid var(--line)}.hist div:last-child{border-bottom:0}
+.rrow{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--sc,var(--line));border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.rtop{display:flex;align-items:center;gap:8px}
+.rtop .who{flex:1;min-width:0}
+.rtop .ph{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+a.call,a.txt{display:inline-flex;align-items:center;justify-content:center;min-width:56px;height:40px;border-radius:8px;font-weight:700;text-decoration:none;font-size:14px}
+a.call{background:var(--s-onhand);color:#fff}
+a.txt{background:var(--surface-2);color:var(--ink);border:1px solid var(--line);min-width:46px}
+.rres{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.rres button{border:1px solid var(--line);background:var(--surface-2);border-radius:6px;padding:6px 4px;font-size:12.5px;font-weight:700}
+.rres button[aria-pressed="true"]{color:#fff;border-color:transparent}
+.rres button[data-r="ok"][aria-pressed="true"]{background:var(--s-onhand)}
+.rres button[data-r="vm"][aria-pressed="true"]{background:var(--s-duty)}
+.rres button[data-r="na"][aria-pressed="true"]{background:var(--warn)}
+.addph{display:flex;gap:6px}.addph input{flex:1;min-width:0;padding:8px;border:1px solid var(--line);border-radius:7px;background:var(--surface-2)}
+.addph button{border:0;background:var(--olive);color:var(--olive-ink);border-radius:7px;padding:0 12px;font-weight:700}
+.m .tel{color:var(--s-onhand);font-size:12px;font-weight:700;text-decoration:none;padding:2px 0 2px 12px}
 .m select{max-width:44vw;padding:8px 6px;border-radius:7px;border:1px solid var(--line);background:var(--surface-2);font-weight:600;font-size:14px}
 .m .rm{border:0;background:transparent;color:var(--muted);font-size:12px;padding:2px 0;text-align:left}
 .m .rm.arm{color:var(--warn);font-weight:700}
@@ -237,6 +253,7 @@ let storageOK=true;
 try{const raw=localStorage.getItem(KEY); if(raw){const v=JSON.parse(raw); if(v&&Array.isArray(v.roster)) S=Object.assign(S,v);} }catch(e){storageOK=false}
 S.w6=Array.isArray(S.w6)?S.w6:[];
 S.hist=Array.isArray(S.hist)?S.hist:[];
+S.rc=Object.assign({open:false,start:0,end:0,res:{},att:true,only:false},S.rc||{});
 S.mus=Object.assign({open:false,seen:{},inc:["On Hand"],att:true,only:false,last:null},S.mus||{});
 S.pt=Object.assign({event:"Unit PT",when:"",inc:["On Hand"],att:true},S.pt||{});
 const dutyOf=m=>DUTIES.includes(m.duty)?m.duty:"Full Duty";
@@ -244,7 +261,7 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(S));storageOK=true}c
 
 let view="board", armed=null, query="";
 const h0=(location.hash||"").slice(1).toLowerCase();
-if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts"].includes(h0)) view=h0;
+if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall"].includes(h0)) view=h0;
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -296,7 +313,8 @@ function renderBoard(){
     <div class="pct"><b>${P}%</b><div class="bar"><i style="width:${P}%"></i></div><span>Present ${present(T)} · Off deck ${T.total-present(T)}</span></div>
     ${(()=>{const al=alerts();const M=S.mus;const pool=M.open?musPool():[];const sn=M.open?pool.filter(m=>M.seen[m.id]).length:0;
       return `<div class="bigbtns"><button class="bigbtn${M.open?" live":""}" data-go="muster"><b>MUSTER</b><span>${M.open?"In progress · "+sn+"/"+pool.length:M.last?"Last "+dtg(new Date(M.last.t)).slice(0,7)+" · "+M.last.present+"/"+M.last.expected:"Start formation muster"}</span></button>
-      <button class="bigbtn${al.over.length?" hot":""}" data-go="alerts"><b>ALERTS</b><span>${al.over.length?`<span class="w">${al.over.length} overdue</span> · `:""}${al.ret.length} returning · ${al.dep.length} departing</span></button></div>`})()}
+      <button class="bigbtn${al.over.length?" hot":""}" data-go="alerts"><b>ALERTS</b><span>${al.over.length?`<span class="w">${al.over.length} overdue</span> · `:""}${al.ret.length} returning · ${al.dep.length} departing</span></button>
+      <button class="bigbtn${S.rc.open?" live":""}" data-go="recall"><b>RECALL</b><span>${S.rc.open?"In progress · "+recallPool().filter(m=>(S.rc.res||{})[m.id]==="ok").length+"/"+recallPool().length:S.roster.filter(m=>m.phone).length+" numbers loaded"}</span></button></div>`})()}
     <div class="dutyline">${dutyChips(S.roster.filter(m=>m.sec!=="ATT"))}<button class="chip" data-go="pt" style="cursor:pointer">PT roster ▸</button></div>
     <div class="att"><div><div class="lbl">Attached · not on our numbers</div><div class="big">${A.total}<small>${A["On Hand"]} on hand</small></div><div class="note">Total accounted for: <b>${T.total+A.total}</b> · Physically here: <b>${present(T)+present(A)}</b></div></div><button data-go="att">${A.total?"View":"Add"}</button></div>
   </div>`;
@@ -321,7 +339,7 @@ function renderSection(code){
   h+=`<div class="list">${list.map(m=>{
     const det=[m.parent?("From "+m.parent):"",m.detail,m.end?("thru "+m.end):""].filter(Boolean).join(" · ");
     return `<div class="m" style="--sc:var(${SVAR[m.status]})"><div class="who"><div><b>${esc(m.rank)}</b><span class="nm">${esc(m.name)}</span>${dutyOf(m)==="Light Duty"?'<span class="tag ld">LD</span>':dutyOf(m)==="LIMDU"?'<span class="tag lim">LIMDU</span>':""}</div>
-      ${det?`<div class="det">${esc(det)}</div>`:""}<button class="rm${armed===m.id?" arm":""}" data-rm="${m.id}">${armed===m.id?"Tap again to remove":"Remove"}</button><button class="w6" data-w6="${m.id}">6W</button></div><div class="pick">${statusSelect(m.id,m.status)}${dutySelect(m.id,dutyOf(m))}</div></div>`}).join("")}</div>`;
+      ${det?`<div class="det">${esc(det)}</div>`:""}<button class="rm${armed===m.id?" arm":""}" data-rm="${m.id}">${armed===m.id?"Tap again to remove":"Remove"}</button><button class="w6" data-w6="${m.id}">6W</button>${m.phone?`<a class="tel" href="${telHref(m.phone)}">Call</a>`:""}</div><div class="pick">${statusSelect(m.id,m.status)}${dutySelect(m.id,dutyOf(m))}</div></div>`}).join("")}</div>`;
   h+=`<form class="addbox" id="addf"><h3>${isAtt?"Add an attached Marine":"Add a Marine to "+code}</h3>
     <select id="aRank" aria-label="Rank">${RANKS.map(r=>`<option${r==="LCPL"?" selected":""}>${r}</option>`).join("")}</select>
     <input id="aName" placeholder="LAST, FIRST M." autocomplete="off" aria-label="Name" required>
@@ -384,6 +402,12 @@ function renderData(){
     <button class="btn alt" id="exp" hidden>Export backup (.csv)</button>
     <button class="btn warn" id="reset">${armed==="reset"?"Tap again to clear the roster":"Clear roster and show sample"}</button>
   </div>
+  <h2>Recall roster (phone numbers)</h2><div class="panel">
+    <label for="rcFile">Load recall roster (.csv)</label><input type="file" id="rcFile" accept=".csv,text/csv,text/plain">
+    <label for="rcPaste">Or paste lines like: CPL SMITH, JOHN A. 808-555-0100</label>
+    <textarea id="rcPaste" style="min-height:90px" placeholder="LCPL DOE, JANE 808 555 0101"></textarea>
+    <button class="btn" id="rcPasteGo">Add numbers</button><div class="note" id="rcOut"></div>
+    <p class="note">Numbers attach to Marines already in the app, matched by name. They stay on this phone only and carry over when you load a new MOL list.</p></div>
   <h2>Apply section updates</h2><div class="panel">
     <label for="syncIn">Paste one or more section leader texts</label>
     <textarea id="syncIn" style="min-height:110px" placeholder="EOOP HE SECTION UPDATE ...&#10;#EOOP1|HE|34|..."></textarea>
@@ -599,8 +623,69 @@ function applySectionUpdates(text){const lines=String(text).split(/\r?\n/).map(x
     let ch=0;ms.forEach(m=>{const ns=stSet[m.id]||"On Hand";const nd=dSet[m.id]||"Full Duty";if(m.status!==ns||dutyOf(m)!==nd)ch++;m.status=ns;m.duty=nd});
     const sent=+p[2];res.push(code+": "+ch+" changed"+(miss.length?", "+miss.length+" not found ("+miss.join(", ")+")":"")+(sent!==ms.length?" · their strength "+sent+", yours "+ms.length:""))}
   save();return res}
+
+/* ---------- recall roster ---------- */
+function digits(p){return String(p||"").replace(/\D/g,"")}
+function normPh(p){let d=digits(p);if(d.length===11&&d[0]==="1")d=d.slice(1);return d.length===10?d:""}
+function fmtPh(d){return d&&d.length===10?"("+d.slice(0,3)+") "+d.slice(3,6)+"-"+d.slice(6):d||""}
+const telHref=d=>"tel:+1"+d;
+const smsTo=d=>"sms:+1"+d;
+const PH_RE=/(?<!\d)(?:\+?1[\s.-]?)?\(?[2-9]\d{2}\)?[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)/g;
+function lastOf(m){return (m.name.split(",")[0]||"").trim().toUpperCase()}
+function first3(m){return (((m.name.split(",")[1]||"").trim().split(/\s+/)[0])||"").toUpperCase().replace(/[^A-Z]/g,"").slice(0,3)}
+function wordIn(t,w){if(!w)return false;return new RegExp("(^|[^A-Z])"+w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"([^A-Z]|$)").test(t)}
+function matchMarine(t){t=" "+t.toUpperCase()+" ";let c=S.roster.filter(m=>wordIn(t,lastOf(m)));
+  if(c.length>1){const f=c.filter(m=>first3(m)&&new RegExp("(^|[^A-Z])"+first3(m)).test(t));if(f.length)c=f}
+  if(c.length>1){const r=c.filter(m=>wordIn(t,m.rank));if(r.length)c=r}
+  return c.length===1?c[0]:null}
+function importRecall(text){const rows=parseCSV(text);let hi=-1,pc=-1,ac=-1;
+  for(let i=0;i<Math.min(rows.length,10);i++){const h=rows[i].map(x=>x.toLowerCase());const ix=h.map((x,j)=>/phone|cell|mobile|number|contact #|tel/.test(x)?j:-1).filter(j=>j>=0);
+    if(ix.length&&h.some(x=>/name/.test(x))){hi=i;pc=ix[0];ac=ix[1]??-1;break}}
+  let ok=0;const miss=[],seen=new Set();
+  const body=hi>=0?rows.slice(hi+1):rows;
+  for(const r of body){let ph=[],rest;
+    if(hi>=0){ph=[r[pc],ac>=0?r[ac]:""].map(normPh);rest=r.filter((_,j)=>j!==pc&&j!==ac).join(" , ")}
+    else{const line=r.join(" , ");ph=(line.match(PH_RE)||[]).map(normPh);rest=line.replace(PH_RE," ")}
+    if(!ph[0]){continue}
+    const m=matchMarine(rest.replace(/[^A-Za-z ,.'-]/g," "));
+    if(!m){const nm=rest.replace(/[^A-Za-z ,.'-]/g," ").replace(/\s+/g," ").trim().slice(0,28);if(nm)miss.push(nm);continue}
+    m.phone=ph[0];if(ph[1])m.phone2=ph[1];if(!seen.has(m.id)){seen.add(m.id);ok++}}
+  save();return {ok,miss}}
+function recallPool(){return S.roster.filter(m=>m.sec!=="ATT"||S.rc.att)}
+function recallText(){const pool=recallPool();const res=S.rc.res||{};const got=pool.filter(m=>res[m.id]==="ok");
+  const el=S.rc.start?Math.round(((S.rc.end||Date.now())-S.rc.start)/60000):0;
+  const L=["EOOP RECALL "+dtg(new Date(S.rc.start||Date.now())),"CONTACTED: "+got.length+"/"+pool.length+" ("+pct(got.length,pool.length)+"%) IN "+el+" MIN"];
+  const vm=pool.filter(m=>res[m.id]==="vm"),na=pool.filter(m=>res[m.id]==="na"),nt=pool.filter(m=>!res[m.id]);
+  const nm=m=>"- "+(m.sec==="ATT"?"ATT":m.sec)+" "+m.rank+" "+m.name.split(",")[0];
+  if(vm.length){L.push("");L.push("LEFT VOICEMAIL ("+vm.length+")");sorted(vm).forEach(m=>L.push(nm(m)))}
+  if(na.length){L.push("");L.push("NO ANSWER ("+na.length+")");sorted(na).forEach(m=>L.push(nm(m)))}
+  if(nt.length){L.push("");L.push("NOT YET CALLED ("+nt.length+")");sorted(nt).forEach(m=>L.push(nm(m)))}
+  return L.join("\n")}
+function renderRecall(){const pool=recallPool();const withPh=pool.filter(m=>m.phone).length;const rc=S.rc;const res=rc.res||{};
+  let h=banner();
+  const got=pool.filter(m=>res[m.id]==="ok").length;
+  if(rc.open){const el=Math.round((Date.now()-rc.start)/60000);
+    h+=`<div class="mbar"><div class="ct">${got}/${pool.length}<small>contacted · ${el} min</small></div><button class="btn" id="rcClose">Close out</button></div>
+      <label class="tog" style="margin:4px 0 6px"><input type="checkbox" id="rcOnly"${rc.only?" checked":""}> Show not yet contacted only</label>`}
+  else{h+=`<h2>Recall roster</h2><div class="panel"><div><b>${withPh}</b> of ${pool.length} Marines have a phone number.</div>
+      <label class="tog"><input type="checkbox" id="rcAtt"${rc.att?" checked":""}> Include attached Marines</label>
+      <div class="row2"><button class="btn" id="rcStart">Start recall drill</button><button class="btn alt" data-go="data">Load numbers</button></div>
+      <p class="note">Tap <b>Call</b> to dial. In a drill, mark each Marine Reached, Voicemail or No answer; the app times it and builds the report.</p></div>`;
+    if(rc.end) h+=`<h2>Last recall</h2><div class="panel"><textarea id="rcMsg" readonly>${esc(recallText())}</textarea><div class="row2"><a class="btn" id="rcSms" href="${esc(smsHref(recallText()))}">Text it</a><button class="btn alt" id="rcCopy">Copy</button></div></div>`}
+  h+=`<input class="search" id="rq" type="search" placeholder="Find a Marine" value="${esc(rq)}" style="margin-top:10px">`;
+  const groups=SECTIONS.map(s=>s[0]).concat("ATT").map(k=>[k,sorted(pool.filter(m=>m.sec===k))]).filter(g=>g[1].length);
+  for(const [k,ms] of groups){let show=ms.filter(m=>!rq||(m.rank+" "+m.name).toLowerCase().includes(rq));if(rc.open&&rc.only)show=show.filter(m=>res[m.id]!=="ok");if(!show.length)continue;
+    h+=`<div class="mgrp"><h3><span>${k}</span><span class="note">${ms.filter(m=>m.phone).length}/${ms.length} numbers</span></h3>${show.map(m=>{const r=res[m.id];const col=r==="ok"?"--s-onhand":r==="vm"?"--s-duty":r==="na"?"--warn":"--line";
+      return `<div class="rrow" style="--sc:var(${col})"><div class="rtop"><div class="who"><b>${esc(m.rank)}</b> ${esc(m.name)}<div class="ph">${m.phone?fmtPh(m.phone)+(m.phone2?" · alt "+fmtPh(m.phone2):""):"No number"} · ${esc(SHORT[m.status]||m.status)}</div></div>
+        ${m.phone?`<a class="call" href="${telHref(m.phone)}" data-called="${m.id}">Call</a><a class="txt" href="${smsTo(m.phone)}">Text</a>`:`<button class="btn alt" data-addph="${m.id}" style="padding:8px 10px">Add #</button>`}</div>
+        ${editPh===m.id?`<div class="addph"><input type="tel" id="phIn" placeholder="808 555 0100" value="${esc(fmtPh(m.phone||""))}"><button data-saveph="${m.id}">Save</button></div>`:""}
+        ${m.phone2?`<div><a class="txt" style="min-width:0;padding:0 10px;height:32px" href="${telHref(m.phone2)}">Call alt ${fmtPh(m.phone2)}</a></div>`:""}
+        ${rc.open?`<div class="rres">${[["ok","Reached"],["vm","Voicemail"],["na","No answer"]].map(([c,l])=>`<button data-r="${c}" data-rid="${m.id}" aria-pressed="${r===c}">${l}</button>`).join("")}</div>`:""}</div>`}).join("")}</div>`}
+  if(rc.open) h+=`<button class="btn warn" id="rcCancel" style="margin-top:16px;width:100%">${armed==="rccancel"?"Tap again to discard this recall":"Discard recall"}</button>`;
+  $("#main").innerHTML=h}
+let rq="",editPh=null;
 function render(){renderTabs();
-  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());}
+  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());}
 
 /* ---------- CSV import ---------- */
 function parseCSV(text){const rows=[];let row=[],f="",q=false;
@@ -625,13 +710,13 @@ function importCSV(text){
   const own=col("section")>=0&&col("status")>=0;
   const out=[];let n=0;
   for(const r of rows.slice(hi+1)){const rank=(r[col("rank")]||"").toUpperCase();const name=r[col("name")]||"";if(!rank||!name)continue;
-    if(own) out.push({id:"m"+(++n),rank,name,sec:(SECTIONS.some(s=>s[0]===r[col("section")])||r[col("section")]==="ATT")?r[col("section")]:"HQ",parent:col("parent unit")>=0?(r[col("parent unit")]||""):"",duty:col("duty")>=0&&DUTIES.includes(r[col("duty")])?r[col("duty")]:"Full Duty",status:mapStatus(r[col("status")]),detail:r[col("detail")]||"",loc:r[col("location")]||"",edd:r[col("edd")]||"",start:r[col("start")]||"",end:r[col("end")]||""});
+    if(own) out.push({id:"m"+(++n),rank,name,sec:(SECTIONS.some(s=>s[0]===r[col("section")])||r[col("section")]==="ATT")?r[col("section")]:"HQ",parent:col("parent unit")>=0?(r[col("parent unit")]||""):"",duty:col("duty")>=0&&DUTIES.includes(r[col("duty")])?r[col("duty")]:"Full Duty",status:mapStatus(r[col("status")]),detail:r[col("detail")]||"",loc:r[col("location")]||"",edd:r[col("edd")]||"",phone:normPh(r[col("phone")]||""),phone2:normPh(r[col("alt phone")]||""),start:r[col("start")]||"",end:r[col("end")]||""});
     else{const det=r[col("duty status")]||"";out.push({id:"m"+(++n),rank,name,sec:mapSec(r[col("unit")]),status:mapStatus(det),detail:det,loc:r[col("location")]||"",start:fmtD(r[col("start date")]),end:fmtD(r[col("end date")]),edd:fmtD(r[col("edd")]||"")})}}
   if(!out.length)throw new Error("The file had a header but no Marines under it.");
   return {roster:out,own};
 }
 function exportCSV(){const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
-  return ["Rank,Name,Section,Status,Detail,Location,Start,End,Parent Unit,Duty,EDD"].concat(sorted(S.roster).map(m=>[m.rank,m.name,m.sec,m.status,m.detail,m.loc,m.start,m.end,m.parent||"",dutyOf(m),m.edd||""].map(q).join(","))).join("\n")}
+  return ["Rank,Name,Section,Status,Detail,Location,Start,End,Parent Unit,Duty,EDD,Phone,Alt Phone"].concat(sorted(S.roster).map(m=>[m.rank,m.name,m.sec,m.status,m.detail,m.loc,m.start,m.end,m.parent||"",dutyOf(m),m.edd||"",m.phone||"",m.phone2||""].map(q).join(","))).join("\n")}
 
 /* ---------- events ---------- */
 document.addEventListener("click",e=>{
@@ -646,6 +731,14 @@ document.addEventListener("click",e=>{
   if(e.target.id==="wNew"){W=newW("");renderW();window.scrollTo(0,0);return}
   const wo=e.target.closest("[data-wopen]");if(wo){const r=S.w6.find(x=>x.id===wo.dataset.wopen);if(r){W=Object.assign({},r);renderW();window.scrollTo(0,0)}return}
   const wd=e.target.closest("[data-wdel]");if(wd){const id=wd.dataset.wdel;if(armed===id){S.w6=S.w6.filter(r=>r.id!==id);armed=null;save();toast("6W deleted")}else armed=id;renderW();return}
+  if(e.target.id==="rcStart"){S.rc.open=true;S.rc.start=Date.now();S.rc.end=0;S.rc.res={};S.rc.only=false;armed=null;save();renderRecall();window.scrollTo(0,0);return}
+  const rr=e.target.closest("[data-rid]");if(rr){const id=rr.dataset.rid,c=rr.dataset.r;if(S.rc.res[id]===c)delete S.rc.res[id];else S.rc.res[id]=c;save();const y=window.scrollY;renderRecall();window.scrollTo(0,y);return}
+  if(e.target.id==="rcClose"){S.rc.open=false;S.rc.end=Date.now();S.hist=(S.hist||[]).concat({type:"recall",t:S.rc.start}).slice(-60);save();renderRecall();window.scrollTo(0,0);toast("Recall closed");return}
+  if(e.target.id==="rcCancel"){if(armed==="rccancel"){S.rc.open=false;S.rc.res={};S.rc.start=0;armed=null;save();toast("Recall discarded")}else armed="rccancel";renderRecall();return}
+  if(e.target.id==="rcCopy"){try{navigator.clipboard.writeText(recallText()).then(()=>toast("Recall copied"),()=>toast("Copy blocked here. Use Text it."))}catch(err){toast("Copy blocked here.")}return}
+  const ap=e.target.closest("[data-addph]");if(ap){editPh=ap.dataset.addph;const y=window.scrollY;renderRecall();window.scrollTo(0,y);const i=$("#phIn");if(i)i.focus();return}
+  const sp=e.target.closest("[data-saveph]");if(sp){const d=normPh($("#phIn").value);if(!d){toast("Enter a 10-digit number.");return}const m=S.roster.find(x=>x.id===sp.dataset.saveph);if(m){m.phone=d;save()}editPh=null;const y=window.scrollY;renderRecall();window.scrollTo(0,y);toast("Number saved");return}
+  if(e.target.id==="rcPasteGo"){const r=importRecall($("#rcPaste").value);$("#rcOut").textContent=r.ok+" numbers added"+(r.miss.length?" · not matched: "+r.miss.slice(0,8).join("; ")+(r.miss.length>8?" …":""):"");renderTabs();return}
   if(e.target.id==="mStart"){S.mus.open=true;S.mus.seen={};S.mus.only=false;armed=null;save();renderMuster();return}
   const mt=e.target.closest("[data-mtog]");if(mt){const id=mt.dataset.mtog;if(S.mus.seen[id])delete S.mus.seen[id];else S.mus.seen[id]=1;save();const y=window.scrollY;renderMuster();window.scrollTo(0,y);return}
   const ma=e.target.closest("[data-mall]");if(ma){musPool().filter(m=>m.sec===ma.dataset.mall).forEach(m=>S.mus.seen[m.id]=1);save();const y=window.scrollY;renderMuster();window.scrollTo(0,y);return}
@@ -679,6 +772,9 @@ document.addEventListener("change",e=>{
     const {c}=counts();const o=c[m.sec];const r=document.querySelector(".ratio");if(r)r.innerHTML=o["On Hand"]+"/"+o.total+"<small>"+(m.sec==="ATT"?"on hand / attached":"on hand / strength")+"</small>";
     const ch=document.querySelector(".chips");if(ch)ch.innerHTML=STATUSES.filter(s=>o[s]).map(s=>`<span class="chip"><span class="dot" style="background:var(${SVAR[s]})"></span>${SHORT[s]} ${o[s]}</span>`).join("")}
     return}
+  if(e.target.id==="rcAtt"){S.rc.att=e.target.checked;save();renderRecall();return}
+  if(e.target.id==="rcOnly"){S.rc.only=e.target.checked;save();renderRecall();return}
+  if(e.target.id==="rcFile"){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{const r=importRecall(String(rd.result));const o=$("#rcOut");if(o)o.textContent=r.ok+" numbers added"+(r.miss.length?" · not matched: "+r.miss.slice(0,8).join("; ")+(r.miss.length>8?" …":""):"");toast(r.ok+" numbers added")};rd.readAsText(f);return}
   if(e.target.matches("input[data-minc]")){const v=e.target.dataset.minc;S.mus.inc=e.target.checked?Array.from(new Set(S.mus.inc.concat(v))):S.mus.inc.filter(x=>x!==v);save();renderMuster();return}
   if(e.target.id==="mAtt"){S.mus.att=e.target.checked;save();renderMuster();return}
   if(e.target.id==="mOnly"){S.mus.only=e.target.checked;save();renderMuster();return}
@@ -693,12 +789,14 @@ document.addEventListener("change",e=>{
   if(e.target.id==="file"){const f=e.target.files[0];if(!f)return;const rd=new FileReader();
     rd.onload=()=>{try{const {roster,own}=importCSV(String(rd.result));const keep=own?[]:S.roster.filter(m=>m.sec==="ATT"&&S.source!=="sample");
       if(!own&&S.source!=="sample"){const dm={};S.roster.forEach(m=>{if(m.duty&&m.duty!=="Full Duty")dm[m.name.toUpperCase()]=m.duty});roster.forEach(m=>{if(dm[m.name.toUpperCase()])m.duty=dm[m.name.toUpperCase()]})}
+      if(!own){const pm={};S.roster.forEach(m=>{if(m.phone)pm[m.name.toUpperCase()]=[m.phone,m.phone2]});roster.forEach(m=>{const p=pm[m.name.toUpperCase()];if(p){m.phone=p[0];if(p[1])m.phone2=p[1]}})}
       S.roster=roster.concat(keep);S.source=own?"backup":"mol";
       S.loadedAt=new Date().toLocaleString([], {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});save();view="board";render();toast(roster.length+" Marines loaded")}
       catch(err){toast(err.message)}};
     rd.onerror=()=>toast("Couldn't read that file.");rd.readAsText(f);return}
 });
 document.addEventListener("input",e=>{
+  if(e.target.id==="rq"){rq=e.target.value.toLowerCase();const pos=e.target.selectionStart;renderRecall();const q=$("#rq");q.focus();q.setSelectionRange(pos,pos);return}
   if(e.target.matches("[data-wf]")){W[e.target.dataset.wf]=e.target.value;refreshW();return}
   if(e.target.id==="wOther"){W.other=e.target.value;refreshW();return}
   if(e.target.id==="wRep"){S.reporter=e.target.value;save();refreshW();return}
@@ -721,6 +819,7 @@ const dl=Promise.resolve({save:({filename,data})=>new Promise((res,rej)=>{try{co
   const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=filename;document.body.appendChild(a);a.click();a.remove();res({status:"saved"})}catch(e){rej({code:"unavailable"})}})});
 render();
 if("serviceWorker" in navigator&&document.querySelector("link[rel=manifest]")&&(location.protocol==="https:"||location.hostname==="localhost")){navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(()=>{const o=document.getElementById("offStat");if(o&&navigator.serviceWorker.controller)o.textContent="Ready: this app opens and works with no signal. Text reports once you have service."}).catch(()=>{})}
+setInterval(()=>{if(view==="recall"&&S.rc.open){const c=document.querySelector(".mbar .ct small");if(c)c.textContent="contacted · "+Math.round((Date.now()-S.rc.start)/60000)+" min"}},20000);
 setInterval(()=>{const d=$("#dtg");if(d)d.textContent="AS OF "+dtg()},30000);
 </script>
 </body></html>
