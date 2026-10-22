@@ -68,6 +68,8 @@ button{cursor:pointer}
 .banner{margin:12px 0 0;padding:10px 12px;border-radius:8px;background:var(--brass-soft);font-size:13px;display:flex;gap:10px;align-items:center;justify-content:space-between}
 .banner button{border:0;background:var(--olive);color:var(--olive-ink);border-radius:6px;padding:6px 10px;font-weight:600;font-size:13px;white-space:nowrap}
 .note{color:var(--muted);font-size:12.5px}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:10px;transition:border-color .2s,background .2s}.drop.over{border-color:var(--accent,#3b82f6);background:rgba(59,130,246,.08)}
+#rvBox{scroll-margin-top:200px}.rv .addph input{font-size:16px;padding:8px 10px}.rv .addph input:first-child{flex:1.3}.rv .addph button{padding:0 10px}.rv select{font-size:15px}
 
 /* strength tiles */
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
@@ -345,7 +347,7 @@ S.w6=Array.isArray(S.w6)?S.w6:[];
 S.hist=Array.isArray(S.hist)?S.hist:[];
 S.events=Array.isArray(S.events)?S.events:[];
 S.arm=Object.assign({open:false,start:0,st:{},only:false,last:""},S.arm||{});
-S.rcMiss=Array.isArray(S.rcMiss)?S.rcMiss:[];
+S.rcMiss=Array.isArray(S.rcMiss)?S.rcMiss:[];if(S.rcRev&&!Array.isArray(S.rcRev.rows))S.rcRev=null;
 S.rc=Object.assign({open:false,start:0,end:0,res:{},att:true,only:false},S.rc||{});
 S.mus=Object.assign({open:false,seen:{},inc:["On Hand"],att:true,only:false,last:null},S.mus||{});
 S.pt=Object.assign({event:"Unit PT",when:"",inc:["On Hand"],att:true},S.pt||{});
@@ -496,10 +498,10 @@ function renderData(){
     <button class="btn warn" id="reset">${armed==="reset"?"Tap again to clear the roster":"Clear roster and show sample"}</button>
   </div>
   <h2>Recall roster (phone numbers)</h2><div class="panel">
-    <label for="rcFile">Load recall roster (.csv)</label><input type="file" id="rcFile" accept=".csv,.txt,.xlsx,.xls,.vcf,text/csv,text/plain,text/vcard">
+    <label for="rcFile">Load recall roster (Excel, CSV, PDF, Word, .vcf)</label><input type="file" id="rcFile" accept=".csv,.txt,.xlsx,.xls,.vcf,.pdf,.docx,text/csv,text/plain,text/vcard,application/pdf">
     <label for="rcPaste">Or paste lines like: CPL SMITH, JOHN A. 808-555-0100</label>
     <textarea id="rcPaste" style="min-height:90px" placeholder="LCPL DOE, JANE 808 555 0101"></textarea>
-    <button class="btn" id="rcPasteGo">Add numbers</button><div class="note" id="rcOut"></div>
+    <button class="btn" id="rcPasteGo">Read numbers</button><div class="note" id="rcOut"></div>
     <p class="note">Numbers attach to Marines already in the app, matched by name. They stay on this phone only and carry over when you load a new MOL list.</p></div>
   <h2>Apply section updates</h2><div class="panel">
     <label for="syncIn">Paste one or more section leader texts</label>
@@ -731,24 +733,6 @@ function matchMarine(t){t=" "+t.toUpperCase()+" ";let c=S.roster.filter(m=>wordI
   if(c.length>1){const f=c.filter(m=>first3(m)&&new RegExp("(^|[^A-Z])"+first3(m)).test(t));if(f.length)c=f}
   if(c.length>1){const r=c.filter(m=>wordIn(t,m.rank));if(r.length)c=r}
   return c.length===1?c[0]:null}
-function importRecall(text){const rows=parseCSV(text);let hi=-1,cols=[];
-  const bad=/edipi|dod|ssn|\bid\b|emerg|nok|next of kin|spouse|parent|zip|unit|uic|room|plate/i;
-  const score=x=>/cell|mobile/.test(x)?4:/personal/.test(x)?3:/phone|tel/.test(x)?2:/number|contact/.test(x)?1:0;
-  for(let i=0;i<Math.min(rows.length,15);i++){const h=rows[i].map(x=>x.toLowerCase());
-    const ph=h.map((x,j)=>[j,bad.test(x)?0:score(x)]).filter(a=>a[1]>0).sort((a,b)=>b[1]-a[1]).map(a=>a[0]);
-    if(ph.length&&h.some(x=>/name|last|first|marine|member/.test(x))){hi=i;cols=ph.slice(0,2);break}}
-  let ok=0;const miss=[],seen=new Set();
-  const skip=hi>=0?rows[hi].map((x,j)=>bad.test(x)?j:-1).filter(j=>j>=0):[];
-  const body=hi>=0?rows.slice(hi+1):rows;
-  for(const r of body){let ph=[],rest;
-    if(hi>=0){ph=cols.map(j=>normPh(r[j]||"")).filter(Boolean);rest=r.filter((_,j)=>!cols.includes(j)&&!skip.includes(j)).join(" , ")}
-    else{const line=r.join(" , ");ph=(line.match(PH_RE)||[]).map(normPh).filter(Boolean);rest=line.replace(PH_RE," ")}
-    if(!ph.length)continue;
-    const clean=rest.replace(/[^A-Za-z ,.'-]/g," ");
-    const m=matchMarine(clean);
-    if(!m){const nm=clean.replace(/\s+/g," ").replace(/^[ ,]+|[ ,]+$/g,"").slice(0,40);if(nm)miss.push({t:nm,ph});continue}
-    m.phone=ph[0];if(ph[1]&&ph[1]!==ph[0])m.phone2=ph[1];if(!seen.has(m.id)){seen.add(m.id);ok++}}
-  S.rcMiss=miss;save();return {ok,miss}}
 function vcfToCSV(t){const out=["Name,Phone,Alt Phone"];const q=v=>'"'+String(v||"").replace(/"/g,'""')+'"';
   for(const card of String(t).split(/BEGIN:VCARD/i).slice(1)){const L=card.replace(/\r?\n[ \t]/g,"").split(/\r?\n/);
     let fn="",n="";const tel=[];for(const l of L){const k=l.split(":")[0].toUpperCase();const v=l.slice(l.indexOf(":")+1);
@@ -759,10 +743,60 @@ function vcfToCSV(t){const out=["Name,Phone,Alt Phone"];const q=v=>'"'+String(v|
 let xlsxP=null;
 function loadXLSX(){if(window.XLSX)return Promise.resolve(window.XLSX);if(xlsxP)return xlsxP;
   xlsxP=new Promise((res,rej)=>{const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";s.onload=()=>res(window.XLSX);s.onerror=()=>{xlsxP=null;rej(new Error("Couldn't load the Excel reader. Connect to signal once, or save the file as CSV."))};document.head.appendChild(s)});return xlsxP}
+function parseRecall(text,opt){opt=opt||{};const rows=parseCSV(text);let hi=-1,cols=[];
+  const bad=/edipi|dod|ssn|\bid\b|emerg|nok|next of kin|spouse|parent|zip|unit|uic|room|plate/i;
+  const score=x=>/cell|mobile/.test(x)?4:/personal/.test(x)?3:/phone|tel/.test(x)?2:/number|contact/.test(x)?1:0;
+  if(!opt.free)for(let i=0;i<Math.min(rows.length,15);i++){const h=rows[i].map(x=>x.toLowerCase());
+    const ph=h.map((x,j)=>[j,bad.test(x)?0:score(x)]).filter(a=>a[1]>0).sort((a,b)=>b[1]-a[1]).map(a=>a[0]);
+    if(ph.length&&h.some(x=>/name|last|first|marine|member/.test(x))){hi=i;cols=ph.slice(0,2);break}}
+  const out=[];const skip=hi>=0?rows[hi].map((x,j)=>bad.test(x)?j:-1).filter(j=>j>=0):[];
+  const body=hi>=0?rows.slice(hi+1):rows;
+  for(const r of body){let ph=[],rest;
+    if(hi>=0){ph=cols.map(j=>normPh(r[j]||"")).filter(Boolean);rest=r.filter((_,j)=>!cols.includes(j)&&!skip.includes(j)).join(" , ")}
+    else{const line=r.join(" , ");ph=(line.match(PH_RE)||[]).map(normPh).filter(Boolean);rest=line.replace(PH_RE," ")}
+    if(!ph.length)continue;
+    const clean=rest.replace(/[^A-Za-z ,.'-]/g," ");const m=matchMarine(clean);
+    const nm=clean.replace(/\s+/g," ").replace(/\s+,/g,",").replace(/,+/g,",").replace(/^[ ,.]+|[ ,.]+$/g,"").slice(0,48);
+    out.push({t:nm||"(no name)",id:m?m.id:"",p1:ph[0],p2:ph[1]&&ph[1]!==ph[0]?ph[1]:"",on:true})}
+  return out}
+function importRecall(text,src,opt){const rows=parseRecall(text,opt);S.rcRev={src:src||"Pasted text",rows};S.rcMiss=[];save();
+  return {n:rows.length,ok:rows.filter(r=>r.id).length}}
+function rcResult(r){return r.n?`Read <b>${r.n}</b> numbers · <b>${r.ok}</b> matched to names. Check them below, fix anything, then tap <b>Attach</b>.`:`No phone numbers found in that file. You can type them in below.`}
+function loadLib(url,glob){return new Promise((res,rej)=>{if(window[glob])return res(window[glob]);const s=document.createElement("script");s.src=url;s.onload=()=>res(window[glob]);s.onerror=()=>rej(new Error("Couldn't load the reader for this file. Connect to signal once and try again, or save it as Excel/CSV."));document.head.appendChild(s)})}
+function pdfText(buf){const B="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+  return loadLib(B+"pdf.min.js","pdfjsLib").then(P=>{P.GlobalWorkerOptions.workerSrc=B+"pdf.worker.min.js";return P.getDocument({data:buf}).promise}).then(async doc=>{const lines=[];
+    for(let p=1;p<=doc.numPages;p++){const tc=await(await doc.getPage(p)).getTextContent();const rows={};
+      for(const it of tc.items){if(!it.str||!it.str.trim())continue;const y=Math.round(it.transform[5]/3);(rows[y]=rows[y]||[]).push([it.transform[4],it.str])}
+      Object.keys(rows).map(Number).sort((a,b)=>b-a).forEach(y=>lines.push(rows[y].sort((a,b)=>a[0]-b[0]).map(a=>a[1].replace(/,/g," ")).join(" , ")))}
+    return lines.join("\n")})}
+function docxText(buf){return loadLib("https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js","mammoth").then(M=>M.convertToHtml({arrayBuffer:buf})).then(r=>{
+  const d=new DOMParser().parseFromString(r.value,"text/html");const q=v=>'"'+String(v).replace(/\s+/g," ").trim().replace(/"/g,'""')+'"';const out=[];
+  d.body.querySelectorAll("tr").forEach(tr=>out.push([...tr.children].map(c=>q(c.textContent)).join(",")));
+  d.body.querySelectorAll("p,li").forEach(p=>{if(!p.closest("table"))out.push(q(p.textContent))});return out.join("\n")})}
 function readRecallFile(f){const name=(f.name||"").toLowerCase();
-  if(/\.(xlsx|xls)$/.test(name))return loadXLSX().then(X=>f.arrayBuffer().then(b=>{const wb=X.read(b,{type:"array"});return wb.SheetNames.map(n=>X.utils.sheet_to_csv(wb.Sheets[n])).join("\n")}));
-  return f.text().then(t=>/\.vcf$/.test(name)||/BEGIN:VCARD/i.test(t.slice(0,200))?vcfToCSV(t):t)}
-function rcResult(r){return `<b>${r.ok}</b> numbers attached`+(r.miss.length?` · <b>${r.miss.length}</b> need a name below`:" · every row matched")}
+  if(/\.(xlsx|xls)$/.test(name))return loadXLSX().then(X=>f.arrayBuffer().then(b=>{const wb=X.read(b,{type:"array"});return {t:wb.SheetNames.map(n=>X.utils.sheet_to_csv(wb.Sheets[n])).join("\n")}}));
+  if(/\.pdf$/.test(name)||f.type==="application/pdf")return f.arrayBuffer().then(pdfText).then(t=>({t,free:true}));
+  if(/\.docx$/.test(name))return f.arrayBuffer().then(docxText).then(t=>({t}));
+  if(/\.(doc|pages|jpe?g|png|heic|gif)$/.test(name)||/^image\//.test(f.type))return Promise.reject(new Error("That file type can't be read here. Save it as Excel, CSV, PDF or Word (.docx), or type the numbers in below."));
+  return f.text().then(t=>/\.vcf$/.test(name)||/BEGIN:VCARD/i.test(t.slice(0,200))?{t:vcfToCSV(t)}:{t})}
+function rcLoadFile(f,outId){const o=$(outId);if(o)o.textContent="Reading "+f.name+"…";
+  return readRecallFile(f).then(x=>{const r=importRecall(x.t,f.name,{free:x.free});if(view!=="recall"){view="recall";armed=null;render()}else renderRecall();
+    const o2=$("#rcOutR");if(o2)o2.innerHTML=rcResult(r);const b=$("#rvBox");if(b)b.scrollIntoView({behavior:"smooth",block:"start"});toast(r.n?"Review "+r.n+" numbers":"No numbers found")})
+  .catch(err=>{const o2=$(outId);if(o2)o2.textContent=err.message||"Couldn't read that file."})}
+function rvOpts(sel){return `<option value="">— Not on roster / skip —</option>`+SECTIONS.map(s=>s[0]).concat("ATT").map(k=>{const ms=sorted(S.roster.filter(m=>m.sec===k));return ms.length?`<optgroup label="${k}">${ms.map(m=>`<option value="${m.id}"${m.id===sel?" selected":""}>${esc(m.rank+" "+m.name)}${m.phone?" ✓":""}</option>`).join("")}</optgroup>`:""}).join("")}
+function rvHTML(){const R=S.rcRev;if(!R)return"";const rows=R.rows;const ok=rows.filter(r=>r.id).length;const cnt={};rows.forEach(r=>{if(r.id&&r.on)cnt[r.id]=(cnt[r.id]||0)+1});
+  return `<div id="rvBox"><h2>Review numbers</h2><div class="panel"><div><b>${esc(R.src)}</b> · ${rows.length} rows · ${ok} matched${rows.length-ok?` · <span style="color:var(--warn)">${rows.length-ok} need a name</span>`:""}</div>
+    <p class="note">Check each row. Change the name, fix or type the number, untick anything you don't want. Nothing is saved until you tap Attach.</p>
+    <div class="alist">${rows.map((r,i)=>`<div class="rrow rv" style="--sc:${r.id?"var(--s-onhand)":"var(--warn)"}">
+      <label class="tog" style="margin:0"><input type="checkbox" data-rvon="${i}"${r.on?" checked":""}> <b>${esc(r.t)}</b></label>
+      ${r.id&&r.on&&cnt[r.id]>1?`<div class="note" style="color:var(--warn)">Same name is picked on another row. The last one checked wins.</div>`:""}<select class="wsel" id="rvm${i}" data-rvf="id" data-rvi="${i}" aria-label="Marine for row ${i+1}">${rvOpts(r.id)}</select>
+      <div class="addph"><input type="tel" inputmode="tel" id="rvp${i}" data-rvf="p1" data-rvi="${i}" placeholder="Phone" value="${esc(dashPh(r.p1))}" aria-label="Phone"><input type="tel" inputmode="tel" id="rva${i}" data-rvf="p2" data-rvi="${i}" placeholder="Alt #" value="${esc(dashPh(r.p2))}" aria-label="Alt phone"><button type="button" data-rvdel="${i}" style="background:transparent;color:var(--muted);border:1px solid var(--line)" aria-label="Remove row">✕</button></div></div>`).join("")}</div>
+    <div class="row2" style="margin-top:8px"><button class="btn alt" id="rvAdd">+ Add a row</button><button class="btn alt" id="rvCancel">Cancel</button></div>
+    <button class="btn" id="rvSave" style="width:100%;margin-top:6px">Attach checked numbers</button></div></div>`}
+function dashPh(d){return d&&d.length===10?d.slice(0,3)+"-"+d.slice(3,6)+"-"+d.slice(6):d||""}
+function rvSync(){const R=S.rcRev;if(!R)return;R.rows.forEach((r,i)=>{const m=$("#rvm"+i),p=$("#rvp"+i),a=$("#rva"+i),c=document.querySelector(`[data-rvon="${i}"]`);
+  if(m)r.id=m.value;if(p)r.p1=digits(p.value).length?(normPh(p.value)||p.value.trim()):"";if(a)r.p2=digits(a.value).length?(normPh(a.value)||a.value.trim()):"";if(c)r.on=c.checked});save()}
+function rvRedraw(){const y=window.scrollY;renderRecall();window.scrollTo(0,y)}
 function missHTML(){const miss=S.rcMiss||[];if(!miss.length)return"";
   const opts=SECTIONS.map(s=>s[0]).concat("ATT").map(k=>{const ms=sorted(S.roster.filter(m=>m.sec===k));return ms.length?`<optgroup label="${k}">${ms.map(m=>`<option value="${m.id}">${esc(m.rank+" "+m.name)}${m.phone?" ✓":""}</option>`).join("")}</optgroup>`:""}).join("");
   return `<h2>Match these numbers</h2><div class="alist">${miss.map((x,i)=>`<div class="rrow"><div class="rtop"><div class="who"><b>${esc(x.t||"(no name)")}</b><div class="ph">${x.ph.map(fmtPh).join(" · ")}</div></div><button class="btn alt" data-mxskip="${i}" style="padding:8px 10px">Skip</button></div>
@@ -789,10 +823,10 @@ function renderRecall(){const pool=recallPool();const withPh=pool.filter(m=>m.ph
       <div class="row2"><button class="btn" id="rcStart">Start recall drill</button><button class="btn alt" type="button" onclick="document.getElementById('rcFileR').scrollIntoView({behavior:'smooth',block:'center'})">Load numbers</button></div>
       <p class="note">Tap <b>Call</b> to dial. In a drill, mark each Marine Reached, Voicemail or No answer; the app times it and builds the report.</p></div>
       <h2>Load phone numbers</h2><div class="panel">
-        <label for="rcFileR">Recall roster file: Excel, CSV, or contacts (.vcf)</label><input type="file" id="rcFileR" accept=".csv,.txt,.xlsx,.xls,.vcf,text/csv,text/plain,text/vcard">
+        <div id="rcDrop" class="drop"><label for="rcFileR">Drop or pick the recall roster: Excel, CSV, PDF, Word (.docx) or contacts (.vcf)</label><input type="file" id="rcFileR" accept=".csv,.txt,.xlsx,.xls,.vcf,.pdf,.docx,text/csv,text/plain,text/vcard,application/pdf"></div>
         <label for="rcPasteR">Or paste names and numbers</label><textarea id="rcPasteR" style="min-height:80px" placeholder="CPL SMITH, JOHN A. 808-555-0100&#10;Doe Jane (808) 555-0101"></textarea>
-        <button class="btn" id="rcPasteRGo">Attach numbers</button><div class="note" id="rcOutR"></div>
-        <p class="note">Each number is attached to the matching name on your roster. Columns for EDIPI, emergency contact or next of kin are ignored.</p></div>`+missHTML();
+        <div class="row2"><button class="btn" id="rcPasteRGo">Read numbers</button><button class="btn alt" id="rvType">Type them in</button></div><div class="note" id="rcOutR"></div>
+        <p class="note">The app reads the file and matches each number to a name. You review and edit everything before it is saved. Columns for EDIPI, emergency contact or next of kin are ignored.</p></div>`+rvHTML()+missHTML();
     if(rc.end) h+=`<h2>Last recall</h2><div class="panel"><textarea id="rcMsg" readonly>${esc(recallText())}</textarea><div class="row2"><a class="btn" id="rcSms" href="${esc(smsHref(recallText()))}">Text it</a><button class="btn alt" id="rcCopy">Copy</button></div></div>`}
   h+=`<input class="search" id="rq" type="search" placeholder="Find a Marine" value="${esc(rq)}" style="margin-top:10px">`;
   const groups=SECTIONS.map(s=>s[0]).concat("ATT").map(k=>[k,sorted(pool.filter(m=>m.sec===k))]).filter(g=>g[1].length);
@@ -923,6 +957,9 @@ document.addEventListener("click",e=>{
   if(e.target.closest(".mrow,[data-r],[data-ws],[data-evtog]"))buzz();
 },true);
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetCtx)closeSheet()});
+["dragenter","dragover"].forEach(t=>document.addEventListener(t,e=>{if(view!=="recall"&&view!=="data")return;if(![...(e.dataTransfer&&e.dataTransfer.types||[])].includes("Files"))return;e.preventDefault();const d=$("#rcDrop");if(d)d.classList.add("over")}));
+document.addEventListener("dragleave",e=>{const d=$("#rcDrop");if(d&&!e.relatedTarget)d.classList.remove("over")});
+document.addEventListener("drop",e=>{if(view!=="recall"&&view!=="data")return;const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;e.preventDefault();const d=$("#rcDrop");if(d)d.classList.remove("over");rcLoadFile(f,view==="recall"?"#rcOutR":"#rcOut")});
 function render(){renderTabs();
   if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
 
@@ -993,10 +1030,20 @@ document.addEventListener("click",e=>{
   if(e.target.id==="rcCopy"){try{navigator.clipboard.writeText(recallText()).then(()=>toast("Recall copied"),()=>toast("Copy blocked here. Use Text it."))}catch(err){toast("Copy blocked here.")}return}
   const ap=e.target.closest("[data-addph]");if(ap){editPh=ap.dataset.addph;const y=window.scrollY;renderRecall();window.scrollTo(0,y);const i=$("#phIn");if(i)i.focus();return}
   const sp=e.target.closest("[data-saveph]");if(sp){const d=normPh($("#phIn").value);if(!d){toast("Enter a 10-digit number.");return}const m=S.roster.find(x=>x.id===sp.dataset.saveph);if(m){m.phone=d;save()}editPh=null;const y=window.scrollY;renderRecall();window.scrollTo(0,y);toast("Number saved");return}
-  if(e.target.id==="rcPasteRGo"){const r=importRecall($("#rcPasteR").value);renderRecall();const o=$("#rcOutR");if(o)o.innerHTML=rcResult(r);renderTabs();toast(r.ok+" numbers attached");return}
+  if(e.target.id==="rcPasteRGo"){const r=importRecall($("#rcPasteR").value,"Pasted text");renderRecall();const o=$("#rcOutR");if(o)o.innerHTML=rcResult(r);const bx=$("#rvBox");if(bx)bx.scrollIntoView({behavior:"smooth",block:"start"});return}
+  if(e.target.id==="rvAdd"){rvSync();S.rcRev.rows.push({t:"Typed in",id:"",p1:"",p2:"",on:true});save();rvRedraw();const i=S.rcRev.rows.length-1;const s=$("#rvm"+i);if(s){s.scrollIntoView({block:"center"});s.focus()}return}
+  if(e.target.id==="rvType"){const R0=S.rcRev;if(R0)rvSync();const have=new Set(R0?R0.rows.map(r=>r.id):[]);const add=sorted(recallPool().filter(m=>!m.phone&&!have.has(m.id))).map(m=>({t:m.rank+" "+m.name,id:m.id,p1:"",p2:"",on:true}));
+    S.rcRev=R0||{src:"Typed in",rows:[]};S.rcRev.rows.push(...add);if(!S.rcRev.rows.length)S.rcRev.rows.push({t:"Typed in",id:"",p1:"",p2:"",on:true});save();rvRedraw();const b=$("#rvBox");if(b)b.scrollIntoView({behavior:"smooth",block:"start"});toast(add.length?add.length+" Marines without a number":"Everyone has a number");return}
+  if(e.target.id==="rvCancel"){S.rcRev=null;save();rvRedraw();return}
+  const rvd=e.target.closest("[data-rvdel]");if(rvd){rvSync();S.rcRev.rows.splice(+rvd.dataset.rvdel,1);save();rvRedraw();return}
+  if(e.target.id==="rvSave"){rvSync();let n=0,bad=0,noName=0;const done=new Set();
+    for(const r of S.rcRev.rows){if(!r.on)continue;const p1=normPh(r.p1),p2=normPh(r.p2);if(!r.id){if(p1)noName++;continue}if(!p1){bad++;continue}
+      const m=S.roster.find(x=>x.id===r.id);if(!m)continue;m.phone=p1;if(p2&&p2!==p1)m.phone2=p2;if(!done.has(m.id)){done.add(m.id);n++}}
+    if(bad){toast(bad+" checked row"+(bad>1?"s have":" has")+" no valid 10-digit number. Fix or untick "+(bad>1?"them":"it")+".");return}
+    S.rcRev=null;save();rvRedraw();renderTabs();const o=$("#rcOutR");if(o)o.innerHTML=`<b>${n}</b> numbers attached`+(noName?` · ${noName} skipped (no name picked)`:"");toast(n+" numbers attached");return}
   const mxs=e.target.closest("[data-mxsave]");if(mxs){const i=+mxs.dataset.mxsave;const id=$("#mx"+i).value;if(!id){toast("Pick a name first.");return}const m=S.roster.find(x=>x.id===id);const it=(S.rcMiss||[])[i];if(m&&it){m.phone=it.ph[0];if(it.ph[1])m.phone2=it.ph[1];S.rcMiss.splice(i,1);save();const y=window.scrollY;renderRecall();window.scrollTo(0,y);toast("Attached to "+m.rank+" "+m.name.split(",")[0])}return}
   const mxk=e.target.closest("[data-mxskip]");if(mxk){(S.rcMiss||[]).splice(+mxk.dataset.mxskip,1);save();const y=window.scrollY;renderRecall();window.scrollTo(0,y);return}
-  if(e.target.id==="rcPasteGo"){const r=importRecall($("#rcPaste").value);$("#rcOut").innerHTML=rcResult(r)+(r.miss.length?" (open RECALL to match them)":"");renderTabs();return}
+  if(e.target.id==="rcPasteGo"){const r=importRecall($("#rcPaste").value,"Pasted text");view="recall";armed=null;render();const o=$("#rcOutR");if(o)o.innerHTML=rcResult(r);const bx=$("#rvBox");if(bx)bx.scrollIntoView({behavior:"smooth",block:"start"});return}
   if(e.target.id==="mStart"){S.mus.open=true;S.mus.seen={};S.mus.only=false;armed=null;save();renderMuster();return}
   const mt=e.target.closest("[data-mtog]");if(mt){const id=mt.dataset.mtog;if(S.mus.seen[id])delete S.mus.seen[id];else S.mus.seen[id]=1;save();const y=window.scrollY;renderMuster();window.scrollTo(0,y);return}
   const ma=e.target.closest("[data-mall]");if(ma){musPool().filter(m=>m.sec===ma.dataset.mall).forEach(m=>S.mus.seen[m.id]=1);save();const y=window.scrollY;renderMuster();window.scrollTo(0,y);return}
@@ -1035,8 +1082,8 @@ document.addEventListener("change",e=>{
   if(e.target.id==="wFile"){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const r=importWeapons(String(rd.result));renderArmory();const o=$("#wOut");if(o)o.textContent=r.ok+" weapons assigned"+(r.miss.length?" · not matched: "+r.miss.slice(0,8).join("; "):"");toast(r.ok+" weapons assigned")}catch(err){const o=$("#wOut");if(o)o.textContent=err.message}};rd.readAsText(f);return}
   if(e.target.id==="rcAtt"){S.rc.att=e.target.checked;save();renderRecall();return}
   if(e.target.id==="rcOnly"){S.rc.only=e.target.checked;save();renderRecall();return}
-  if(e.target.id==="rcFileR"||e.target.id==="rcFile"){const f=e.target.files[0];if(!f)return;const outId=e.target.id==="rcFileR"?"#rcOutR":"#rcOut";
-    readRecallFile(f).then(t=>{const r=importRecall(t);if(view==="recall")renderRecall();const o=$(outId);if(o)o.innerHTML=rcResult(r);renderTabs();toast(r.ok+" numbers attached")}).catch(err=>{const o=$(outId);if(o)o.textContent=err.message||"Couldn't read that file."});return}
+  if(e.target.id==="rcFileR"||e.target.id==="rcFile"){const f=e.target.files[0];if(!f)return;rcLoadFile(f,e.target.id==="rcFileR"?"#rcOutR":"#rcOut");e.target.value="";return}
+  if(e.target.closest&&e.target.closest("#rvBox")&&e.target.matches("select,input[type=checkbox]")){rvSync();if(e.target.tagName==="SELECT")rvRedraw();return}
   if(e.target.id==="rcFile_old"){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{const r=importRecall(String(rd.result));const o=$("#rcOut");if(o)o.textContent=r.ok+" numbers added"+(r.miss.length?" · not matched: "+r.miss.slice(0,8).join("; ")+(r.miss.length>8?" …":""):"");toast(r.ok+" numbers added")};rd.readAsText(f);return}
   if(e.target.matches("input[data-minc]")){const v=e.target.dataset.minc;S.mus.inc=e.target.checked?Array.from(new Set(S.mus.inc.concat(v))):S.mus.inc.filter(x=>x!==v);save();renderMuster();return}
   if(e.target.id==="mAtt"){S.mus.att=e.target.checked;save();renderMuster();return}
