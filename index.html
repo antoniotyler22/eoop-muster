@@ -177,6 +177,8 @@ a.txt{background:var(--surface-2);color:var(--ink);border:1px solid var(--line);
 .rres button[data-r="ok"][aria-pressed="true"]{background:var(--s-onhand)}
 .rres button[data-r="vm"][aria-pressed="true"]{background:var(--s-duty)}
 .rres button[data-r="na"][aria-pressed="true"]{background:var(--warn)}
+.rvlist{display:flex;flex-direction:column;gap:8px}.rvsel{width:100%;padding:9px 8px;border:1px solid var(--line);border-radius:7px;background:var(--surface-2);color:var(--ink);font-size:16px}
+.btn[disabled]{opacity:.45}
 .addph{display:flex;gap:6px}.addph input{flex:1;min-width:0;padding:8px;border:1px solid var(--line);border-radius:7px;background:var(--surface-2)}
 .addph button{border:0;background:var(--olive);color:var(--olive-ink);border-radius:7px;padding:0 12px;font-weight:700}
 .m .tel{color:var(--s-onhand);font-size:12px;font-weight:700;text-decoration:none;padding:2px 0 2px 12px}
@@ -495,11 +497,11 @@ function renderData(){
     <button class="btn warn" id="reset">${armed==="reset"?"Tap again to clear the roster":"Clear roster and show sample"}</button>
   </div>
   <h2>Recall roster (phone numbers)</h2><div class="panel">
-    <label for="rcFile">Load recall roster (.csv)</label><input type="file" id="rcFile" accept=".csv,text/csv,text/plain">
-    <label for="rcPaste">Or paste lines like: CPL SMITH, JOHN A. 808-555-0100</label>
+    <label for="rcFile">Load recall roster (Excel, CSV, Word or PDF)</label><input type="file" id="rcFile" accept=".xlsx,.xls,.csv,.txt,.docx,.pdf,text/csv,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+    <label for="rcPaste">Or paste rows from the roster (copied cells work): CPL SMITH, JOHN A. 808-555-0100</label>
     <textarea id="rcPaste" style="min-height:90px" placeholder="LCPL DOE, JANE 808 555 0101"></textarea>
-    <button class="btn" id="rcPasteGo">Add numbers</button><div class="note" id="rcOut"></div>
-    <p class="note">Numbers attach to Marines already in the app, matched by name. They stay on this phone only and carry over when you load a new MOL list.</p></div>
+    <button class="btn" id="rcPasteGo">Read numbers</button><div class="note" id="rcOut"></div>
+    <p class="note">The app reads every name and number, matches each number to a Marine already loaded, and lets you check the matches before saving. Numbers stay on this phone only and carry over when you load a new MOL list. Excel, Word and PDF need signal the first time.</p></div>${recallReview()}
   <h2>Apply section updates</h2><div class="panel">
     <label for="syncIn">Paste one or more section leader texts</label>
     <textarea id="syncIn" style="min-height:110px" placeholder="EOOP HE SECTION UPDATE ...&#10;#EOOP1|HE|34|..."></textarea>
@@ -730,19 +732,69 @@ function matchMarine(t){t=" "+t.toUpperCase()+" ";let c=S.roster.filter(m=>wordI
   if(c.length>1){const f=c.filter(m=>first3(m)&&new RegExp("(^|[^A-Z])"+first3(m)).test(t));if(f.length)c=f}
   if(c.length>1){const r=c.filter(m=>wordIn(t,m.rank));if(r.length)c=r}
   return c.length===1?c[0]:null}
-function importRecall(text){const rows=parseCSV(text);let hi=-1,pc=-1,ac=-1;
-  for(let i=0;i<Math.min(rows.length,10);i++){const h=rows[i].map(x=>x.toLowerCase());const ix=h.map((x,j)=>/phone|cell|mobile|number|contact #|tel/.test(x)?j:-1).filter(j=>j>=0);
-    if(ix.length&&h.some(x=>/name/.test(x))){hi=i;pc=ix[0];ac=ix[1]??-1;break}}
-  let ok=0;const miss=[],seen=new Set();
-  const body=hi>=0?rows.slice(hi+1):rows;
-  for(const r of body){let ph=[],rest;
-    if(hi>=0){ph=[r[pc],ac>=0?r[ac]:""].map(normPh);rest=r.filter((_,j)=>j!==pc&&j!==ac).join(" , ")}
-    else{const line=r.join(" , ");ph=(line.match(PH_RE)||[]).map(normPh);rest=line.replace(PH_RE," ")}
-    if(!ph[0]){continue}
-    const m=matchMarine(rest.replace(/[^A-Za-z ,.'-]/g," "));
-    if(!m){const nm=rest.replace(/[^A-Za-z ,.'-]/g," ").replace(/\s+/g," ").trim().slice(0,28);if(nm)miss.push(nm);continue}
-    m.phone=ph[0];if(ph[1])m.phone2=ph[1];if(!seen.has(m.id)){seen.add(m.id);ok++}}
-  save();return {ok,miss}}
+/* Recall file reader: CSV, TXT, Excel, Word or PDF -> rows -> {name, phones} -> matched Marine, reviewed before saving */
+const LIBS={xlsx:"https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",jszip:"https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js",
+  pdf:"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",pdfw:"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"};
+function loadLib(k,g){if(window[g])return Promise.resolve(window[g]);return new Promise((res,rej)=>{const s=document.createElement("script");s.src=LIBS[k];
+  s.onload=()=>window[g]?res(window[g]):rej(new Error("Couldn't open the file reader."));s.onerror=()=>rej(new Error("Needs signal the first time you load this file type."));document.head.appendChild(s)})}
+function textRows(t){t=String(t||"").replace(/^﻿/,"");if(/\t/.test(t))return t.split(/\r?\n/).map(l=>l.split("\t").map(x=>x.trim()));return parseCSV(t)}
+async function fileRows(f){const n=(f.name||"").toLowerCase();
+  if(/\.(xlsx|xlsm|xls|ods)$/.test(n)){const X=await loadLib("xlsx","XLSX");const wb=X.read(await f.arrayBuffer(),{type:"array"});let rows=[];
+    wb.SheetNames.forEach(s=>{rows=rows.concat(X.utils.sheet_to_json(wb.Sheets[s],{header:1,raw:false,defval:""}).map(r=>r.map(x=>String(x??"").trim())))});return {rows}}
+  if(/\.docx$/.test(n)){const Z=await loadLib("jszip","JSZip");const z=await Z.loadAsync(await f.arrayBuffer());const xf=z.file("word/document.xml");if(!xf)throw new Error("That Word file looks empty.");
+    const doc=new DOMParser().parseFromString(await xf.async("string"),"application/xml");const W="http://schemas.openxmlformats.org/wordprocessingml/2006/main";const tx=el=>Array.from(el.getElementsByTagNameNS(W,"t")).map(t=>t.textContent).join("").trim();
+    const trs=Array.from(doc.getElementsByTagNameNS(W,"tr"));if(trs.length)return {rows:trs.map(tr=>Array.from(tr.children).filter(c=>c.localName==="tc").map(tx))};
+    return {rows:Array.from(doc.getElementsByTagNameNS(W,"p")).map(tx).filter(Boolean).map(t=>[t]),free:true}}
+  if(/\.pdf$/.test(n)){const P=await loadLib("pdf","pdfjsLib");P.GlobalWorkerOptions.workerSrc=LIBS.pdfw;const pdf=await P.getDocument({data:await f.arrayBuffer()}).promise;const rows=[];
+    for(let p=1;p<=pdf.numPages;p++){const items=(await (await pdf.getPage(p)).getTextContent()).items.filter(it=>it.str&&it.str.trim()).map(it=>({x:it.transform[4],y:it.transform[5],s:it.str.trim()})).sort((a,b)=>b.y-a.y||a.x-b.x);
+      let cur=[],cy=null;for(const it of items){if(cy!==null&&Math.abs(it.y-cy)>3){rows.push(cur.sort((a,b)=>a.x-b.x).map(i=>i.s));cur=[]}if(!cur.length)cy=it.y;cur.push(it)}if(cur.length)rows.push(cur.sort((a,b)=>a.x-b.x).map(i=>i.s))}
+    if(!rows.length)throw new Error("No text in that PDF (it may be a scan). Export it to Excel or CSV.");return {rows,free:true}}
+  if(/\.(doc|pages|numbers|key|png|jpe?g|heic)$/.test(n))throw new Error("Can't read that file type. Save it as Excel (.xlsx), CSV, Word (.docx) or PDF.");
+  return {rows:textRows(await f.text())}}
+/* a real US number: area code and exchange can't start with 0 or 1, so a 10-digit EDIPI is never taken as a phone */
+function validPh(p){const d=normPh(p);return d&&/^[2-9]\d{2}[2-9]/.test(d)?d:""}
+const NOT_HIM=/emerg|nok|kin\b|next of|spouse|wife|husband|parent|father|mother|guardian|supervisor|poc/;
+function phScore(h){h=(h||"").toLowerCase();if(!h||NOT_HIM.test(h)||/edipi|dod ?id|ssn|\bid\b|zip|address|room|bldg|dsn|fax|serial|weapon|rack|unit|ruc/.test(h))return 0;
+  let s=/cell|mobile|personal|primary/.test(h)?5:/phone|tel\b|telephone|contact ?(#|no)|ph ?#|^ph$/.test(h)?4:/home/.test(h)?3:/number|#|no\.?$/.test(h)?1:0;
+  if(s&&/work|office|desk|secondary|alt/.test(h))s=2;return s}
+function nameCol(h){h=(h||"").toLowerCase();return !NOT_HIM.test(h)&&/name|^last|^first|^middle|^mi$|^m\.?i\.?$|^marine|^member/.test(h)&&!/user|file|unit|section|platoon|plt|company|nick/.test(h)}
+function parseRecall(rows,free){rows=rows.map(r=>(r||[]).map(x=>String(x??"").trim())).filter(r=>r.some(Boolean));const recs=[];
+  let hi=-1;if(!free)for(let i=0;i<Math.min(rows.length,15);i++){const h=rows[i];if(h.some(nameCol)&&(h.some(x=>phScore(x)>0)||h.some(x=>/^(rank|grade)/i.test(x)))){hi=i;break}}
+  if(hi>=0){const H=rows[hi].map(x=>x.toLowerCase());const nc=H.map((x,j)=>nameCol(x)?j:-1).filter(j=>j>=0);
+    const rc=H.findIndex(x=>/^(rank|grade|pay ?grade|rnk)/.test(x));const lc=nc.find(j=>/last/.test(H[j])),fc=nc.find(j=>/first/.test(H[j])),mc=nc.find(j=>/middle|^mi$|^m\.?i\.?$/.test(H[j]));
+    const pcs=H.map((x,j)=>[j,phScore(x)]).filter(a=>a[1]>0).sort((a,b)=>b[1]-a[1]).map(a=>a[0]);const skip=new Set(H.map((x,j)=>NOT_HIM.test(x)||/edipi|dod|ssn|\bid\b/.test(x)?j:-1).filter(j=>j>=0));
+    for(const r of rows.slice(hi+1)){if(r.join("").toLowerCase()===rows[hi].join("").toLowerCase())continue;
+      const nm=lc!==undefined&&fc!==undefined?(r[lc]+", "+r[fc]+(mc!==undefined&&r[mc]?" "+r[mc]:"")):nc.map(j=>r[j]).filter(Boolean).join(" ");
+      let ph=[];pcs.forEach(j=>{(String(r[j]||"").match(PH_RE)||[r[j]]).forEach(x=>{const d=validPh(x);if(d&&!ph.includes(d))ph.push(d)})});
+      if(!ph.length)r.forEach((c,j)=>{if(nc.includes(j)||skip.has(j))return;(String(c).match(PH_RE)||[]).forEach(x=>{const d=validPh(x);if(d&&!ph.includes(d))ph.push(d)})});
+      const rank=rc>=0?(r[rc]||"").toUpperCase():"";if(nm.replace(/[^A-Za-z]/g,"")&&ph.length)recs.push({nm:nm.replace(/\s+/g," ").trim(),rank,ph})}}
+  else for(const r of rows){const line=r.join("  ");const ph=[];(line.match(PH_RE)||[]).forEach(x=>{const d=validPh(x);if(d&&!ph.includes(d))ph.push(d)});if(!ph.length)continue;
+    const nm=line.replace(PH_RE," ").replace(/[^A-Za-z ,.'-]/g," ").replace(/\s*,(\s*,)+/g,",").replace(/\s+/g," ").replace(/^[ ,]+|[ ,]+$/g,"");if(nm.replace(/[^A-Za-z]/g,"").length>1)recs.push({nm,rank:"",ph})}
+  return recs}
+function bestMatch(nm,rank){const t=" "+(rank+" "+nm).toUpperCase().replace(/[^A-Z' -]/g," ")+" ";const sq=t.replace(/[^A-Z]/g,"");
+  let c=S.roster.filter(m=>wordIn(t,lastOf(m)));
+  if(!c.length)c=S.roster.filter(m=>{const l=lastOf(m).replace(/[^A-Z]/g,"");return l.length>=4&&sq.includes(l)});
+  if(c.length<2)return c[0]||null;
+  const sc=c.map(m=>{const fn=((m.name.split(",")[1]||"").trim().split(/\s+/)[0]||"").toUpperCase().replace(/[^A-Z]/g,"");let s=lastOf(m).length/100;
+    if(fn&&wordIn(t,fn))s+=4;else if(first3(m)&&new RegExp("(^|[^A-Z])"+first3(m)).test(t))s+=2;else if(fn&&new RegExp("(^|[^A-Z])"+fn[0]+"([^A-Z]|$)").test(t))s+=1;
+    if(m.rank&&wordIn(t,m.rank.toUpperCase()))s+=1;return [m,s]}).sort((a,b)=>b[1]-a[1]);
+  return sc[0][1]-sc[1][1]>=0.5?sc[0][0]:null}
+let rcPend=null;
+function showReview(){const t=document.getElementById("rvTop");if(t)t.scrollIntoView({behavior:"smooth",block:"start"})}
+function stageRecall(recs,src){if(!recs.length){rcPend=null;return 0}rcPend={src,items:recs.map(r=>{const m=bestMatch(r.nm,r.rank);return {txt:(r.rank?r.rank+" ":"")+r.nm,ph:r.ph.slice(0,2),mid:m?m.id:"",auto:!!m}})};return recs.length}
+function recallReview(){if(!rcPend)return"";const it=rcPend.items;const cnt={};it.forEach(x=>{if(x.mid)cnt[x.mid]=(cnt[x.mid]||0)+1});
+  const got=it.filter(x=>x.mid).length;
+  const opts=SECTIONS.map(s=>s[0]).concat("ATT").map(k=>{const ms=sorted(S.roster.filter(m=>m.sec===k));return ms.length?`<optgroup label="${k}">${ms.map(m=>`<option value="${m.id}">${esc(m.rank+" "+m.name)}</option>`).join("")}</optgroup>`:""}).join("");
+  return `<h2 id="rvTop">Check numbers before saving</h2><div class="panel"><div><b>${got}</b> matched · <b style="color:${got<it.length?"var(--warn)":"inherit"}">${it.length-got}</b> need a pick · ${esc(rcPend.src)}</div>
+    <p class="note">Each number is matched to a Marine by name. Fix any wrong match or pick one for the red rows, then save.</p>
+    <div class="rvlist">${it.map((x,i)=>{const m=x.mid?S.roster.find(y=>y.id===x.mid):null;const dup=x.mid&&cnt[x.mid]>1;
+      const note=dup?`<div class="ph" style="color:var(--warn)">Picked on another row too</div>`:m&&m.phone&&m.phone!==x.ph[0]?`<div class="ph">Replaces ${fmtPh(m.phone)}</div>`:"";
+      return `<div class="rrow" style="--sc:var(${!x.mid||dup?"--warn":"--s-onhand"})"><div class="who"><b>${esc(x.txt)}</b><div class="ph">${fmtPh(x.ph[0])}${x.ph[1]?" · alt "+fmtPh(x.ph[1]):""}</div>${note}</div>
+        <select class="rvsel" data-rvi="${i}" aria-label="Marine for ${esc(x.txt)}"><option value="">Skip this number</option>${opts.replace(`value="${x.mid}"`,`value="${x.mid}" selected`)}</select></div>`}).join("")}</div>
+    <div class="row2"><button class="btn" id="rvApply"${got?"":" disabled"}>Save ${got} number${got===1?"":"s"}</button><button class="btn alt" id="rvCancel">Cancel</button></div></div>`}
+function applyRecall(){if(!rcPend)return 0;const done=new Set();rcPend.items.forEach(x=>{const m=x.mid&&S.roster.find(y=>y.id===x.mid);if(!m)return;m.phone=x.ph[0];if(x.ph[1])m.phone2=x.ph[1];else delete m.phone2;done.add(m.id)});
+  rcPend=null;save();return done.size}
+function importRecall(text){return stageRecall(parseRecall(textRows(text)),"pasted text")}
 function recallPool(){return S.roster.filter(m=>m.sec!=="ATT"||S.rc.att)}
 function recallText(){const pool=recallPool();const res=S.rc.res||{};const got=pool.filter(m=>res[m.id]==="ok");
   const el=S.rc.start?Math.round(((S.rc.end||Date.now())-S.rc.start)/60000):0;
@@ -963,7 +1015,9 @@ document.addEventListener("click",e=>{
   if(e.target.id==="rcCopy"){try{navigator.clipboard.writeText(recallText()).then(()=>toast("Recall copied"),()=>toast("Copy blocked here. Use Text it."))}catch(err){toast("Copy blocked here.")}return}
   const ap=e.target.closest("[data-addph]");if(ap){editPh=ap.dataset.addph;const y=window.scrollY;renderRecall();window.scrollTo(0,y);const i=$("#phIn");if(i)i.focus();return}
   const sp=e.target.closest("[data-saveph]");if(sp){const d=normPh($("#phIn").value);if(!d){toast("Enter a 10-digit number.");return}const m=S.roster.find(x=>x.id===sp.dataset.saveph);if(m){m.phone=d;save()}editPh=null;const y=window.scrollY;renderRecall();window.scrollTo(0,y);toast("Number saved");return}
-  if(e.target.id==="rcPasteGo"){const r=importRecall($("#rcPaste").value);$("#rcOut").textContent=r.ok+" numbers added"+(r.miss.length?" · not matched: "+r.miss.slice(0,8).join("; ")+(r.miss.length>8?" …":""):"");renderTabs();return}
+  if(e.target.id==="rcPasteGo"){const n=importRecall($("#rcPaste").value);if(!n){$("#rcOut").textContent="No phone numbers found in that text.";return}renderData();showReview();return}
+  if(e.target.id==="rvApply"){const n=applyRecall();render();toast(n+" number"+(n===1?"":"s")+" saved");return}
+  if(e.target.id==="rvCancel"){rcPend=null;const y=window.scrollY;renderData();window.scrollTo(0,y);return}
   if(e.target.id==="mStart"){S.mus.open=true;S.mus.seen={};S.mus.only=false;armed=null;save();renderMuster();return}
   const mt=e.target.closest("[data-mtog]");if(mt){const id=mt.dataset.mtog;if(S.mus.seen[id])delete S.mus.seen[id];else S.mus.seen[id]=1;save();const y=window.scrollY;renderMuster();window.scrollTo(0,y);return}
   const ma=e.target.closest("[data-mall]");if(ma){musPool().filter(m=>m.sec===ma.dataset.mall).forEach(m=>S.mus.seen[m.id]=1);save();const y=window.scrollY;renderMuster();window.scrollTo(0,y);return}
@@ -1002,7 +1056,10 @@ document.addEventListener("change",e=>{
   if(e.target.id==="wFile"){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const r=importWeapons(String(rd.result));renderArmory();const o=$("#wOut");if(o)o.textContent=r.ok+" weapons assigned"+(r.miss.length?" · not matched: "+r.miss.slice(0,8).join("; "):"");toast(r.ok+" weapons assigned")}catch(err){const o=$("#wOut");if(o)o.textContent=err.message}};rd.readAsText(f);return}
   if(e.target.id==="rcAtt"){S.rc.att=e.target.checked;save();renderRecall();return}
   if(e.target.id==="rcOnly"){S.rc.only=e.target.checked;save();renderRecall();return}
-  if(e.target.id==="rcFile"){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{const r=importRecall(String(rd.result));const o=$("#rcOut");if(o)o.textContent=r.ok+" numbers added"+(r.miss.length?" · not matched: "+r.miss.slice(0,8).join("; ")+(r.miss.length>8?" …":""):"");toast(r.ok+" numbers added")};rd.readAsText(f);return}
+  if(e.target.id==="rcFile"){const f=e.target.files[0];if(!f)return;const o=$("#rcOut");if(o)o.textContent="Reading "+f.name+"…";
+    fileRows(f).then(({rows,free})=>{const n=stageRecall(parseRecall(rows,free),f.name);if(!n){const o2=$("#rcOut");if(o2)o2.textContent="No names with phone numbers found in "+f.name+".";return}renderData();showReview()})
+      .catch(err=>{const o2=$("#rcOut");if(o2)o2.textContent=(err&&err.message)||"Couldn't read that file.";toast("Couldn't read that file")});return}
+  const rv=e.target.closest("[data-rvi]");if(rv&&rcPend){rcPend.items[+rv.dataset.rvi].mid=rv.value;const y=window.scrollY;renderData();window.scrollTo(0,y);return}
   if(e.target.matches("input[data-minc]")){const v=e.target.dataset.minc;S.mus.inc=e.target.checked?Array.from(new Set(S.mus.inc.concat(v))):S.mus.inc.filter(x=>x!==v);save();renderMuster();return}
   if(e.target.id==="mAtt"){S.mus.att=e.target.checked;save();renderMuster();return}
   if(e.target.id==="mOnly"){S.mus.only=e.target.checked;save();renderMuster();return}
