@@ -49,11 +49,12 @@ button{cursor:pointer}
   padding:10px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
 .top-in{max-width:560px;margin:0 auto}
 .brand{display:flex;align-items:center;gap:10px;justify-content:space-between}
-.brand h1{font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:.03em;margin:0;line-height:1;white-space:nowrap}
-.brand .dtg{font-family:var(--display);font-weight:600;font-size:14px;letter-spacing:.06em;opacity:.85}
-.acts{display:flex;gap:6px}
+.brand h1{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:.02em;margin:0;line-height:1;white-space:nowrap}
+.brand>div:first-child{min-width:0;overflow:hidden}
+.brand .dtg{font-family:var(--display);font-weight:600;font-size:12.5px;letter-spacing:.04em;opacity:.85;white-space:nowrap}
+.acts{display:flex;gap:4px;flex-shrink:0}
 .acts button{background:transparent;border:1px solid rgba(255,255,255,.45);color:var(--olive-ink);border-radius:6px;
-  padding:5px 8px;font-size:12.5px;font-weight:600;letter-spacing:.03em}
+  padding:5px 6px;font-size:11.5px;font-weight:700;letter-spacing:.02em}
 .acts button[aria-pressed="true"]{background:var(--brass);border-color:var(--brass);color:#1d2219}
 .tabs{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-top:10px}
 .tabs button{background:transparent;border:0;color:var(--olive-ink);padding:8px 0 9px;border-bottom:3px solid transparent;
@@ -132,6 +133,9 @@ tr.key td{font-family:var(--display);font-size:17px;font-weight:800;background:v
 .grp h3{font-family:var(--display);font-size:16px;letter-spacing:.05em;margin:0 0 6px;display:flex;justify-content:space-between}
 .names{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14px;line-height:1.7}
 .names div{border-bottom:1px solid var(--line)}.names div:last-child{border-bottom:0}
+.wta{min-height:74px;width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);font:inherit;resize:vertical}
+.wsel{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);font:inherit}
+.m .w6{border:0;background:transparent;color:var(--brass);font-size:12px;font-weight:700;padding:2px 0 2px 12px}
 .m select{max-width:44vw;padding:8px 6px;border-radius:7px;border:1px solid var(--line);background:var(--surface-2);font-weight:600;font-size:14px}
 .m .rm{border:0;background:transparent;color:var(--muted);font-size:12px;padding:2px 0;text-align:left}
 .m .rm.arm{color:var(--warn);font-weight:700}
@@ -163,6 +167,7 @@ ul.plain{margin:0;padding-left:18px;font-size:13.5px}
   <div class="brand">
     <div><h1>EOOP MUSTER</h1><div class="dtg" id="dtg"></div></div>
     <div class="acts">
+      <button id="b6W" aria-pressed="false">6W</button>
       <button id="bPT" aria-pressed="false">PT</button>
       <button id="bText" aria-pressed="false">TEXT</button>
       <button id="bData" aria-pressed="false">DATA</button>
@@ -203,13 +208,14 @@ function sampleRoster(){
 let S={roster:sampleRoster(),source:"sample",loadedAt:"",recipients:"",names:false,pt:{event:"Unit PT",when:"",inc:["On Hand"],att:true}};
 let storageOK=true;
 try{const raw=localStorage.getItem(KEY); if(raw){const v=JSON.parse(raw); if(v&&Array.isArray(v.roster)) S=Object.assign(S,v);} }catch(e){storageOK=false}
+S.w6=Array.isArray(S.w6)?S.w6:[];
 S.pt=Object.assign({event:"Unit PT",when:"",inc:["On Hand"],att:true},S.pt||{});
 const dutyOf=m=>DUTIES.includes(m.duty)?m.duty:"Full Duty";
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));storageOK=true}catch(e){storageOK=false}}
 
 let view="board", armed=null, query="";
 const h0=(location.hash||"").slice(1).toLowerCase();
-if(["board","hq","he","ce","ord","ut","att","pt","text","data"].includes(h0)) view=h0;
+if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data"].includes(h0)) view=h0;
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -241,7 +247,7 @@ function renderTabs(){
   const {c,T}=counts();
   const items=[["board","BOARD",T["On Hand"]+"/"+T.total]].concat(SECTIONS.map(([k])=>[k.toLowerCase(),k,c[k]["On Hand"]+"/"+c[k].total])).concat([["att","ATT","+"+c.ATT.total]]);
   $("#tabs").innerHTML=items.map(([id,lbl,sub])=>`<button role="tab" data-v="${id}" aria-selected="${view===id}">${lbl}<small>${sub}</small></button>`).join("");
-  $("#bPT").setAttribute("aria-pressed",view==="pt");$("#bText").setAttribute("aria-pressed",view==="text");$("#bData").setAttribute("aria-pressed",view==="data");
+  $("#b6W").setAttribute("aria-pressed",view==="w6");$("#bPT").setAttribute("aria-pressed",view==="pt");$("#bText").setAttribute("aria-pressed",view==="text");$("#bData").setAttribute("aria-pressed",view==="data");
   $("#dtg").textContent="AS OF "+dtg();
 }
 function banner(){
@@ -282,7 +288,7 @@ function renderSection(code){
   h+=`<div class="list">${list.map(m=>{
     const det=[m.parent?("From "+m.parent):"",m.detail,m.end?("thru "+m.end):""].filter(Boolean).join(" · ");
     return `<div class="m" style="--sc:var(${SVAR[m.status]})"><div class="who"><div><b>${esc(m.rank)}</b><span class="nm">${esc(m.name)}</span>${dutyOf(m)==="Light Duty"?'<span class="tag ld">LD</span>':dutyOf(m)==="LIMDU"?'<span class="tag lim">LIMDU</span>':""}</div>
-      ${det?`<div class="det">${esc(det)}</div>`:""}<button class="rm${armed===m.id?" arm":""}" data-rm="${m.id}">${armed===m.id?"Tap again to remove":"Remove"}</button></div><div class="pick">${statusSelect(m.id,m.status)}${dutySelect(m.id,dutyOf(m))}</div></div>`}).join("")}</div>`;
+      ${det?`<div class="det">${esc(det)}</div>`:""}<button class="rm${armed===m.id?" arm":""}" data-rm="${m.id}">${armed===m.id?"Tap again to remove":"Remove"}</button><button class="w6" data-w6="${m.id}">6W</button></div><div class="pick">${statusSelect(m.id,m.status)}${dutySelect(m.id,dutyOf(m))}</div></div>`}).join("")}</div>`;
   h+=`<form class="addbox" id="addf"><h3>${isAtt?"Add an attached Marine":"Add a Marine to "+code}</h3>
     <select id="aRank" aria-label="Rank">${RANKS.map(r=>`<option${r==="LCPL"?" selected":""}>${r}</option>`).join("")}</select>
     <input id="aName" placeholder="LAST, FIRST M." autocomplete="off" aria-label="Name" required>
@@ -385,8 +391,55 @@ function renderPT(){
   h+=`<p class="note" style="margin-top:10px">Available = selected statuses + Full Duty. Set Light Duty or LIMDU on each Marine in the section tabs.</p>`;
   $("#main").innerHTML=h;
 }
+
+const W_TYPES=["Liberty incident","Injury","Vehicle accident","UA / missed movement","Medical","Family emergency","Other"];
+const W_FIELDS=[["what","WHAT","What happened. Facts only, in order."],["where","WHERE","Location: building, base, city, grid"],["why","WHY","Cause or circumstances, if known"],["how","HOW","How it happened / how it was discovered"],["act","ACTIONS TAKEN","Actions taken, who was notified (SNCOIC, OIC, CO, OOD, PMO), current status"]];
+let W=null;
+function newW(id){const now=new Date();const p=n=>String(n).padStart(2,"0");
+  return {id:"w"+Date.now(),mid:id||"",other:"",type:"",kind:"INITIAL",when:now.getFullYear()+"-"+p(now.getMonth()+1)+"-"+p(now.getDate())+"T"+p(now.getHours())+":"+p(now.getMinutes()),what:"",where:"",why:"",how:"",act:"",created:""}}
+function wWho(w){const m=S.roster.find(x=>x.id===w.mid);let s=m?(m.rank+" "+m.name+" / "+(m.sec==="ATT"?"ATTACHED"+(m.parent?" ("+m.parent+")":""):m.sec)+", EOOP"):"";
+  if(w.other.trim()) s+=(s?"; ":"")+w.other.trim().toUpperCase();return s||"(select a Marine)"}
+function wText(w){const d=w.when?dtg(new Date(w.when)):"";const L=[];
+  L.push("6W REPORT ("+w.kind+")"+(w.type?" - "+w.type.toUpperCase():""));
+  L.push("DTG: "+dtg());
+  L.push("WHO: "+wWho(w));
+  L.push("WHAT: "+(w.what.trim()||"-"));
+  L.push("WHEN: "+(d||"-"));
+  L.push("WHERE: "+(w.where.trim()||"-"));
+  L.push("WHY: "+(w.why.trim()||"UNK"));
+  L.push("HOW: "+(w.how.trim()||"UNK"));
+  L.push("ACTIONS TAKEN: "+(w.act.trim()||"-"));
+  if(S.reporter) L.push("REPORTED BY: "+S.reporter.toUpperCase());
+  return L.join("\n")}
+function renderW(){
+  if(!W) W=newW("");
+  const opts=SECTIONS.map(s=>s[0]).concat("ATT").map(k=>{const ms=sorted(S.roster.filter(m=>m.sec===k));if(!ms.length)return"";
+    return `<optgroup label="${k}">${ms.map(m=>`<option value="${m.id}"${m.id===W.mid?" selected":""}>${esc(m.rank+" "+m.name)}</option>`).join("")}</optgroup>`}).join("");
+  const m=S.roster.find(x=>x.id===W.mid);
+  let h=banner();
+  h+=`<h2>6W report</h2><div class="panel">
+    <div class="evts">${["INITIAL","UPDATE","FINAL"].map(k=>`<button data-wkind="${k}" aria-pressed="${W.kind===k}">${k[0]+k.slice(1).toLowerCase()}</button>`).join("")}</div>
+    <label for="wMar">WHO · Marine</label>
+    <select id="wMar" class="wsel"><option value="">Select a Marine…</option>${opts}</select>
+    ${m?`<div class="note">${esc(m.rank+" "+m.name)} · ${m.sec==="ATT"?"Attached":m.sec} · ${esc(m.status)} · ${esc(dutyOf(m))}</div>`:""}
+    <input type="text" id="wOther" value="${esc(W.other)}" placeholder="Others involved (optional)">
+    <label>Type</label>
+    <div class="evts">${W_TYPES.map(t=>`<button data-wtype="${t}" aria-pressed="${W.type===t}">${t}</button>`).join("")}</div>
+    <label for="wWhen">WHEN</label><input type="datetime-local" id="wWhen" value="${esc(W.when)}" class="wsel">
+    ${W_FIELDS.map(([k,l,ph])=>`<label for="w_${k}">${l}</label><textarea class="wta" id="w_${k}" data-wf="${k}" placeholder="${ph}">${esc(W[k])}</textarea>`).join("")}
+    <label for="wRep">Reported by</label><input type="text" id="wRep" value="${esc(S.reporter||"")}" placeholder="Rank Name, billet">
+  </div>
+  <h2>Preview</h2><div class="panel"><textarea id="wMsg" readonly>${esc(wText(W))}</textarea>
+    <div class="row2"><a class="btn" id="wSms" href="${esc(smsHref(wText(W)))}">Text it</a><button class="btn alt" id="wCopy">Copy</button></div>
+    <div class="row2"><button class="btn alt" id="wSave">Save to log</button><button class="btn alt" id="wNew">New report</button></div>
+    <p class="note">Texts go to the numbers saved on the TEXT screen. Check Messages before assuming it sent. Send incident details only over channels your command approves.</p></div>`;
+  const log=(S.w6||[]).slice().reverse();
+  h+=`<h2>Saved 6Ws</h2>`+(log.length?`<div class="list">${log.map(r=>{const mm=S.roster.find(x=>x.id===r.mid);return `<div class="m" style="--sc:var(--brass)"><div class="who"><div><b>${r.kind}</b><span class="nm">${esc(mm?mm.rank+" "+mm.name:(r.other||"Unknown"))}</span></div><div class="det">${esc((r.type||"6W")+" · "+(r.when?dtg(new Date(r.when)):""))}</div><button class="rm${armed===r.id?" arm":""}" data-wdel="${r.id}">${armed===r.id?"Tap again to delete":"Delete"}</button></div><button class="btn alt" data-wopen="${r.id}">Open</button></div>`}).join("")}</div>`:`<p class="note">No saved reports on this phone yet.</p>`);
+  $("#main").innerHTML=h;
+}
+function refreshW(){const t=wText(W);const a=$("#wMsg");if(a)a.value=t;const s=$("#wSms");if(s)s.href=smsHref(t)}
 function render(){renderTabs();
-  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());}
+  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());}
 
 /* ---------- CSV import ---------- */
 function parseCSV(text){const rows=[];let row=[],f="",q=false;
@@ -423,6 +476,15 @@ function exportCSV(){const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
 document.addEventListener("click",e=>{
   const go=e.target.closest("[data-v],[data-go]");
   if(go){view=go.dataset.v||go.dataset.go;armed=null;query="";render();window.scrollTo(0,0);return}
+  if(e.target.closest("#b6W")){view=view==="w6"?"board":"w6";armed=null;render();window.scrollTo(0,0);return}
+  const w6b=e.target.closest("[data-w6]");if(w6b){W=newW(w6b.dataset.w6);view="w6";armed=null;render();window.scrollTo(0,0);return}
+  const wk=e.target.closest("[data-wkind]");if(wk){W.kind=wk.dataset.wkind;renderW();return}
+  const wt=e.target.closest("[data-wtype]");if(wt){W.type=W.type===wt.dataset.wtype?"":wt.dataset.wtype;document.querySelectorAll("[data-wtype]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.wtype===W.type));refreshW();return}
+  if(e.target.id==="wCopy"){const t=wText(W);try{navigator.clipboard.writeText(t).then(()=>toast("6W copied"),()=>toast("Copy blocked here. Use Text it."))}catch(err){toast("Copy blocked here. Use Text it.")}return}
+  if(e.target.id==="wSave"){if(!W.mid&&!W.other.trim()){toast("Select a Marine first.");return}const i=S.w6.findIndex(r=>r.id===W.id);const rec=Object.assign({},W,{created:W.created||new Date().toISOString()});if(i>=0)S.w6[i]=rec;else S.w6.push(rec);save();renderW();toast("6W saved");return}
+  if(e.target.id==="wNew"){W=newW("");renderW();window.scrollTo(0,0);return}
+  const wo=e.target.closest("[data-wopen]");if(wo){const r=S.w6.find(x=>x.id===wo.dataset.wopen);if(r){W=Object.assign({},r);renderW();window.scrollTo(0,0)}return}
+  const wd=e.target.closest("[data-wdel]");if(wd){const id=wd.dataset.wdel;if(armed===id){S.w6=S.w6.filter(r=>r.id!==id);armed=null;save();toast("6W deleted")}else armed=id;renderW();return}
   if(e.target.closest("#bPT")){view=view==="pt"?"board":"pt";armed=null;render();window.scrollTo(0,0);return}
   const ev=e.target.closest("[data-evt]");if(ev){S.pt.event=ev.dataset.evt;save();renderPT();return}
   if(e.target.id==="ptCopy"){const t=ptText();try{navigator.clipboard.writeText(t).then(()=>toast("Roster copied"),()=>toast("Copy blocked here. Use Text list."))}catch(err){toast("Copy blocked here. Use Text list.")}return}
@@ -445,6 +507,8 @@ document.addEventListener("change",e=>{
     const {c}=counts();const o=c[m.sec];const r=document.querySelector(".ratio");if(r)r.innerHTML=o["On Hand"]+"/"+o.total+"<small>"+(m.sec==="ATT"?"on hand / attached":"on hand / strength")+"</small>";
     const ch=document.querySelector(".chips");if(ch)ch.innerHTML=STATUSES.filter(s=>o[s]).map(s=>`<span class="chip"><span class="dot" style="background:var(${SVAR[s]})"></span>${SHORT[s]} ${o[s]}</span>`).join("")}
     return}
+  if(e.target.id==="wMar"){W.mid=e.target.value;renderW();return}
+  if(e.target.id==="wWhen"){W.when=e.target.value;refreshW();return}
   const ds=e.target.closest("select[data-duty]");
   if(ds){const m=S.roster.find(x=>x.id===ds.dataset.duty);if(m){m.duty=ds.value;save();render()}return}
   if(e.target.id==="ptAtt"){S.pt.att=e.target.checked;save();renderPT();return}
@@ -459,6 +523,10 @@ document.addEventListener("change",e=>{
     rd.onerror=()=>toast("Couldn't read that file.");rd.readAsText(f);return}
 });
 document.addEventListener("input",e=>{
+  if(e.target.matches("[data-wf]")){W[e.target.dataset.wf]=e.target.value;refreshW();return}
+  if(e.target.id==="wOther"){W.other=e.target.value;refreshW();return}
+  if(e.target.id==="wRep"){S.reporter=e.target.value;save();refreshW();return}
+  if(e.target.id==="wWhen"){W.when=e.target.value;refreshW();return}
   if(e.target.id==="ptEvt"||e.target.id==="ptWhen"){S.pt[e.target.id==="ptEvt"?"event":"when"]=e.target.value;save();const a=$("#ptSms");if(a)a.href=smsHref(ptText());document.querySelectorAll("[data-evt]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.evt===S.pt.event));return}
   if(e.target.id==="rcp"){S.recipients=e.target.value;save();const a=$("#sms");if(a)a.href=smsHref($("#msg").value);return}
   if(e.target.id==="q"){query=e.target.value.toLowerCase();const pos=e.target.selectionStart;renderSection(view.toUpperCase());const q=$("#q");q.focus();q.setSelectionRange(pos,pos);return}
