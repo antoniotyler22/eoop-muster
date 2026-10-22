@@ -179,6 +179,22 @@ a.txt{background:var(--surface-2);color:var(--ink);border:1px solid var(--line);
 .addph{display:flex;gap:6px}.addph input{flex:1;min-width:0;padding:8px;border:1px solid var(--line);border-radius:7px;background:var(--surface-2)}
 .addph button{border:0;background:var(--olive);color:var(--olive-ink);border-radius:7px;padding:0 12px;font-weight:700}
 .m .tel{color:var(--s-onhand);font-size:12px;font-weight:700;text-decoration:none;padding:2px 0 2px 12px}
+.evrow{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%;text-align:left}
+.evrow .p{font-family:var(--display);font-weight:800;font-size:20px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.evrow .p small{font-size:11px;font-family:var(--body);color:var(--muted);font-weight:600;margin-left:3px}
+.wrow{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--sc,var(--line));border-radius:8px;padding:8px 10px}
+.wrow .rk{font-family:var(--display);font-weight:800;font-size:20px;min-width:44px;text-align:center;font-variant-numeric:tabular-nums}
+.wrow .wi{flex:1;min-width:0}
+.wrow .wi .s{font-size:12.5px;color:var(--muted)}
+.wst{display:grid;grid-template-columns:1fr;gap:5px;width:98px;flex-shrink:0}
+.wst button{border:1px solid var(--line);background:var(--surface-2);border-radius:6px;padding:8px 4px;font-size:12.5px;font-weight:700}
+.wst button[aria-pressed="true"]{color:#fff;border-color:transparent}
+.wst button[data-ws="in"][aria-pressed="true"]{background:var(--s-onhand)}
+.wst button[data-ws="out"][aria-pressed="true"]{background:var(--s-aob)}
+.wedit{display:grid;grid-template-columns:1fr 70px 80px;gap:6px;margin-top:6px}
+.wedit select,.wedit input{padding:8px 6px;border:1px solid var(--line);border-radius:7px;background:var(--surface-2);min-width:0}
+.wedit .full{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.chiprow{display:flex;flex-wrap:wrap;gap:6px}
 .m select{max-width:44vw;padding:8px 6px;border-radius:7px;border:1px solid var(--line);background:var(--surface-2);font-weight:600;font-size:14px}
 .m .rm{border:0;background:transparent;color:var(--muted);font-size:12px;padding:2px 0;text-align:left}
 .m .rm.arm{color:var(--warn);font-weight:700}
@@ -253,6 +269,8 @@ let storageOK=true;
 try{const raw=localStorage.getItem(KEY); if(raw){const v=JSON.parse(raw); if(v&&Array.isArray(v.roster)) S=Object.assign(S,v);} }catch(e){storageOK=false}
 S.w6=Array.isArray(S.w6)?S.w6:[];
 S.hist=Array.isArray(S.hist)?S.hist:[];
+S.events=Array.isArray(S.events)?S.events:[];
+S.arm=Object.assign({open:false,start:0,st:{},only:false,last:""},S.arm||{});
 S.rc=Object.assign({open:false,start:0,end:0,res:{},att:true,only:false},S.rc||{});
 S.mus=Object.assign({open:false,seen:{},inc:["On Hand"],att:true,only:false,last:null},S.mus||{});
 S.pt=Object.assign({event:"Unit PT",when:"",inc:["On Hand"],att:true},S.pt||{});
@@ -261,7 +279,7 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(S));storageOK=true}c
 
 let view="board", armed=null, query="";
 const h0=(location.hash||"").slice(1).toLowerCase();
-if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall"].includes(h0)) view=h0;
+if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory"].includes(h0)) view=h0;
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -314,7 +332,9 @@ function renderBoard(){
     ${(()=>{const al=alerts();const M=S.mus;const pool=M.open?musPool():[];const sn=M.open?pool.filter(m=>M.seen[m.id]).length:0;
       return `<div class="bigbtns"><button class="bigbtn${M.open?" live":""}" data-go="muster"><b>MUSTER</b><span>${M.open?"In progress · "+sn+"/"+pool.length:M.last?"Last "+dtg(new Date(M.last.t)).slice(0,7)+" · "+M.last.present+"/"+M.last.expected:"Start formation muster"}</span></button>
       <button class="bigbtn${al.over.length?" hot":""}" data-go="alerts"><b>ALERTS</b><span>${al.over.length?`<span class="w">${al.over.length} overdue</span> · `:""}${al.ret.length} returning · ${al.dep.length} departing</span></button>
-      <button class="bigbtn${S.rc.open?" live":""}" data-go="recall"><b>RECALL</b><span>${S.rc.open?"In progress · "+recallPool().filter(m=>(S.rc.res||{})[m.id]==="ok").length+"/"+recallPool().length:S.roster.filter(m=>m.phone).length+" numbers loaded"}</span></button></div>`})()}
+      <button class="bigbtn${S.rc.open?" live":""}" data-go="recall"><b>RECALL</b><span>${S.rc.open?"In progress · "+recallPool().filter(m=>(S.rc.res||{})[m.id]==="ok").length+"/"+recallPool().length:S.roster.filter(m=>m.phone).length+" numbers loaded"}</span></button>
+      <button class="bigbtn" data-go="events"><b>EVENTS</b><span>${S.events.length?S.events.length+(S.events.length===1?" event · ":" events · ")+S.events.reduce((a,e)=>a+evReq(e).filter(m=>!evDone(e,m)).length,0)+" owe":"Attendance"}</span></button>
+      <button class="bigbtn${S.arm.open?" live":""}" data-go="armory"><b>ARMORY</b><span>${S.arm.open?"Muster in progress":S.roster.filter(hasW).length+" weapons"}</span></button></div>`})()}
     <div class="dutyline">${dutyChips(S.roster.filter(m=>m.sec!=="ATT"))}<button class="chip" data-go="pt" style="cursor:pointer">PT roster ▸</button></div>
     <div class="att"><div><div class="lbl">Attached · not on our numbers</div><div class="big">${A.total}<small>${A["On Hand"]} on hand</small></div><div class="note">Total accounted for: <b>${T.total+A.total}</b> · Physically here: <b>${present(T)+present(A)}</b></div></div><button data-go="att">${A.total?"View":"Add"}</button></div>
   </div>`;
@@ -684,8 +704,92 @@ function renderRecall(){const pool=recallPool();const withPh=pool.filter(m=>m.ph
   if(rc.open) h+=`<button class="btn warn" id="rcCancel" style="margin-top:16px;width:100%">${armed==="rccancel"?"Tap again to discard this recall":"Discard recall"}</button>`;
   $("#main").innerHTML=h}
 let rq="",editPh=null;
+
+/* ---------- events & attendance ---------- */
+const EV_TYPES=["Range","MCMAP","Class","Working party","Volunteer","Inspection","Other"];
+let evOpen=null,evNew=false,evOnly=false;
+function evReq(ev){return S.roster.filter(m=>(m.sec==="ATT"?ev.att:ev.secs.includes(m.sec)))}
+function evDone(ev,m){return !!(ev.done||{})[nkey(m)]}
+function evText(ev){const req=evReq(ev);const got=req.filter(m=>evDone(ev,m));const owe=sorted(req.filter(m=>!evDone(ev,m)));
+  const d=parseD(ev.date);const L=[(ev.name||"EVENT").toUpperCase()+(d?" "+short(d)+" "+String(d.getFullYear()).slice(2):"")+(ev.type?" ("+ev.type.toUpperCase()+")":"")];
+  L.push("ATTENDED: "+got.length+"/"+req.length+" ("+pct(got.length,req.length)+"%)");
+  L.push("");L.push("STILL OWE ("+owe.length+")");owe.forEach(m=>L.push("- "+(m.sec==="ATT"?"ATT":m.sec)+" "+m.rank+" "+m.name.split(",")[0]+" ("+SHORT[m.status]+")"));
+  return L.join("\n")}
+function renderEvents(){let h=banner();
+  const ev=evOpen&&S.events.find(e=>e.id===evOpen);
+  if(ev){const req=evReq(ev);const got=req.filter(m=>evDone(ev,m)).length;
+    h+=`<div class="mbar"><div class="ct">${got}/${req.length}<small>attended</small></div><button class="btn alt" id="evBack">All events</button></div>
+      <h2 style="margin-top:6px">${esc(ev.name)}</h2><div class="note">${esc(ev.type||"")}${ev.date?" · "+esc(ev.date):""} · required: ${ev.secs.join(", ")}${ev.att?", attached":""}</div>
+      <label class="tog" style="margin:8px 0"><input type="checkbox" id="evOnly"${evOnly?" checked":""}> Show who still owes only</label>
+      <div class="row2"><a class="btn" href="${esc(smsHref(evText(ev)))}">Text owe list</a><button class="btn alt" id="evCopy">Copy</button></div>`;
+    const groups=SECTIONS.map(s=>s[0]).concat("ATT").map(k=>[k,sorted(req.filter(m=>m.sec===k))]).filter(g=>g[1].length);
+    for(const [k,ms] of groups){const left=ms.filter(m=>!evDone(ev,m));const show=evOnly?left:ms;if(!show.length)continue;
+      h+=`<div class="mgrp"><h3><span>${k} · ${ms.length-left.length}/${ms.length}</span>${left.length?`<button data-evall="${k}">All ${k} attended</button>`:""}</h3>
+        ${show.map(m=>`<button class="mrow${evDone(ev,m)?" on":""}" data-evtog="${esc(nkey(m))}"><span class="box">${evDone(ev,m)?"✓":""}</span><span class="nm2"><b>${esc(m.rank)}</b> ${esc(m.name)} <span class="note">${esc(SHORT[m.status])}</span></span></button>`).join("")}</div>`}
+    if(evOnly&&got===req.length) h+=`<p class="note" style="margin-top:12px">Everyone required has attended.</p>`;
+    h+=`<button class="btn warn" id="evDel" style="margin-top:16px;width:100%">${armed==="evdel"?"Tap again to delete this event":"Delete event"}</button>`;
+    $("#main").innerHTML=h;return}
+  h+=`<div class="ahead"><h2>Events & attendance</h2><span>${S.events.length}</span></div>`;
+  if(evNew){const _n=new Date();const today=_n.getFullYear()+"-"+String(_n.getMonth()+1).padStart(2,"0")+"-"+String(_n.getDate()).padStart(2,"0");
+    h+=`<form class="panel" id="evForm"><label for="evName">Event name</label><input type="text" id="evName" placeholder="e.g. Annual rifle qual, MCMAP tan belt" required>
+      <label for="evDate">Date</label><input type="date" id="evDate" value="${today}" class="wsel">
+      <label>Type</label><div class="evts">${EV_TYPES.map((t,i)=>`<label class="tog"><input type="radio" name="evType" value="${t}"${i===0?" checked":""}> ${t}</label>`).join("")}</div>
+      <label>Required for</label><div class="evts">${SECTIONS.map(([k])=>`<label class="tog"><input type="checkbox" name="evSec" value="${k}" checked> ${k}</label>`).join("")}<label class="tog"><input type="checkbox" id="evAtt"> Attached</label></div>
+      <div class="row2"><button class="btn" type="submit">Create event</button><button class="btn alt" type="button" id="evCancel">Cancel</button></div></form>`}
+  else h+=`<button class="btn" id="evNewBtn" style="width:100%">New event</button>`;
+  const list=S.events.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  h+=list.length?`<div class="alist" style="margin-top:12px">${list.map(e=>{const req=evReq(e);const got=req.filter(m=>evDone(e,m)).length;
+    return `<button class="evrow" data-evopen="${e.id}"><div style="min-width:0"><b>${esc(e.name)}</b><div class="note">${esc(e.type||"")}${e.date?" · "+esc(e.date):""} · ${req.length-got} still owe</div></div><div class="p">${got}/${req.length}<small>${pct(got,req.length)}%</small></div></button>`}).join("")}</div>`
+    :`<p class="note" style="margin-top:12px">No events yet. Create one for a range day, MCMAP, a required class or a working party, then tap Marines as they attend.</p>`;
+  $("#main").innerHTML=h}
+
+/* ---------- armory: weapon assignments + armory muster ---------- */
+const WEAPONS=["M4","M4A1","M27 IAR","M16A4","M18","M17","M9","M249","M240B","M2","MK19","M320","M38 SDMR","Other"];
+let wEdit=null;
+const hasW=m=>m.wpn&&m.wpn.t;
+const rackNum=m=>{const n=parseInt((m.wpn&&m.wpn.rack)||"",10);return isNaN(n)?99999:n};
+function armText(){const A=S.arm;const ms=S.roster.filter(hasW).sort((a,b)=>rackNum(a)-rackNum(b));const st=A.st||{};
+  const inn=ms.filter(m=>st[nkey(m)]==="in"),out=ms.filter(m=>st[nkey(m)]==="out"),ns=ms.filter(m=>!st[nkey(m)]);
+  const w=m=>"RACK "+(m.wpn.rack||"?")+" "+m.wpn.t+(m.wpn.s4?" ..."+m.wpn.s4:"")+" ("+m.rank+" "+m.name.split(",")[0]+")";
+  const L=["ARMORY MUSTER "+dtg(new Date(A.start||Date.now())),"ACCOUNTED: "+(inn.length+out.length)+"/"+ms.length+" (IN RACK "+inn.length+" · SIGNED OUT "+out.length+")"];
+  if(out.length){L.push("");L.push("SIGNED OUT ("+out.length+")");out.forEach(m=>L.push("- "+w(m)))}
+  L.push("");L.push("NOT SEEN ("+ns.length+")");ns.forEach(m=>L.push("- "+w(m)));
+  return L.join("\n")}
+function importWeapons(text){const rows=parseCSV(text);const hi=rows.findIndex(r=>r.some(x=>/weapon/i.test(x))&&r.some(x=>/name/i.test(x)));
+  if(hi<0)throw new Error("Use the weapons template: columns Name, Weapon, Rack, Serial (last 4).");
+  const H=rows[hi].map(x=>x.toLowerCase());const ci=k=>H.findIndex(x=>x.includes(k));const wi=ci("weapon"),ri=ci("rack"),si=ci("serial");
+  let ok=0;const miss=[];
+  for(const r of rows.slice(hi+1)){const t=(r[wi]||"").trim();if(!t)continue;const rest=r.filter((_,j)=>j!==wi&&j!==ri&&j!==si).join(" , ");
+    const m=matchMarine(rest.replace(/[^A-Za-z ,.'-]/g," "));if(!m){miss.push(rest.replace(/\s+/g," ").trim().slice(0,28));continue}
+    const tt=WEAPONS.find(x=>x.replace(/\s/g,"").toUpperCase()===t.replace(/\s/g,"").toUpperCase())||t.toUpperCase();
+    m.wpn={t:tt,rack:(r[ri]||"").trim(),s4:digits(r[si]||"").slice(-4)};ok++}
+  save();return {ok,miss}}
+function renderArmory(){const A=S.arm;const ms=S.roster.filter(hasW).sort((a,b)=>rackNum(a)-rackNum(b));const st=A.st||{};let h=banner();
+  if(A.open){const inn=ms.filter(m=>st[nkey(m)]==="in").length,out=ms.filter(m=>st[nkey(m)]==="out").length;
+    h+=`<div class="mbar"><div class="ct">${inn+out}/${ms.length}<small>accounted · ${out} out</small></div><button class="btn" id="arClose">Close out</button></div>
+      <label class="tog" style="margin:4px 0 8px"><input type="checkbox" id="arOnly"${A.only?" checked":""}> Show not seen only</label><div class="alist">`;
+    for(const m of ms){const s=st[nkey(m)];if(A.only&&s)continue;
+      h+=`<div class="wrow" style="--sc:var(${s==="in"?"--s-onhand":s==="out"?"--s-aob":"--line"})"><div class="rk">${esc(m.wpn.rack||"–")}</div><div class="wi"><b>${esc(m.wpn.t)}</b>${m.wpn.s4?` <span class="s">…${esc(m.wpn.s4)}</span>`:""}<div class="s">${esc(m.rank+" "+m.name)} · ${m.sec}</div></div>
+        <div class="wst"><button data-ws="in" data-wk="${esc(nkey(m))}" aria-pressed="${s==="in"}">In rack</button><button data-ws="out" data-wk="${esc(nkey(m))}" aria-pressed="${s==="out"}">Signed out</button></div></div>`}
+    h+=`</div><button class="btn warn" id="arCancel" style="margin-top:16px;width:100%">${armed==="arcancel"?"Tap again to discard":"Discard armory muster"}</button>`;
+    $("#main").innerHTML=h;return}
+  const byT={};ms.forEach(m=>byT[m.wpn.t]=(byT[m.wpn.t]||0)+1);
+  h+=`<h2>Armory</h2><div class="panel"><div><b>${ms.length}</b> weapons assigned${ms.length?":":""}</div>
+    ${ms.length?`<div class="chiprow">${Object.entries(byT).map(([t,n])=>`<span class="chip">${esc(t)} ${n}</span>`).join("")}</div>`:""}
+    <button class="btn" id="arStart"${ms.length?"":" disabled"}>Start armory muster</button>
+    <p class="note">Mark each weapon In rack or Signed out. Close out builds the report with anything not seen. Serials are last 4 only and stay on this phone.</p></div>`;
+  if(A.last) h+=`<h2>Last armory muster</h2><div class="panel"><textarea readonly>${esc(A.last)}</textarea><div class="row2"><a class="btn" href="${esc(smsHref(A.last))}">Text it</a><button class="btn alt" id="arCopy">Copy</button></div></div>`;
+  h+=`<h2>Load weapon assignments</h2><div class="panel"><label for="wFile">Weapons file (.csv: Name, Weapon, Rack, Serial)</label><input type="file" id="wFile" accept=".csv,text/csv,text/plain"><div class="note" id="wOut"></div></div>`;
+  h+=`<h2>Assign by Marine</h2><input class="search" id="wq" type="search" placeholder="Find a Marine" value="${esc(rq)}">`;
+  const groups=SECTIONS.map(s=>s[0]).concat("ATT").map(k=>[k,sorted(S.roster.filter(m=>m.sec===k))]).filter(g=>g[1].length);
+  for(const [k,list] of groups){const show=list.filter(m=>!rq||(m.rank+" "+m.name).toLowerCase().includes(rq));if(!show.length)continue;
+    h+=`<div class="mgrp"><h3><span>${k}</span><span class="note">${list.filter(hasW).length}/${list.length} assigned</span></h3>${show.map(m=>`<div class="wrow" style="--sc:var(${hasW(m)?"--olive":"--line"})"><div class="wi"><b>${esc(m.rank)}</b> ${esc(m.name)}<div class="s">${hasW(m)?esc(m.wpn.t)+" · rack "+esc(m.wpn.rack||"–")+(m.wpn.s4?" · …"+esc(m.wpn.s4):""):"No weapon assigned"}</div>
+      ${wEdit===m.id?`<div class="wedit"><select id="wT">${WEAPONS.map(w=>`<option${hasW(m)&&m.wpn.t===w?" selected":""}>${w}</option>`).join("")}</select><input id="wR" placeholder="Rack" value="${esc(hasW(m)?m.wpn.rack:"")}"><input id="wS" inputmode="numeric" maxlength="4" placeholder="Last 4" value="${esc(hasW(m)?m.wpn.s4:"")}">
+        <div class="full"><button class="btn" data-wsave="${m.id}">Save</button><button class="btn alt" data-wclear="${m.id}">${hasW(m)?"Remove weapon":"Cancel"}</button></div></div>`:""}</div>
+      ${wEdit===m.id?"":`<button class="btn alt" data-wedit="${m.id}" style="padding:8px 10px">${hasW(m)?"Edit":"Assign"}</button>`}</div>`).join("")}</div>`}
+  $("#main").innerHTML=h}
 function render(){renderTabs();
-  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());}
+  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());}
 
 /* ---------- CSV import ---------- */
 function parseCSV(text){const rows=[];let row=[],f="",q=false;
@@ -710,13 +814,13 @@ function importCSV(text){
   const own=col("section")>=0&&col("status")>=0;
   const out=[];let n=0;
   for(const r of rows.slice(hi+1)){const rank=(r[col("rank")]||"").toUpperCase();const name=r[col("name")]||"";if(!rank||!name)continue;
-    if(own) out.push({id:"m"+(++n),rank,name,sec:(SECTIONS.some(s=>s[0]===r[col("section")])||r[col("section")]==="ATT")?r[col("section")]:"HQ",parent:col("parent unit")>=0?(r[col("parent unit")]||""):"",duty:col("duty")>=0&&DUTIES.includes(r[col("duty")])?r[col("duty")]:"Full Duty",status:mapStatus(r[col("status")]),detail:r[col("detail")]||"",loc:r[col("location")]||"",edd:r[col("edd")]||"",phone:normPh(r[col("phone")]||""),phone2:normPh(r[col("alt phone")]||""),start:r[col("start")]||"",end:r[col("end")]||""});
+    if(own) out.push({id:"m"+(++n),rank,name,sec:(SECTIONS.some(s=>s[0]===r[col("section")])||r[col("section")]==="ATT")?r[col("section")]:"HQ",parent:col("parent unit")>=0?(r[col("parent unit")]||""):"",duty:col("duty")>=0&&DUTIES.includes(r[col("duty")])?r[col("duty")]:"Full Duty",status:mapStatus(r[col("status")]),detail:r[col("detail")]||"",loc:r[col("location")]||"",edd:r[col("edd")]||"",phone:normPh(r[col("phone")]||""),phone2:normPh(r[col("alt phone")]||""),wpn:(r[col("weapon")]||"")?{t:r[col("weapon")],rack:r[col("rack")]||"",s4:digits(r[col("serial4")]||"").slice(-4)}:undefined,start:r[col("start")]||"",end:r[col("end")]||""});
     else{const det=r[col("duty status")]||"";out.push({id:"m"+(++n),rank,name,sec:mapSec(r[col("unit")]),status:mapStatus(det),detail:det,loc:r[col("location")]||"",start:fmtD(r[col("start date")]),end:fmtD(r[col("end date")]),edd:fmtD(r[col("edd")]||"")})}}
   if(!out.length)throw new Error("The file had a header but no Marines under it.");
   return {roster:out,own};
 }
 function exportCSV(){const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
-  return ["Rank,Name,Section,Status,Detail,Location,Start,End,Parent Unit,Duty,EDD,Phone,Alt Phone"].concat(sorted(S.roster).map(m=>[m.rank,m.name,m.sec,m.status,m.detail,m.loc,m.start,m.end,m.parent||"",dutyOf(m),m.edd||"",m.phone||"",m.phone2||""].map(q).join(","))).join("\n")}
+  return ["Rank,Name,Section,Status,Detail,Location,Start,End,Parent Unit,Duty,EDD,Phone,Alt Phone,Weapon,Rack,Serial4"].concat(sorted(S.roster).map(m=>[m.rank,m.name,m.sec,m.status,m.detail,m.loc,m.start,m.end,m.parent||"",dutyOf(m),m.edd||"",m.phone||"",m.phone2||"",m.wpn?m.wpn.t:"",m.wpn?m.wpn.rack:"",m.wpn?m.wpn.s4:""].map(q).join(","))).join("\n")}
 
 /* ---------- events ---------- */
 document.addEventListener("click",e=>{
@@ -731,6 +835,22 @@ document.addEventListener("click",e=>{
   if(e.target.id==="wNew"){W=newW("");renderW();window.scrollTo(0,0);return}
   const wo=e.target.closest("[data-wopen]");if(wo){const r=S.w6.find(x=>x.id===wo.dataset.wopen);if(r){W=Object.assign({},r);renderW();window.scrollTo(0,0)}return}
   const wd=e.target.closest("[data-wdel]");if(wd){const id=wd.dataset.wdel;if(armed===id){S.w6=S.w6.filter(r=>r.id!==id);armed=null;save();toast("6W deleted")}else armed=id;renderW();return}
+  if(e.target.id==="evNewBtn"){evNew=true;renderEvents();const n=$("#evName");if(n)n.focus();return}
+  if(e.target.id==="evCancel"){evNew=false;renderEvents();return}
+  const eo=e.target.closest("[data-evopen]");if(eo){evOpen=eo.dataset.evopen;evOnly=false;armed=null;renderEvents();window.scrollTo(0,0);return}
+  if(e.target.id==="evBack"){evOpen=null;armed=null;renderEvents();window.scrollTo(0,0);return}
+  const et=e.target.closest("[data-evtog]");if(et){const ev=S.events.find(x=>x.id===evOpen);if(ev){ev.done=ev.done||{};const k=et.dataset.evtog;if(ev.done[k])delete ev.done[k];else ev.done[k]=1;save();const y=window.scrollY;renderEvents();window.scrollTo(0,y)}return}
+  const ea=e.target.closest("[data-evall]");if(ea){const ev=S.events.find(x=>x.id===evOpen);if(ev){ev.done=ev.done||{};evReq(ev).filter(m=>m.sec===ea.dataset.evall).forEach(m=>ev.done[nkey(m)]=1);save();const y=window.scrollY;renderEvents();window.scrollTo(0,y)}return}
+  if(e.target.id==="evCopy"){const ev=S.events.find(x=>x.id===evOpen);if(ev){try{navigator.clipboard.writeText(evText(ev)).then(()=>toast("Owe list copied"),()=>toast("Copy blocked here. Use Text."))}catch(err){toast("Copy blocked here.")}}return}
+  if(e.target.id==="evDel"){if(armed==="evdel"){S.events=S.events.filter(x=>x.id!==evOpen);evOpen=null;armed=null;save();toast("Event deleted")}else armed="evdel";renderEvents();return}
+  if(e.target.id==="arStart"){S.arm.open=true;S.arm.start=Date.now();S.arm.st={};S.arm.only=false;armed=null;save();renderArmory();window.scrollTo(0,0);return}
+  const ws=e.target.closest("[data-ws]");if(ws){const k=ws.dataset.wk,v=ws.dataset.ws;if(S.arm.st[k]===v)delete S.arm.st[k];else S.arm.st[k]=v;save();const y=window.scrollY;renderArmory();window.scrollTo(0,y);return}
+  if(e.target.id==="arClose"){S.arm.last=armText();S.arm.open=false;S.hist=(S.hist||[]).concat({type:"armory",t:S.arm.start}).slice(-60);save();renderArmory();window.scrollTo(0,0);toast("Armory muster closed");return}
+  if(e.target.id==="arCancel"){if(armed==="arcancel"){S.arm.open=false;S.arm.st={};armed=null;save();toast("Armory muster discarded")}else armed="arcancel";renderArmory();return}
+  if(e.target.id==="arCopy"){try{navigator.clipboard.writeText(S.arm.last).then(()=>toast("Copied"),()=>toast("Copy blocked here. Use Text it."))}catch(err){toast("Copy blocked here.")}return}
+  const we=e.target.closest("[data-wedit]");if(we){wEdit=we.dataset.wedit;const y=window.scrollY;renderArmory();window.scrollTo(0,y);return}
+  const wsv=e.target.closest("[data-wsave]");if(wsv){const m=S.roster.find(x=>x.id===wsv.dataset.wsave);if(m){m.wpn={t:$("#wT").value,rack:$("#wR").value.trim(),s4:digits($("#wS").value).slice(-4)};save()}wEdit=null;const y=window.scrollY;renderArmory();window.scrollTo(0,y);toast("Weapon saved");return}
+  const wc=e.target.closest("[data-wclear]");if(wc){const m=S.roster.find(x=>x.id===wc.dataset.wclear);if(m&&hasW(m)&&wEdit===m.id&&armed==="wclr"+m.id){delete m.wpn;save();armed=null;wEdit=null;toast("Weapon removed")}else if(m&&hasW(m)){armed="wclr"+m.id;toast("Tap Remove weapon again to confirm");return}else{wEdit=null}const y=window.scrollY;renderArmory();window.scrollTo(0,y);return}
   if(e.target.id==="rcStart"){S.rc.open=true;S.rc.start=Date.now();S.rc.end=0;S.rc.res={};S.rc.only=false;armed=null;save();renderRecall();window.scrollTo(0,0);return}
   const rr=e.target.closest("[data-rid]");if(rr){const id=rr.dataset.rid,c=rr.dataset.r;if(S.rc.res[id]===c)delete S.rc.res[id];else S.rc.res[id]=c;save();const y=window.scrollY;renderRecall();window.scrollTo(0,y);return}
   if(e.target.id==="rcClose"){S.rc.open=false;S.rc.end=Date.now();S.hist=(S.hist||[]).concat({type:"recall",t:S.rc.start}).slice(-60);save();renderRecall();window.scrollTo(0,0);toast("Recall closed");return}
@@ -772,6 +892,9 @@ document.addEventListener("change",e=>{
     const {c}=counts();const o=c[m.sec];const r=document.querySelector(".ratio");if(r)r.innerHTML=o["On Hand"]+"/"+o.total+"<small>"+(m.sec==="ATT"?"on hand / attached":"on hand / strength")+"</small>";
     const ch=document.querySelector(".chips");if(ch)ch.innerHTML=STATUSES.filter(s=>o[s]).map(s=>`<span class="chip"><span class="dot" style="background:var(${SVAR[s]})"></span>${SHORT[s]} ${o[s]}</span>`).join("")}
     return}
+  if(e.target.id==="evOnly"){evOnly=e.target.checked;renderEvents();return}
+  if(e.target.id==="arOnly"){S.arm.only=e.target.checked;save();renderArmory();return}
+  if(e.target.id==="wFile"){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const r=importWeapons(String(rd.result));renderArmory();const o=$("#wOut");if(o)o.textContent=r.ok+" weapons assigned"+(r.miss.length?" · not matched: "+r.miss.slice(0,8).join("; "):"");toast(r.ok+" weapons assigned")}catch(err){const o=$("#wOut");if(o)o.textContent=err.message}};rd.readAsText(f);return}
   if(e.target.id==="rcAtt"){S.rc.att=e.target.checked;save();renderRecall();return}
   if(e.target.id==="rcOnly"){S.rc.only=e.target.checked;save();renderRecall();return}
   if(e.target.id==="rcFile"){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{const r=importRecall(String(rd.result));const o=$("#rcOut");if(o)o.textContent=r.ok+" numbers added"+(r.miss.length?" · not matched: "+r.miss.slice(0,8).join("; ")+(r.miss.length>8?" …":""):"");toast(r.ok+" numbers added")};rd.readAsText(f);return}
@@ -789,6 +912,7 @@ document.addEventListener("change",e=>{
   if(e.target.id==="file"){const f=e.target.files[0];if(!f)return;const rd=new FileReader();
     rd.onload=()=>{try{const {roster,own}=importCSV(String(rd.result));const keep=own?[]:S.roster.filter(m=>m.sec==="ATT"&&S.source!=="sample");
       if(!own&&S.source!=="sample"){const dm={};S.roster.forEach(m=>{if(m.duty&&m.duty!=="Full Duty")dm[m.name.toUpperCase()]=m.duty});roster.forEach(m=>{if(dm[m.name.toUpperCase()])m.duty=dm[m.name.toUpperCase()]})}
+      if(!own){const wm={};S.roster.forEach(m=>{if(m.wpn)wm[m.name.toUpperCase()]=m.wpn});roster.forEach(m=>{const w=wm[m.name.toUpperCase()];if(w)m.wpn=w})}
       if(!own){const pm={};S.roster.forEach(m=>{if(m.phone)pm[m.name.toUpperCase()]=[m.phone,m.phone2]});roster.forEach(m=>{const p=pm[m.name.toUpperCase()];if(p){m.phone=p[0];if(p[1])m.phone2=p[1]}})}
       S.roster=roster.concat(keep);S.source=own?"backup":"mol";
       S.loadedAt=new Date().toLocaleString([], {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});save();view="board";render();toast(roster.length+" Marines loaded")}
@@ -796,6 +920,7 @@ document.addEventListener("change",e=>{
     rd.onerror=()=>toast("Couldn't read that file.");rd.readAsText(f);return}
 });
 document.addEventListener("input",e=>{
+  if(e.target.id==="wq"){rq=e.target.value.toLowerCase();const pos=e.target.selectionStart;renderArmory();const q=$("#wq");q.focus();q.setSelectionRange(pos,pos);return}
   if(e.target.id==="rq"){rq=e.target.value.toLowerCase();const pos=e.target.selectionStart;renderRecall();const q=$("#rq");q.focus();q.setSelectionRange(pos,pos);return}
   if(e.target.matches("[data-wf]")){W[e.target.dataset.wf]=e.target.value;refreshW();return}
   if(e.target.id==="wOther"){W.other=e.target.value;refreshW();return}
@@ -806,6 +931,10 @@ document.addEventListener("input",e=>{
   if(e.target.id==="q"){query=e.target.value.toLowerCase();const pos=e.target.selectionStart;renderSection(view.toUpperCase());const q=$("#q");q.focus();q.setSelectionRange(pos,pos);return}
 });
 document.addEventListener("submit",e=>{
+  if(e.target.id==="evForm"){e.preventDefault();const name=$("#evName").value.trim();if(!name){toast("Name the event.");return}
+    const secs=[...document.querySelectorAll("input[name=evSec]:checked")].map(x=>x.value);const att=$("#evAtt").checked;if(!secs.length&&!att){toast("Pick at least one section.");return}
+    const ev={id:"e"+Date.now(),name,date:$("#evDate").value,type:(document.querySelector("input[name=evType]:checked")||{}).value||"",secs,att,done:{}};
+    S.events.push(ev);save();evNew=false;evOpen=ev.id;renderEvents();window.scrollTo(0,0);toast("Event created");return}
   if(e.target.id!=="addf")return;e.preventDefault();
   const name=$("#aName").value.trim().toUpperCase();if(!name){toast("Enter a name first.");return}
   const sec=view.toUpperCase();const rec={id:"a"+Date.now(),rank:$("#aRank").value,name,sec,status:$("#aStatus").value,duty:$("#aDuty").value,detail:"Added in app",loc:"",start:"",end:""};
