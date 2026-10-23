@@ -552,7 +552,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="1.8.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="1.9.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -1282,18 +1282,24 @@ const b64e=u=>{let s="";for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode(..
 const b64d=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 const b64url=u=>b64e(u).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
 const unurl=s=>b64d(s.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-s.length%4)%4));
-const fdKeys={};let fdBusy=false,fdSel=null,fdOpen=null,fdNew=false,fdDraft={txt:"",urg:false};
+const fdKeys={};let fdBusy=false,fdSel=null,fdOpen=null,fdNew=false,fdDraft={txt:"",urg:false,to:"all",secs:[],att:true,mid:""};
 async function fdKey(ek){return fdKeys[ek]=fdKeys[ek]||await crypto.subtle.importKey("raw",unurl(ek),"AES-GCM",false,["encrypt","decrypt"])}
 async function fdEnc(ek,o){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},await fdKey(ek),new TextEncoder().encode(JSON.stringify(o))));const a=new Uint8Array(12+ct.length);a.set(iv);a.set(ct,12);return b64e(a)}
 async function fdDec(ek,s){try{const a=b64d(s);return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:a.slice(0,12)},await fdKey(ek),a.slice(12))))}catch(e){return null}}
 const fdCur=()=>S.feeds.find(f=>f.id===fdSel)||S.feeds[0]||null;
-function fdUnread(){return S.feeds.reduce((a,f)=>a+(f.lk?0:(f.posts||[]).filter(p=>p.id>(f.seen||0)).length),0)}
-function fdLink(f){const q=new URLSearchParams();q.set("feed",f.id);q.set("k",f.mk);q.set("e",f.ek);q.set("u",f.unit);return location.origin+location.pathname+"#"+q.toString()}
+function fdUnread(){return S.feeds.reduce((a,f)=>a+(f.lk?0:fdVisible(f).filter(p=>p.id>(f.seen||0)).length),0)}
+function fdForMe(f,p){const to=p.to;if(!to||to.k==="all")return true;
+  if(to.k==="secs")return !f.sec||f.sec==="ATT"?(f.sec==="ATT"?!!to.att:true):to.s.includes(f.sec);
+  if(to.k==="one"){const mine=new Set(f.meH||[]);return (to.w||[]).length>0&&to.w.every(h=>mine.has(h))}return true}
+function fdVisible(f){return (f.posts||[]).filter(p=>f.lk||fdForMe(f,p))}
+async function fdMeHash(f){f.meH=f.me?await Promise.all(SB.words(f.me).map(w=>SB.h(f.id,w))):[];save()}
+function fdToLabel(to){if(!to||to.k==="all")return"Everyone";if(to.k==="secs")return to.s.concat(to.att?["ATT"]:[]).join(", ")||"No one";if(to.k==="one")return to.n||"One person";return"Everyone"}
+function fdLink(f){const q=new URLSearchParams();q.set("feed",f.id);q.set("k",f.mk);q.set("e",f.ek);q.set("u",f.unit);q.set("s",SECTIONS.map(x=>x[0]).join(","));return location.origin+location.pathname+"#"+q.toString()}
 async function fdCreate(){const f={id:rndId(14),mk:rndId(32),lk:rndId(32),ek:b64url(crypto.getRandomValues(new Uint8Array(32))),unit:unitName(),posts:[],seen:0,acks:{},ackAfter:0,mine:{},un:{}};
   await SB.rpc("create_feed",{p_id:f.id,p_member_key:f.mk,p_leader_key:f.lk});S.feeds.unshift(f);fdSel=f.id;save()}
 async function fdPoll(f,full){const after=full?0:Math.max(0,...(f.posts||[]).map(p=>p.id));
   const rows=await SB.rpc("feed_get",{p_feed:f.id,p_member_key:f.mk,p_after:after});let fresh=0;const keep=full?[]:(f.posts||[]);const have=new Set(keep.map(p=>p.id));
-  for(const r of rows||[]){if(have.has(+r.id))continue;const o=await fdDec(f.ek,r.ct);if(!o)continue;keep.push({id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,1000),urg:!!o.u});if(+r.id>(f.seen||0))fresh++}
+  for(const r of rows||[]){if(have.has(+r.id))continue;const o=await fdDec(f.ek,r.ct);if(!o)continue;const to=o.to&&["all","secs","one"].includes(o.to.k)?o.to:{k:"all"};if(to.k==="secs"&&!Array.isArray(to.s))to.s=[];if(o.sa&&!f.lk)f.secsAll=o.sa;const post={id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,1000),urg:!!o.u,to};keep.push(post);if(+r.id>(f.seen||0)&&(f.lk||fdForMe(f,post)))fresh++}
   f.posts=keep.sort((a,b)=>b.id-a.id).slice(0,200);f.err="";
   if(f.lk){const acks=await SB.rpc("feed_acks_get",{p_feed:f.id,p_leader_key:f.lk,p_after:f.ackAfter||0});
     if(acks&&acks.length){const idx=await bcIndexFor(f.id);f.acks=f.acks||{};f.un=f.un||{};
@@ -1309,20 +1315,22 @@ async function fdPollAll(full){if(fdBusy||!S.feeds.length)return;fdBusy=true;let
   finally{fdBusy=false}}
 setInterval(()=>{if(S.feeds.length&&!document.hidden)fdPollAll(false)},30000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.feeds.length)fdPollAll(false)});
-function fdPool(){return S.roster}
+function fdPool(p){const to=p&&p.to;if(!to||to.k==="all")return S.roster;if(to.k==="secs")return S.roster.filter(m=>m.sec==="ATT"?to.att:to.s.includes(m.sec));if(to.k==="one")return S.roster.filter(m=>m.id===to.mid);return S.roster}
 async function fdPushAttach(f){if(!S.pushOn||f.lk)return;try{const sub=await pushSub(false);if(!sub)return;await SB.rpc("feed_sub",{p_feed:f.id,p_member_key:f.mk,p_sub:sub.toJSON()});f.push=true;save()}catch(e){}}
 function fdPushHTML(f){if(f.lk)return"";if(!pushOK())return isIOS()&&!standalone()?`<p class="note">To get alerts when new word is posted: Share → <b>Add to Home Screen</b>, then open the app from there.</p>`:"";
   if(Notification.permission==="denied")return `<p class="note">Alerts are blocked for this app in your phone settings.</p>`;
   if(S.pushOn&&Notification.permission==="granted"&&f.push)return `<p class="note" style="color:var(--s-onhand);font-weight:700">🔔 Alerts on for new word</p>`;
   return `<button class="btn alt" id="fdPushOn" style="width:100%">🔔 Alert me when there's new word</button>`}
-function fdStats(f,p){const A=(f.acks||{})[String(p.id)]||{};const pool=fdPool();return {pool:pool.length,got:pool.filter(m=>A[m.id]).length,prob:pool.filter(m=>A[m.id]&&A[m.id].c===2).length,A}}
-function fdJoinPrompt(q){const id=(q.get("feed")||"").replace(/[^a-z0-9]/g,"").slice(0,20),mk=(q.get("k")||"").replace(/[^a-z0-9]/g,"").slice(0,40),ek=(q.get("e")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60),unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24)||"Your unit";
+function fdStats(f,p){const A=(f.acks||{})[String(p.id)]||{};const pool=fdPool(p);return {pool:pool.length,got:pool.filter(m=>A[m.id]).length,prob:pool.filter(m=>A[m.id]&&A[m.id].c===2).length,A}}
+function fdSecOpts(list,cur){return `<option value="">Not sure / none</option>${list.concat(["ATT"]).map(k=>`<option value="${esc(k)}"${k===cur?" selected":""}>${esc(k==="ATT"?"ATT (attached)":k)}</option>`).join("")}`}
+function fdJoinPrompt(q){const secsL=(q.get("s")||"").toUpperCase().split(",").map(x=>x.replace(/[^A-Z0-9]/g,"").slice(0,6)).filter(Boolean).slice(0,10);const id=(q.get("feed")||"").replace(/[^a-z0-9]/g,"").slice(0,20),mk=(q.get("k")||"").replace(/[^a-z0-9]/g,"").slice(0,40),ek=(q.get("e")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60),unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24)||"Your unit";
   try{history.replaceState(null,"",location.pathname)}catch(e){}
   if(id.length<10||mk.length<24||ek.length<40)return toast("That feed link is incomplete.");
   if(S.feeds.some(f=>f.id===id)){fdSel=id;view="feed";render();fdPollAll(true);return}
-  sheetCtx={kind:"fjoin",id,mk,ek,unit};
+  sheetCtx={kind:"fjoin",id,mk,ek,unit,secsL};
   $("#sheetT").innerHTML=`Join ${esc(unit)}'s feed?<small>You'll see the word they pass, old and new, and tap Got it here in the app.</small>`;
   $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><label for="fjMe">Your rank and last name</label><input type="text" id="fjMe" maxlength="30" placeholder="CPL SMITH" autocapitalize="characters" style="text-transform:uppercase" value="${esc(S.myName||"")}">
+    ${secsL.length?`<label for="fjSec">Your section</label><select id="fjSec" class="wsel">${fdSecOpts(secsL,"")}</select>`:""}
     <p class="note">Your leader sees your Got it next to your name. Your name is scrambled before it leaves this phone; the server never stores it. Posts are encrypted.</p>
     <button class="btn" id="fjYes">Join feed</button><button class="btn alt" data-sclose="1">Not now</button></div>`;
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")))}
@@ -1335,20 +1343,24 @@ function renderFeed(){let h=S.source==="sample"?"":banner();const f=fdCur();
   if(!f||fdNew){h+=`<h2>Feed</h2><div class="panel"><p class="note">Pass the word in one place. Your people join once with a link, see every post old and new, and tap <b>Got it</b> in the app. You see who confirmed and who hasn't, per post. Posts are encrypted on your phone; the server can't read them or see names.</p>
       <button class="btn" id="fdCreate">Start a feed for ${esc(unitName())}</button>${fdNew?`<button class="btn alt" id="fdCancelNew">Cancel</button>`:""}<div class="note" id="fdOut"></div>
       <p class="note">Joining someone else's feed? Open the link they sent on this phone.</p></div>`;$("#main").innerHTML=h;return}
-  const maxId=Math.max(0,...(f.posts||[]).map(p=>p.id));const prevSeen=f.seen||0;
+  const maxId=Math.max(0,...fdVisible(f).map(p=>p.id));const prevSeen=f.seen||0;
   h+=`<div class="sechead" style="margin-top:12px"><h2>${esc(f.unit)} feed</h2><div class="ratio" style="font-size:13px">${f.err?`<span style="color:var(--warn)">offline</span>`:`<span style="color:var(--s-onhand)">● live</span>`}</div></div>`;
   if(f.lk){h+=`<div class="panel"><label for="fdTxt">Pass the word</label><textarea id="fdTxt" maxlength="1000" style="min-height:90px" placeholder="Formation 0700 tomorrow, PT gear. Duty section report to the S-3 at 0800.">${esc(fdDraft.txt)}</textarea>
+      <div class="note">Send to:</div><div class="evts">${[["all","Everyone"],["secs","Sections"],["one","One person"]].map(([k,l])=>`<button data-fdto="${k}" aria-pressed="${fdDraft.to===k}">${l}</button>`).join("")}</div>
+      ${fdDraft.to==="secs"?`<div class="evts">${SECTIONS.map(([k])=>`<label class="tog"><input type="checkbox" data-fdsec="${k}"${fdDraft.secs.includes(k)?" checked":""}> ${k}</label>`).join("")}<label class="tog"><input type="checkbox" id="fdAtt"${fdDraft.att?" checked":""}> ATT</label></div>`:""}
+      ${fdDraft.to==="one"?`<select id="fdWho" class="wsel"><option value="">Pick the person…</option>${SECTIONS.map(s=>s[0]).concat("ATT").map(k=>{const ms=sorted(S.roster.filter(m=>m.sec===k));return ms.length?`<optgroup label="${k}">${ms.map(m=>`<option value="${m.id}"${m.id===fdDraft.mid?" selected":""}>${esc(m.rank+" "+m.name)}</option>`).join("")}</optgroup>`:""}).join("")}</select>
+        <p class="note">Only that person sees it in their feed. It matches the rank and last name they joined with. For anything sensitive, call or text them directly.</p>`:""}
       <label class="tog"><input type="checkbox" id="fdUrg"${fdDraft.urg?" checked":""}> Urgent (shows in red)</label><button class="btn" id="fdPost">Post</button></div>
       <details class="panel"><summary><b>Invite people</b> · send the join link once</summary>${bcBatches(S.roster,f.unit+" FEED: tap to join and see the word in EOP Numbers: "+fdLink(f)).map((x,i,arr)=>`<a class="btn" href="${esc(x.href)}">Text join link${arr.length>1?" · group "+(i+1)+" of "+arr.length:""} (${x.n})</a>`).join("")||`<p class="note">No phone numbers loaded (RECALL → Load numbers). You can copy the link instead.</p>`}
       <button class="btn alt" id="fdCopyLink">Copy join link</button><p class="note">Anyone with this link can read the feed, so send it only to your people.</p></details>`}
-  else h+=`<p class="note">You: <b>${esc(f.me||"(name not set)")}</b> · <button class="chip" id="fdName" style="cursor:pointer">Change</button></p>${fdPushHTML(f)}`;
-  const posts=f.posts||[];
+  else h+=`<p class="note">You: <b>${esc(f.me||"(name not set)")}</b>${f.sec?" · "+esc(f.sec):""} · <button class="chip" id="fdName" style="cursor:pointer">Change</button></p>${!f.sec&&(f.secsAll||f.secsLink||[]).length?`<p class="note" style="color:var(--warn)">Pick your section (Change) so you only see posts meant for you.</p>`:""}${fdPushHTML(f)}`;
+  const posts=fdVisible(f);
   if(!posts.length)h+=`<p class="note" style="margin-top:14px">${f.lk?"Nothing posted yet.":"Nothing posted yet. New posts show up here."}</p>`;
   for(const p of posts){const isNew=!f.lk&&p.id>prevSeen;const mine=(f.mine||{})[p.id];
-    h+=`<div class="fdpost${isNew?" new":""}" style="--sc:var(${p.urg?"--warn":mine?"--s-onhand":"--line"})"><div class="mt"><span>${p.urg?`<b style="color:var(--warn)">URGENT</b> · `:""}${ago(p.t)} · ${dtg(new Date(p.t)).slice(0,7)} ${dtg(new Date(p.t)).slice(8)}</span>${isNew?`<b style="color:var(--brass)">NEW</b>`:""}</div><div class="tx">${esc(p.txt)}</div>`;
+    h+=`<div class="fdpost${isNew?" new":""}" style="--sc:var(${p.urg?"--warn":mine?"--s-onhand":"--line"})"><div class="mt"><span>${p.urg?`<b style="color:var(--warn)">URGENT</b> · `:""}${ago(p.t)} · ${dtg(new Date(p.t)).slice(0,7)} ${dtg(new Date(p.t)).slice(8)}${p.to&&p.to.k!=="all"?` · <b>To: ${esc(f.lk?fdToLabel(p.to):p.to.k==="one"?"you":fdToLabel(p.to))}</b>`:""}</span>${isNew?`<b style="color:var(--brass)">NEW</b>`:""}</div><div class="tx">${esc(p.txt)}</div>`;
     if(f.lk){const st=fdStats(f,p);const open=fdOpen===p.id;
       h+=`<div class="mt"><span><b style="color:var(--s-onhand)">${st.got}/${st.pool} got it</b>${st.prob?` · <b style="color:var(--warn)">${st.prob} problem${st.prob>1?"s":""}</b>`:""}${(f.un||{})[p.id]?` · ${f.un[p.id]} unmatched`:""}</span><button class="chip" data-fdopen="${p.id}" style="cursor:pointer">${open?"Hide":"Who"} ▸</button></div>`;
-      if(open){const pool=fdPool();const pr=sorted(pool.filter(m=>st.A[m.id]&&st.A[m.id].c===2));const miss=sorted(pool.filter(m=>!st.A[m.id]));
+      if(open){const pool=fdPool(p);const pr=sorted(pool.filter(m=>st.A[m.id]&&st.A[m.id].c===2));const miss=sorted(pool.filter(m=>!st.A[m.id]));
         if(pr.length)h+=`<div><b style="color:var(--warn)">Problems</b>${pr.map(m=>`<div class="rtop"><div class="who"><b>${esc(m.rank)}</b> ${esc(m.name)}<div class="ph">${esc(st.A[m.id].note)}</div></div>${m.phone?`<a class="call" href="${telHref(m.phone)}">Call</a>`:""}</div>`).join("")}</div>`;
         if(miss.length){const rb=bcBatches(miss,f.unit+": new word in the FEED you haven't confirmed. Open EOP Numbers → FEED.");
           h+=`<div><b>Not confirmed (${miss.length})</b><div class="note">${miss.map(m=>esc((m.sec==="ATT"?"ATT":m.sec)+" "+m.rank+" "+lastOf(m))).join(" · ")}</div></div>${rb.map((x,i,arr)=>`<a class="btn alt" href="${esc(x.href)}">Remind ${x.n} not confirmed${arr.length>1?" · group "+(i+1):""}</a>`).join("")}`}
@@ -1771,11 +1783,15 @@ document.addEventListener("click",e=>{
   if(e.target.id==="bpushOn"){e.target.disabled=true;e.target.textContent="Asking…";pushSub(true).then(sub=>{if(!sub){toast("Alerts not allowed");renderLive();return}S.pushOn=true;save();boardPush().then(()=>{renderLive();toast(S.board&&S.board.push?"Alerts on":"Couldn't connect alerts. Try again.")})}).catch(()=>{toast("Couldn't turn on alerts here.");renderLive()});return}
   if(e.target.id==="fdCreate"){e.target.disabled=true;e.target.textContent="Creating…";fdCreate().then(()=>{fdNew=false;renderFeed();toast("Feed created. Invite your people.")}).catch(err=>{e.target.disabled=false;e.target.textContent="Start a feed";const o=$("#fdOut");if(o)o.textContent="Couldn't create: "+(err.message||err)});return}
   if(e.target.id==="fdPushOn"){const f=fdCur();e.target.disabled=true;e.target.textContent="Asking…";pushSub(true).then(sub=>{if(!sub){toast("Alerts not allowed");renderFeed();return}S.pushOn=true;save();fdPushAttach(f).then(()=>{renderFeed();toast(f.push?"Alerts on":"Couldn't connect alerts. Try again.")})}).catch(()=>{toast("Couldn't turn on alerts here.");renderFeed()});return}
+  const fto=e.target.closest("[data-fdto]");if(fto){fdDraft.txt=($("#fdTxt")||{}).value||fdDraft.txt;fdDraft.to=fto.dataset.fdto;if(fdDraft.to==="secs"&&!fdDraft.secs.length)fdDraft.secs=SECTIONS.map(x=>x[0]);const y=window.scrollY;renderFeed();window.scrollTo(0,y);return}
   if(e.target.id==="fdNewFeed"){fdNew=true;renderFeed();return}
   if(e.target.id==="fdCancelNew"){fdNew=false;renderFeed();return}
   const fsel=e.target.closest("[data-fdsel]");if(fsel){fdSel=fsel.dataset.fdsel;fdOpen=null;renderFeed();window.scrollTo(0,0);return}
-  if(e.target.id==="fdPost"){const f=fdCur();const txt=($("#fdTxt").value||"").trim();if(!txt){toast("Type the word first.");return}const urg=$("#fdUrg").checked;e.target.disabled=true;e.target.textContent="Posting…";
-    fdEnc(f.ek,{t:txt,u:urg}).then(ct=>SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct})).then(id=>{SB.notify(null,{feed:f.id,lk:f.lk,urg});f.posts=[{id:+id,t:Date.now(),txt,urg}].concat(f.posts||[]);fdDraft={txt:"",urg:false};save();renderFeed();window.scrollTo(0,0);toast("Posted")})
+  if(e.target.id==="fdPost"){const f=fdCur();const txt=($("#fdTxt").value||"").trim();if(!txt){toast("Type the word first.");return}const urg=$("#fdUrg").checked;const D=fdDraft;let to={k:"all"};
+    if(D.to==="secs"){if(!D.secs.length&&!D.att){toast("Pick at least one section.");return}to={k:"secs",s:D.secs.slice(),att:D.att}}
+    let wP=Promise.resolve(null);if(D.to==="one"){const m=S.roster.find(x=>x.id===D.mid);if(!m){toast("Pick the person.");return}to={k:"one",mid:m.id,n:m.rank+" "+lastOf(m),w:[]};wP=Promise.all(SB.words(m.rank+" "+lastOf(m)).map(w=>SB.h(f.id,w)))}
+    e.target.disabled=true;e.target.textContent="Posting…";
+    wP.then(w=>{if(w)to.w=w;return fdEnc(f.ek,{t:txt,u:urg,to,sa:SECTIONS.map(x=>x[0])})}).then(ct=>SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct})).then(id=>{SB.notify(null,{feed:f.id,lk:f.lk,urg});f.posts=[{id:+id,t:Date.now(),txt,urg,to}].concat(f.posts||[]);fdDraft={txt:"",urg:false,to:D.to,secs:D.secs,att:D.att,mid:""};save();renderFeed();window.scrollTo(0,0);toast("Posted")})
       .catch(err=>{e.target.disabled=false;e.target.textContent="Post";toast("Couldn't post: "+(err.message||err))});return}
   if(e.target.id==="fdCopyLink"){const u=fdLink(fdCur());try{navigator.clipboard.writeText(u).then(()=>toast("Join link copied"),()=>toast(u))}catch(err){toast(u)}return}
   const fo=e.target.closest("[data-fdopen]");if(fo){const id=+fo.dataset.fdopen;fdOpen=fdOpen===id?null:id;const y=window.scrollY;renderFeed();window.scrollTo(0,y);return}
@@ -1784,11 +1800,14 @@ document.addEventListener("click",e=>{
   if(e.target.id==="fdKill"){const f=fdCur();if(armed==="fdkill"){armed=null;SB.rpc("delete_feed",{p_feed:f.id,p_leader_key:f.lk}).catch(()=>{});S.feeds=S.feeds.filter(x=>x!==f);fdSel=null;save();renderFeed();toast("Feed deleted")}else{armed="fdkill";renderFeed()}return}
   if(e.target.id==="fdLeave"){const f=fdCur();if(armed==="fdleave"){armed=null;S.feeds=S.feeds.filter(x=>x!==f);fdSel=null;save();renderFeed();renderTabs();toast("Left the feed")}else{armed="fdleave";renderFeed()}return}
   if(e.target.id==="fdName"){const f=fdCur();sheetCtx={kind:"fname",id:f.id};$("#sheetT").innerHTML="Your name on this feed<small>Rank and last name, as on your unit's roster.</small>";
-    $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><input type="text" id="fjMe" maxlength="30" value="${esc(f.me||"")}" placeholder="CPL SMITH" autocapitalize="characters" style="text-transform:uppercase"><button class="btn" id="fnSave">Save</button></div>`;
+    const sl=f.secsAll||f.secsLink||[];
+    $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><input type="text" id="fjMe" maxlength="30" value="${esc(f.me||"")}" placeholder="CPL SMITH" autocapitalize="characters" style="text-transform:uppercase">${sl.length?`<label for="fjSec">Your section</label><select id="fjSec" class="wsel">${fdSecOpts(sl,f.sec||"")}</select>`:""}<button class="btn" id="fnSave">Save</button></div>`;
     const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));return}
   if((e.target.id==="fjYes"||e.target.id==="fnSave")&&sheetCtx){const me=($("#fjMe").value||"").toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim();if(!me){toast("Enter your rank and last name.");return}S.myName=me;
-    if(sheetCtx.kind==="fjoin"){const c=sheetCtx;S.feeds.push({id:c.id,mk:c.mk,ek:c.ek,unit:c.unit,me,posts:[],seen:0,mine:{}});fdSel=c.id;if(!S.mode)S.mode="military";S.onb=true}
-    else{const f=S.feeds.find(x=>x.id===sheetCtx.id);if(f)f.me=me}
+    const secSel=($("#fjSec")||{}).value||"";let tf=null;
+    if(sheetCtx.kind==="fjoin"){const c=sheetCtx;tf={id:c.id,mk:c.mk,ek:c.ek,unit:c.unit,me,sec:secSel,secsLink:c.secsL,posts:[],seen:0,mine:{}};S.feeds.push(tf);fdSel=c.id;if(!S.mode)S.mode="military";S.onb=true}
+    else{tf=S.feeds.find(x=>x.id===sheetCtx.id);if(tf){tf.me=me;if($("#fjSec"))tf.sec=secSel}}
+    if(tf){closeSheet();fdMeHash(tf).then(()=>{view="feed";render();window.scrollTo(0,0);fdPollAll(true)});save();return}
     save();closeSheet();view="feed";render();window.scrollTo(0,0);fdPollAll(true);return}
   if(e.target.id==="bcGo"){const D=bcDraft;const msg=($("#bcMsg").value||"").trim();if(!msg){toast("Type the message first.");return}if(!D.secs.length&&!D.att){toast("Pick who gets it.");return}
     const b={rid:Date.now().toString(36)+rndId(4),key:rndId(32),msg:msg.slice(0,300),t:Date.now(),secs:D.secs.slice(),att:D.att,ack:{},after:0,ok:false,sent:{},un:0};
@@ -1879,6 +1898,9 @@ document.addEventListener("change",e=>{
   if(e.target.id==="bcAtt"){bcDraft.msg=($("#bcMsg")||{}).value||bcDraft.msg;bcDraft.att=e.target.checked;renderSend();return}
   if(e.target.id==="bcMe"){const d=normPh(e.target.value);if(e.target.value.trim()&&!d){toast("Enter a 10-digit number.");return}S.myPh=d;save();return}
   if(e.target.id==="fdUrg"){fdDraft.urg=e.target.checked;return}
+  if(e.target.matches&&e.target.matches("input[data-fdsec]")){const k=e.target.dataset.fdsec;fdDraft.secs=e.target.checked?[...new Set(fdDraft.secs.concat(k))]:fdDraft.secs.filter(x=>x!==k);return}
+  if(e.target.id==="fdAtt"){fdDraft.att=e.target.checked;return}
+  if(e.target.id==="fdWho"){fdDraft.mid=e.target.value;return}
   if(e.target.id==="liveTog"){S.live=e.target.checked;save();toast(S.live?"Live check-in on. Starts with your next recall.":"Live check-in off. Text replies only.");return}
   if(e.target.id==="rcAtt"){S.rc.att=e.target.checked;save();renderRecall();return}
   if(e.target.id==="ciMe"){const d=normPh(e.target.value);if(e.target.value.trim()&&!d){toast("Enter a 10-digit number.");return}S.myPh=d;save();const y=window.scrollY;renderRecall();window.scrollTo(0,y);toast(d?"Replies will come to "+fmtPh(d):"Number cleared");return}
@@ -2020,7 +2042,7 @@ let firstPick=false;{const qm=new URLSearchParams(location.search).get("m");if(!
 startXL();
 render();
 {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join"))setTimeout(()=>joinPrompt(q),firstPick?900:300);if(q.get("feed")){firstPick=false;setTimeout(()=>fdJoinPrompt(q),300)}}
-if(S.feeds.length){setTimeout(()=>fdPollAll(true),900);if(S.pushOn)setTimeout(()=>S.feeds.filter(f=>!f.lk&&!f.push).forEach(fdPushAttach),1600)}
+if(S.feeds.length){S.feeds.filter(f=>!f.lk&&f.me&&!f.meH).forEach(fdMeHash);setTimeout(()=>fdPollAll(true),900);if(S.pushOn)setTimeout(()=>S.feeds.filter(f=>!f.lk&&!f.push).forEach(fdPushAttach),1600)}
 if(bcActive())setTimeout(bcPoll,1000);
 if(S.board){setTimeout(livePollBoard,800);if(S.pushOn&&!S.board.push)setTimeout(boardPush,1500)}if(S.link)setTimeout(()=>linkPush(),1200);
 if(firstPick)setTimeout(()=>openModeSheet(true),350);
