@@ -1,7 +1,7 @@
 {
-  "name": "EOP Numbers",
-  "short_name": "EOP Numbers",
-  "description": "EOP accountability: on hand, total strength, muster, alerts and reports.",
+  "name": "MusterBoard: Team Accountability",
+  "short_name": "MusterBoard",
+  "description": "Accountability, muster and headcount for military units, police shifts, job crews, HR and civilian teams. Data stays on your phone.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -20,5 +20,14 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "id": "./",
+  "categories": [
+    "productivity",
+    "business",
+    "utilities"
+  ],
+  "lang": "en",
+  "dir": "ltr",
+  "orientation": "portrait"
 }

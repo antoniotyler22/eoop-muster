@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="EOP Numbers">
+<meta name="apple-mobile-web-app-title" content="MusterBoard">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#eef2f6" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0b1016" media="(prefers-color-scheme: dark)">
@@ -14,8 +14,13 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%233b4a2c'/%3E%3Ctext x='32' y='42' font-family='Arial' font-weight='700' font-size='26' text-anchor='middle' fill='%23d4ae4f'%3EEO%3C/text%3E%3C/svg%3E">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
 <title>EOP Numbers</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+@font-face{font-family:"Plus Jakarta Sans";font-style:normal;font-weight:400;font-display:swap;src:url(fonts/pjs-400.woff2) format("woff2")}
+@font-face{font-family:"Plus Jakarta Sans";font-style:normal;font-weight:500;font-display:swap;src:url(fonts/pjs-500.woff2) format("woff2")}
+@font-face{font-family:"Plus Jakarta Sans";font-style:normal;font-weight:600;font-display:swap;src:url(fonts/pjs-600.woff2) format("woff2")}
+@font-face{font-family:"Plus Jakarta Sans";font-style:normal;font-weight:700;font-display:swap;src:url(fonts/pjs-700.woff2) format("woff2")}
+@font-face{font-family:"Plus Jakarta Sans";font-style:normal;font-weight:800;font-display:swap;src:url(fonts/pjs-800.woff2) format("woff2")}
+</style>
 <style>
 /* Layout: phone-first muster board — sticky tab strip (Board + five sections), big strength tiles, status grid, per-Marine status pickers */
 :root{
@@ -227,23 +232,23 @@ ul.plain{margin:0;padding-left:18px;font-size:13.5px}
 @media (prefers-reduced-motion: no-preference){ .bar i{transition:width .3s ease} }
 /* ===== Glass theme ===== */
 :root{--bg:#eef2f6;--surface:rgba(255,255,255,.78);--surface-solid:#ffffff;--surface-2:#e6ebf1;--ink:#0f1720;--muted:#5b6673;--line:rgba(15,23,32,.09);
- --olive:#0f1720;--olive-ink:#ffffff;--brass:#1f8a70;--brass-soft:#dff3ec;--glass:rgba(255,255,255,.72);--glass-line:rgba(255,255,255,.65);--shadow:0 8px 24px rgba(15,23,32,.07);
- --s-onhand:#1f8a70;--s-aob:#2e78d2;--s-aoff:#6a5ae0;--s-duty:#c98a12;--s-op:#e26a3d;--s-tad:#9b51e0;--s-leave:#8a94a3;--warn:#d93a3a;
+ --olive:#0f1720;--olive-ink:#ffffff;--brass:#17795f;--on-brass:#ffffff;--brass-soft:#dff3ec;--glass:rgba(255,255,255,.72);--glass-line:rgba(255,255,255,.65);--shadow:0 8px 24px rgba(15,23,32,.07);
+ --s-onhand:#17795f;--s-aob:#2e78d2;--s-aoff:#6a5ae0;--s-duty:#c98a12;--s-op:#e26a3d;--s-tad:#9b51e0;--s-leave:#8a94a3;--warn:#d93a3a;
  --g1:#d9e7ff;--g2:#d5f5ea;--display:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;--body:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
  --bg:#0b1016;--surface:rgba(24,31,40,.72);--surface-solid:#18202a;--surface-2:#1f2833;--ink:#e8eef5;--muted:#93a1b1;--line:rgba(255,255,255,.08);
- --olive:#e8eef5;--olive-ink:#0b1016;--brass:#3ccf9e;--brass-soft:#13302a;--glass:rgba(16,22,30,.7);--glass-line:rgba(255,255,255,.07);--shadow:0 8px 24px rgba(0,0,0,.35);
+ --olive:#e8eef5;--olive-ink:#0b1016;--brass:#3ccf9e;--on-brass:#04231a;--brass-soft:#13302a;--glass:rgba(16,22,30,.7);--glass-line:rgba(255,255,255,.07);--shadow:0 8px 24px rgba(0,0,0,.35);
  --s-onhand:#3ccf9e;--s-aob:#5aa2ff;--s-aoff:#9a8cff;--s-duty:#f0b43c;--s-op:#ff8a5c;--s-tad:#c58cff;--s-leave:#9aa5b4;--warn:#ff6b6b;--g1:#132544;--g2:#0f2f27;color-scheme:dark}}
 :root[data-theme="dark"]{
  --bg:#0b1016;--surface:rgba(24,31,40,.72);--surface-solid:#18202a;--surface-2:#1f2833;--ink:#e8eef5;--muted:#93a1b1;--line:rgba(255,255,255,.08);
- --olive:#e8eef5;--olive-ink:#0b1016;--brass:#3ccf9e;--brass-soft:#13302a;--glass:rgba(16,22,30,.7);--glass-line:rgba(255,255,255,.07);--shadow:0 8px 24px rgba(0,0,0,.35);
+ --olive:#e8eef5;--olive-ink:#0b1016;--brass:#3ccf9e;--on-brass:#04231a;--brass-soft:#13302a;--glass:rgba(16,22,30,.7);--glass-line:rgba(255,255,255,.07);--shadow:0 8px 24px rgba(0,0,0,.35);
  --s-onhand:#3ccf9e;--s-aob:#5aa2ff;--s-aoff:#9a8cff;--s-duty:#f0b43c;--s-op:#ff8a5c;--s-tad:#c58cff;--s-leave:#9aa5b4;--warn:#ff6b6b;--g1:#132544;--g2:#0f2f27;color-scheme:dark}
 body{background:radial-gradient(1100px 560px at 15% -10%,var(--g1) 0,transparent 60%),radial-gradient(900px 520px at 110% 8%,var(--g2) 0,transparent 55%),var(--bg);background-attachment:fixed;-webkit-font-smoothing:antialiased}
 body::before{background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 .top{background:var(--glass);backdrop-filter:saturate(1.6) blur(18px);-webkit-backdrop-filter:saturate(1.6) blur(18px);color:var(--ink);border-bottom:1px solid var(--line)}
 .brand h1{font-weight:800;letter-spacing:-.015em;font-size:20px}.brand .dtg{color:var(--muted);opacity:1;font-weight:600;letter-spacing:.01em}
 .acts button{border:0;background:var(--line);color:var(--ink);border-radius:999px;padding:6px 10px;font-weight:700}
-.acts button[aria-pressed="true"]{background:var(--brass);color:#fff}
+.acts button[aria-pressed="true"]{background:var(--brass);color:var(--on-brass)}
 .tabs{display:flex;background:var(--line);border-radius:14px;padding:3px;gap:2px;margin:10px 0;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tabs button{flex:1 0 auto;min-width:46px;color:var(--ink);border:0;border-radius:11px;padding:6px 4px;font-family:var(--body);font-weight:700;font-size:13px;letter-spacing:0;opacity:.7}
@@ -255,13 +260,13 @@ body::before{background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop
 .bigbtn b{font-weight:800;letter-spacing:-.01em;font-size:16px}
 .chip{border:0;background:var(--line)}
 .att{border:1px solid color-mix(in srgb,var(--brass) 40%,transparent)}
-.att button,.btn{border-radius:14px}.att button{background:var(--brass);color:#fff;border-radius:999px}
+.att button,.btn{border-radius:14px}.att button{background:var(--brass);color:var(--on-brass);border-radius:999px}
 .btn{background:var(--ink);color:var(--bg)}.btn.alt{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
 a.call{border-radius:12px}
 thead th{background:transparent}tr.sum td{background:color-mix(in srgb,var(--line) 70%,transparent)}
 tr.key td{background:var(--ink);color:var(--bg)}
 h2{letter-spacing:-.01em;text-transform:none;font-weight:800;font-size:19px}
-.banner{background:var(--brass-soft);border-radius:16px}.banner button{background:var(--brass);border-radius:999px}
+.banner{background:var(--brass-soft);border-radius:16px}.banner button{background:var(--brass);color:var(--on-brass);border-radius:999px}
 .toast{border-radius:999px;background:var(--ink);color:var(--bg);box-shadow:var(--shadow)}
 .mbar{background:transparent;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 textarea,.panel input[type=text],.panel input[type=tel],select,.wsel,.wta{border-radius:12px}
@@ -301,11 +306,28 @@ textarea,.panel input[type=text],.panel input[type=tel],select,.wsel,.wta{border
 .mshare{margin-top:12px}.mshare .evts{margin-top:6px}
 .brand h1{overflow:hidden;text-overflow:ellipsis;font-size:18px}.brand .acts button{padding:6px 9px}
 .vpanel{display:flex;align-items:center;justify-content:space-between;gap:10px}
+
+/* ===== lock screen ===== */
+body.locked .top,body.locked #main{visibility:hidden}
+.lock{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px 16px calc(24px + env(safe-area-inset-bottom))}
+.lock-in{width:100%;max-width:320px;text-align:center}
+.lock-ic{font-size:30px}.lock h2{margin:6px 0 2px;font-size:22px;font-weight:800;color:var(--ink)}
+.lock-sub{margin:0;color:var(--muted);font-weight:600}
+.dots{display:flex;gap:12px;justify-content:center;margin:22px 0 8px}.dots i{width:13px;height:13px;border-radius:50%;border:2px solid var(--ink);opacity:.5}.dots i.on{background:var(--ink);opacity:1}
+.lock-err{min-height:40px;margin:4px 0 10px;color:var(--warn);font-weight:600;font-size:14px}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.pad button{height:64px;border-radius:999px;border:1px solid var(--line);background:var(--surface-solid);color:var(--ink);font:inherit;font-size:24px;font-weight:700}
+.pad button:active{background:var(--brass-soft)}
+.lock-forgot{margin-top:18px;background:none;border:0;color:var(--muted);font:inherit;font-weight:600;text-decoration:underline;min-height:44px}
+details summary{cursor:pointer;font-weight:700;min-height:32px}
+:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
+.ts-big .brand{flex-wrap:wrap;row-gap:6px}.ts-big .brand>div:first-child{flex:1 1 100%}.ts-big .acts{width:100%}.ts-big .acts button{flex:1}
+button[data-w6],button[data-tup],button[data-tdn]{min-height:28px;min-width:32px}
 </style>
 </head><body>
-<div class="top"><div class="top-in">
+<header class="top"><div class="top-in">
   <div class="brand">
-    <div><h1><button id="bMode" class="titlebtn" aria-label="App version">EOP Numbers<span class="caret">▾</span></button></h1><div class="dtg" id="dtg"></div></div>
+    <div><h1><button id="bMode" class="titlebtn" aria-haspopup="dialog" title="Change app version">EOP Numbers<span class="caret">▾</span></button></h1><div class="dtg" id="dtg"></div></div>
     <div class="acts">
       <button id="b6W" aria-pressed="false">6W</button>
       <button id="bPT" aria-pressed="false">PT</button>
@@ -313,15 +335,86 @@ textarea,.panel input[type=text],.panel input[type=tel],select,.wsel,.wta{border
       <button id="bData" aria-pressed="false">DATA</button>
     </div>
   </div>
-  <div class="tabs" role="tablist" id="tabs"></div>
-</div></div>
+  <nav aria-label="Sections"><div class="tabs" role="tablist" id="tabs"></div></nav>
+</div></header>
 
 <main class="wrap" id="main"></main>
-<div class="toast" id="toast" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <div class="sheet" id="sheet" hidden><div class="sheet-bg" data-sclose="1"></div><div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheetT"><div class="grab"></div><h3 id="sheetT"></h3><div class="sheet-opts" id="sheetOpts"></div></div></div>
 
 
+<div class="lock" id="lock" hidden role="dialog" aria-modal="true" aria-labelledby="lockT">
+  <div class="lock-in">
+    <div class="lock-ic" aria-hidden="true">🔒</div>
+    <h2 id="lockT">MusterBoard</h2>
+    <p class="lock-sub" id="lockSub">Enter your PIN</p>
+    <div class="dots" id="lockDots" aria-hidden="true"></div>
+    <p class="lock-err" id="lockErr" role="alert"></p>
+    <div class="pad" id="lockPad"></div>
+    <button class="lock-forgot" id="lockForgot" type="button">Forgot PIN?</button>
+  </div>
+</div>
 <script>
+/* ---------- vault: PIN lock + encrypted storage (AES-GCM, key from PIN via PBKDF2) ---------- */
+(()=>{
+const K="eoop-muster-v1",KE=K+"-enc",KC=K+"-lock",ITER=310000;
+const te=new TextEncoder(),td=new TextDecoder();
+const b64=a=>btoa(String.fromCharCode(...new Uint8Array(a)));
+const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const getCfg=()=>{try{return JSON.parse(localStorage.getItem(KC)||"null")}catch(e){return null}};
+const putCfg=c=>{try{localStorage.setItem(KC,JSON.stringify(c))}catch(e){}};
+async function derive(pin,salt,iter){const base=await crypto.subtle.importKey("raw",te.encode(pin),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:iter,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"])}
+async function enc(key,text){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,te.encode(text));return JSON.stringify({v:1,iv:b64(iv),ct:b64(ct)})}
+async function dec(key,blob){const o=JSON.parse(blob);const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(o.iv)},key,unb64(o.ct));return td.decode(pt)}
+let pending=null,writing=false;
+async function flush(){if(writing)return;writing=true;while(pending!==null){const t=pending;pending=null;
+  try{localStorage.setItem(KE,await enc(V.key,t));localStorage.removeItem(K)}catch(e){}}writing=false}
+const V=window.VAULT={key:null,cfg:getCfg(),ok:!!(window.crypto&&crypto.subtle),
+  on(){return !!this.key},
+  write(text){pending=text;flush()},
+  async setPin(pin,text,opts){const salt=crypto.getRandomValues(new Uint8Array(16));const key=await derive(pin,salt,ITER);
+    const blob=await enc(key,text);localStorage.setItem(KE,blob);
+    this.cfg=Object.assign({auto:5,wipe:false},this.cfg||{},opts||{},{salt:b64(salt),iter:ITER,len:pin.length,fails:0});putCfg(this.cfg);
+    this.key=key;localStorage.removeItem(K)},
+  async check(pin){const c=this.cfg;if(!c)return false;try{const k=await derive(pin,unb64(c.salt),c.iter);await dec(k,localStorage.getItem(KE));return true}catch(e){return false}},
+  off(text){try{localStorage.setItem(K,text)}catch(e){}localStorage.removeItem(KE);localStorage.removeItem(KC);this.key=null;this.cfg=null},
+  set(p){this.cfg=Object.assign(this.cfg||{},p);putCfg(this.cfg)},
+  lockNow(){location.reload()},
+  eraseAll(){try{[K,KE,KC].forEach(x=>localStorage.removeItem(x));Object.keys(localStorage).filter(x=>x.startsWith(K)).forEach(x=>localStorage.removeItem(x))}catch(e){}
+    try{if(window.caches)caches.keys().then(ks=>Promise.all(ks.map(k=>caches.delete(k)))).finally(()=>location.replace(location.pathname))}catch(e){location.replace(location.pathname)}}
+};
+let hiddenAt=0;
+document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.hidden){hiddenAt=Date.now();return}
+  const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
+function startApp(){const s=document.createElement("script");s.textContent=document.getElementById("app").textContent;document.body.appendChild(s)}
+window.addEventListener("DOMContentLoaded",()=>{
+  if(!V.cfg||!localStorage.getItem(KE)){if(V.cfg&&!localStorage.getItem(KE)){try{localStorage.removeItem(KC)}catch(e){}V.cfg=null}startApp();return}
+  const L=document.getElementById("lock"),dots=document.getElementById("lockDots"),err=document.getElementById("lockErr"),pad=document.getElementById("lockPad");
+  const c=V.cfg;document.getElementById("lockT").textContent=c.title||"MusterBoard";let pin="",busy=false,until=0;
+  const draw=()=>{dots.innerHTML=Array.from({length:c.len||6},(_,i)=>`<i class="${i<pin.length?"on":""}"></i>`).join("")};
+  pad.innerHTML=["1","2","3","4","5","6","7","8","9","","0","⌫"].map(k=>k?`<button type="button" data-k="${k}" aria-label="${k==="⌫"?"Delete":k}">${k}</button>`:"<span></span>").join("");
+  draw();L.hidden=false;document.body.classList.add("locked");
+  async function tryPin(){busy=true;document.getElementById("lockSub").textContent="Checking…";
+    const ok=await V.check(pin);
+    if(ok){const k=await derive(pin,unb64(c.salt),c.iter);window.__RAW=await dec(k,localStorage.getItem(KE));V.key=k;V.set({fails:0});
+      L.hidden=true;document.body.classList.remove("locked");startApp();return}
+    const f=(c.fails||0)+1;V.set({fails:f});pin="";draw();busy=false;document.getElementById("lockSub").textContent="Enter your PIN";
+    if(c.wipe&&f>=10){err.textContent="Too many wrong PINs. Erasing data.";setTimeout(()=>V.eraseAll(),1200);busy=true;return}
+    if(f>=5){until=Date.now()+30000*Math.pow(2,Math.min(f-5,5));err.textContent="Wrong PIN ("+f+" tries). Wait "+Math.round((until-Date.now())/1000)+" seconds."+(c.wipe?" Data erases at 10.":"")}
+    else err.textContent="Wrong PIN."+(c.wipe?" "+(10-f)+" tries left before data is erased.":"");
+    if(navigator.vibrate)navigator.vibrate([40,60,40])}
+  pad.addEventListener("click",e=>{const b=e.target.closest("[data-k]");if(!b||busy)return;if(Date.now()<until){err.textContent="Wait "+Math.ceil((until-Date.now())/1000)+" seconds.";return}
+    const k=b.dataset.k;if(k==="⌫")pin=pin.slice(0,-1);else if(pin.length<8)pin+=k;draw();if(pin.length===(c.len||6))tryPin()});
+  document.addEventListener("keydown",e=>{if(L.hidden||busy)return;if(/^\d$/.test(e.key)){const b=pad.querySelector(`[data-k="${e.key}"]`);b&&b.click()}else if(e.key==="Backspace"){pad.querySelector('[data-k="⌫"]').click()}});
+  let fArm=false;document.getElementById("lockForgot").addEventListener("click",e=>{
+    if(!fArm){fArm=true;e.target.textContent="Tap again to ERASE all app data and start over";err.textContent="There is no PIN recovery. Your data is encrypted with your PIN.";return}
+    V.eraseAll()});
+  const f0=c.fails||0;if(f0>=5)until=Date.now()+30000;
+});
+})();
+</script>
+<script id="app" type="text/plain">
 const STATUSES=["On Hand","Appointment on Base","Appointment off Base","Company Duties","Operation","TAD","Leave"];
 const SHORT={"On Hand":"On Hand","Appointment on Base":"Appt On Base","Appointment off Base":"Appt Off Base","Company Duties":"Co Duties","Operation":"Operation","TAD":"TAD","Leave":"Leave"};
 const SVAR={"On Hand":"--s-onhand","Appointment on Base":"--s-aob","Appointment off Base":"--s-aoff","Company Duties":"--s-duty","Operation":"--s-op","TAD":"--s-tad","Leave":"--s-leave"};
@@ -378,6 +471,8 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
+const APP_VER="1.0.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
 const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
@@ -424,7 +519,7 @@ function xlTree(root){if(!root)return;if(root.nodeType===3){xlText(root);return}
   if(root.nodeName==="INPUT")return;
   const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const L=[];while(w.nextNode())L.push(w.currentNode);L.forEach(xlText)}
 let XOBS=null;
-function startXL(){if(XOBS){XOBS.disconnect();XOBS=null}XL=modeDict(MODE());document.title=MODE().title;
+function startXL(){if(XOBS){XOBS.disconnect();XOBS=null}XL=modeDict(MODE());document.title=MODE().title;if(window.VAULT&&VAULT.cfg&&VAULT.cfg.title!==MODE().title)VAULT.set({title:MODE().title});
   xlTree(document.body);if(!XL)return;
   XOBS=new MutationObserver(rs=>{for(const r of rs){if(r.type==="characterData")xlText(r.target);else r.addedNodes.forEach(xlTree)}});
   XOBS.observe(document.body,{subtree:true,childList:true,characterData:true})}
@@ -448,8 +543,8 @@ function modeLink(k){return location.origin+location.pathname+(k==="all"?"":"?m=
 function openModeSheet(first){sheetCtx={kind:"mode"};const cur=MODES[S.mode]?S.mode:"military";
   $("#sheetT").innerHTML=first?`Pick your version<small>Sets the tabs, statuses and report titles for your group. Change it any time by tapping the title.</small>`:`App version<small>Changes every tab, status and report title. Same people, same data.</small>`;
   $("#sheetOpts").innerHTML=MODE_ORDER.map(k=>`<button data-mopt="${k}" aria-pressed="${k===cur}" data-noxl><span><b>${MODES[k].name}</b><br><span class="mdesc">${MODES[k].desc}</span></span></button>`).join("")+(first?"":
-   `<div class="mshare" data-noxl><button class="btn" data-mshare="all" style="width:100%;margin:6px 0 10px">Send app link (they pick their version)</button><div class="note">Or send one version, already set:</div><div class="evts">${MODE_ORDER.map(k=>`<button data-mshare="${k}">${MODES[k].name}</button>`).join("")}</div></div>`);
-  const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));buzz()}
+   `<div class="mshare" data-noxl><button class="btn" data-mshare="all" style="width:100%;margin:6px 0 10px">Send app link (they pick their version)</button><div class="note">Or send one version, already set:</div><div class="evts">${MODE_ORDER.map(k=>`<button data-mshare="${k}">${MODES[k].name}</button>`).join("")}</div></div>`)+`<p class="note" data-noxl style="margin:10px 2px 0">${DISCLAIMER} <a href="privacy.html">Privacy</a></p>`;
+  const sh=$("#sheet");sheetFocus();sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));buzz()}
 function shareMode(k){const url=modeLink(k);const t=k==="all"?"Accountability app: Military, Police, Jobs, HR or Civilian. Pick yours when it opens.":MODES[k].title+" ("+MODES[k].name+" version)";
   if(navigator.share){navigator.share({title:t,text:t,url}).catch(()=>{});return}
   try{navigator.clipboard.writeText(url).then(()=>toast((k==="all"?"App":MODES[k].name)+" link copied"),()=>toast(url))}catch(e){toast(url)}}
@@ -502,7 +597,7 @@ function sampleRoster(){
 
 let S={roster:sampleRoster(),source:"sample",loadedAt:"",recipients:"",names:false,pt:{event:"Unit PT",when:"",inc:["On Hand"],att:true}};
 let storageOK=true;
-try{const raw=localStorage.getItem(KEY); if(raw){const v=JSON.parse(raw); if(v&&Array.isArray(v.roster)) S=Object.assign(S,v);} }catch(e){storageOK=false}
+try{const raw=window.__RAW!==undefined?window.__RAW:localStorage.getItem(KEY);window.__RAW=undefined; if(raw){const v=JSON.parse(raw); if(v&&Array.isArray(v.roster)) S=Object.assign(S,v);} }catch(e){storageOK=false}
 if(MODES[S.mode]&&MODES[S.mode].secs){DEF_SECS.splice(0,DEF_SECS.length,...MODES[S.mode].secs.map(s=>s.slice()));SECTIONS.splice(0,SECTIONS.length,...DEF_SECS.map(s=>s.slice()))}
 if(Array.isArray(S.secs)&&S.secs.length&&S.secs.every(x=>Array.isArray(x)&&x[0])){SECTIONS.splice(0,SECTIONS.length,...S.secs.slice(0,10))}secFix();
 S.w6=Array.isArray(S.w6)?S.w6:[];
@@ -514,7 +609,7 @@ S.rc=Object.assign({open:false,start:0,end:0,res:{},att:true,only:false},S.rc||{
 S.mus=Object.assign({open:false,seen:{},inc:["On Hand"],att:true,only:false,last:null},S.mus||{});
 S.pt=Object.assign({event:"Unit PT",when:"",inc:["On Hand"],att:true},S.pt||{});
 const dutyOf=m=>DUTIES.includes(m.duty)?m.duty:"Full Duty";
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));storageOK=true}catch(e){storageOK=false}}
+function save(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.write(t);else localStorage.setItem(KEY,t);storageOK=true}catch(e){storageOK=false}}
 
 let view="board", armed=null, query="";
 const h0=(location.hash||"").slice(1).toLowerCase();
@@ -641,7 +736,7 @@ function renderText(){
     <input type="tel" id="rcp" value="${esc(S.recipients)}" placeholder="808 555 0100, 808 555 0101">
     <label class="tog"><input type="checkbox" id="nm"${S.names?" checked":""}> Include last names of Marines off deck</label>
     <label class="tog"><input type="checkbox" id="chg"${S.chg!==false?" checked":""}> Include changes since last report${S.snap?"":" (starts after your first send)"}</label>
-    <textarea id="msg" readonly>${esc(t)}</textarea>
+    <textarea id="msg" readonly aria-label="Report text">${esc(t)}</textarea>
     <div class="row2"><a class="btn" id="sms" href="${esc(smsHref(t))}">Text it</a><button class="btn alt" id="copy">Copy text</button></div>
     ${navigator.share?'<button class="btn alt" id="share">Share to Signal, Teams, email…</button>':''}
     <button class="btn alt" id="markSent">Mark as sent (start a new change window)</button>
@@ -661,6 +756,9 @@ function renderData(){
     <button class="btn warn" id="reset">${armed==="reset"?"Tap again to clear the roster":"Clear roster and show sample"}</button>
   </div>
   ${tabsHTML()}
+  ${displayHTML()}
+  ${secHTML()}
+  ${aboutHTML()}
   <h2>Recall roster (phone numbers)</h2><div class="panel">
     <label for="rcFile">Load recall roster (Excel, CSV, PDF, Word, .vcf)</label><input type="file" id="rcFile" accept=".csv,.txt,.xlsx,.xls,.vcf,.pdf,.docx,text/csv,text/plain,text/vcard,application/pdf">
     <label for="rcPaste">Or paste lines like: CPL SMITH, JOHN A. 808-555-0100</label>
@@ -758,7 +856,7 @@ function renderW(){
     ${W_FIELDS.map(([k,l,ph])=>`<label for="w_${k}">${l}</label><textarea class="wta" id="w_${k}" data-wf="${k}" placeholder="${ph}">${esc(W[k])}</textarea>`).join("")}
     <label for="wRep">Reported by</label><input type="text" id="wRep" value="${esc(S.reporter||"")}" placeholder="Rank Name, billet">
   </div>
-  <h2>Preview</h2><div class="panel"><textarea id="wMsg" readonly>${esc(wText(W))}</textarea>
+  <h2>Preview</h2><div class="panel"><textarea id="wMsg" readonly aria-label="Incident report preview">${esc(wText(W))}</textarea>
     <div class="row2"><a class="btn" id="wSms" href="${esc(smsHref(wText(W)))}">Text it</a><button class="btn alt" id="wCopy">Copy</button></div>
     <div class="row2"><button class="btn alt" id="wSave">Save to log</button><button class="btn alt" id="wNew">New report</button></div>
     <p class="note">Texts go to the numbers saved on the TEXT screen. Check Messages before assuming it sent. Send incident details only over channels your command approves.</p></div>`;
@@ -906,7 +1004,7 @@ function vcfToCSV(t){const out=["Name,Phone,Alt Phone"];const q=v=>'"'+String(v|
   return out.join("\n")}
 let xlsxP=null;
 function loadXLSX(){if(window.XLSX)return Promise.resolve(window.XLSX);if(xlsxP)return xlsxP;
-  xlsxP=new Promise((res,rej)=>{const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";s.onload=()=>res(window.XLSX);s.onerror=()=>{xlsxP=null;rej(new Error("Couldn't load the Excel reader. Connect to signal once, or save the file as CSV."))};document.head.appendChild(s)});return xlsxP}
+  xlsxP=new Promise((res,rej)=>{const s=document.createElement("script");s.src="lib/xlsx.full.min.js";s.onload=()=>res(window.XLSX);s.onerror=()=>{xlsxP=null;rej(new Error("Couldn't load the Excel reader. Connect to signal once, or save the file as CSV."))};document.head.appendChild(s)});return xlsxP}
 function parseRecall(text,opt){opt=opt||{};const rows=parseCSV(text);let hi=-1,cols=[];
   const bad=/edipi|dod|ssn|\bid\b|emerg|nok|next of kin|spouse|parent|zip|unit|uic|room|plate/i;
   const score=x=>/cell|mobile/.test(x)?4:/personal/.test(x)?3:/phone|tel/.test(x)?2:/number|contact/.test(x)?1:0;
@@ -927,13 +1025,13 @@ function importRecall(text,src,opt){const rows=parseRecall(text,opt);S.rcRev={sr
   return {n:rows.length,ok:rows.filter(r=>r.id).length}}
 function rcResult(r){return r.n?`Read <b>${r.n}</b> numbers · <b>${r.ok}</b> matched to names. Check them below, fix anything, then tap <b>Attach</b>.`:`No phone numbers found in that file. You can type them in below.`}
 function loadLib(url,glob){return new Promise((res,rej)=>{if(window[glob])return res(window[glob]);const s=document.createElement("script");s.src=url;s.onload=()=>res(window[glob]);s.onerror=()=>rej(new Error("Couldn't load the reader for this file. Connect to signal once and try again, or save it as Excel/CSV."));document.head.appendChild(s)})}
-function pdfText(buf){const B="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+function pdfText(buf){const B="lib/";
   return loadLib(B+"pdf.min.js","pdfjsLib").then(P=>{P.GlobalWorkerOptions.workerSrc=B+"pdf.worker.min.js";return P.getDocument({data:buf}).promise}).then(async doc=>{const lines=[];
     for(let p=1;p<=doc.numPages;p++){const tc=await(await doc.getPage(p)).getTextContent();const rows={};
       for(const it of tc.items){if(!it.str||!it.str.trim())continue;const y=Math.round(it.transform[5]/3);(rows[y]=rows[y]||[]).push([it.transform[4],it.str])}
       Object.keys(rows).map(Number).sort((a,b)=>b-a).forEach(y=>lines.push(rows[y].sort((a,b)=>a[0]-b[0]).map(a=>a[1].replace(/,/g," ")).join(" , ")))}
     return lines.join("\n")})}
-function docxText(buf){return loadLib("https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js","mammoth").then(M=>M.convertToHtml({arrayBuffer:buf})).then(r=>{
+function docxText(buf){return loadLib("lib/mammoth.browser.min.js","mammoth").then(M=>M.convertToHtml({arrayBuffer:buf})).then(r=>{
   const d=new DOMParser().parseFromString(r.value,"text/html");const q=v=>'"'+String(v).replace(/\s+/g," ").trim().replace(/"/g,'""')+'"';const out=[];
   d.body.querySelectorAll("tr").forEach(tr=>out.push([...tr.children].map(c=>q(c.textContent)).join(",")));
   d.body.querySelectorAll("p,li").forEach(p=>{if(!p.closest("table"))out.push(q(p.textContent))});return out.join("\n")})}
@@ -1099,8 +1197,10 @@ function openSheet(kind,id){const m=S.roster.find(x=>x.id===id);if(!m)return;she
   $("#sheetT").innerHTML=`${kind==="s"?"Status":"Duty status"}<small>${esc(m.rank+" "+m.name)}</small>`;
   const opts=kind==="s"?STATUSES:DUTIES;const cur=kind==="s"?m.status:dutyOf(m);
   $("#sheetOpts").innerHTML=opts.map(o=>`<button data-sopt="${esc(o)}" aria-pressed="${o===cur}">${kind==="s"?`<span class="dot" style="background:var(${SVAR[o]})"></span>`:""}${esc(o)}</button>`).join("");
-  const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));buzz()}
-function closeSheet(){const sh=$("#sheet");sh.classList.remove("open");setTimeout(()=>{sh.hidden=true},RM()?0:260);sheetCtx=null}
+  const sh=$("#sheet");sheetFocus();sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));buzz()}
+let sheetRet=null;
+function sheetFocus(){sheetRet=document.activeElement;setTimeout(()=>{const f=document.querySelector('#sheetOpts [aria-pressed="true"]')||document.querySelector("#sheetOpts button");if(f)f.focus({preventScroll:true})},60)}
+function closeSheet(){const sh=$("#sheet");sh.classList.remove("open");setTimeout(()=>{sh.hidden=true;if(sheetRet&&sheetRet.isConnected&&sheetRet.focus)sheetRet.focus({preventScroll:true});sheetRet=null},RM()?0:260);sheetCtx=null}
 let lastView=null,slideDir="";
 function animateView(){const el=$("#main");if(!el)return;if(lastView!==view){el.classList.remove("vin","vl","vr");void el.offsetWidth;el.classList.add(slideDir||"vin");slideDir=""}lastView=view}
 const NUMS={};
@@ -1309,7 +1409,52 @@ document.addEventListener("submit",e=>{
 const dl=Promise.resolve({save:({filename,data})=>new Promise((res,rej)=>{try{const b=new Blob([data],{type:"text/csv"});
   if(navigator.canShare&&navigator.canShare({files:[new File([b],filename,{type:"text/csv"})]})){navigator.share({files:[new File([b],filename,{type:"text/csv"})],title:filename}).then(()=>res({status:"saved"}),()=>rej({code:"declined"}));return}
   const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=filename;document.body.appendChild(a);a.click();a.remove();res({status:"saved"})}catch(e){rej({code:"unavailable"})}})});
-applyLists();
+/* ---------- about ---------- */
+const TSIZES=[["1","Normal"],["1.15","Large"],["1.3","Extra large"]];
+function applyTS(){const z=+(S.ts||1);document.documentElement.style.zoom=z===1?"":String(z);document.documentElement.classList.toggle("ts-big",z>1)}
+function displayHTML(){return `<h2>Display</h2><div class="panel"><label for="tsSel">Text size</label><select id="tsSel">${TSIZES.map(([v,t])=>`<option value="${v}"${String(S.ts||1)===v?" selected":""}>${t}</option>`).join("")}</select>
+  <p class="note">Makes everything in the app bigger, including buttons. Use Large or Extra large if the default is hard to read.</p></div>`}
+document.addEventListener("change",e=>{if(e.target.id==="tsSel"){S.ts=+e.target.value;save();applyTS();toast("Text size saved")}});
+function aboutHTML(){return `<h2>About</h2><div class="panel" data-noxl><div><b>MusterBoard</b> · ${esc(MODE().name)} version · v${APP_VER} (${APP_BUILD})</div>
+  <p class="note">Your data stays on this phone. No accounts, no analytics, no ads. ${DISCLAIMER}</p>
+  <div class="row2"><a class="btn alt" href="privacy.html">Privacy policy</a><a class="btn alt" href="support.html">Support</a></div>
+  <a class="btn alt" href="mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("MusterBoard v"+APP_VER+" support")}">Email support</a></div>`}
+/* ---------- security panel ---------- */
+const pinIn=(id,lbl,ac)=>`<div><label for="${id}">${lbl}</label><input id="${id}" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="${ac}" maxlength="8"></div>`;
+function secHTML(){const V=window.VAULT;
+  const erase=`<button class="btn warn" id="secErase">${armed==="erase"?"Tap again: erase ALL app data on this phone":"Erase all app data on this phone"}</button>`;
+  if(!V||!V.ok)return `<h2>Security</h2><div class="panel"><p class="note">This browser can't encrypt data. Open the app in Safari or Chrome.</p>${erase}</div>`;
+  if(!V.on())return `<h2>Security</h2><div class="panel"><p class="note"><b>Lock is off.</b> Set a PIN to lock the app and encrypt the roster stored on this phone. There is no PIN recovery: if you forget it, the only fix is erasing the data.</p>
+    <div class="row2">${pinIn("pinA","New PIN (4–8 digits)","new-password")}${pinIn("pinB","Repeat PIN","new-password")}</div>
+    <button class="btn" id="secSet">Turn on PIN lock</button>${erase}</div>`;
+  const c=V.cfg||{};const opt=(v,t)=>`<option value="${v}"${+c.auto===v?" selected":""}>${t}</option>`;
+  return `<h2>Security</h2><div class="panel"><div><b>🔒 PIN lock is on.</b> <span class="note">Roster data on this phone is encrypted (AES-256).</span></div>
+    <label for="secAuto">Lock again after leaving the app</label><select id="secAuto">${opt(0,"Right away")}${opt(1,"1 minute")}${opt(5,"5 minutes")}${opt(15,"15 minutes")}${opt(60,"1 hour")}${opt(-1,"Only when I tap Lock now")}</select>
+    <label class="tog"><input type="checkbox" id="secWipe"${c.wipe?" checked":""}> Erase all data after 10 wrong PINs</label>
+    <button class="btn alt" id="secLock">Lock now</button>
+    <details><summary>Change PIN or turn off lock</summary>
+      <div class="row2">${pinIn("pinC","Current PIN","current-password")}<div></div>${pinIn("pinA","New PIN","new-password")}${pinIn("pinB","Repeat new PIN","new-password")}</div>
+      <div class="row2" style="margin-top:8px"><button class="btn alt" id="secChange">Change PIN</button><button class="btn warn" id="secOff">Turn off lock</button></div></details>
+    <p class="note">Backup files you export are not encrypted. Store and send them only over approved channels.</p>${erase}</div>`}
+function pinsOK(){const a=($("#pinA")||{}).value||"",b=($("#pinB")||{}).value||"";
+  if(!/^\d{4,8}$/.test(a)){toast("PIN must be 4 to 8 digits.");return null}if(a!==b){toast("PINs don't match.");return null}
+  if(/^(\d)\1+$/.test(a)||"0123456789".includes(a)||"9876543210".includes(a)){toast("Too easy to guess. Pick another PIN.");return null}return a}
+document.addEventListener("click",async e=>{const id=e.target.id;const V=window.VAULT;
+  if(id==="secErase"){if(armed==="erase"){V?V.eraseAll():(localStorage.clear(),location.reload())}else{armed="erase";tabRedraw()}return}
+  if(!V)return;
+  if(id==="secSet"){const p=pinsOK();if(!p)return;e.target.disabled=true;e.target.textContent="Encrypting…";
+    try{await V.setPin(p,JSON.stringify(S),{title:MODE().title});toast("PIN lock on. Data encrypted.")}catch(err){toast("Couldn't turn on the lock here.")}tabRedraw();return}
+  if(id==="secLock"){V.lockNow();return}
+  if(id==="secChange"||id==="secOff"){const cur=($("#pinC")||{}).value||"";if(!cur){toast("Enter your current PIN.");return}
+    e.target.disabled=true;const ok=await V.check(cur);e.target.disabled=false;if(!ok){toast("Current PIN is wrong.");return}
+    if(id==="secOff"){V.off(JSON.stringify(S));toast("Lock off. Data is no longer encrypted.");tabRedraw();return}
+    const p=pinsOK();if(!p)return;await V.setPin(p,JSON.stringify(S),{auto:V.cfg.auto,wipe:V.cfg.wipe,title:MODE().title});toast("PIN changed.");tabRedraw();return}
+});
+document.addEventListener("change",e=>{const V=window.VAULT;if(!V||!V.on())return;
+  if(e.target.id==="secAuto"){V.set({auto:+e.target.value});toast("Saved")}
+  if(e.target.id==="secWipe"){V.set({wipe:e.target.checked});toast(e.target.checked?"Data erases after 10 wrong PINs.":"Auto-erase off.")}});
+
+applyLists();applyTS();
 for(const f of ["reportText","ptText","wText","alertsText","musText","sectionUpdateText","recallText","evText","armText"]){const o=window[f];if(typeof o==="function")window[f]=(...a)=>RT(o(...a))}
 reportText=window.reportText;ptText=window.ptText;wText=window.wText;alertsText=window.alertsText;musText=window.musText;sectionUpdateText=window.sectionUpdateText;recallText=window.recallText;evText=window.evText;armText=window.armText;
 let firstPick=false;{const qm=new URLSearchParams(location.search).get("m");if(!qm&&!S.mode)firstPick=true;if(qm&&MODES[qm]){if(!S.mode&&qm==="military"){S.mode="military";save()}setMode(qm);try{history.replaceState(null,"",location.pathname+location.hash)}catch(e){}}}
