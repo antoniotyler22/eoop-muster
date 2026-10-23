@@ -486,7 +486,7 @@ const SB=window.SB={url:"https://vdhxhvklwbimjpoomnui.supabase.co",key:"sb_publi
   notify(rid,body){try{fetch(this.url+"/functions/v1/notify",{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify(body||{recall:rid}),keepalive:true}).catch(()=>{})}catch(e){}},
   async rpc(fn,args){const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),12000);
     try{const r=await fetch(this.url+"/rest/v1/rpc/"+fn,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify(args),signal:ac.signal});
-      const t=await r.text();if(!r.ok)throw new Error((()=>{try{return JSON.parse(t).message}catch(e){return t}})()||("HTTP "+r.status));return t?JSON.parse(t):null}finally{clearTimeout(tm)}},
+      const t=await r.text();if(r.ok)SB.okAt=Date.now();else{SB.failAt=Date.now();SB.failMsg=t.slice(0,120)}if(!r.ok)throw new Error((()=>{try{return JSON.parse(t).message}catch(e){return t}})()||("HTTP "+r.status));return t?JSON.parse(t):null}finally{clearTimeout(tm)}},
   words(n){return [...new Set(String(n||"").toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean))].slice(0,6)},
   async h(rid,w){const b=await crypto.subtle.digest("SHA-256",te.encode(rid+":"+w));return [...new Uint8Array(b)].slice(0,8).map(x=>x.toString(16).padStart(2,"0")).join("")}};
 /* check-in page for the person receiving a recall link (#ci=...). Shows nothing from this phone's roster. */
@@ -827,6 +827,7 @@ function renderTabs(){renderShell();
 }
 function banner(){if(S.role==="view")return `<div class="banner"><span><b>View-only phone.</b> You see the shared board; changes here aren't saved.</span></div>`+banner0();return banner0()}
 function banner0(){
+  {const sb=staleBanner();if(sb)return sb}
   const LK=S.link;if(LK&&LK.rk2){if(!LK.pulled)return `<div class="banner"><span>${LK.perr?esc(LK.perr):`Loading <b>${esc(LK.sec)}</b> from ${esc(LK.unit)}'s board…`}</span>${LK.perr?`<button id="lkRetry">Retry</button>`:""}</div>`;
     if(!LK.me)return `<div class="banner"><span><b>${esc(LK.sec)}</b> roster from ${esc(LK.unit)}. Add your name so they see who sent updates.</span><button id="lkName">Add name</button></div>`}
   if(S.source==="sample"&&!memberMode()) return `<div class="banner"><span>Showing <b>sample Marines</b>. Load your MOL detail list to start.</span><button data-go="data">Load roster</button></div>`;
@@ -1263,13 +1264,13 @@ async function linkPush(force){const L=S.link;if(!L||lkBusy)return;if(L.rk2&&!L.
       L.sig=st;L.sent=Date.now();L.lsig=lsigOf(ms);L.err="";save();SB.notify(null,{board:L.board})}
     if(L.ek){const cal=ms.flatMap(m=>(m.cal||[]).filter(e=>(e.end||e.d)>=dkey(new Date(Date.now()-30*86400000))).map(e=>({nk:fullK(m),d:e.d,tm:e.tm||"",end:e.end||"",ty:e.ty,ti:e.ti,no:e.no||""})));const dt=ms.map(m=>({nk:fullK(m),st:m.status,s:m.start||"",e:m.end||"",l:m.loc||"",x:m.detail||""}));const cs=sigF([cal,dt]);
       if(force||cs!==L.calSig){const ct=await fdEnc(L.ek,{e:cal,d:dt});await SB.rpc("push_cal",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_ct:ct});L.calSig=cs;L.err="";rawSave()}}}
-  catch(e){L.err=String(e.message||e).slice(0,80);save();clearTimeout(lkTimer);lkTimer=setTimeout(linkPush,60000)}
+  catch(e){const t=String(e.message||e);L.err=/link not valid/i.test(t)?"This link was replaced by your OIC. Ask them for the new one.":t.slice(0,80);save();clearTimeout(lkTimer);if(!/replaced/.test(L.err))lkTimer=setTimeout(linkPush,60000)}
   finally{lkBusy=false;if(view==="live"||view===(L.mysec||"").toLowerCase()){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;render();window.scrollTo(0,y)}}}}
 function linkStatus(){const L=S.link;if(!L)return"";if(L.err)return `<span style="color:var(--warn)">Not sent yet (${esc(L.err)}). Retrying.</span>`;
   return L.sent?`Last sent ${dtg(new Date(L.sent)).slice(0,7)}.`:"Sending…"}
 window.addEventListener("online",()=>{if(S.link)linkPush();if(S.board)livePollBoard()});
 /* OIC side */
-function boardLink(sec){if(!S.board.ek){S.board.ek=b64url(crypto.getRandomValues(new Uint8Array(32)));save()}const q=new URLSearchParams();q.set("join",S.board.id);q.set("k",S.board.wk);q.set("s",sec);q.set("u",unitName());q.set("e",S.board.ek);q.set("r",secKey(sec));return location.origin+location.pathname+"#"+q.toString()}
+function boardLink(sec){if(!S.board.ek){S.board.ek=b64url(crypto.getRandomValues(new Uint8Array(32)));save()}const q=new URLSearchParams();q.set("join",S.board.id);q.set("k",(S.board.wks&&S.board.wks[sec])||S.board.wk);q.set("s",sec);q.set("u",unitName());q.set("e",S.board.ek);q.set("r",secKey(sec));return location.origin+location.pathname+"#"+q.toString()}
 async function boardPush(){const B=S.board;if(!B||!S.pushOn)return;try{const sub=await pushSub(false);if(!sub)return;await SB.rpc("set_board_push",{p_board:B.id,p_read_key:B.rk,p_sub:sub.toJSON()});B.push=true;save()}catch(e){}}
 function boardPushHTML(){if(!pushOK())return isIOS()&&!standalone()?`<p class="note">For alerts with your phone locked: Share → <b>Add to Home Screen</b>, then open the app from there.</p>`:"";
   if(Notification.permission==="denied")return `<p class="note">Alerts are blocked for this app in your phone settings.</p>`;
@@ -1319,7 +1320,7 @@ function renderLive(){let h=banner();const B=S.board,L=S.link;
       return `<div class="rrow" style="--sc:var(${!r?"--line":old?"--warn":"--s-onhand"})"><div class="rtop"><div class="who"><b>${k}</b> ${esc(n)}
         <div class="ph">${B.rsig&&B.rsig[k]?`<b style="color:var(--s-onhand)">✓ Roster shared</b> · `:S.source==="sample"?"":`Roster sharing… · `}${r?`Updated ${ago(r.t)} (${dtg(new Date(r.t)).slice(0,7)})${r.by?" by "+esc(r.by):""} · ${r.ch} change${r.ch===1?"":"s"}`:"No update yet"}</div>
         ${r&&(r.miss||r.str!==r.mine)?`<div class="ph" style="color:var(--warn)">${r.miss?r.miss+" name"+(r.miss>1?"s":"")+" not on your roster. ":""}${r.str!==r.mine?"Their strength "+r.str+", yours "+r.mine+".":""}</div>`:""}</div></div>
-        <div class="row2"><a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent(unitName()+": you're the "+k+" section leader. Open this link in EOP Numbers. Your section roster loads from my board, your updates come straight to me, and you can post to the unit FEED: "+boardLink(k)))}">Text ${k} link</a><button class="btn alt" data-lvcopy="${k}">Copy link</button></div></div>`}).join("")}</div>
+        <div class="row2"><a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent(unitName()+": you're the "+k+" section leader. Open this link in EOP Numbers. Your section roster loads from my board, your updates come straight to me, and you can post to the unit FEED: "+boardLink(k)))}">Text ${k} link</a><button class="btn alt" data-lvcopy="${k}">Copy link</button></div><button class="chip" data-lvreset="${k}" style="cursor:pointer;margin-top:6px">${armed==="lvreset"+k?"Tap again: old "+k+" link stops working":"↺ Replace "+k+" link (cut off the old one)"}</button></div>`}).join("")}</div>
     <button class="btn warn" id="lvOff" style="margin-top:16px;width:100%">${armed==="lvoff"?"Tap again: turn off and disconnect all sections":"Turn off live updates"}</button>`}
   if(L)h+=`<h2>My link</h2><div class="panel"><div>This phone sends <b>${esc(L.mysec)}</b> to <b>${esc(L.unit)}</b> as <b>${esc(L.sec)}</b>${L.me?" · sender "+esc(L.me):""}.</div><div class="note">${linkStatus()}</div>${L.rk2?`<div class="note">${L.perr?`<span style="color:var(--warn)">Roster: ${esc(L.perr)}</span>`:L.pulled?`Roster from ${esc(L.unit)} · ${S.roster.filter(m=>m.sec===L.mysec).length} people · updated ${ago(L.pt)}`:"Loading your section roster…"}</div>`:""}
     <div class="row2"><button class="btn" id="lkNow">Send now</button><button class="btn alt" id="lkOff">${armed==="lkoff"?"Tap again to unlink":"Unlink"}</button></div></div>`;
@@ -1351,7 +1352,7 @@ document.addEventListener("click",e=>{if(e.target.id==="actClear"){if(armed==="a
   if(e.target.id==="hubPush"){const f=mainFeed();if(!f)return;e.target.disabled=true;pushSub(true).then(sub=>{if(!sub)throw new Error("Alerts not allowed on this phone");return SB.rpc("feed_sub",{p_feed:f.id,p_member_key:f.mk,p_sub:sub.toJSON()})}).then(()=>{f.oicPush=true;S.pushOn=true;save();renderLive();toast("Alerts on for FEED posts")}).catch(err=>{e.target.disabled=false;toast(String(err.message||err).slice(0,80))});return}});
 /* ---------- REFRESH: pull every update now ---------- */
 let refBusy=false;
-async function refreshAll(){if(refBusy)return;refBusy=true;const b=$("#hRef");if(b)b.classList.add("spin");toast("Getting updates…");
+async function refreshAll(quiet){if(refBusy)return;refBusy=true;const b=$("#hRef");if(b)b.classList.add("spin");if(!quiet)toast("Getting updates…");
   const jobs=[];const add=f=>{try{const r=f();if(r&&r.then)jobs.push(r)}catch(e){}};
   if(S.board){add(()=>livePollBoard());add(()=>ensureHub())}
   if(S.feeds.length)add(()=>fdPollAll(true));
@@ -1368,7 +1369,39 @@ async function refreshAll(){if(refBusy)return;refBusy=true;const b=$("#hRef");if
   if(newer){toast("New version of the app. Reloading…");setTimeout(()=>location.reload(),1200);return}
   const y=window.scrollY;const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){render();window.scrollTo(0,y)}
   const errs=[S.board&&S.board.err,S.link&&(S.link.perr||S.link.err),S.me&&S.me.err,S.sync&&S.sync.err,...S.feeds.map(f=>f.err)].filter(Boolean);
-  toast(errs.length?"Updated, with a problem: "+String(errs[0]).slice(0,70):"Up to date · "+String(new Date().getHours()).padStart(2,"0")+String(new Date().getMinutes()).padStart(2,"0"))}
+  if(!quiet)toast(errs.length?"Updated, with a problem: "+String(errs[0]).slice(0,70):"Up to date · "+String(new Date().getHours()).padStart(2,"0")+String(new Date().getMinutes()).padStart(2,"0"))}
+/* ---------- HEALTH: what's stale or broken, in plain words ---------- */
+const hrs=t=>Math.round((Date.now()-t)/3600000);
+function healthIssues(){const out=[];const B=S.board;
+  if(SB.failAt&&(!SB.okAt||SB.failAt>SB.okAt)&&Date.now()-SB.failAt<30*60000)out.push({t:/paused|inactive|restor/i.test(SB.failMsg||"")?"Your server looks paused. Open supabase.com → your project → Restore.":"Can't reach your server right now. Check signal; if it keeps happening, open DATA → System check.",go:"sys"});
+  if(isOwner()&&S.source!=="sample"&&(!S.sync||!S.sync.on))out.push({t:"Backup is off. Losing this phone loses the board.",go:"data"});
+  if(S.sync&&S.sync.err)out.push({t:"Backup: "+S.sync.err,go:"data"});
+  if(B){if(B.err)out.push({t:"Live sections: "+B.err,go:"live"});if(B.rerr)out.push({t:"Sharing rosters: "+B.rerr,go:"live"});if(S.hubErr)out.push({t:"FEED setup: "+S.hubErr,go:"live"});
+    const keyed=Object.keys(B.sk||{});const never=keyed.filter(k=>!B.last[k]);const quiet=keyed.filter(k=>B.last[k]&&Date.now()-B.last[k].t>24*3600000);
+    if(never.length)out.push({t:"Section leaders not connected yet: "+never.join(", ")+". Text them their links.",go:"live"});
+    if(quiet.length)out.push({t:quiet.join(", ")+(quiet.length>1?" haven't":" hasn't")+" sent an update in over 24 hr.",go:"live"})}
+  if(S.mpErr)out.push({t:"My pages: "+S.mpErr,go:"data"});
+  for(const f of S.feeds)if(f.err)out.push({t:"FEED "+f.unit+": "+f.err,go:"feed"});
+  return out}
+function healthCard(){const I=healthIssues();if(!I.length)return `<div class="note" style="margin:10px 4px 0;color:var(--s-onhand);font-weight:700">● All systems working${SB.okAt?" · server reached "+ago(SB.okAt):""}${hubOn?" · hub mode on":""}</div>`;
+  return `<div class="sech"><h2>Needs attention</h2><span class="note" style="margin:0">${I.length}</span></div><div class="card ny">${I.map(x=>`<button class="lrow" data-go="${x.go}" style="width:100%;text-align:left;background:none;border:0;cursor:pointer;color:inherit"><span class="n tone-r">!</span><span class="t" style="flex:1">${esc(x.t)}</span></button>`).join("")}</div>`}
+function staleBanner(){const L=S.link;if(L&&L.rk2&&L.pulled&&L.hb&&Date.now()-L.hb>24*3600000)return `<div class="banner"><span>${esc(L.unit)}'s app hasn't synced in ${hrs(L.hb)} hr. Your changes are saved and reach them when they open it.</span></div>`;
+  const D=S.me&&S.me.d;if(D&&D.at&&Date.now()-D.at>36*3600000&&(view==="me"||view==="today"))return `<div class="banner"><span>Your page was last updated ${hrs(D.at)} hr ago. Check with your section leader for anything newer.</span></div>`;return""}
+/* ---------- REPLACE ONE SECTION LINK ---------- */
+async function resetSecLink(sec){const B=S.board;const nk=rndId(32);await SB.rpc("set_sec_key",{p_board:B.id,p_read_key:B.rk,p_sec:sec,p_key:nk});
+  B.wks=B.wks||{};B.wks[sec]=nk;B.sk=B.sk||{};B.sk[sec]=b64url(crypto.getRandomValues(new Uint8Array(32)));B.rsig=B.rsig||{};delete B.rsig[sec];
+  const f=mainFeed();if(f&&f.lk){const pk=rndId(32);await SB.rpc("set_feed_poster",{p_feed:f.id,p_leader_key:f.lk,p_poster_key:pk});f.pk=pk;B.rsig={}}
+  save();await rpPublish(true);actAdd("↺","Replaced the "+sec+" leader link. The old one no longer works.","live")}
+/* ---------- HUB MODE: keep a spare phone, tablet or computer running as the always-on hub ---------- */
+let hubOn=false,hubWL=null,hubT=null;
+async function hubWake(){try{if("wakeLock" in navigator&&!document.hidden){hubWL=await navigator.wakeLock.request("screen");hubWL.addEventListener("release",()=>{hubWL=null})}}catch(e){}}
+function hubStart(){hubOn=true;hubWake();clearInterval(hubT);hubT=setInterval(()=>{if(!refBusy)refreshAll(true)},120000);refreshAll(true)}
+function hubStop(){hubOn=false;clearInterval(hubT);try{hubWL&&hubWL.release()}catch(e){}hubWL=null}
+document.addEventListener("visibilitychange",()=>{if(hubOn&&!document.hidden&&!hubWL)hubWake()});
+if(S.hubMode)setTimeout(hubStart,3000);
+document.addEventListener("click",e=>{const rs=e.target.closest("[data-lvreset]");if(rs){if(!isOwner())return denyMsg();const k=rs.dataset.lvreset;if(armed!=="lvreset"+k){armed="lvreset"+k;renderLive();return}armed=null;rs.disabled=true;rs.textContent="Replacing…";
+    resetSecLink(k).then(()=>{renderLive();toast("New "+k+" link ready. Text it to the right leader.")}).catch(err=>{const t=String(err.message||err);toast(/could not find|schema/i.test(t)?"Server needs setup part 12a and 12b first (DATA → System check).":"Couldn't replace: "+t.slice(0,60));renderLive()});return}
+  if(e.target.id==="hubMode"){S.hubMode=!S.hubMode;rawSave();S.hubMode?hubStart():hubStop();renderLive();toast(S.hubMode?"Hub mode on. Keep this screen open and plugged in.":"Hub mode off");return}});
 let rpT=null,rpBusy=false,hubBusy=false,rpullBusy=false;
 function autoLink(c){try{history.replaceState(null,"",location.pathname)}catch(e){}if(typeof closeSheet==="function")try{closeSheet()}catch(e){}
   const L0=S.link;const same=L0&&L0.board===c.bid&&L0.sec===c.sec&&L0.rk2===c.rk2;
@@ -1390,10 +1423,10 @@ function rpSchedule(){if(!S.board||!S.board.sk||S.role==="view")return;clearTime
 async function rpPublish(force){const B=S.board;if(!B||!B.sk||rpBusy||S.role==="view")return;rpBusy=true;
   try{const f=mainFeed();const feed=f&&f.pk?{id:f.id,mk:f.mk,ek:f.ek,pk:f.pk,unit:f.unit}:null;B.rsig=B.rsig||{};let n=0;
     for(const [sec,k] of Object.entries(B.sk)){const ms=S.roster.filter(m=>m.sec===sec).map(m=>{const o={};for(const x of RPF)if(m[x]!=null&&m[x]!=="")o[x]=x==="duty"?dutyOf(m):m[x];o.duty=dutyOf(m);return o});
-      const body={v:1,unit:unitName(),sec,secName:((SECTIONS.find(x=>x[0]===sec)||[])[1]||sec),secs:SECTIONS.map(x=>x[0]),sl:SECTIONS.map(x=>x.slice()),mode:S.mode||"military",ms,feed};const sg=sigF(body);
-      if(!force&&B.rsig[sec]===sg)continue;
+      const body0={v:1,unit:unitName(),sec,secName:((SECTIONS.find(x=>x[0]===sec)||[])[1]||sec),secs:SECTIONS.map(x=>x[0]),sl:SECTIONS.map(x=>x.slice()),mode:S.mode||"military",ms,feed};const sg=sigF(body0);B.rat=B.rat||{};
+      if(!force&&B.rsig[sec]===sg&&Date.now()-(B.rat[sec]||0)<6*3600000)continue;const body=Object.assign({hb:Date.now()},body0);
       if(S.source==="sample")continue;
-      await SB.rpc("put_roster",{p_board:B.id,p_read_key:B.rk,p_sec:sec,p_ct:await fdEnc(k,body)});B.rsig[sec]=sg;n++}
+      await SB.rpc("put_roster",{p_board:B.id,p_read_key:B.rk,p_sec:sec,p_ct:await fdEnc(k,body)});B.rsig[sec]=sg;B.rat[sec]=Date.now();n++}
     if(n||B.rerr){B.rerr="";rawSave()}}
   catch(e){const t=String(e.message||e);B.rerr=/could not find|schema cache|404/i.test(t)?"Server needs setup part 11a.":t.slice(0,80);rawSave()}
   finally{rpBusy=false}}
@@ -1415,7 +1448,7 @@ document.addEventListener("click",e=>{if(e.target.id==="accOn"){if(!isOwner())re
   const ac=e.target.closest("[data-acccopy]");if(ac){const u=accLink(ac.dataset.acccopy);try{navigator.clipboard.writeText(u).then(()=>toast(ROLE_N[ac.dataset.acccopy]+" link copied"),()=>toast(u))}catch(err){toast(u)}return}});
 function hubHTML(){const f=mainFeed();const B=S.board;const err=S.source==="sample"?"Leaders can't get your roster: this phone is on sample Marines. Load your roster in DATA first.":(S.hubErr||(B&&B.rerr)||"");
   const lp=f?(f.posts||[]).filter(p=>p.sl&&Date.now()-p.t<7*86400000).length:0;const mp=S.roster.filter(m=>m.pk).length;
-  return `<div class="panel" style="margin:10px 0 0"><b>Your hub</b><div class="note">${err?`<span style="color:var(--warn)">${esc(err)} DATA → System check.</span>`:f&&f.pk?`● One FEED for the unit: <b>${esc(f.unit)}</b>. Section leaders post to it from their link; Marines with My page land in it. You see every post${lp?` · ${lp} from section leaders this week`:""}.${mp?` · ${mp} My page${mp>1?"s":""} on`:""}`:"Setting up your unit FEED…"}</div><div class="row2">${f?`<button class="btn alt" data-go="feed">Open FEED</button>`:""}<button class="btn alt" data-go="act">Activity${actNew()?" · "+actNew()+" new":""}</button></div>${f&&f.pk&&pushOK()&&!f.oicPush?`<button class="btn alt" id="hubPush" style="width:100%">🔔 Buzz my phone when a leader posts in FEED</button>`:f&&f.oicPush?`<p class="note" style="color:var(--s-onhand);font-weight:700">🔔 Alerts on for FEED posts</p>`:""}</div>`}
+  return `<div class="panel" style="margin:10px 0 0"><b>Your hub</b><div class="note">${err?`<span style="color:var(--warn)">${esc(err)} DATA → System check.</span>`:f&&f.pk?`● One FEED for the unit: <b>${esc(f.unit)}</b>. Section leaders post to it from their link; Marines with My page land in it. You see every post${lp?` · ${lp} from section leaders this week`:""}.${mp?` · ${mp} My page${mp>1?"s":""} on`:""}`:"Setting up your unit FEED…"}</div><div class="row2">${f?`<button class="btn alt" data-go="feed">Open FEED</button>`:""}<button class="btn alt" data-go="act">Activity${actNew()?" · "+actNew()+" new":""}</button></div><button class="btn alt" id="hubMode" style="width:100%">${S.hubMode?"■ Turn off hub mode on this device":"⚡ Make this device the always-on hub"}</button>${S.hubMode?`<p class="note">Hub mode: screen stays on and everything refreshes every 2 min. Leave it plugged in with the app open.</p>`:""}${f&&f.pk&&pushOK()&&!f.oicPush?`<button class="btn alt" id="hubPush" style="width:100%">🔔 Buzz my phone when a leader posts in FEED</button>`:f&&f.oicPush?`<p class="note" style="color:var(--s-onhand);font-weight:700">🔔 Alerts on for FEED posts</p>`:""}</div>`}
 async function rosterPull(force){const L=S.link;if(!L||!L.rk2||rpullBusy)return;rpullBusy=true;
   try{const rows=await SB.rpc("get_roster",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec});const r=rows&&rows[0];
     if(!r){L.perr="Your OIC's board hasn't shared "+L.sec+" yet. It loads when they open the app.";rawSave();return}
@@ -1428,14 +1461,14 @@ async function rosterPull(force){const L=S.link;if(!L||!L.rk2||rpullBusy)return;
     if(S.source==="sample"){S.roster=[];S.source="link";S.loadedAt=dtg(new Date())}
     if(S.source==="link"&&Array.isArray(o.sl)&&o.sl.length&&o.sl.every(x=>Array.isArray(x)&&x[0])){const nw=o.sl.slice(0,10).map(x=>[String(x[0]).replace(/[^A-Z0-9]/g,"").slice(0,6),String(x[1]||x[0]).slice(0,30)]);if(JSON.stringify(nw)!==JSON.stringify(SECTIONS)){SECTIONS.splice(0,SECTIONS.length,...nw);S.secs=nw}}
     S.roster=S.roster.filter(m=>m.sec!==L.mysec).concat(next);
-    L.unit=String(o.unit||L.unit).slice(0,24);L.pt=t;L.pulled=true;L.perr="";L.lsig=lsigOf(next);
+    L.unit=String(o.unit||L.unit).slice(0,24);L.pt=t;if(o.hb)L.hb=+o.hb||0;L.pulled=true;L.perr="";L.lsig=lsigOf(next);
     if(takeSt){try{const items=await itemsFor(L.board,next);L.sig=next.length+"|"+items.join(",")}catch(e){}}
     if(o.feed&&o.feed.id){const F=o.feed;const own=S.feeds.find(f=>f.id===F.id);
       if(!own){S.feeds=S.feeds.filter(f=>!f.hub||f.lk);const nf={id:String(F.id).slice(0,20),mk:String(F.mk).slice(0,40),ek:String(F.ek).slice(0,60),pk:String(F.pk||"").slice(0,40),unit:String(F.unit||L.unit).slice(0,24),me:L.me,sec:L.sec,secsLink:(o.secs||[]).slice(0,12),posts:[],seen:0,mine:{},hub:1};S.feeds.push(nf);fdMeHash(nf).then(()=>fdPollAll(true));toast("You're in the "+nf.unit+" FEED")}
       else if(!own.lk){own.pk=String(F.pk||"").slice(0,40);own.hub=1;if(!own.sec)own.sec=L.sec}}
     save();if(["live","board","feed"].includes(view)||view===(L.mysec||"").toLowerCase()){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"&&a!=="SELECT"){const y=window.scrollY;render();window.scrollTo(0,y)}}
     if(dirty)linkSchedule()}
-  catch(e){const t=String(e.message||e);L.perr=/could not find|schema cache|404/i.test(t)?"Your OIC's server needs setup part 11a.":/fetch|network/i.test(t)?"No signal. Retrying.":t.slice(0,80);rawSave()}
+  catch(e){const t=String(e.message||e);L.perr=/link not valid/i.test(t)?"This link was replaced by your OIC. Ask them for the new one.":/could not find|schema cache|404/i.test(t)?"Your OIC's server needs setup part 11a.":/fetch|network/i.test(t)?"No signal. Retrying.":t.slice(0,80);rawSave()}
   finally{rpullBusy=false}}
 setInterval(()=>{if(document.hidden)return;if(S.link&&S.link.rk2)rosterPull();if(S.board)ensureHub()},30000);
 setTimeout(()=>{if(S.board){ensureHub();rpSchedule()}if(S.link&&S.link.rk2)rosterPull()},2500);
@@ -1549,7 +1582,7 @@ function needsYou(){const out=[];const al=alerts();
   if(al.ret.length)out.push({n:al.ret.length,tone:"g",t:"Returning this week",s:al.ret.slice(0,2).map(a=>a.m.rank+" "+lastOf(a.m)+" "+a.why.split(" ").pop()).join(", "),go:"alerts"});
   return out}
 function renderBoard(){const {c,T,A}=counts();const P=pct(T["On Hand"],T.total);const hr=new Date().getHours();const d0=today0();
-  let h=banner()+fdDueHTML();const actH=(S.board||S.feeds.some(f=>f.lk))?actCard():"";
+  let h=banner()+fdDueHTML();const actH=((S.board||S.feeds.some(f=>f.lk))&&S.source!=="sample"?healthCard():"")+((S.board||S.feeds.some(f=>f.lk))?actCard():"");
   const who=(S.postAs||S.myName||"").trim();
   h+=`<div style="margin-top:14px"><div class="hm-k">${DOW[d0.getDay()]} ${short(d0)} · ${esc(unitName())}</div><div class="hm-h">Good ${hr<12?"morning":hr<17?"afternoon":"evening"}${who?", "+esc(who.split(" ").slice(-1)[0].charAt(0)+who.split(" ").slice(-1)[0].slice(1).toLowerCase()):""}</div></div>`;
   h+=`<div class="card hero"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">ON HAND</span><span style="font-size:12px;font-weight:700;color:var(--s-onhand)">${S.board?"● Live sections":S.loadedAt?"Roster "+esc(S.loadedAt):""}</span></div>
@@ -1756,6 +1789,7 @@ const SC=[
  {k:"rq",n:"Requests",f:["08_requests"],t:[["feed_req",{p_feed:"zz",p_member_key:"x",p_ct:"QQ=="}],["feed_reqs_get",{p_feed:"zz",p_leader_key:"x",p_after:0}]]},
  {k:"bk",n:"Backup and sync",f:["06a_backup_put","06b_backup_read"],t:[["backup_put",{p_id:"zz",p_key:"x",p_ct:"QQ==",p_base:null}],["backup_get",{p_id:"zz",p_key:"x"}],["backup_ver",{p_id:"zz",p_key:"x"}],["backup_delete",{p_id:"zz",p_key:"x"}]]},
  {k:"mp",n:"My page",f:["07_my_page"],t:[["put_page",{p_id:"zz",p_wk:"x",p_ct:"QQ=="}],["get_page",{p_id:"zz"}],["delete_page",{p_id:"zz",p_wk:"x"}]]},
+ {k:"sk",n:"Replace one section link",f:["12a_section_keys","12b_section_checks"],t:[["set_sec_key",{p_board:"zz",p_read_key:"x",p_sec:"HQ",p_key:"x"}]]},
  {k:"hub",n:"Unit hub (leader links pull your roster, one FEED)",f:["11a_hub_roster","11b_hub_feed"],t:[["put_roster",{p_board:"zz",p_read_key:"x",p_sec:"HQ",p_ct:"QQ=="}],["get_roster",{p_board:"zz",p_write_key:"x",p_sec:"HQ"}],["set_feed_poster",{p_feed:"zz",p_leader_key:"x",p_poster_key:"x"}],["feed_post_sl",{p_feed:"zz",p_poster_key:"x",p_ct:"QQ=="}]]}];
 let scRes=null,scBusy=false;
 async function scRun(){scBusy=true;scRes={at:Date.now(),g:{},nt:null};renderSys();
@@ -1799,7 +1833,7 @@ function mpDigest(m){const t=dkey();const to=dkey(new Date(Date.now()+60*8640000
   return {v:1,feed,reqs,pod,unit:unitName(),rank:m.rank,name:m.name,sec:m.sec,secName:((SECTIONS.find(x=>x[0]===m.sec)||[])[1]||m.sec),status:m.status,statusShort:SHORT[m.status]||m.status,duty:dutyOf(m),since:sn||0,start:isoOf(m.start),end:isoOf(m.end),edd:isoOf(m.edd),eas:isoOf(m.eas),duties:duties.sort((a,b)=>a.d.localeCompare(b.d)),due,cal,owe}}
 function mpSchedule(){if(!S.roster.some(m=>m.pk))return;clearTimeout(mpT);mpT=setTimeout(mpPublish,5000)}
 async function mpPublish(force){if(mpBusy){clearTimeout(mpT);mpT=setTimeout(()=>mpPublish(force),4000);return 0}mpBusy=true;let n=0;
-  try{for(const m of S.roster.filter(m=>m.pk)){const d=mpDigest(m);const sg=sigF(d);if(!force&&sg===m.pkSig)continue;
+  try{for(const m of S.roster.filter(m=>m.pk)){const d=mpDigest(m);const sg=sigF(d);if(!force&&sg===m.pkSig&&Date.now()-(m.pkAt||0)<12*3600000)continue;d.at=Date.now();
       const K=await mpKeys(m.pk);const ct=await sealObj(K,d);await SB.rpc("put_page",{p_id:K.id,p_wk:K.wk,p_ct:ct});m.pkSig=sg;m.pkAt=Date.now();n++}
     if(n||S.mpErr){S.mpErr="";rawSave()}}
   catch(e){S.mpErr=String(e.message||e).slice(0,80);rawSave()}finally{mpBusy=false}return n}
@@ -1811,6 +1845,7 @@ function mpJoinFeed(D){const F=D&&D.feed;if(!F||!F.id||S.feeds.some(f=>f.id===F.
   const last=(String(D.name).split(",")[0]||D.name).trim();const first=(String(D.name).split(",")[1]||"").trim().split(/\s+/)[0]||"";const nf={id:String(F.id).slice(0,20),mk:String(F.mk).slice(0,40),ek:String(F.ek).slice(0,60),unit:String(F.unit||D.unit).slice(0,24),me:(D.rank+" "+last+(first?" "+first:"")).toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim().slice(0,30),sec:D.sec==="ATT"?"ATT":D.sec,secsLink:(F.secs||[]).slice(0,12),posts:[],seen:0,mine:{},hub:1};
   S.feeds=S.feeds.filter(f=>!f.hub||f.lk);S.feeds.push(nf);if(!S.myName)S.myName=nf.me;save();fdMeHash(nf).then(()=>{fdPollAll(true);fdPushAttach(nf)});toast("You're in the "+nf.unit+" FEED")}
 setInterval(()=>{if(S.me&&!document.hidden)mpFetch()},60000);
+setInterval(()=>{if(!document.hidden&&S.roster.some(m=>m.pk)&&isLeaderPhone()&&canEdit())mpPublish()},30*60000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.me)mpFetch()});
 const daysTo=iso=>{const d=parseD(iso);return d?Math.round((d-today0())/86400000):null};
 function renderMe(){const M=S.me;let h="";
