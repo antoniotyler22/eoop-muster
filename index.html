@@ -296,11 +296,16 @@ textarea,.panel input[type=text],.panel input[type=tel],select,.wsel,.wta{border
   .m,.mrow,.rrow{transition:border-color .25s ease,background-color .25s ease}
   .toast{animation:tin .22s ease}@keyframes tin{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
 }
+.titlebtn{all:unset;cursor:pointer;display:inline-flex;align-items:baseline;gap:4px;max-width:100%}.titlebtn .caret{font-size:.6em;color:var(--brass);transform:translateY(-1px)}.titlebtn:focus-visible{outline:2px solid var(--brass);outline-offset:2px;border-radius:6px}
+.mdesc{font-weight:600;font-size:12.5px;color:var(--muted)}
+.mshare{margin-top:12px}.mshare .evts{margin-top:6px}
+.brand h1{overflow:hidden;text-overflow:ellipsis;font-size:18px}.brand .acts button{padding:6px 9px}
+.vpanel{display:flex;align-items:center;justify-content:space-between;gap:10px}
 </style>
 </head><body>
 <div class="top"><div class="top-in">
   <div class="brand">
-    <div><h1>EOP Numbers</h1><div class="dtg" id="dtg"></div></div>
+    <div><h1><button id="bMode" class="titlebtn" aria-label="App version">EOP Numbers<span class="caret">▾</span></button></h1><div class="dtg" id="dtg"></div></div>
     <div class="acts">
       <button id="b6W" aria-pressed="false">6W</button>
       <button id="bPT" aria-pressed="false">PT</button>
@@ -324,7 +329,131 @@ const PRESENT=["On Hand","Appointment on Base","Company Duties"];
 const SECTIONS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
 const DEF_SECS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
 const RESERVED=["BOARD","ATT","PT","W6","TEXT","DATA","MUSTER","ALERTS","RECALL","EVENTS","ARMORY"];
+const MIL_SECS=DEF_SECS.map(s=>s.slice());
 let secDraft=null;
+/* ---------- versions: one app, five vocabularies ---------- */
+const MODES={
+ military:{name:"Military",desc:"Marines, sections, muster, armory",title:"EOP Numbers"},
+ police:{name:"Police",desc:"Officers, shifts, roll call, armory",title:"Shift Numbers",
+  secs:[["PAT","Patrol"],["INV","Investigations"],["TRF","Traffic"],["SOD","Special Ops"],["ADM","Admin"]],
+  ranks:["CHIEF","DEP CHIEF","CAPT","LT","SGT","CPL","DET","OFC","RECRUIT"],rankDef:"OFC",
+  events:["Shift PT","Range qual","Defensive tactics","Run","Fitness test","Training day"],
+  evTypes:["Range","In-service","Briefing","Detail","Community event","Inspection","Other"],
+  wTypes:["Use of force","Injury","Vehicle collision","Missed shift","Medical","Family emergency","Other"],
+  items:["Duty pistol","Patrol rifle","Shotgun","Taser","Radio","Body cam","Vehicle keys","Other"],
+  v:{p:"Officer",ps:"Officers",here:"On Duty",aob:"In Station",aobS:"In Station",aoff:"Court",aoffS:"Court",cod:"Special Detail",codS:"Detail",op:"Call-Out",tad:"Training",
+   lim:"Restricted",attPl:"Mutual Aid",attP:"mutual aid officers",att1:"mutual aid officer",attC:"Mutual Aid Officers",code:"AID",org:"agency",mus:"roll call",
+   deck:"Present for duty",eo:"SHIFT",billet:"assignment",fap:"loaned in, detailed to us, mutual aid",mol:"roster file",w6:"IR",edd:"end date"}},
+ jobs:{name:"Jobs",desc:"Crews, job sites, head count, tool crib",title:"Crew Numbers",
+  secs:[["SUP","Supervision"],["CARP","Carpentry"],["ELEC","Electrical"],["PLMB","Plumbing"],["EQP","Equipment"]],
+  ranks:["PM","SUPT","FOREMAN","LEAD","JOURNEY","APPRENT","LABORER"],rankDef:"LABORER",
+  events:["Toolbox talk","Safety brief","Stretch & flex","Site walk","Training"],
+  evTypes:["Safety class","Certification","Site walk","Cleanup","Inspection","Other"],
+  wTypes:["Injury","Near miss","Equipment damage","Vehicle accident","No-show","Family emergency","Other"],
+  items:["Drill","Impact driver","Saw","Grinder","Laser level","Ladder","Radio","Truck keys","Other"],
+  v:{p:"Worker",ps:"Workers",here:"On Site",aob:"In the Yard",aobS:"Yard",aoff:"Appointment",aoffS:"Appt",cod:"Shop Work",codS:"Shop",op:"Other Job Site",opS:"Other Site",tad:"Off-Site Training",tadS:"Training",lv:"Off / PTO",
+   fd:"Cleared",ld:"Light Work",lim:"Restricted",attPl:"Subcontractors",attP:"subcontractors",att1:"subcontractor",attC:"Subcontractors",code:"SUB",org:"company",mus:"head count",
+   rec:"call tree",ptB:"BRIEF",ptT:"Safety brief roster",arm:"tool crib",armB:"TOOL CRIB",wpn:"tool",bin:"bin",deck:"On the job",eo:"CREW",billet:"trade",rank:"Title",
+   fap:"loaned in, from other crews, subs",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}},
+ hr:{name:"HR",desc:"Employees, departments, check-in, assets",title:"Staff Numbers",
+  secs:[["ADM","Admin"],["OPS","Operations"],["FIN","Finance"],["TECH","IT"],["SLS","Sales"]],
+  ranks:["EXEC","DIR","MGR","SUPV","LEAD","SR","STAFF","INTERN"],rankDef:"STAFF",
+  events:["All-hands","Training","Team meeting","Wellness","Safety drill"],
+  evTypes:["Required training","Compliance","Town hall","Volunteer","Review","Other"],
+  wTypes:["Workplace injury","Conduct concern","Property damage","No call / no show","Medical","Family emergency","Other"],
+  items:["Laptop","Phone","Badge","Keys","Monitor","Vehicle","Other"],
+  v:{p:"Employee",ps:"Employees",here:"In Office",aob:"Remote",aobS:"Remote",aoff:"Appointment",aoffS:"Appt",cod:"Training",codS:"Training",op:"Off-Site Work",opS:"Off-Site",tad:"Business Travel",tadS:"Travel",lv:"PTO",
+   fd:"Full Schedule",ld:"Modified Duty",lim:"Accommodation",attPl:"Contractors",attP:"contractors",att1:"contractor",attC:"Contractors",code:"CTR",org:"department",mus:"check-in",
+   rec:"call tree",ptB:"MTG",ptT:"Meeting roster",arm:"asset",armB:"ASSETS",wpn:"asset",bin:"tag",deck:"Working today",eo:"STAFF",billet:"job title",rank:"Title",
+   fap:"loaned in, temps, contractors",mol:"HR roster file",strength:"headcount",w6:"IR",edd:"end date"}},
+ civilian:{name:"Civilian",desc:"Members, groups, check-in, gear",title:"Team Numbers",
+  secs:[["LEAD","Leaders"],["RED","Red Team"],["BLUE","Blue Team"],["GRN","Green Team"],["VOL","Volunteers"]],
+  ranks:["LEAD","CO-LEAD","CAPTAIN","MEMBER","VOLUNTEER","GUEST"],rankDef:"MEMBER",
+  events:["Meeting","Practice","Workout","Volunteer shift","Outing"],
+  evTypes:["Meeting","Class","Volunteer","Cleanup","Trip","Other"],
+  wTypes:["Injury","Lost person","Property damage","Missed pickup","Medical","Family emergency","Other"],
+  items:["Radio","Keys","Vest","First aid kit","Laptop","Camera","Other"],
+  v:{p:"Member",ps:"Members",here:"Here",aob:"Appt On Site",aobS:"Appt On Site",aoff:"Appt Off Site",aoffS:"Appt Off Site",cod:"Assigned Task",codS:"Task",op:"Event",tad:"Away",lv:"Time Off",
+   fd:"Full Go",ld:"Limited",lim:"Restricted",attPl:"Guests",attP:"guests",att1:"guest",attC:"Guests",code:"GST",org:"group",mus:"check-in",
+   rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
+   fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
+};
+const MODE_ORDER=["military","police","jobs","hr","civilian"];
+const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+/* Build the label map for the current version. Military = no map (app text as written). */
+function modeDict(md){const v=md.v;if(!v)return null;const t=[];const add=(a,b)=>{if(b!=null&&b!==a)t.push([a,b])};
+  add("EOP Numbers",md.title);add("EOOP",v.eo);
+  add("Present on deck",v.deck);add("on deck","present");add("off deck","away");
+  add("On Hand",v.here);add("Appointment on Base",v.aob);add("Appt On Base",v.aobS);add("Appointment off Base",v.aoff);add("Appt Off Base",v.aoffS);
+  add("Company Duties",v.cod);add("Co Duties",v.codS);add("Operation",v.opS||v.op);add("TAD",v.tadS||v.tad);add("Leave",v.lv);
+  add("Full Duty",v.fd);add("Light Duty",v.ld);add("LIMDU",v.lim);
+  add("FAP in, TAD to us, attachments",v.fap);add("TAD/FAP",v.tadS||v.tad||"TAD");add("FAP in","loaned in");add("FAP","loan");
+  add("Attached Marines",v.attC);add("attached Marines",v.attP);add("an attached Marine",(/^[aeiou]/i.test(v.att1)?"an ":"a ")+v.att1);add("attached Marine",v.att1);add("Attached",v.attPl);
+  add("Marines",v.ps);add("Marine",v.p);
+  add("MOL detail list",v.mol);add("MOL list",v.mol);add("MOL","Roster");
+  add("Parent unit","Home "+v.org);add("parent unit","home "+v.org);add("unit",v.org);add("Unit",cap(v.org));
+  if(v.mus){add("Formation muster",cap(v.mus));add("formation muster",v.mus);add("Formation",cap(v.mus));add("formation",v.mus);add("Muster",cap(v.mus));add("muster",v.mus)}
+  if(v.rec){add("Recall",cap(v.rec));add("recall",v.rec)}
+  if(v.ptB){add("Physical activity roster",v.ptT);add("PT roster",v.ptT);add("PT",v.ptB)}
+  if(v.arm){add("Armory",cap(v.arm));add("armory",v.arm);add("ARMORY",v.armB);add("Weapons",cap(v.wpn)+"s");add("weapons",v.wpn+"s");add("Weapon",cap(v.wpn));add("weapon",v.wpn);
+    add("In rack","In "+v.bin);add("rack",v.bin);add("Rack",cap(v.bin))}
+  if(v.strength){add("Total Strength","Total "+cap(v.strength));add("strength",v.strength);add("Strength",cap(v.strength))}
+  add("billet",v.billet);add("EDDs",v.edd+"s");add("EDD",v.edd);add("6W",v.w6);
+  const map={};const isAc=s=>/^[A-Z0-9\/&-]+$/.test(s);
+  const low=s=>s.split(" ").map(w=>isAc(w)&&w.length>1?w:w.toLowerCase()).join(" ");
+  for(const [a,b] of t)if(!(a in map))map[a]=b;
+  for(const [a,b] of t){const U=a.toUpperCase();if(!(U in map))map[U]=b.toUpperCase();
+    if(!isAc(a.split(" ")[0])){const l=low(a);if(!(l in map))map[l]=low(b);const c=cap(l);if(!(c in map))map[c]=cap(low(b))}}
+  const keys=Object.keys(map).sort((x,y)=>y.length-x.length).map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"));
+  const ex={ATT:v.code};if(v.rank)ex.Rank=v.rank;
+  const mapU=Object.assign({},map);for(const k in map)if(isAc(k))mapU[k]=map[k].toUpperCase();
+  return {map,mapU,re:new RegExp("(?<![A-Za-z0-9])(?:"+keys.join("|")+")(?![A-Za-z0-9])","g"),ex}}
+let XL=null;
+function xs(s,U){if(!XL||!s)return s;const M=U?XL.mapU:XL.map;return String(s).replace(XL.re,m=>M[m]??m)}
+function RT(txt){if(!XL)return txt;return String(txt).split("\n").map(l=>l.startsWith("#EOOP1|")?l:xs(l,l===l.toUpperCase())).join("\n")}
+const XSKIP=new Set(["SCRIPT","STYLE","TEXTAREA","INPUT"]);
+const XREC=new WeakMap();
+function xlText(n){const p=n.parentNode;if(!p||XSKIP.has(p.nodeName)||p.closest&&p.closest("[data-noxl]"))return;const cur=n.nodeValue;if(!cur||!cur.trim())return;
+  const r=XREC.get(n);const o=r&&r.out===cur?r.orig:cur;const tr=o.trim();
+  const v=!XL?o:XL.ex[tr]!==undefined?o.replace(tr,XL.ex[tr]):xs(o);
+  if(v!==cur){if(p.nodeName==="OPTION"&&!p.hasAttribute("value"))p.setAttribute("value",o);n.nodeValue=v}
+  if(v!==o)XREC.set(n,{orig:o,out:v});else XREC.delete(n)}
+function xlTree(root){if(!root)return;if(root.nodeType===3){xlText(root);return}if(root.nodeType!==1||XSKIP.has(root.nodeName)&&root.nodeName!=="INPUT")return;
+  if(root.nodeName==="INPUT"||root.querySelectorAll){const ph=root.nodeName==="INPUT"?[root]:root.querySelectorAll("[placeholder]");ph.forEach(e=>{if(!e.hasAttribute("data-ph0"))e.setAttribute("data-ph0",e.getAttribute("placeholder"));const a=e.getAttribute("data-ph0");const b=xs(a);if(e.getAttribute("placeholder")!==b)e.setAttribute("placeholder",b)})}
+  if(root.nodeName==="INPUT")return;
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const L=[];while(w.nextNode())L.push(w.currentNode);L.forEach(xlText)}
+let XOBS=null;
+function startXL(){if(XOBS){XOBS.disconnect();XOBS=null}XL=modeDict(MODE());document.title=MODE().title;
+  xlTree(document.body);if(!XL)return;
+  XOBS=new MutationObserver(rs=>{for(const r of rs){if(r.type==="characterData")xlText(r.target);else r.addedNodes.forEach(xlTree)}});
+  XOBS.observe(document.body,{subtree:true,childList:true,characterData:true})}
+let ORIG=null;
+function applyLists(){if(!ORIG)ORIG={events:EVENTS.slice(),evTypes:EV_TYPES.slice(),wTypes:W_TYPES.slice(),items:WEAPONS.slice()};const md=MODE();
+  for(const [arr,k] of [[EVENTS,"events"],[EV_TYPES,"evTypes"],[W_TYPES,"wTypes"],[WEAPONS,"items"]])arr.splice(0,arr.length,...(md[k]||ORIG[k]));
+  RANKS.splice(0,RANKS.length,...(md.ranks||MIL_RANKS))}
+function setMode(k){if(!MODES[k])return false;const was=MODES[S.mode]?S.mode:"military";if(k===was)return false;
+  S.secsBy=S.secsBy||{};S.secsBy[was]=SECTIONS.map(s=>s.slice());
+  const oldEv=EVENTS.slice();const old=SECTIONS.map(s=>s.slice());
+  S.mode=k;DEF_SECS.splice(0,DEF_SECS.length,...(MODES[k].secs||MIL_SECS).map(s=>s.slice()));applyLists();
+  const sv=S.secsBy[k];let nw=(Array.isArray(sv)&&sv.length&&sv.every(x=>Array.isArray(x)&&x[0]))?sv.map(s=>s.slice()):DEF_SECS.map(s=>s.slice());
+  for(let i=nw.length;i<old.length&&nw.length<10;i++)if(!nw.some(s=>s[0]===old[i][0]))nw.push(old[i].slice());
+  const map={};old.forEach((o,i)=>map[o[0]]=nw[Math.min(i,nw.length-1)][0]);
+  SECTIONS.splice(0,SECTIONS.length,...nw);S.secs=JSON.stringify(nw)===JSON.stringify(DEF_SECS)?null:nw;
+  if(S.source==="sample")S.roster=sampleRoster();else for(const m of S.roster){if(m.sec!=="ATT")m.sec=map[m.sec]||nw[0][0]}
+  for(const ev of S.events||[]){if(Array.isArray(ev.secs))ev.secs=[...new Set(ev.secs.map(x=>map[x]).filter(Boolean))]}
+  if(!S.pt.event||oldEv.includes(S.pt.event))S.pt.event=EVENTS[0];
+  secFix();secDraft=null;S.snap=null;save();startXL();return true}
+function modeLink(k){return location.origin+location.pathname+"?m="+k}
+function openModeSheet(){sheetCtx={kind:"mode"};const cur=MODES[S.mode]?S.mode:"military";
+  $("#sheetT").innerHTML=`App version<small>Changes every tab, status and report title. Same people, same data.</small>`;
+  $("#sheetOpts").innerHTML=MODE_ORDER.map(k=>`<button data-mopt="${k}" aria-pressed="${k===cur}" data-noxl><span><b>${MODES[k].name}</b><br><span class="mdesc">${MODES[k].desc}</span></span></button>`).join("")+
+   `<div class="mshare" data-noxl><div class="note">Send a version (opens the app already set to it):</div><div class="evts">${MODE_ORDER.map(k=>`<button data-mshare="${k}">${MODES[k].name}</button>`).join("")}</div></div>`;
+  const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));buzz()}
+function shareMode(k){const url=modeLink(k);const t=MODES[k].title+" ("+MODES[k].name+" version)";
+  if(navigator.share){navigator.share({title:t,text:t,url}).catch(()=>{});return}
+  try{navigator.clipboard.writeText(url).then(()=>toast(MODES[k].name+" link copied"),()=>toast(url))}catch(e){toast(url)}}
+
 function secFix(){for(const m of S.roster){if(m.sec!=="ATT"&&!SECTIONS.some(s=>s[0]===m.sec))m.sec=SECTIONS[0][0]}}
 function tabsHTML(){if(!secDraft)secDraft=SECTIONS.map(([k,n])=>({o:k,k,n}));const D=secDraft;
   const cnt=k=>S.roster.filter(m=>m.sec===k).length;const gone=SECTIONS.filter(([k])=>!D.some(d=>d.o===k)&&cnt(k));
@@ -337,7 +466,7 @@ function tabsHTML(){if(!secDraft)secDraft=SECTIONS.map(([k,n])=>({o:k,k,n}));con
     ${gone.length?`<label for="tabMove">People in removed tabs (${gone.map(g=>g[0]+": "+cnt(g[0])).join(", ")}) move to</label><select id="tabMove" class="wsel">${D.map((d,i)=>`<option value="${i}">${esc(d.k||"(new tab)")}</option>`).join("")}<option value="ATT">ATT</option></select>`:""}
     <div class="row2" style="margin-top:8px"><button class="btn alt" id="tabAdd"${D.length>=10?" disabled":""}>+ Add tab</button><button class="btn alt" id="tabUndo">Undo changes</button></div>
     <button class="btn" id="tabSave" style="width:100%;margin-top:6px">Save tabs</button>
-    <button class="btn alt" id="tabDef" style="width:100%;margin-top:6px">Reset to HQ / HE / CE / ORD / UT</button></div>`}
+    <button class="btn alt" id="tabDef" style="width:100%;margin-top:6px">Reset to ${DEF_SECS.map(s=>s[0]).join(" / ")}</button></div>`}
 function tabRedraw(){const y=window.scrollY;renderData();window.scrollTo(0,y)}
 function tabSave(){const D=secDraft;const keys=D.map(d=>d.k.trim().toUpperCase());
   for(let i=0;i<D.length;i++){const k=keys[i];if(!/^[A-Z0-9]{1,6}$/.test(k))return toast("Short names: 1–6 letters or numbers, no spaces."),false;
@@ -353,6 +482,7 @@ const ATT=["ATT","Attached"];
 const DUTIES=["Full Duty","Light Duty","LIMDU"];
 const EVENTS=["Unit PT","Hike","Run","PFT","CFT","Field event"];
 const RANKS=["CWO5","CWO4","CWO3","CWO2","WO","MAJ","CAPT","1STLT","2NDLT","SGTMAJ","MGYSGT","1STSGT","MSGT","GYSGT","SSGT","SGT","CPL","LCPL","PFC","PVT"];
+const MIL_RANKS=RANKS.slice();
 const KEY="eoop-muster-v1";
 
 function sampleRoster(){
@@ -362,9 +492,10 @@ function sampleRoster(){
     ["ORD",["SSGT","CPL","LCPL","PFC"],["Leave","On Hand","On Hand","On Hand"]],
     ["UT",["GYSGT","SGT","CPL","LCPL","LCPL","PFC"],["On Hand","Operation","Operation","Appointment on Base","On Hand","TAD"]]];
   const out=[];let n=1;
-  for(const [sec,ranks,sts] of spec) ranks.forEach((r,i)=>out.push({id:"s"+n,rank:r,name:"SAMPLE, MARINE "+String(n++).padStart(2,"0"),sec,status:sts[i],detail:"Sample row",loc:"",start:"",end:""}));
-  out.push({id:"s"+n++,rank:"CPL",name:"SAMPLE, ATTACHED 01",sec:"ATT",parent:"CLB-3 (FAP in)",status:"On Hand",detail:"Working with HE",loc:"",start:"",end:"30 NOV 26"});
-  out.push({id:"s"+n++,rank:"LCPL",name:"SAMPLE, ATTACHED 02",sec:"ATT",parent:"7th ESB (TAD to us)",status:"Appointment on Base",detail:"Working with UT",loc:"",start:"",end:"15 NOV 26"});
+  const rk=r=>{const j=MIL_RANKS.indexOf(r);return RANKS.join()===MIL_RANKS.join()||j<0?r:RANKS[Math.min(RANKS.length-1,Math.floor(j*RANKS.length/MIL_RANKS.length))]};
+  for(const [si,[s0,ranks,sts]] of spec.entries()){const sec=(SECTIONS[si]||SECTIONS[SECTIONS.length-1])[0];ranks.forEach((r,i)=>out.push({id:"s"+n,rank:rk(r),name:"SAMPLE, MARINE "+String(n++).padStart(2,"0"),sec,status:sts[i],detail:"Sample row",loc:"",start:"",end:""}));}
+  out.push({id:"s"+n++,rank:rk("CPL"),name:"SAMPLE, ATTACHED 01",sec:"ATT",parent:"CLB-3 (FAP in)",status:"On Hand",detail:"Working with "+(SECTIONS[1]||SECTIONS[0])[0],loc:"",start:"",end:"30 NOV 26"});
+  out.push({id:"s"+n++,rank:rk("LCPL"),name:"SAMPLE, ATTACHED 02",sec:"ATT",parent:"7th ESB (TAD to us)",status:"Appointment on Base",detail:"Working with "+(SECTIONS[4]||SECTIONS[SECTIONS.length-1])[0],loc:"",start:"",end:"15 NOV 26"});
   if(out[5])out[5].duty="Light Duty";if(out[13])out[13].duty="LIMDU";
   return out;
 }
@@ -372,6 +503,7 @@ function sampleRoster(){
 let S={roster:sampleRoster(),source:"sample",loadedAt:"",recipients:"",names:false,pt:{event:"Unit PT",when:"",inc:["On Hand"],att:true}};
 let storageOK=true;
 try{const raw=localStorage.getItem(KEY); if(raw){const v=JSON.parse(raw); if(v&&Array.isArray(v.roster)) S=Object.assign(S,v);} }catch(e){storageOK=false}
+if(MODES[S.mode]&&MODES[S.mode].secs){DEF_SECS.splice(0,DEF_SECS.length,...MODES[S.mode].secs.map(s=>s.slice()));SECTIONS.splice(0,SECTIONS.length,...DEF_SECS.map(s=>s.slice()))}
 if(Array.isArray(S.secs)&&S.secs.length&&S.secs.every(x=>Array.isArray(x)&&x[0])){SECTIONS.splice(0,SECTIONS.length,...S.secs.slice(0,10))}secFix();
 S.w6=Array.isArray(S.w6)?S.w6:[];
 S.hist=Array.isArray(S.hist)?S.hist:[];
@@ -410,7 +542,7 @@ function zoneLetter(){const off=-new Date().getTimezoneOffset()/60;if(!Number.is
 function dtg(d=new Date()){const M=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
   const p=n=>String(n).padStart(2,"0");return p(d.getDate())+p(d.getHours())+p(d.getMinutes())+zoneLetter()+" "+M[d.getMonth()]+" "+String(d.getFullYear()).slice(2)}
 
-function rankIdx(r){const i=RANKS.indexOf(r);return i<0?99:i}
+function rankIdx(r){const i=RANKS.indexOf(r);if(i>=0)return i;const j=MIL_RANKS.indexOf(r);return j<0?99:50+j}
 function sorted(list){return list.slice().sort((a,b)=>rankIdx(a.rank)-rankIdx(b.rank)||a.name.localeCompare(b.name))}
 
 /* ---------- render ---------- */
@@ -466,7 +598,7 @@ function renderSection(code){
     return `<div class="m" style="--sc:var(${SVAR[m.status]})"><div class="who"><div><b>${esc(m.rank)}</b><span class="nm">${esc(m.name)}</span>${dutyOf(m)==="Light Duty"?'<span class="tag ld">LD</span>':dutyOf(m)==="LIMDU"?'<span class="tag lim">LIMDU</span>':""}</div>
       ${det?`<div class="det">${esc(det)}</div>`:""}<button class="rm${armed===m.id?" arm":""}" data-rm="${m.id}">${armed===m.id?"Tap again to remove":"Remove"}</button><button class="w6" data-w6="${m.id}">6W</button>${m.phone?`<a class="tel" href="${telHref(m.phone)}">Call</a>`:""}</div><div class="pick">${statusSelect(m.id,m.status)}${dutySelect(m.id,dutyOf(m))}</div></div>`}).join("")}</div>`;
   h+=`<form class="addbox" id="addf"><h3>${isAtt?"Add an attached Marine":"Add a Marine to "+code}</h3>
-    <select id="aRank" aria-label="Rank">${RANKS.map(r=>`<option${r==="LCPL"?" selected":""}>${r}</option>`).join("")}</select>
+    <select id="aRank" aria-label="Rank">${RANKS.map(r=>`<option${r===(MODE().rankDef||"LCPL")?" selected":""}>${r}</option>`).join("")}</select>
     <input id="aName" placeholder="LAST, FIRST M." autocomplete="off" aria-label="Name" required>
     ${isAtt?`<input id="aParent" class="full" placeholder="Parent unit (e.g. CLB-3, 7th ESB)" autocomplete="off" aria-label="Parent unit" required>
     <select id="aWith" aria-label="Working with"><option value="">With…</option>${SECTIONS.map(([k])=>`<option>${k}</option>`).join("")}</select>
@@ -519,7 +651,8 @@ function renderText(){
 }
 function renderData(){
   const {T}=counts();
-  let h=`<h2>Roster data</h2><div class="panel">
+  let h=`<h2>App version</h2><div class="panel vpanel" data-noxl><div><b>${MODE().name}</b> · <span class="mdesc">${MODE().desc}</span></div><button class="btn alt" data-mode-open>Change / send</button></div>
+  <h2>Roster data</h2><div class="panel">
     <div><b>${T.total}</b> Marines loaded · ${S.source==="sample"?"sample data":S.source==="mol"?"from MOL detail list":"from backup"}${S.loadedAt?" · "+esc(S.loadedAt):""}</div>
     <label for="file">Load MOL detail list (.csv) or a backup from this app</label>
     <input type="file" id="file" accept=".csv,text/csv">
@@ -981,6 +1114,10 @@ function animateNums(){document.querySelectorAll("[data-n]").forEach(el=>{const 
     slideDir=dx<0?"vl":"vr";view=o[j];armed=null;query="";render();window.scrollTo(0,0);buzz();
     const tb=document.querySelector('.tabs [aria-selected="true"]');if(tb&&tb.scrollIntoView)tb.scrollIntoView({inline:"center",block:"nearest",behavior:RM()?"auto":"smooth"})},{passive:true})})();
 document.addEventListener("click",e=>{
+  if(e.target.closest("#bMode,[data-mode-open]")){e.stopImmediatePropagation();openModeSheet();return}
+  const mo=e.target.closest("[data-mopt]");if(mo){e.stopImmediatePropagation();const k=mo.dataset.mopt;closeSheet();
+    if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory"].includes(view))view="board";render();window.scrollTo(0,0);toast(MODES[k].name+" version on. Same people, new labels.")}return}
+  const msh=e.target.closest("[data-mshare]");if(msh){e.stopImmediatePropagation();shareMode(msh.dataset.mshare);return}
   const pk=e.target.closest("[data-pick]");if(pk){e.stopImmediatePropagation();openSheet(pk.dataset.pick,pk.dataset.pid);return}
   if(e.target.closest("[data-sclose]")){e.stopImmediatePropagation();closeSheet();return}
   const so=e.target.closest("[data-sopt]");if(so&&sheetCtx){e.stopImmediatePropagation();const m=S.roster.find(x=>x.id===sheetCtx.id);
@@ -1172,6 +1309,11 @@ document.addEventListener("submit",e=>{
 const dl=Promise.resolve({save:({filename,data})=>new Promise((res,rej)=>{try{const b=new Blob([data],{type:"text/csv"});
   if(navigator.canShare&&navigator.canShare({files:[new File([b],filename,{type:"text/csv"})]})){navigator.share({files:[new File([b],filename,{type:"text/csv"})],title:filename}).then(()=>res({status:"saved"}),()=>rej({code:"declined"}));return}
   const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=filename;document.body.appendChild(a);a.click();a.remove();res({status:"saved"})}catch(e){rej({code:"unavailable"})}})});
+applyLists();
+for(const f of ["reportText","ptText","wText","alertsText","musText","sectionUpdateText","recallText","evText","armText"]){const o=window[f];if(typeof o==="function")window[f]=(...a)=>RT(o(...a))}
+reportText=window.reportText;ptText=window.ptText;wText=window.wText;alertsText=window.alertsText;musText=window.musText;sectionUpdateText=window.sectionUpdateText;recallText=window.recallText;evText=window.evText;armText=window.armText;
+{const qm=new URLSearchParams(location.search).get("m");if(qm&&MODES[qm]){setMode(qm);try{history.replaceState(null,"",location.pathname+location.hash)}catch(e){}}}
+startXL();
 render();
 if("serviceWorker" in navigator&&document.querySelector("link[rel=manifest]")&&(location.protocol==="https:"||location.hostname==="localhost")){navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(()=>{const o=document.getElementById("offStat");if(o&&navigator.serviceWorker.controller)o.textContent="Ready: this app opens and works with no signal. Text reports once you have service."}).catch(()=>{})}
 setInterval(()=>{if(view==="recall"&&S.rc.open){const c=document.querySelector(".mbar .ct small");if(c)c.textContent="contacted · "+Math.round((Date.now()-S.rc.start)/60000)+" min"}},20000);
