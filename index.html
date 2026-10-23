@@ -519,7 +519,7 @@ const SVAR={"On Hand":"--s-onhand","Appointment on Base":"--s-aob","Appointment 
 const PRESENT=["On Hand","Appointment on Base","Company Duties"];
 const SECTIONS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
 const DEF_SECS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
-const RESERVED=["BOARD","ATT","PT","W6","TEXT","DATA","MUSTER","ALERTS","RECALL","EVENTS","ARMORY","ROLLUP","LIVE","SEND","FEED","TRENDS","READY","DUTY","P","CAL","LOG"];
+const RESERVED=["BOARD","ATT","PT","W6","TEXT","DATA","MUSTER","ALERTS","RECALL","EVENTS","ARMORY","ROLLUP","LIVE","SEND","FEED","TRENDS","READY","DUTY","P","CAL","LOG","ME"];
 const MIL_SECS=DEF_SECS.map(s=>s.slice());
 let secDraft=null;
 /* ---------- versions: one app, five vocabularies ---------- */
@@ -569,7 +569,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="2.3.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="2.4.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -706,17 +706,17 @@ S.rcMiss=Array.isArray(S.rcMiss)?S.rcMiss:[];if(S.rcRev&&!Array.isArray(S.rcRev.
 S.rc=Object.assign({open:false,start:0,end:0,res:{},att:true,only:false,ci:{}},S.rc||{});if(!S.rc.ci||typeof S.rc.ci!=="object")S.rc.ci={};
 S.bc=Array.isArray(S.bc)?S.bc:[];
 S.feeds=Array.isArray(S.feeds)?S.feeds:[];
-S.days=S.days&&typeof S.days==="object"?S.days:{};S.log=Array.isArray(S.log)?S.log:[];S.secCal=S.secCal&&typeof S.secCal==="object"?S.secCal:{};if(S.sync&&typeof S.sync!=="object")S.sync=null;
+S.days=S.days&&typeof S.days==="object"?S.days:{};S.log=Array.isArray(S.log)?S.log:[];if(S.me&&typeof S.me!=="object")S.me=null;S.secCal=S.secCal&&typeof S.secCal==="object"?S.secCal:{};if(S.sync&&typeof S.sync!=="object")S.sync=null;
 S.ready=S.ready&&typeof S.ready==="object"?S.ready:{};S.duty=Object.assign({rosters:[]},S.duty||{});if(!Array.isArray(S.duty.rosters))S.duty.rosters=[];S.tl=S.tl&&typeof S.tl==="object"?S.tl:{};
 S.roll=Object.assign({units:{},own:true,name:""},S.roll||{});if(!S.roll.units||typeof S.roll.units!=="object")S.roll.units={};
 S.mus=Object.assign({open:false,seen:{},inc:["On Hand"],att:true,only:false,last:null},S.mus||{});
 S.pt=Object.assign({event:"Unit PT",when:"",inc:["On Hand"],att:true},S.pt||{});
 const dutyOf=m=>DUTIES.includes(m.duty)?m.duty:"Full Duty";
-function save(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.write(t);else localStorage.setItem(KEY,t);storageOK=true}catch(e){storageOK=false}if(S.link&&typeof linkSchedule==="function")linkSchedule();if(typeof histTick==="function")histTick();if(typeof syncSchedule==="function")syncSchedule()}
+function save(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.write(t);else localStorage.setItem(KEY,t);storageOK=true}catch(e){storageOK=false}if(S.link&&typeof linkSchedule==="function")linkSchedule();if(typeof histTick==="function")histTick();if(typeof syncSchedule==="function")syncSchedule();if(typeof mpSchedule==="function")mpSchedule()}
 
 let view="board", armed=null, query="";
 const h0=(location.hash||"").slice(1).toLowerCase();
-if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty","cal","log"].includes(h0)) view=h0;
+if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty","cal","log","me"].includes(h0)) view=h0;
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -779,6 +779,7 @@ function renderBoard(){
       ${(()=>{const t=calOn(dkey()).length;return `<button class="bigbtn" data-go="cal"><b>CALENDAR</b><span>${t?t+" today":"Nothing today"}</span></button>`})()}
       ${(()=>{const n=S.log.filter(x=>x.d===dkey()).length;const st=logStreak();return `<button class="bigbtn${n?" live":""}" data-go="log"><b>MY LOG</b><span>${n?n+" today":"Log today"}${st>1?" · 🔥"+st:""}</span></button>`})()}
       <button class="bigbtn" data-go="trends"><b>TRENDS</b><span>Numbers over time</span></button>
+      ${S.me?`<button class="bigbtn live" data-go="me"><b>MY PAGE</b><span>${S.me.d?esc(S.me.d.statusShort):"Your info"}</span></button>`:""}
       ${(()=>{const a=bcActive();if(!a)return `<button class="bigbtn" data-go="send"><b>SEND</b><span>Message with read receipts</span></button>`;const st=bcStats(a);
         return `<button class="bigbtn${st.prob?" hot":" live"}" data-go="send"><b>SEND</b><span>${st.prob?`<span class="w">${st.prob} problem${st.prob>1?"s":""}</span> · `:""}${st.got}/${st.pool} got it</span></button>`})()}
       ${(()=>{const n=Object.keys(S.roll.units).length;if(!n)return `<button class="bigbtn" data-go="rollup"><b>ROLLUP</b><span>Add up units under you</span></button>`;const R=rollSum(rollUnits());const st=rollStale();
@@ -894,6 +895,8 @@ function renderData(){
     <textarea id="syncIn" style="min-height:110px" placeholder="EOOP HE SECTION UPDATE ...&#10;#EOOP1|HE|34|..."></textarea>
     <button class="btn" id="syncGo">Apply to board</button><div class="note" id="syncOut"></div></div>
   <h2>Live section updates</h2><div class="panel"><p class="note">${S.board?"<b style='color:var(--s-onhand)'>● On</b> for your board.":"Off."}${S.link?" This phone sends "+esc(S.link.mysec)+" to "+esc(S.link.unit)+".":""}</p><button class="btn alt" data-go="live">${S.board||S.link?"Manage":"Set up"} live section updates</button></div>
+  <h2>My pages</h2><div class="panel"><p class="note">${S.roster.filter(m=>m.pk).length} of ${S.roster.length} people have a private My page.${S.mpErr?` <span style="color:var(--warn)">Last error: ${esc(S.mpErr)}</span>`:""} Turn it on from each person's card, or for everyone with a number below. Each link is private, so it's sent one text at a time.</p>
+    <button class="btn alt" id="mpAll">Turn on for everyone with a phone number</button><div class="alist">${sorted(S.roster.filter(m=>m.pk&&m.phone&&!m.pkSent)).slice(0,60).map(m=>`<div class="rtop"><div class="who">${esc(m.rank+" "+m.name)}</div><a class="btn alt" data-mpsent="${m.id}" href="${esc("sms:+1"+m.phone+"?&body="+encodeURIComponent(unitName()+": your private My page (status, duty, due-outs, calendar). Keep this link to yourself: "+mpLink(m)))}">Text link</a></div>`).join("")}</div></div>
   <h2>Live check-in</h2><div class="panel"><label class="tog"><input type="checkbox" id="liveTog"${S.live!==false?" checked":""}> Recall check-ins appear on my board by themselves</label>
     <p class="note">Uses a small relay server. It never gets names or phone numbers: only scrambled codes of what each person types, Good/Delayed/Help and their short note. Each recall deletes itself when you close it out, or after 72 hours. Turn off to use text replies only.</p></div>
   <h2>Offline</h2><div class="panel"><div id="offStat" class="note">Checking…</div></div>
@@ -1283,6 +1286,55 @@ function joinPrompt(q){const bid=(q.get("join")||"").replace(/[^a-z0-9]/g,"").sl
     <button class="btn" id="jYes">Link and send now</button><button class="btn alt" data-sclose="1">Not now</button></div>`;
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));try{history.replaceState(null,"",location.pathname)}catch(e){}}
 
+/* ---------- MY PAGE: each member's own info, encrypted per person ---------- */
+let mpT=null,mpBusy=false;
+async function mpKeys(pk){return {id:hexOf(await sha("mpid:"+pk)).slice(0,24),wk:hexOf(await sha("mpwk:"+pk)),ek:await crypto.subtle.importKey("raw",await sha("mpek:"+pk),"AES-GCM",false,["encrypt","decrypt"])}}
+function mpLink(m){const q=new URLSearchParams();q.set("me",m.pk);q.set("u",unitName());return location.origin+location.pathname+"#"+q.toString()}
+function mpDigest(m){const t=dkey();const to=dkey(new Date(Date.now()+60*86400000));const sn=sinceOf(m);
+  const cal=calEntries(t,to,"ALL").filter(e=>e.m&&e.m.id===m.id).map(e=>({d:e.d,end:e.end&&e.end!==e.d?e.end:"",tm:e.tm||"",ty:e.ty,ti:e.ti,no:e.no||""}));
+  const duties=[];for(const r of S.duty.rosters)for(const k of Object.keys(r.assign||{}).filter(k=>k>=t&&r.assign[k]===m.id).sort().slice(0,3))duties.push({r:r.name,d:k});
+  const due=readyItems().map(it=>{const st=dueState(m,it);return {n:it.n,st:st.st,txt:st.txt,d:st.iso||""}}).filter(x=>x.st!=="none");
+  const owe=(S.events||[]).filter(e=>evReq(e).some(x=>x.id===m.id)&&!evDone(e,m)).map(e=>({n:e.name,d:e.date||""}));
+  return {v:1,unit:unitName(),rank:m.rank,name:m.name,sec:m.sec,secName:((SECTIONS.find(x=>x[0]===m.sec)||[])[1]||m.sec),status:m.status,statusShort:SHORT[m.status]||m.status,duty:dutyOf(m),since:sn||0,start:isoOf(m.start),end:isoOf(m.end),edd:isoOf(m.edd),eas:isoOf(m.eas),duties:duties.sort((a,b)=>a.d.localeCompare(b.d)),due,cal,owe}}
+function mpSchedule(){if(!S.roster.some(m=>m.pk))return;clearTimeout(mpT);mpT=setTimeout(mpPublish,15000)}
+async function mpPublish(force){if(mpBusy)return;mpBusy=true;let n=0;
+  try{for(const m of S.roster.filter(m=>m.pk)){const d=mpDigest(m);const sg=sigF(d);if(!force&&sg===m.pkSig)continue;
+      const K=await mpKeys(m.pk);const ct=await sealObj(K,d);await SB.rpc("put_page",{p_id:K.id,p_wk:K.wk,p_ct:ct});m.pkSig=sg;m.pkAt=Date.now();n++}
+    if(n)rawSave()}
+  catch(e){S.mpErr=String(e.message||e).slice(0,80);rawSave()}finally{mpBusy=false}return n}
+async function mpTurnOn(m){if(!m.pk){m.pk=rndId(28);m.pkSig="";save()}await mpPublish();return mpLink(m)}
+async function mpFetch(){const M=S.me;if(!M)return;try{const K=await mpKeys(M.pk);const rows=await SB.rpc("get_page",{p_id:K.id});const r=rows&&rows[0];
+  if(!r){M.err="Your leader hasn't published your page yet.";rawSave();return}const t=Date.parse(r.updated_at)||0;if(M.t===t&&M.d){M.err="";return}
+  M.d=await openBlob(K,r.ct);M.t=t;M.err="";rawSave();if(view==="me"){const y=window.scrollY;renderMe();window.scrollTo(0,y)}}catch(e){M.err=String(e.message||e).slice(0,80);rawSave()}}
+setInterval(()=>{if(S.me&&!document.hidden)mpFetch()},300000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.me)mpFetch()});
+const daysTo=iso=>{const d=parseD(iso);return d?Math.round((d-today0())/86400000):null};
+function renderMe(){const M=S.me;let h="";
+  if(!M){h=`<h2>My page</h2><div class="panel"><p class="note">Your leader sends you a private link to your page. Open it on this phone and your status, duty, due-outs and calendar show up here.</p></div>`;$("#main").innerHTML=h;return}
+  const D=M.d;if(!D){h=`<h2>My page</h2><div class="panel"><p class="note">${M.err?esc(M.err):"Loading your page…"}</p><button class="btn alt" id="meRe">Try again</button></div>`;$("#main").innerHTML=h;return}
+  const cd=[];const add=(lab,iso,col)=>{const n=daysTo(iso);if(n!=null&&n>=0)cd.push({lab,n,col})};
+  if(D.duties[0])add("Next duty: "+D.duties[0].r,D.duties[0].d,"--s-duty");
+  if(D.status!=="On Hand"&&D.end)add("Back from "+D.statusShort,D.end,"--s-onhand");
+  const lv=D.cal.find(e=>e.ty==="LEAVE"&&e.d>dkey());if(lv)add("Leave starts",lv.d,"--s-leave");
+  const nd=D.due.filter(x=>x.d&&x.st!=="over").sort((a,b)=>a.d.localeCompare(b.d))[0];if(nd)add(nd.n+" due",nd.d,"--s-aob");
+  if(D.eas)add("EAS",D.eas,"--brass");else if(D.edd)add("EDD",D.edd,"--brass");
+  const over=D.due.filter(x=>x.st==="over");
+  h+=`<div class="sechead" style="margin-top:14px"><h2 style="margin:0">${esc(D.rank)} ${esc(D.name)}</h2></div><div class="note">${esc(D.sec)} · ${esc(D.secName)} · ${esc(D.unit)} · updated ${ago(M.t)}</div>
+    <div class="panel" style="--sc:var(${SVAR[D.status]||"--line"});border-left:5px solid var(--sc)"><div style="font-size:20px;font-weight:800">${esc(D.statusShort)}${D.duty!=="Full Duty"?` · <span style="color:var(--warn)">${esc(D.duty)}</span>`:""}</div>
+      <div class="note">${D.since?"Since "+short(new Date(D.since)):""}${D.end&&D.status!=="On Hand"?" · through "+short(parseD(D.end)):""}</div></div>`;
+  if(cd.length)h+=`<div class="tiles">${cd.sort((a,b)=>a.n-b.n).slice(0,4).map(c=>`<div class="tile"><div class="lbl">${esc(c.lab)}</div><div class="num" style="font-size:40px;color:var(${c.col})">${c.n}<small style="font-size:14px"> ${c.n===1?"day":"days"}</small></div></div>`).join("")}</div>`;
+  if(over.length)h+=`<div class="panel" style="border-color:var(--warn)"><b style="color:var(--warn)">⚠ Overdue (${over.length})</b>${over.map(x=>`<div>${esc(x.n)} <span class="note">· ${esc(x.txt)}</span></div>`).join("")}<p class="note">See your section leader to get these knocked out.</p></div>`;
+  h+=`<h2>Duty</h2><div class="panel">${D.duties.length?D.duties.map(x=>{const d=parseD(x.d);return `<div><b>${DOW[d.getDay()]} ${short(d)}</b> · ${esc(x.r)}</div>`}).join(""):`<p class="note">No duty scheduled.</p>`}</div>`;
+  h+=`<h2>Due-outs</h2><div class="alist">${D.due.length?D.due.map(x=>`<div class="rrow" style="--sc:var(${x.st==="over"?"--warn":x.st==="soon"?"--s-duty":"--s-onhand"})"><div class="who"><b>${esc(x.n)}</b><div class="ph">${esc(x.txt)}</div></div></div>`).join(""):`<p class="note">Nothing tracked yet.</p>`}</div>`;
+  h+=`<h2 style="display:flex;justify-content:space-between;align-items:center">My calendar <button class="chip" id="meIcs" style="cursor:pointer">Add to phone calendar</button></h2><div class="alist">${D.cal.length?D.cal.map(e=>{const d=parseD(e.d);const t=ctype(e.ty);return `<div class="rrow" style="--sc:var(${t[2]})"><div class="who"><b>${DOW[d.getDay()]} ${short(d)}${e.tm?" · "+esc(e.tm):""} · ${esc(e.ti)}</b><div class="ph">${t[1]}${e.end?" · thru "+short(parseD(e.end)):""}${e.no?" · "+esc(e.no):""}</div></div></div>`}).join(""):`<p class="note">Nothing in the next 60 days.</p>`}</div>`;
+  if(D.owe.length)h+=`<h2>You still owe</h2><div class="panel">${D.owe.map(x=>`<div>${esc(x.n)}${x.d?" · "+esc(x.d):""}</div>`).join("")}</div>`;
+  h+=`<div class="row2" style="margin-top:14px">${S.feeds.length?`<button class="btn alt" data-go="feed">FEED</button>`:"<span></span>"}<button class="btn alt" data-go="log">📝 My log</button></div>
+    <p class="note">Only you can read this page: it's encrypted with a key in your private link. Something wrong? Tell your section leader.</p>
+    <button class="btn warn" id="meOff" style="width:100%;margin-top:8px">${armed==="meoff"?"Tap again to remove My page from this phone":"Remove My page from this phone"}</button>`;
+  $("#main").innerHTML=h}
+function mePrompt(q){const pk=(q.get("me")||"").replace(/[^a-z0-9]/g,"").slice(0,40);const unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24);try{history.replaceState(null,"",location.pathname)}catch(e){}
+  if(pk.length<20)return toast("That My page link is incomplete.");S.me={pk,unit,d:null,t:0};S.onb=true;if(!S.mode)S.mode="military";save();view="me";render();window.scrollTo(0,0);mpFetch()}
+
 /* ---------- CALENDAR: per person, whole board, sections ---------- */
 const CAL_TYPES=[["APPT","Appointment","--s-aob"],["LEAVE","Leave","--s-leave"],["TAD","TAD / travel","--s-tad"],["TRNG","Training","--s-op"],["DUTY","Duty","--s-duty"],["DUE","Due-out","--warn"],["EVENT","Event","--brass"],["OTHER","Other","--muted"]];
 const ctype=k=>CAL_TYPES.find(x=>x[0]===k)||CAL_TYPES[7];
@@ -1573,6 +1625,11 @@ function renderPerson(){const m=S.roster.find(x=>x.id===pid);if(!m){view=pBack||
   if(typeof nextDuties==="function"){const nd=nextDuties(m);h+=pSec("Duty",nd.length?nd.map(x=>`<div>${esc(x.roster)}: <b>${esc(x.day)}</b></div>`).join(""):`<p class="note">No upcoming duty.</p>`)}
   // calendar
   {const up=calEntries(dkey(),dkey(new Date(Date.now()+90*86400000)),"ALL").filter(e=>e.m&&e.m.id===m.id);h+=`<h2 style="display:flex;justify-content:space-between;align-items:center">Calendar <button class="chip" id="pcIcs" style="cursor:pointer">Add to phone calendar</button></h2>`+(up.length?`<div class="alist">${up.slice(0,12).map(e=>calRow(e,true)).join("")}</div>`:`<p class="note">Nothing in the next 90 days.</p>`)+calForm(m)}
+  // my page
+  h+=pSec("My page",m.pk?`<div class="note">${m.pkAt?"<b style='color:var(--s-onhand)'>● Updated "+ago(m.pkAt)+"</b>":"Publishing…"} · ${esc(m.rank+" "+lastOf(m))} sees their status, duty, due-outs and calendar.</div>
+    <div class="row2">${m.phone?`<a class="btn" href="${esc("sms:+1"+m.phone+"?&body="+encodeURIComponent(unitName()+": your private My page (status, duty, due-outs, calendar). Keep this link to yourself: "+mpLink(m)))}">Text their link</a>`:`<button class="btn alt" data-pedit="ph">Add phone first</button>`}<button class="btn alt" data-mpcopy="${m.id}">Copy link</button></div>
+    <button class="btn warn" data-mpoff="${m.id}">${armed==="mpoff"+m.id?"Tap again: turn off and delete their page":"Turn off My page"}</button>`
+    :`<p class="note">Give ${esc(m.rank+" "+lastOf(m))} a private page on their phone with their status, next duty, due-outs and calendar. It updates by itself as you change things here.</p><button class="btn" data-mpon="${m.id}">Turn on My page</button>`);
   // gear
   if(m.wpn&&m.wpn.t)h+=pSec("Gear",`<div><b>${esc(m.wpn.t)}</b>${m.wpn.rack?" · rack "+esc(m.wpn.rack):""}${m.wpn.s4?" · serial …"+esc(m.wpn.s4):""}</div>`);
   // accountability
@@ -1777,7 +1834,7 @@ function renderFeed(){let h=S.source==="sample"?"":banner();const f=fdCur();
           ${bcBatches(ns,f.unit+" FEED: tap to join and see the word in EOP Numbers: "+fdLink(f)).map((x,i,arr)=>`<a class="btn alt" href="${esc(x.href)}">Text join link to them${arr.length>1?" ("+(i+1)+")":""} (${x.n})</a>`).join("")}</details>`})()}
       <details class="panel"><summary><b>Invite people</b> · send the join link once</summary>${bcBatches(S.roster,f.unit+" FEED: tap to join and see the word in EOP Numbers: "+fdLink(f)).map((x,i,arr)=>`<a class="btn" href="${esc(x.href)}">Text join link${arr.length>1?" · group "+(i+1)+" of "+arr.length:""} (${x.n})</a>`).join("")||`<p class="note">No phone numbers loaded (RECALL → Load numbers). You can copy the link instead.</p>`}
       <button class="btn alt" id="fdCopyLink">Copy join link</button><p class="note">Anyone with this link can read the feed, so send it only to your people.</p></details>`}
-  else h+=`<button class="btn alt" data-go="log" style="width:100%;margin:4px 0">📝 My log${S.log.some(x=>x.d===dkey())?" · logged today":" · log today's accomplishments"}</button><p class="note">You: <b>${esc(f.me||"(name not set)")}</b>${f.sec?" · "+esc(f.sec):""} · <button class="chip" id="fdName" style="cursor:pointer">Change</button></p>${!f.sec&&(f.secsAll||f.secsLink||[]).length?`<p class="note" style="color:var(--warn)">Pick your section (Change) so you only see posts meant for you.</p>`:""}${fdPushHTML(f)}`;
+  else h+=`${S.me?`<button class="btn alt" data-go="me" style="width:100%;margin:4px 0">👤 My page</button>`:""}<button class="btn alt" data-go="log" style="width:100%;margin:4px 0">📝 My log${S.log.some(x=>x.d===dkey())?" · logged today":" · log today's accomplishments"}</button><p class="note">You: <b>${esc(f.me||"(name not set)")}</b>${f.sec?" · "+esc(f.sec):""} · <button class="chip" id="fdName" style="cursor:pointer">Change</button></p>${!f.sec&&(f.secsAll||f.secsLink||[]).length?`<p class="note" style="color:var(--warn)">Pick your section (Change) so you only see posts meant for you.</p>`:""}${fdPushHTML(f)}`;
   const all=fdVisible(f);const pins=(f.pins||[]).filter(id=>all.some(p=>p.id===id));
   if(all.length>3)h+=`<input class="search" id="fdQ" type="search" placeholder="Search the feed" value="${esc(fdQ)}" style="margin-top:10px">`;
   const qq=fdQ.trim().toLowerCase();const posts=(qq?all.filter(p=>p.txt.toLowerCase().includes(qq)):all).slice().sort((a,b)=>(pins.includes(b.id)?1:0)-(pins.includes(a.id)?1:0)||b.id-a.id);
@@ -2129,7 +2186,7 @@ function animateNums(){document.querySelectorAll("[data-n]").forEach(el=>{const 
 document.addEventListener("click",e=>{
   if(e.target.closest("#bMode,[data-mode-open]")){e.stopImmediatePropagation();openModeSheet();return}
   const mo=e.target.closest("[data-mopt]");if(mo){e.stopImmediatePropagation();const k=mo.dataset.mopt;const wasFirst=sheetCtx&&sheetCtx.first;closeSheet();if(!S.mode){S.mode=k==="military"?"military":S.mode;save()}
-    if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty","p","cal","log"].includes(view))view="board";render();window.scrollTo(0,0);if(!wasFirst)toast(MODES[k].name+" version on. Same people, new labels.")}if(wasFirst&&!S.onb)setTimeout(()=>showOnb(0),300);return}
+    if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty","p","cal","log","me"].includes(view))view="board";render();window.scrollTo(0,0);if(!wasFirst)toast(MODES[k].name+" version on. Same people, new labels.")}if(wasFirst&&!S.onb)setTimeout(()=>showOnb(0),300);return}
   const msh=e.target.closest("[data-mshare]");if(msh){e.stopImmediatePropagation();shareMode(msh.dataset.mshare);return}
   const pk=e.target.closest("[data-pick]");if(pk){e.stopImmediatePropagation();openSheet(pk.dataset.pick,pk.dataset.pid);return}
   if(e.target.closest("[data-sclose]")){e.stopImmediatePropagation();closeSheet();return}
@@ -2142,7 +2199,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetCtx)closeSheet
 document.addEventListener("dragleave",e=>{const d=$("#rcDrop");if(d&&!e.relatedTarget)d.classList.remove("over")});
 document.addEventListener("drop",e=>{if(view!=="recall"&&view!=="data")return;const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;e.preventDefault();const d=$("#rcDrop");if(d)d.classList.remove("over");rcLoadFile(f,view==="recall"?"#rcOutR":"#rcOut")});
 function render(){renderTabs();
-  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="rollup")renderRollup();else if(view==="live")renderLive();else if(view==="send")renderSend();else if(view==="feed")renderFeed();else if(view==="trends")renderTrends();else if(view==="ready")renderReady();else if(view==="duty")renderDuty();else if(view==="p")renderPerson();else if(view==="cal")renderCal();else if(view==="log")renderLog();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
+  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="rollup")renderRollup();else if(view==="live")renderLive();else if(view==="send")renderSend();else if(view==="feed")renderFeed();else if(view==="trends")renderTrends();else if(view==="ready")renderReady();else if(view==="duty")renderDuty();else if(view==="p")renderPerson();else if(view==="cal")renderCal();else if(view==="log")renderLog();else if(view==="me")renderMe();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
 
 /* ---------- CSV import ---------- */
 function parseCSV(text){const rows=[];let row=[],f="",q=false;
@@ -2264,6 +2321,14 @@ document.addEventListener("click",e=>{
   const lgd=e.target.closest("[data-lgdel]");if(lgd){const id=lgd.dataset.lgdel;if(armed==="lg"+id){S.log=S.log.filter(z=>z.id!==id);armed=null;logEdit=null;save()}else armed="lg"+id;const y=window.scrollY;renderLog();window.scrollTo(0,y);return}
   if(e.target.id==="lgCopy"){const t=logText(logList());try{navigator.clipboard.writeText(t).then(()=>toast("Copied as bullets"),()=>toast("Copy blocked here."))}catch(err){toast("Copy blocked here.")}return}
   if(e.target.id==="lgShare"){const t=logText(logList());if(navigator.share)navigator.share({title:"My log",text:t}).catch(()=>{});else shareFile(t,"My_log.txt","text/plain");return}
+  const mpo=e.target.closest("[data-mpon]");if(mpo){const m=S.roster.find(x=>x.id===mpo.dataset.mpon);mpo.disabled=true;mpo.textContent="Publishing…";mpTurnOn(m).then(()=>{const y=window.scrollY;renderPerson();window.scrollTo(0,y);toast(S.mpErr&&!m.pkAt?"Couldn't publish: "+S.mpErr:"My page is on. Text them the link.")});return}
+  const mpc=e.target.closest("[data-mpcopy]");if(mpc){const m=S.roster.find(x=>x.id===mpc.dataset.mpcopy);const u=mpLink(m);try{navigator.clipboard.writeText(u).then(()=>toast("Link copied"),()=>toast(u))}catch(err){toast(u)}return}
+  const mpf=e.target.closest("[data-mpoff]");if(mpf){const m=S.roster.find(x=>x.id===mpf.dataset.mpoff);if(armed==="mpoff"+m.id){armed=null;const pk=m.pk;delete m.pk;delete m.pkSig;delete m.pkAt;delete m.pkSent;save();mpKeys(pk).then(K=>SB.rpc("delete_page",{p_id:K.id,p_wk:K.wk})).catch(()=>{});toast("My page turned off")}else armed="mpoff"+m.id;const y=window.scrollY;renderPerson();window.scrollTo(0,y);return}
+  const mps=e.target.closest("[data-mpsent]");if(mps){const m=S.roster.find(x=>x.id===mps.dataset.mpsent);if(m){m.pkSent=Date.now();save()}setTimeout(()=>{if(view==="data")tabRedraw()},500);return}
+  if(e.target.id==="mpAll"){let n=0;for(const m of S.roster)if(m.phone&&!m.pk){m.pk=rndId(28);n++}save();e.target.disabled=true;e.target.textContent="Publishing "+n+" pages…";mpPublish().then(()=>{tabRedraw();toast(n+" pages on. Text each link below.")});return}
+  if(e.target.id==="meRe"){mpFetch().then(()=>renderMe());return}
+  if(e.target.id==="meIcs"){const D=S.me&&S.me.d;if(!D||!D.cal.length){toast("Nothing coming up.");return}shareFile(icsFor(D.cal,D.name),"My_calendar.ics","text/calendar");return}
+  if(e.target.id==="meOff"){if(armed==="meoff"){S.me=null;armed=null;save();view="board";render();toast("Removed")}else{armed="meoff";renderMe()}return}
   if(e.target.id==="fdCreate"){e.target.disabled=true;e.target.textContent="Creating…";fdCreate().then(()=>{fdNew=false;renderFeed();toast("Feed created. Invite your people.")}).catch(err=>{e.target.disabled=false;e.target.textContent="Start a feed";const o=$("#fdOut");if(o)o.textContent="Couldn't create: "+(err.message||err)});return}
   if(e.target.id==="fdPushOn"){const f=fdCur();e.target.disabled=true;e.target.textContent="Asking…";pushSub(true).then(sub=>{if(!sub){toast("Alerts not allowed");renderFeed();return}S.pushOn=true;save();fdPushAttach(f).then(()=>{renderFeed();toast(f.push?"Alerts on":"Couldn't connect alerts. Try again.")})}).catch(()=>{toast("Couldn't turn on alerts here.");renderFeed()});return}
   const fto=e.target.closest("[data-fdto]");if(fto){fdDraft.txt=($("#fdTxt")||{}).value||fdDraft.txt;fdDraft.to=fto.dataset.fdto;if(fdDraft.to==="secs"&&!fdDraft.secs.length)fdDraft.secs=SECTIONS.map(x=>x[0]);const y=window.scrollY;renderFeed();window.scrollTo(0,y);return}
@@ -2544,6 +2609,9 @@ let firstPick=false;{const qm=new URLSearchParams(location.search).get("m");if(!
 startXL();
 render();
 {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join"))setTimeout(()=>joinPrompt(q),firstPick?900:300);if(q.get("feed")){firstPick=false;setTimeout(()=>fdJoinPrompt(q),300)}}
+{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("me")){firstPick=false;setTimeout(()=>mePrompt(q),200)}}
+if(S.me){if(S.source==="sample"&&!location.hash){view="me";render()}setTimeout(()=>mpFetch(),600)}
+if(S.roster.some(m=>m.pk))setTimeout(()=>mpPublish(),2500);
 {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("sync")){firstPick=false;setTimeout(()=>syncJoinPrompt(q.get("sync")),300)}}
 if(S.sync&&S.sync.on)setTimeout(()=>syncPull(),700);
 if(S.feeds.length){S.feeds.filter(f=>!f.lk&&f.me&&!f.meH).forEach(fdMeHash);setTimeout(()=>fdPollAll(true),900);if(S.pushOn)setTimeout(()=>S.feeds.filter(f=>!f.lk&&!f.push).forEach(fdPushAttach),1600)}
@@ -2552,7 +2620,7 @@ if(S.board){setTimeout(livePollBoard,800);if(S.pushOn&&!S.board.push)setTimeout(
 if(firstPick)setTimeout(()=>openModeSheet(true),350);
 if("serviceWorker" in navigator&&document.querySelector("link[rel=manifest]")&&(location.protocol==="https:"||location.hostname==="localhost")){navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(()=>{const o=document.getElementById("offStat");if(o&&navigator.serviceWorker.controller)o.textContent="Ready: this app opens and works with no signal. Text reports once you have service."}).catch(()=>{})}
 setInterval(()=>{if(view==="recall"&&S.rc.open){const c=document.querySelector(".mbar .ct small");if(c)c.textContent="contacted · "+Math.round((Date.now()-S.rc.start)/60000)+" min"}},20000);
-window.addEventListener("hashchange",()=>{{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){joinPrompt(q);return}if(q.get("feed")){fdJoinPrompt(q);return}if(q.get("sync")){syncJoinPrompt(q.get("sync"));return}}const h=(location.hash||"").slice(1).toLowerCase();if(["recall","rollup","board","muster","alerts","live","send","feed"].includes(h)&&h!==view){view=h;armed=null;render();window.scrollTo(0,0);if(h==="feed")fdPollAll(true)}});
+window.addEventListener("hashchange",()=>{{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){joinPrompt(q);return}if(q.get("feed")){fdJoinPrompt(q);return}if(q.get("sync")){syncJoinPrompt(q.get("sync"));return}if(q.get("me")){mePrompt(q);return}}const h=(location.hash||"").slice(1).toLowerCase();if(["recall","rollup","board","muster","alerts","live","send","feed"].includes(h)&&h!==view){view=h;armed=null;render();window.scrollTo(0,0);if(h==="feed")fdPollAll(true)}});
 setInterval(()=>{const d=$("#dtg");if(d)d.textContent="AS OF "+dtg()},30000);
 </script>
 </body></html>
