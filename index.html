@@ -444,15 +444,15 @@ function setMode(k){if(!MODES[k])return false;const was=MODES[S.mode]?S.mode:"mi
   for(const ev of S.events||[]){if(Array.isArray(ev.secs))ev.secs=[...new Set(ev.secs.map(x=>map[x]).filter(Boolean))]}
   if(!S.pt.event||oldEv.includes(S.pt.event))S.pt.event=EVENTS[0];
   secFix();secDraft=null;S.snap=null;save();startXL();return true}
-function modeLink(k){return location.origin+location.pathname+"?m="+k}
-function openModeSheet(){sheetCtx={kind:"mode"};const cur=MODES[S.mode]?S.mode:"military";
-  $("#sheetT").innerHTML=`App version<small>Changes every tab, status and report title. Same people, same data.</small>`;
-  $("#sheetOpts").innerHTML=MODE_ORDER.map(k=>`<button data-mopt="${k}" aria-pressed="${k===cur}" data-noxl><span><b>${MODES[k].name}</b><br><span class="mdesc">${MODES[k].desc}</span></span></button>`).join("")+
-   `<div class="mshare" data-noxl><div class="note">Send a version (opens the app already set to it):</div><div class="evts">${MODE_ORDER.map(k=>`<button data-mshare="${k}">${MODES[k].name}</button>`).join("")}</div></div>`;
+function modeLink(k){return location.origin+location.pathname+(k==="all"?"":"?m="+k)}
+function openModeSheet(first){sheetCtx={kind:"mode"};const cur=MODES[S.mode]?S.mode:"military";
+  $("#sheetT").innerHTML=first?`Pick your version<small>Sets the tabs, statuses and report titles for your group. Change it any time by tapping the title.</small>`:`App version<small>Changes every tab, status and report title. Same people, same data.</small>`;
+  $("#sheetOpts").innerHTML=MODE_ORDER.map(k=>`<button data-mopt="${k}" aria-pressed="${k===cur}" data-noxl><span><b>${MODES[k].name}</b><br><span class="mdesc">${MODES[k].desc}</span></span></button>`).join("")+(first?"":
+   `<div class="mshare" data-noxl><button class="btn" data-mshare="all" style="width:100%;margin:6px 0 10px">Send app link (they pick their version)</button><div class="note">Or send one version, already set:</div><div class="evts">${MODE_ORDER.map(k=>`<button data-mshare="${k}">${MODES[k].name}</button>`).join("")}</div></div>`);
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));buzz()}
-function shareMode(k){const url=modeLink(k);const t=MODES[k].title+" ("+MODES[k].name+" version)";
+function shareMode(k){const url=modeLink(k);const t=k==="all"?"Accountability app: Military, Police, Jobs, HR or Civilian. Pick yours when it opens.":MODES[k].title+" ("+MODES[k].name+" version)";
   if(navigator.share){navigator.share({title:t,text:t,url}).catch(()=>{});return}
-  try{navigator.clipboard.writeText(url).then(()=>toast(MODES[k].name+" link copied"),()=>toast(url))}catch(e){toast(url)}}
+  try{navigator.clipboard.writeText(url).then(()=>toast((k==="all"?"App":MODES[k].name)+" link copied"),()=>toast(url))}catch(e){toast(url)}}
 
 function secFix(){for(const m of S.roster){if(m.sec!=="ATT"&&!SECTIONS.some(s=>s[0]===m.sec))m.sec=SECTIONS[0][0]}}
 function tabsHTML(){if(!secDraft)secDraft=SECTIONS.map(([k,n])=>({o:k,k,n}));const D=secDraft;
@@ -1115,7 +1115,7 @@ function animateNums(){document.querySelectorAll("[data-n]").forEach(el=>{const 
     const tb=document.querySelector('.tabs [aria-selected="true"]');if(tb&&tb.scrollIntoView)tb.scrollIntoView({inline:"center",block:"nearest",behavior:RM()?"auto":"smooth"})},{passive:true})})();
 document.addEventListener("click",e=>{
   if(e.target.closest("#bMode,[data-mode-open]")){e.stopImmediatePropagation();openModeSheet();return}
-  const mo=e.target.closest("[data-mopt]");if(mo){e.stopImmediatePropagation();const k=mo.dataset.mopt;closeSheet();
+  const mo=e.target.closest("[data-mopt]");if(mo){e.stopImmediatePropagation();const k=mo.dataset.mopt;closeSheet();if(!S.mode){S.mode=k==="military"?"military":S.mode;save()}
     if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory"].includes(view))view="board";render();window.scrollTo(0,0);toast(MODES[k].name+" version on. Same people, new labels.")}return}
   const msh=e.target.closest("[data-mshare]");if(msh){e.stopImmediatePropagation();shareMode(msh.dataset.mshare);return}
   const pk=e.target.closest("[data-pick]");if(pk){e.stopImmediatePropagation();openSheet(pk.dataset.pick,pk.dataset.pid);return}
@@ -1312,9 +1312,10 @@ const dl=Promise.resolve({save:({filename,data})=>new Promise((res,rej)=>{try{co
 applyLists();
 for(const f of ["reportText","ptText","wText","alertsText","musText","sectionUpdateText","recallText","evText","armText"]){const o=window[f];if(typeof o==="function")window[f]=(...a)=>RT(o(...a))}
 reportText=window.reportText;ptText=window.ptText;wText=window.wText;alertsText=window.alertsText;musText=window.musText;sectionUpdateText=window.sectionUpdateText;recallText=window.recallText;evText=window.evText;armText=window.armText;
-{const qm=new URLSearchParams(location.search).get("m");if(qm&&MODES[qm]){setMode(qm);try{history.replaceState(null,"",location.pathname+location.hash)}catch(e){}}}
+let firstPick=false;{const qm=new URLSearchParams(location.search).get("m");if(!qm&&!S.mode)firstPick=true;if(qm&&MODES[qm]){if(!S.mode&&qm==="military"){S.mode="military";save()}setMode(qm);try{history.replaceState(null,"",location.pathname+location.hash)}catch(e){}}}
 startXL();
 render();
+if(firstPick)setTimeout(()=>openModeSheet(true),350);
 if("serviceWorker" in navigator&&document.querySelector("link[rel=manifest]")&&(location.protocol==="https:"||location.hostname==="localhost")){navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(()=>{const o=document.getElementById("offStat");if(o&&navigator.serviceWorker.controller)o.textContent="Ready: this app opens and works with no signal. Text reports once you have service."}).catch(()=>{})}
 setInterval(()=>{if(view==="recall"&&S.rc.open){const c=document.querySelector(".mbar .ct small");if(c)c.textContent="contacted · "+Math.round((Date.now()-S.rc.start)/60000)+" min"}},20000);
 setInterval(()=>{const d=$("#dtg");if(d)d.textContent="AS OF "+dtg()},30000);
