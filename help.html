@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quick-start · MusterBoard / EOP Numbers</title>
+<style>
+@font-face{font-family:"Plus Jakarta Sans";font-weight:400;font-display:swap;src:url(fonts/pjs-400.woff2) format("woff2")}
+@font-face{font-family:"Plus Jakarta Sans";font-weight:700;font-display:swap;src:url(fonts/pjs-700.woff2) format("woff2")}
+@font-face{font-family:"Plus Jakarta Sans";font-weight:800;font-display:swap;src:url(fonts/pjs-800.woff2) format("woff2")}
+:root{--bg:#eef2f6;--card:#fff;--ink:#0f1720;--muted:#5b6673;--line:rgba(15,23,32,.1);--acc:#17795f}
+@media (prefers-color-scheme:dark){:root{--bg:#0b1016;--card:#18202a;--ink:#e8eef5;--muted:#93a1b1;--line:rgba(255,255,255,.1);--acc:#3ccf9e}}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
+main{max-width:720px;margin:0 auto;padding:28px 16px 60px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px 8px;margin-top:14px}
+h1{font-size:28px;font-weight:800;margin:0}h2{font-size:19px;font-weight:800;margin:0 0 6px}li{margin-bottom:8px}a{color:var(--acc);font-weight:700}.muted{color:var(--muted)}
+</style></head><body><main>
+<h1>Quick-start guide</h1><p class="muted">For leaders, section leaders and members. Five minutes to get running.</p>
+<div class="card"><h2>1. Leader: first 10 minutes</h2><ol>
+<li>Open the app, pick your version (Military, Police, Jobs, HR or Civilian), and add it to your Home Screen (iPhone: Share → Add to Home Screen).</li>
+<li><b>DATA → Load roster</b>: your MOL detail list (CSV) or a backup. Rename tabs to match your sections.</li>
+<li><b>DATA → Security</b>: set a PIN. <b>DATA → Backup and sync</b>: turn it on and save the recovery code somewhere safe.</li>
+<li><b>RECALL → Load phone numbers</b> from your recall roster (Excel, PDF, Word or contacts).</li>
+<li><b>TEXT</b>: add who you send numbers to and your unit name. Tap Text it.</li></ol></div>
+<div class="card"><h2>2. Bring your section leaders in</h2><ol>
+<li>Board → <b>Live sections</b> → turn on → <b>Text HE link</b> (one per section).</li>
+<li>Each section leader loads the same roster, opens their link and taps Link and send now.</li>
+<li>From then on their changes reach your board in about 15 seconds, and their appointments show on your calendar.</li></ol></div>
+<div class="card"><h2>3. Bring everyone in</h2><ol>
+<li><b>FEED → Start a feed → Invite people</b>: one text with a join link. Post the word; people tap Got it.</li>
+<li><b>DATA → My pages → Turn on for everyone</b>, then text each person their private link. They see their own status, duty, due-outs and calendar.</li>
+<li>Everyone can use <b>MY LOG</b> to write daily accomplishments and export them for evals.</li></ol></div>
+<div class="card"><h2>4. Daily rhythm</h2><ul>
+<li>Morning: post the Plan of the Day in FEED; check the board and ALERTS.</li>
+<li>Formation: MUSTER → Show QR, people check themselves in.</li>
+<li>During the day: section leaders update; you send numbers from TEXT.</li>
+<li>Weekly: READY for due-outs, DUTY for the roster, TRENDS for the brief, ⬇ Excel for the admin shop.</li></ul></div>
+<div class="card"><h2>5. Server setup (leaders who run their own copy)</h2><ol>
+<li>Create a free Supabase project. Put its URL and publishable key in the app (ask your developer).</li>
+<li>In the app: <b>DATA → System check → Run</b>. For anything with ❌, tap <b>Copy part 1</b>, paste in Supabase → SQL Editor → Run, then the next part.</li>
+<li>For push alerts: Edge Functions → create <b>notify</b>, paste the code from System check, add the VAPID_PUBLIC and VAPID_PRIVATE secrets, and turn off Enforce JWT verification.</li>
+<li>Run the three Server protection parts once.</li></ol></div>
+<div class="card"><h2>Privacy in one line</h2><p>Your roster stays on your phone. What goes to the server is encrypted or scrambled, so the server can't read names, posts or your data. <a href="privacy.html">Full privacy policy</a> · <a href="support.html">Support</a> · <a href="./">Open the app</a></p></div>
+</main></body></html>
