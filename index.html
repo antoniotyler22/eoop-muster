@@ -785,7 +785,7 @@ S.roll=Object.assign({units:{},own:true,name:""},S.roll||{});if(!S.roll.units||t
 S.mus=Object.assign({open:false,seen:{},inc:["On Hand"],att:true,only:false,last:null},S.mus||{});
 S.pt=Object.assign({event:"Unit PT",when:"",inc:["On Hand"],att:true},S.pt||{});
 const dutyOf=m=>DUTIES.includes(m.duty)?m.duty:"Full Duty";
-function save(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.write(t);else localStorage.setItem(KEY,t);storageOK=true}catch(e){storageOK=false}if(S.link&&typeof linkSchedule==="function")linkSchedule();if(typeof histTick==="function")histTick();if(typeof syncSchedule==="function")syncSchedule();if(typeof mpSchedule==="function")mpSchedule()}
+function save(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.write(t);else localStorage.setItem(KEY,t);storageOK=true}catch(e){storageOK=false}if(S.link&&typeof linkSchedule==="function")linkSchedule();if(typeof histTick==="function")histTick();if(typeof syncSchedule==="function")syncSchedule();if(typeof mpSchedule==="function")mpSchedule();if(S.board&&typeof rpSchedule==="function")rpSchedule()}
 
 let view="board", armed=null, query="";
 const h0=(location.hash||"").slice(1).toLowerCase();
@@ -907,7 +907,7 @@ function renderData(){
   const {T}=counts();
   let h=`<h2>App version</h2><div class="panel vpanel" data-noxl><div><b>${MODE().name}</b> · <span class="mdesc">${MODE().desc}</span></div><button class="btn alt" data-mode-open>Change / send</button></div>
   <h2>Roster data</h2><div class="panel">
-    <div><b>${T.total}</b> Marines loaded · ${S.source==="sample"?"sample data":S.source==="mol"?"from MOL detail list":"from backup"}${S.loadedAt?" · "+esc(S.loadedAt):""}</div>
+    <div><b>${T.total}</b> Marines loaded · ${S.source==="sample"?"sample data":S.source==="mol"?"from MOL detail list":S.source==="link"?"from your OIC's board":"from backup"}${S.loadedAt?" · "+esc(S.loadedAt):""}</div>
     <label for="file">Load MOL detail list (.csv) or a backup from this app</label>
     <input type="file" id="file" accept=".csv,text/csv">
     <p class="note">Loading replaces the current roster. EDIPI and sex columns are skipped and never stored.</p>
@@ -1254,11 +1254,11 @@ async function itemsFor(bid,ms){const out=[];
   return out.sort()}
 /* section leader side */
 function linkSchedule(){if(!S.link||lkBusy)return;clearTimeout(lkTimer);lkTimer=setTimeout(linkPush,3000)}
-async function linkPush(force){const L=S.link;if(!L||lkBusy)return;const ms=S.roster.filter(m=>m.sec===L.mysec);
+async function linkPush(force){const L=S.link;if(!L||lkBusy)return;if(L.rk2&&!L.pulled){rosterPull();return}const ms=S.roster.filter(m=>m.sec===L.mysec);
   lkBusy=true;try{const items=await itemsFor(L.board,ms);const st=ms.length+"|"+items.join(",");
     if(force||st!==L.sig){const me=await Promise.all(SB.words(L.me).map(w=>SB.h(L.board,w)));
       await SB.rpc("push_update",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_sender:me,p_strength:ms.length,p_items:items});
-      L.sig=st;L.sent=Date.now();L.err="";save();SB.notify(null,{board:L.board})}
+      L.sig=st;L.sent=Date.now();L.lsig=lsigOf(ms);L.err="";save();SB.notify(null,{board:L.board})}
     if(L.ek){const cal=ms.flatMap(m=>(m.cal||[]).filter(e=>(e.end||e.d)>=dkey(new Date(Date.now()-30*86400000))).map(e=>({nk:fullK(m),d:e.d,tm:e.tm||"",end:e.end||"",ty:e.ty,ti:e.ti,no:e.no||""})));const cs=sigF(cal);
       if(force||cs!==L.calSig){const ct=await fdEnc(L.ek,{e:cal});await SB.rpc("push_cal",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_ct:ct});L.calSig=cs;L.err="";rawSave()}}}
   catch(e){L.err=String(e.message||e).slice(0,80);save();clearTimeout(lkTimer);lkTimer=setTimeout(linkPush,60000)}
@@ -1267,7 +1267,7 @@ function linkStatus(){const L=S.link;if(!L)return"";if(L.err)return `<span style
   return L.sent?`Last sent ${dtg(new Date(L.sent)).slice(0,7)}.`:"Sending…"}
 window.addEventListener("online",()=>{if(S.link)linkPush();if(S.board)livePollBoard()});
 /* OIC side */
-function boardLink(sec){if(!S.board.ek){S.board.ek=b64url(crypto.getRandomValues(new Uint8Array(32)));save()}const q=new URLSearchParams();q.set("join",S.board.id);q.set("k",S.board.wk);q.set("s",sec);q.set("u",unitName());q.set("e",S.board.ek);return location.origin+location.pathname+"#"+q.toString()}
+function boardLink(sec){if(!S.board.ek){S.board.ek=b64url(crypto.getRandomValues(new Uint8Array(32)));save()}const q=new URLSearchParams();q.set("join",S.board.id);q.set("k",S.board.wk);q.set("s",sec);q.set("u",unitName());q.set("e",S.board.ek);q.set("r",secKey(sec));return location.origin+location.pathname+"#"+q.toString()}
 async function boardPush(){const B=S.board;if(!B||!S.pushOn)return;try{const sub=await pushSub(false);if(!sub)return;await SB.rpc("set_board_push",{p_board:B.id,p_read_key:B.rk,p_sub:sub.toJSON()});B.push=true;save()}catch(e){}}
 function boardPushHTML(){if(!pushOK())return isIOS()&&!standalone()?`<p class="note">For alerts with your phone locked: Share → <b>Add to Home Screen</b>, then open the app from there.</p>`:"";
   if(Notification.permission==="denied")return `<p class="note">Alerts are blocked for this app in your phone settings.</p>`;
@@ -1307,24 +1307,76 @@ function renderLive(){let h=banner();const B=S.board,L=S.link;
       <button class="btn" id="lvOn">Turn on live updates for my board</button><div class="note" id="lvOut"></div></div>`}
   else{h+=`<div class="panel"><div><b style="color:var(--s-onhand)">● Live</b> · checks every 15 seconds while the app is open${B.err?` · <span style="color:var(--warn)">${esc(B.err)}</span>`:""}</div>
       ${boardPushHTML()}
-      <p class="note">Send each section leader their link. They open it in this app, on a phone that has your roster loaded (same names). After that, every change they make to their section shows up here.</p></div>
+      <p class="note">Send each section leader their link. Their section roster loads from your board, so they don't load anything. Every change they make shows up here, and they land in your FEED where you see every post.</p>${hubHTML()}</div>
     <div class="alist" style="margin-top:10px">${SECTIONS.map(([k,n])=>{const r=B.last[k];const old=r&&Date.now()-r.t>4*3600000;
       return `<div class="rrow" style="--sc:var(${!r?"--line":old?"--warn":"--s-onhand"})"><div class="rtop"><div class="who"><b>${k}</b> ${esc(n)}
         <div class="ph">${r?`Updated ${ago(r.t)} (${dtg(new Date(r.t)).slice(0,7)})${r.by?" by "+esc(r.by):""} · ${r.ch} change${r.ch===1?"":"s"}`:"No update yet"}</div>
         ${r&&(r.miss||r.str!==r.mine)?`<div class="ph" style="color:var(--warn)">${r.miss?r.miss+" name"+(r.miss>1?"s":"")+" not on your roster. ":""}${r.str!==r.mine?"Their strength "+r.str+", yours "+r.mine+".":""}</div>`:""}</div></div>
-        <div class="row2"><a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent(unitName()+": you're the "+k+" section leader. Open this link in EOP Numbers to send your section's numbers to my board automatically: "+boardLink(k)))}">Text ${k} link</a><button class="btn alt" data-lvcopy="${k}">Copy link</button></div></div>`}).join("")}</div>
+        <div class="row2"><a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent(unitName()+": you're the "+k+" section leader. Open this link in EOP Numbers. Your section roster loads from my board, your updates come straight to me, and you can post to the unit FEED: "+boardLink(k)))}">Text ${k} link</a><button class="btn alt" data-lvcopy="${k}">Copy link</button></div></div>`}).join("")}</div>
     <button class="btn warn" id="lvOff" style="margin-top:16px;width:100%">${armed==="lvoff"?"Tap again: turn off and disconnect all sections":"Turn off live updates"}</button>`}
-  if(L)h+=`<h2>My link</h2><div class="panel"><div>This phone sends <b>${esc(L.mysec)}</b> to <b>${esc(L.unit)}</b> as <b>${esc(L.sec)}</b>${L.me?" · sender "+esc(L.me):""}.</div><div class="note">${linkStatus()}</div>
+  if(L)h+=`<h2>My link</h2><div class="panel"><div>This phone sends <b>${esc(L.mysec)}</b> to <b>${esc(L.unit)}</b> as <b>${esc(L.sec)}</b>${L.me?" · sender "+esc(L.me):""}.</div><div class="note">${linkStatus()}</div>${L.rk2?`<div class="note">${L.perr?`<span style="color:var(--warn)">Roster: ${esc(L.perr)}</span>`:L.pulled?`Roster from ${esc(L.unit)} · ${S.roster.filter(m=>m.sec===L.mysec).length} people · updated ${ago(L.pt)}`:"Loading your section roster…"}</div>`:""}
     <div class="row2"><button class="btn" id="lkNow">Send now</button><button class="btn alt" id="lkOff">${armed==="lkoff"?"Tap again to unlink":"Unlink"}</button></div></div>`;
   $("#main").innerHTML=h}
 function joinPrompt(q){const bid=(q.get("join")||"").replace(/[^a-z0-9]/g,"").slice(0,20),wk=(q.get("k")||"").replace(/[^a-z0-9]/g,"").slice(0,40),sec=(q.get("s")||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6),unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24);
-  const ek=(q.get("e")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60);if(bid.length<10||wk.length<24||!sec)return;sheetCtx={kind:"join",bid,wk,sec,unit,ek};const def=SECTIONS.some(x=>x[0]===sec)?sec:SECTIONS[0][0];
+  const ek=(q.get("e")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60);if(bid.length<10||wk.length<24||!sec)return;const rk2=(q.get("r")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60);sheetCtx={kind:"join",bid,wk,sec,unit,ek,rk2:rk2.length>=40?rk2:""};const def=SECTIONS.some(x=>x[0]===sec)?sec:SECTIONS[0][0];
   $("#sheetT").innerHTML=`Send live updates?<small>${esc(unit||"Your OIC")} wants this phone to send the <b>${esc(sec)}</b> section's statuses to their board automatically.</small>`;
   $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><label for="jSec">My section in this app</label><select id="jSec" class="wsel">${SECTIONS.map(([k,n])=>`<option value="${k}"${k===def?" selected":""}>${esc(k+" · "+n)}</option>`).join("")}</select>
     <label for="jMe">Your rank and last name (so they see who sent it)</label><input type="text" id="jMe" maxlength="30" placeholder="SGT SMITH" autocapitalize="characters" style="text-transform:uppercase" value="${esc(S.myName||"")}">
-    <p class="note">Only scrambled codes leave this phone; names don't. ${S.source==="sample"?"<b style='color:var(--warn)'>Load your roster first, or the names won't match theirs.</b>":""}</p>
+    ${ek&&q.get("r")?`<p class="note"><b>Your section roster loads from ${esc(unit||"your OIC")}'s board.</b> Nothing to load. You also join the unit FEED and can post to your section.</p>`:`<p class="note">Only scrambled codes leave this phone; names don't. ${S.source==="sample"?"<b style='color:var(--warn)'>Load your roster first, or the names won't match theirs.</b>":""}</p>`}
     <button class="btn" id="jYes">Link and send now</button><button class="btn alt" data-sclose="1">Not now</button></div>`;
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));try{history.replaceState(null,"",location.pathname)}catch(e){}}
+
+/* ---------- HUB: one main database behind every link ----------
+   OIC phone publishes each section's roster, encrypted with that section's own key (only in that leader's link),
+   plus the unit FEED keys. Section leaders pull it; Marines get the FEED through their My page. All posts land in one FEED the OIC sees. */
+let rpT=null,rpBusy=false,hubBusy=false,rpullBusy=false;
+const mainFeed=()=>S.feeds.find(f=>f.lk&&f.main)||S.feeds.find(f=>f.lk)||null;
+function secKey(sec){const B=S.board;B.sk=B.sk||{};if(!B.sk[sec]){B.sk[sec]=b64url(crypto.getRandomValues(new Uint8Array(32)));B.rsig={};setTimeout(save,0)}return B.sk[sec]}
+const lsigOf=ms=>sigF(ms.map(m=>[m.id,m.status,dutyOf(m)]));
+const RPF=["id","rank","name","sec","status","duty","phone","detail","loc","start","end","parent"];
+function rpSchedule(){if(!S.board||!S.board.sk||S.role==="view")return;clearTimeout(rpT);rpT=setTimeout(rpPublish,4000)}
+async function rpPublish(force){const B=S.board;if(!B||!B.sk||rpBusy||S.role==="view")return;rpBusy=true;
+  try{const f=mainFeed();const feed=f&&f.pk?{id:f.id,mk:f.mk,ek:f.ek,pk:f.pk,unit:f.unit}:null;B.rsig=B.rsig||{};let n=0;
+    for(const [sec,k] of Object.entries(B.sk)){const ms=S.roster.filter(m=>m.sec===sec).map(m=>{const o={};for(const x of RPF)if(m[x]!=null&&m[x]!=="")o[x]=x==="duty"?dutyOf(m):m[x];o.duty=dutyOf(m);return o});
+      const body={v:1,unit:unitName(),sec,secName:((SECTIONS.find(x=>x[0]===sec)||[])[1]||sec),secs:SECTIONS.map(x=>x[0]),ms,feed};const sg=sigF(body);
+      if(!force&&B.rsig[sec]===sg)continue;
+      if(S.source==="sample")continue;
+      await SB.rpc("put_roster",{p_board:B.id,p_read_key:B.rk,p_sec:sec,p_ct:await fdEnc(k,body)});B.rsig[sec]=sg;n++}
+    if(n||B.rerr){B.rerr="";rawSave()}}
+  catch(e){const t=String(e.message||e);B.rerr=/could not find|schema cache|404/i.test(t)?"Server needs setup part 11a.":t.slice(0,80);rawSave()}
+  finally{rpBusy=false}}
+async function ensureHub(){if(hubBusy||S.role==="view"||!S.board)return;hubBusy=true;let ch=false;
+  try{let f=mainFeed();if(!f){await fdCreate();f=mainFeed();f.main=true;ch=true;toast("Started your unit FEED. Leaders and Marines land in it from their links.")}
+    if(!f.pk){const pk=rndId(32);await SB.rpc("set_feed_poster",{p_feed:f.id,p_leader_key:f.lk,p_poster_key:pk});f.pk=pk;f.main=true;ch=true}
+    S.hubErr="";if(ch){save();rpPublish(true);mpSchedule()}}
+  catch(e){const t=String(e.message||e);S.hubErr=/could not find|schema cache|404/i.test(t)?"Server needs setup part 11b.":t.slice(0,80);rawSave()}
+  finally{hubBusy=false}}
+function hubHTML(){const f=mainFeed();const B=S.board;const err=S.hubErr||(B&&B.rerr)||"";
+  const lp=f?(f.posts||[]).filter(p=>p.sl&&Date.now()-p.t<7*86400000).length:0;const mp=S.roster.filter(m=>m.pk).length;
+  return `<div class="panel" style="margin:10px 0 0"><b>Your hub</b><div class="note">${err?`<span style="color:var(--warn)">${esc(err)} DATA → System check.</span>`:f&&f.pk?`● One FEED for the unit: <b>${esc(f.unit)}</b>. Section leaders post to it from their link; Marines with My page land in it. You see every post${lp?` · ${lp} from section leaders this week`:""}.${mp?` · ${mp} My page${mp>1?"s":""} on`:""}`:"Setting up your unit FEED…"}</div>${f?`<button class="btn alt" data-go="feed" style="width:100%">Open FEED</button>`:""}</div>`}
+async function rosterPull(force){const L=S.link;if(!L||!L.rk2||rpullBusy)return;rpullBusy=true;
+  try{const rows=await SB.rpc("get_roster",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec});const r=rows&&rows[0];
+    if(!r){L.perr="Your OIC's board hasn't shared "+L.sec+" yet. It loads when they open the app.";rawSave();return}
+    const t=Date.parse(r.updated_at)||0;if(!force&&L.pulled&&t<=(L.pt||0)){if(L.perr){L.perr="";rawSave()}return}
+    const o=await fdDec(L.rk2,r.ct);if(!o||!Array.isArray(o.ms)){L.perr="Couldn't open the roster. Ask your OIC for a new link.";rawSave();return}
+    const cur=S.roster.filter(m=>m.sec===L.mysec);const dirty=L.pulled&&lsigOf(cur)!==(L.lsig||"");const takeSt=!dirty&&t>(L.sent||0);
+    const byId={};cur.forEach(m=>byId[m.id]=m);
+    const next=o.ms.slice(0,600).map(x=>{const m={};for(const k of RPF)if(x[k]!=null)m[k]=String(x[k]).slice(0,120);m.sec=L.mysec;if(!STATUSES.includes(m.status))m.status="On Hand";
+      const old=byId[m.id];if(old){for(const k of Object.keys(old))if(!(k in m)&&!RPF.includes(k))m[k]=old[k];if(!takeSt){m.status=old.status;m.duty=dutyOf(old)}}return m});
+    if(S.source==="sample"){S.roster=[];S.source="link";S.loadedAt=dtg(new Date())}
+    S.roster=S.roster.filter(m=>m.sec!==L.mysec).concat(next);
+    L.unit=String(o.unit||L.unit).slice(0,24);L.pt=t;L.pulled=true;L.perr="";L.lsig=lsigOf(next);
+    if(takeSt){try{const items=await itemsFor(L.board,next);L.sig=next.length+"|"+items.join(",")}catch(e){}}
+    if(o.feed&&o.feed.id){const F=o.feed;const own=S.feeds.find(f=>f.id===F.id);
+      if(!own){S.feeds=S.feeds.filter(f=>!f.hub||f.lk);const nf={id:String(F.id).slice(0,20),mk:String(F.mk).slice(0,40),ek:String(F.ek).slice(0,60),pk:String(F.pk||"").slice(0,40),unit:String(F.unit||L.unit).slice(0,24),me:L.me,sec:L.sec,secsLink:(o.secs||[]).slice(0,12),posts:[],seen:0,mine:{},hub:1};S.feeds.push(nf);fdMeHash(nf).then(()=>fdPollAll(true));toast("You're in the "+nf.unit+" FEED")}
+      else if(!own.lk){own.pk=String(F.pk||"").slice(0,40);own.hub=1;if(!own.sec)own.sec=L.sec}}
+    save();if(["live","board","feed"].includes(view)||view===(L.mysec||"").toLowerCase()){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"&&a!=="SELECT"){const y=window.scrollY;render();window.scrollTo(0,y)}}
+    if(dirty)linkSchedule()}
+  catch(e){const t=String(e.message||e);L.perr=/could not find|schema cache|404/i.test(t)?"Your OIC's server needs setup part 11a.":/fetch|network/i.test(t)?"No signal. Retrying.":t.slice(0,80);rawSave()}
+  finally{rpullBusy=false}}
+setInterval(()=>{if(document.hidden)return;if(S.link&&S.link.rk2)rosterPull();if(S.board)ensureHub()},30000);
+setTimeout(()=>{if(S.board){ensureHub();rpSchedule()}if(S.link&&S.link.rk2)rosterPull()},2500);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.link&&S.link.rk2)rosterPull()});
 
 /* ---------- ASK: OIC controls + status ---------- */
 let akCtl=null,akCtlBusy=false,akCtlErr="",akShowKey=false;
@@ -1471,7 +1523,7 @@ function renderPeople(){const {c,A}=counts();let h=banner();
     <button data-go="live"><span class="ic">${svg("live")}</span><span><b>Live sections</b><small>${S.board?"On · section leaders update you":"Let section leaders update you"}</small></span></button>
     <button data-go="pt"><span class="ic">${svg("pt")}</span><span><b>PT roster</b><small>Who's going, text roster</small></span></button>
     <button data-go="recall"><span class="ic">${svg("recall")}</span><span><b>Phone numbers</b><small>${S.roster.filter(m=>m.phone).length} of ${S.roster.length} loaded</small></span></button>
-    <button data-go="data"><span class="ic">${svg("data")}</span><span><b>Load roster</b><small>${S.source==="sample"?"Using sample data":"MOL list or backup"}</small></span></button></div>`;
+    <button data-go="data"><span class="ic">${svg("data")}</span><span><b>Load roster</b><small>${S.source==="sample"?"Using sample data":S.source==="link"?"From your OIC's board":"MOL list or backup"}</small></span></button></div>`;
   h+=`<div class="dutyline" style="margin-top:12px">${dutyChips(S.roster.filter(m=>m.sec!=="ATT"))}</div>`;
   $("#main").innerHTML=h}
 function renderTools(){const al=alerts();const cf=upcomingConflicts(14).length;const R=readySum();const b=bcActive();
@@ -1638,7 +1690,8 @@ const SC=[
  {k:"fa",n:"FEED alerts",f:["05_feed_alerts"],t:[["feed_sub",{p_feed:"zz",p_member_key:"x",p_sub:{}}],["feed_unsub",{p_feed:"zz",p_member_key:"x",p_endpoint:"x"}]]},
  {k:"rq",n:"Requests",f:["08_requests"],t:[["feed_req",{p_feed:"zz",p_member_key:"x",p_ct:"QQ=="}],["feed_reqs_get",{p_feed:"zz",p_leader_key:"x",p_after:0}]]},
  {k:"bk",n:"Backup and sync",f:["06a_backup_put","06b_backup_read"],t:[["backup_put",{p_id:"zz",p_key:"x",p_ct:"QQ==",p_base:null}],["backup_get",{p_id:"zz",p_key:"x"}],["backup_ver",{p_id:"zz",p_key:"x"}],["backup_delete",{p_id:"zz",p_key:"x"}]]},
- {k:"mp",n:"My page",f:["07_my_page"],t:[["put_page",{p_id:"zz",p_wk:"x",p_ct:"QQ=="}],["get_page",{p_id:"zz"}],["delete_page",{p_id:"zz",p_wk:"x"}]]}];
+ {k:"mp",n:"My page",f:["07_my_page"],t:[["put_page",{p_id:"zz",p_wk:"x",p_ct:"QQ=="}],["get_page",{p_id:"zz"}],["delete_page",{p_id:"zz",p_wk:"x"}]]},
+ {k:"hub",n:"Unit hub (leader links pull your roster, one FEED)",f:["11a_hub_roster","11b_hub_feed"],t:[["put_roster",{p_board:"zz",p_read_key:"x",p_sec:"HQ",p_ct:"QQ=="}],["get_roster",{p_board:"zz",p_write_key:"x",p_sec:"HQ"}],["set_feed_poster",{p_feed:"zz",p_leader_key:"x",p_poster_key:"x"}],["feed_post_sl",{p_feed:"zz",p_poster_key:"x",p_ct:"QQ=="}]]}];
 let scRes=null,scBusy=false;
 async function scRun(){scBusy=true;scRes={at:Date.now(),g:{},nt:null};renderSys();
   const one=async([fn,args])=>{try{await SB.rpc(fn,args);return {ok:1}}catch(e){const m=String(e.message||e);if(/could not find the function|schema cache|PGRST202/i.test(m))return {miss:1,fn};if(/permission denied/i.test(m))return {perm:1,fn};if(/abort|Failed to fetch|NetworkError|Load failed/i.test(m))return {net:1,fn};return {ok:1}}};
@@ -1677,7 +1730,8 @@ function mpDigest(m){const t=dkey();const to=dkey(new Date(Date.now()+60*8640000
   const due=readyItems().map(it=>{const st=dueState(m,it);return {n:it.n,st:st.st,txt:st.txt,d:st.iso||""}}).filter(x=>x.st!=="none");
   const owe=(S.events||[]).filter(e=>evReq(e).some(x=>x.id===m.id)&&!evDone(e,m)).map(e=>({n:e.name,d:e.date||""}));
   const reqs=S.reqs.filter(r=>r.mid===m.id).slice(0,10).map(r=>({rid:r.rid,ty:r.ty,from:r.from,to:r.to,st:r.st,dnote:r.dnote||""}));const pod=latestPod();
-  return {v:1,reqs,pod,unit:unitName(),rank:m.rank,name:m.name,sec:m.sec,secName:((SECTIONS.find(x=>x[0]===m.sec)||[])[1]||m.sec),status:m.status,statusShort:SHORT[m.status]||m.status,duty:dutyOf(m),since:sn||0,start:isoOf(m.start),end:isoOf(m.end),edd:isoOf(m.edd),eas:isoOf(m.eas),duties:duties.sort((a,b)=>a.d.localeCompare(b.d)),due,cal,owe}}
+  const hf=mainFeed();const feed=hf?{id:hf.id,mk:hf.mk,ek:hf.ek,unit:hf.unit,secs:SECTIONS.map(x=>x[0])}:null;
+  return {v:1,feed,reqs,pod,unit:unitName(),rank:m.rank,name:m.name,sec:m.sec,secName:((SECTIONS.find(x=>x[0]===m.sec)||[])[1]||m.sec),status:m.status,statusShort:SHORT[m.status]||m.status,duty:dutyOf(m),since:sn||0,start:isoOf(m.start),end:isoOf(m.end),edd:isoOf(m.edd),eas:isoOf(m.eas),duties:duties.sort((a,b)=>a.d.localeCompare(b.d)),due,cal,owe}}
 function mpSchedule(){if(!S.roster.some(m=>m.pk))return;clearTimeout(mpT);mpT=setTimeout(mpPublish,5000)}
 async function mpPublish(force){if(mpBusy){clearTimeout(mpT);mpT=setTimeout(()=>mpPublish(force),4000);return 0}mpBusy=true;let n=0;
   try{for(const m of S.roster.filter(m=>m.pk)){const d=mpDigest(m);const sg=sigF(d);if(!force&&sg===m.pkSig)continue;
@@ -1687,7 +1741,10 @@ async function mpPublish(force){if(mpBusy){clearTimeout(mpT);mpT=setTimeout(()=>
 async function mpTurnOn(m){if(!m.pk){m.pk=rndId(28);m.pkSig="";save()}await mpPublish();return mpLink(m)}
 async function mpFetch(){const M=S.me;if(!M)return;try{const K=await mpKeys(M.pk);const rows=await SB.rpc("get_page",{p_id:K.id});const r=rows&&rows[0];
   if(!r){M.err="Your leader hasn't published your page yet.";rawSave();return}const t=Date.parse(r.updated_at)||0;if(M.t===t&&M.d){M.err="";return}
-  M.d=await openBlob(K,r.ct);M.t=t;M.err="";rawSave();if(view==="me"||view==="today"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;view==="me"?renderMe():renderToday();window.scrollTo(0,y)}}}catch(e){const t=String(e.message||e);M.err=/could not find|schema cache|404/i.test(t)?"Your unit's server isn't set up for My page yet. Tell your leader: setup part 07.":/fetch|network/i.test(t)?"No signal. Pull down or tap Refresh to try again.":t.slice(0,80);rawSave();if(view==="me")renderMe()}}
+  M.d=await openBlob(K,r.ct);M.t=t;M.err="";rawSave();mpJoinFeed(M.d);if(view==="me"||view==="today"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;view==="me"?renderMe():renderToday();window.scrollTo(0,y)}}}catch(e){const t=String(e.message||e);M.err=/could not find|schema cache|404/i.test(t)?"Your unit's server isn't set up for My page yet. Tell your leader: setup part 07.":/fetch|network/i.test(t)?"No signal. Pull down or tap Refresh to try again.":t.slice(0,80);rawSave();if(view==="me")renderMe()}}
+function mpJoinFeed(D){const F=D&&D.feed;if(!F||!F.id||S.feeds.some(f=>f.id===F.id))return;
+  const last=(String(D.name).split(",")[0]||D.name).trim();const first=(String(D.name).split(",")[1]||"").trim().split(/\s+/)[0]||"";const nf={id:String(F.id).slice(0,20),mk:String(F.mk).slice(0,40),ek:String(F.ek).slice(0,60),unit:String(F.unit||D.unit).slice(0,24),me:(D.rank+" "+last+(first?" "+first:"")).toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim().slice(0,30),sec:D.sec==="ATT"?"ATT":D.sec,secsLink:(F.secs||[]).slice(0,12),posts:[],seen:0,mine:{},hub:1};
+  S.feeds=S.feeds.filter(f=>!f.hub||f.lk);S.feeds.push(nf);if(!S.myName)S.myName=nf.me;save();fdMeHash(nf).then(()=>{fdPollAll(true);fdPushAttach(nf)});toast("You're in the "+nf.unit+" FEED")}
 setInterval(()=>{if(S.me&&!document.hidden)mpFetch()},60000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.me)mpFetch()});
 const daysTo=iso=>{const d=parseD(iso);return d?Math.round((d-today0())/86400000):null};
@@ -2215,7 +2272,7 @@ async function fdCreate(){const f={id:rndId(14),mk:rndId(32),lk:rndId(32),ek:b64
   await SB.rpc("create_feed",{p_id:f.id,p_member_key:f.mk,p_leader_key:f.lk});S.feeds.unshift(f);fdSel=f.id;save()}
 async function fdPoll(f,full){const after=full?0:Math.max(0,f.ctl||0,...(f.posts||[]).map(p=>p.id));
   const rows=await SB.rpc("feed_get",{p_feed:f.id,p_member_key:f.mk,p_after:after});let fresh=0;const keep=full?[]:(f.posts||[]);const have=new Set(keep.map(p=>p.id));
-  let ctlTop=full?0:(f.ctl||0);for(const r of [...(rows||[])].sort((a,b)=>a.id-b.id)){if(have.has(+r.id))continue;const o=await fdDec(f.ek,r.ct);if(!o)continue;if(o.c==="pin"){if(+r.id>=ctlTop){ctlTop=+r.id;f.pins=Array.isArray(o.ids)?o.ids.map(Number).slice(0,5):[]}continue}const to=o.to&&["all","secs","one"].includes(o.to.k)?o.to:{k:"all"};if(to.k==="secs"&&!Array.isArray(to.s))to.s=[];if(o.sa&&!f.lk)f.secsAll=o.sa;const post={id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,1500),urg:!!o.u,to};if(o.pod&&o.pod.d)post.pod={d:String(o.pod.d).slice(0,10)};if(o.by)post.by=String(o.by).slice(0,30);keep.push(post);if(+r.id>(f.seen||0)&&(f.lk||fdForMe(f,post)))fresh++}
+  let ctlTop=full?0:(f.ctl||0);for(const r of [...(rows||[])].sort((a,b)=>a.id-b.id)){if(have.has(+r.id))continue;const o=await fdDec(f.ek,r.ct);if(!o)continue;if(o.c==="pin"){if(+r.id>=ctlTop){ctlTop=+r.id;f.pins=Array.isArray(o.ids)?o.ids.map(Number).slice(0,5):[]}continue}const to=o.to&&["all","secs","one"].includes(o.to.k)?o.to:{k:"all"};if(to.k==="secs"&&!Array.isArray(to.s))to.s=[];if(o.sa&&!f.lk)f.secsAll=o.sa;const post={id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,1500),urg:!!o.u,to};if(o.pod&&o.pod.d)post.pod={d:String(o.pod.d).slice(0,10)};if(o.by)post.by=String(o.by).slice(0,30);if(o.sl)post.sl=String(o.sl).replace(/[^A-Z0-9]/g,"").slice(0,6);keep.push(post);if(+r.id>(f.seen||0)&&(f.lk||fdForMe(f,post)))fresh++}
   f.posts=keep.sort((a,b)=>b.id-a.id).slice(0,200);f.ctl=ctlTop;if(full&&!ctlTop)f.pins=[];f.err="";
   if(f.lk){try{const rq=await SB.rpc("feed_reqs_get",{p_feed:f.id,p_leader_key:f.lk,p_after:f.reqAfter||0});let nr=0;
       for(const r of rq||[]){f.reqAfter=Math.max(f.reqAfter||0,+r.id);const o=await fdDec(f.ek,r.ct);if(!o||o.k!=="req"||S.reqs.some(x=>x.rid===o.rid))continue;const m=matchMarine(String(o.me||""));
@@ -2279,7 +2336,10 @@ function renderFeed(){let h=S.source==="sample"?"":banner();const f=fdCur();
           ${bcBatches(ns,f.unit+" FEED: tap to join and see the word in EOP Numbers: "+fdLink(f)).map((x,i,arr)=>`<a class="btn alt" href="${esc(x.href)}">Text join link to them${arr.length>1?" ("+(i+1)+")":""} (${x.n})</a>`).join("")}</details>`})()}
       <details class="panel"><summary><b>Invite people</b> · send the join link once</summary>${bcBatches(S.roster,f.unit+" FEED: tap to join and see the word in EOP Numbers: "+fdLink(f)).map((x,i,arr)=>`<a class="btn" href="${esc(x.href)}">Text join link${arr.length>1?" · group "+(i+1)+" of "+arr.length:""} (${x.n})</a>`).join("")||`<p class="note">No phone numbers loaded (RECALL → Load numbers). You can copy the link instead.</p>`}
       <button class="btn alt" id="fdCopyLink">Copy join link</button><p class="note">Anyone with this link can read the feed, so send it only to your people.</p></details>`}
-  else h+=`${S.me?`<button class="btn alt" data-go="me" style="width:100%;margin:4px 0">👤 My page</button>`:""}<button class="btn alt" data-go="log" style="width:100%;margin:4px 0">📝 My log${S.log.some(x=>x.d===dkey())?" · logged today":" · log today's accomplishments"}</button><p class="note">You: <b>${esc(f.me||"(name not set)")}</b>${f.sec?" · "+esc(f.sec):""} · <button class="chip" id="fdName" style="cursor:pointer">Change</button></p>${!f.sec&&(f.secsAll||f.secsLink||[]).length?`<p class="note" style="color:var(--warn)">Pick your section (Change) so you only see posts meant for you.</p>`:""}${fdPushHTML(f)}${myReqHTML(f)}`;
+  else{if(f.pk)h+=`<div class="panel"><div class="fch">${fdAv(f.me||"?")}<div class="hd"><div class="nm">${esc(f.me||"Set your name")}</div><span class="note" style="margin:0">Section leader · ${esc(f.sec||"")}</span></div></div><label for="fdSlTxt">Pass the word</label><textarea id="fdSlTxt" maxlength="1000" style="min-height:80px" placeholder="${esc((f.sec||"Section")+" formation 0645 at the motor pool.")}">${esc(fdSlDraft.txt)}</textarea>
+    <div class="note">Send to:</div><div class="evts">${[["sec","My section"+(f.sec?" ("+f.sec+")":"")],["all","Everyone"]].map(([k,l])=>`<button data-fdslto="${k}" aria-pressed="${fdSlDraft.to===k}">${esc(l)}</button>`).join("")}</div>
+    <label class="tog"><input type="checkbox" id="fdSlUrg"${fdSlDraft.urg?" checked":""}> Urgent (shows in red)</label><button class="btn" id="fdSlPost">Post</button><p class="note">Your OIC sees every post and who confirmed.</p></div>`;h+=``}
+  if(!f.lk)h+=`${S.me?`<button class="btn alt" data-go="me" style="width:100%;margin:4px 0">👤 My page</button>`:""}<button class="btn alt" data-go="log" style="width:100%;margin:4px 0">📝 My log${S.log.some(x=>x.d===dkey())?" · logged today":" · log today's accomplishments"}</button><p class="note">You: <b>${esc(f.me||"(name not set)")}</b>${f.sec?" · "+esc(f.sec):""} · <button class="chip" id="fdName" style="cursor:pointer">Change</button></p>${!f.sec&&(f.secsAll||f.secsLink||[]).length?`<p class="note" style="color:var(--warn)">Pick your section (Change) so you only see posts meant for you.</p>`:""}${fdPushHTML(f)}${myReqHTML(f)}`;
   const all=fdVisible(f);const pins=(f.pins||[]).filter(id=>all.some(p=>p.id===id));
   if(all.length>3)h+=`<input class="search" id="fdQ" type="search" placeholder="Search the feed" value="${esc(fdQ)}" style="margin-top:10px">`;
   const qq=fdQ.trim().toLowerCase();const posts=(qq?all.filter(p=>p.txt.toLowerCase().includes(qq)):all).slice().sort((a,b)=>(pins.includes(b.id)?1:0)-(pins.includes(a.id)?1:0)||b.id-a.id);
@@ -2311,7 +2371,7 @@ function fdStatCard(f,p){const st=fdStats(f,p);const pool=fdPool(p);const secs=S
 function fdCard(f,p,pinned,isNew){const mine=(f.mine||{})[p.id];const by=p.by||f.unit;const key=f.id+":"+p.id;const pop=fdShown.size&&!fdShown.has(key);
   let h=`<article class="fc${pop?" pop":""}" style="${p.urg?"border-color:var(--warn);":""}${p.pod?"border-color:var(--brass);":""}">
     <div class="fch">${fdAv(by)}<div class="hd"><div><span class="nm">${esc(by)}</span> <span class="tm">· <span data-ago="${p.t}">${ago(p.t)}</span></span>${isNew?` <b style="color:var(--brass);font-size:12px">● NEW</b>`:""}</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${p.pod?`<span class="fcchip" style="color:var(--brass)">📋 Plan of the Day</span>`:""}${p.urg?`<span class="fcchip" style="color:var(--warn)">URGENT</span>`:""}${pinned?`<span class="fcchip">📌 Pinned</span>`:""}${p.to&&p.to.k!=="all"?`<span class="fcchip">To: ${esc(f.lk?fdToLabel(p.to):p.to.k==="one"?"you":fdToLabel(p.to))}</span>`:""}</div></div></div>`;
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${p.pod?`<span class="fcchip" style="color:var(--brass)">📋 Plan of the Day</span>`:""}${p.urg?`<span class="fcchip" style="color:var(--warn)">URGENT</span>`:""}${pinned?`<span class="fcchip">📌 Pinned</span>`:""}${p.sl?`<span class="fcchip">✎ ${esc(p.sl)} leader</span>`:""}${p.to&&p.to.k!=="all"?`<span class="fcchip">To: ${esc(f.lk?fdToLabel(p.to):p.to.k==="one"?"you":fdToLabel(p.to))}</span>`:""}</div></div></div>`;
   if(p.pod){const o=podParse(p.txt);const d=parseD(p.pod.d);
     h+=`<div class="fci"><span class="ttl">${d?DOW[d.getDay()]+" "+short(d):"Plan of the Day"}</span>${o.f||o.u?`<div style="display:flex;gap:6px;flex-wrap:wrap">${o.f?`<span class="fcchip">⏱ ${esc(o.f)}</span>`:""}${o.u?`<span class="fcchip">👕 ${esc(o.u)}</span>`:""}</div>`:""}
       ${o.sch.length?`<div class="fcsch">${o.sch.map(([t,x])=>`<b>${esc(t)}</b><span>${esc(x)}</span>`).join("")}</div>`:""}${o.du?`<div class="note">⚑ ${esc(o.du)}</div>`:""}${o.n?`<div class="note">${esc(o.n)}</div>`:""}</div>`}
@@ -2327,7 +2387,7 @@ function fdCard(f,p,pinned,isNew){const mine=(f.mine||{})[p.id];const by=p.by||f
   else if(mine)h+=`<div><span class="fcchip" style="color:var(${mine.c===2?"--warn":"--s-onhand"})">${mine.c===2?"⚠ Problem sent: "+esc(mine.note):"✓ Confirmed · <span data-ago=\""+mine.t+"\">"+ago(mine.t)+"</span>"}</span></div>`;
   else h+=`<div class="fcbtns"><button class="go" data-fdack="${p.id}" data-c="1">✓ Got it</button><button data-fdprob="${p.id}">Problem</button></div>${fdProbOpen===p.id?`<div class="addph"><input type="text" id="fdNote${p.id}" maxlength="40" placeholder="Short note about the problem"><button data-fdack="${p.id}" data-c="2">Send</button></div>`:""}`;
   return h+`</article>`}
-let fdProbOpen=null;
+let fdProbOpen=null,fdSlDraft={txt:"",to:"sec",urg:false};
 function fdPillShow(){const b=$("#fdPill");if(!b)return;b.hidden=!(fdPend>0&&view==="feed");if(!b.hidden)b.textContent="↑ "+fdPend+" new post"+(fdPend>1?"s":"")}
 setInterval(()=>{document.querySelectorAll("[data-ago]").forEach(el=>{const t=+el.dataset.ago;if(t)el.textContent=ago(t)})},30000);
 setInterval(()=>{if(view==="feed"&&S.feeds.length&&!document.hidden)fdPollAll(false)},10000);
@@ -2865,6 +2925,12 @@ document.addEventListener("click",e=>{
     e.target.disabled=true;e.target.textContent="Posting…";
     wP.then(w=>{if(w)to.w=w;return fdEnc(f.ek,{t:txt,u:urg,to,sa:SECTIONS.map(x=>x[0]),by:fdBy(f)})}).then(ct=>SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct})).then(id=>{SB.notify(null,{feed:f.id,lk:f.lk,urg});f.posts=[{id:+id,t:Date.now(),txt,urg,to,by:fdBy(f)}].concat(f.posts||[]);if(D.ra){f.ra=f.ra||{};f.ra[+id]=D.ra}fdDraft={txt:"",urg:false,to:D.to,secs:D.secs,att:D.att,mid:"",ra:D.ra};save();renderFeed();window.scrollTo(0,0);toast("Posted")})
       .catch(err=>{e.target.disabled=false;e.target.textContent="Post";toast("Couldn't post: "+(err.message||err))});return}
+  const slt=e.target.closest("[data-fdslto]");if(slt){fdSlDraft.txt=($("#fdSlTxt")||{}).value||fdSlDraft.txt;fdSlDraft.urg=!!($("#fdSlUrg")||{}).checked;fdSlDraft.to=slt.dataset.fdslto;const y=window.scrollY;renderFeed();window.scrollTo(0,y);return}
+  if(e.target.id==="fdSlPost"){const f=fdCur();if(!f||!f.pk)return;const txt=($("#fdSlTxt").value||"").trim();if(!txt){toast("Type the word first.");return}if(!f.me){toast("Set your name first (Change).");return}
+    const urg=$("#fdSlUrg").checked;const sec=f.sec||(S.link&&S.link.sec)||"";const to=fdSlDraft.to==="all"||!sec?{k:"all"}:{k:"secs",s:[sec],att:false};const by=f.me;
+    e.target.disabled=true;e.target.textContent="Posting…";
+    fdEnc(f.ek,{t:txt,u:urg,to,sa:f.secsAll||f.secsLink||[],by,sl:sec}).then(ct=>SB.rpc("feed_post_sl",{p_feed:f.id,p_poster_key:f.pk,p_ct:ct})).then(id=>{SB.notify(null,{feed:f.id,lk:f.pk,urg});f.posts=[{id:+id,t:Date.now(),txt,urg,to,by,sl:sec}].concat(f.posts||[]);f.seen=Math.max(f.seen||0,+id);fdSlDraft={txt:"",to:fdSlDraft.to,urg:false};save();renderFeed();window.scrollTo(0,0);toast("Posted")})
+      .catch(err=>{e.target.disabled=false;e.target.textContent="Post";const t=String(err.message||err);toast(/not allowed/.test(t)?"Your OIC's link changed. Ask for a new one.":/could not find|schema/.test(t)?"Your OIC's server needs setup part 11b.":"Couldn't post: "+t.slice(0,60))});return}
   if(e.target.id==="fdCopyLink"){const u=fdLink(fdCur());try{navigator.clipboard.writeText(u).then(()=>toast("Join link copied"),()=>toast(u))}catch(err){toast(u)}return}
   const fo=e.target.closest("[data-fdopen]");if(fo){const id=+fo.dataset.fdopen;fdOpen=fdOpen===id?null:id;const y=window.scrollY;renderFeed();window.scrollTo(0,y);return}
   const fa=e.target.closest("[data-fdack]");if(fa){const f=fdCur();const pid=+fa.dataset.fdack;fa.disabled=true;fdAck(f,pid,+fa.dataset.c).then(()=>{const y=window.scrollY;renderFeed();window.scrollTo(0,y);toast(+fa.dataset.c===2?"Problem sent":"Got it sent")}).catch(err=>{fa.disabled=false;toast(/gone/.test(err.message)?"That post was deleted.":"Couldn't send. Check signal and try again.")});return}
@@ -2887,12 +2953,12 @@ document.addEventListener("click",e=>{
   const bs=e.target.closest("[data-bcsent]");if(bs){const a=bcActive();if(a){a.sent=Object.assign({},a.sent,{[bs.dataset.bcsent]:1});save();setTimeout(()=>{if(view==="send")rerenderSend()},400)}return}
   if(e.target.id==="bcClose"){const a=bcActive();if(!a)return;if(armed==="bcclose"){a.closed=Date.now();if(a.ok)SB.rpc("close_recall",{p_recall:a.rid,p_read_key:a.key}).catch(()=>{});armed=null;save();renderSend();toast("Message closed out")}else{armed="bcclose";e.target.textContent="Tap again to close";setTimeout(()=>{if(armed==="bcclose"){armed=null;if(view==="send")rerenderSend()}},3000)}return}
   if(e.target.id==="bcCopy"){const a=bcActive();if(a){try{navigator.clipboard.writeText(bcMissText(a)).then(()=>toast("Copied"),()=>toast("Copy blocked here."))}catch(err){toast("Copy blocked here.")}}return}
-  if(e.target.id==="lvOn"){e.target.disabled=true;e.target.textContent="Connecting…";boardCreate().then(()=>{renderLive();toast("Live updates on. Send each section its link.")}).catch(err=>{e.target.disabled=false;e.target.textContent="Turn on live updates for my board";const o=$("#lvOut");if(o)o.textContent="Couldn't connect: "+(err.message||err)});return}
+  if(e.target.id==="lvOn"){e.target.disabled=true;e.target.textContent="Connecting…";boardCreate().then(()=>{renderLive();toast("Live updates on. Send each section its link.");ensureHub().then(()=>{if(view==="live")renderLive()})}).catch(err=>{e.target.disabled=false;e.target.textContent="Turn on live updates for my board";const o=$("#lvOut");if(o)o.textContent="Couldn't connect: "+(err.message||err)});return}
   if(e.target.id==="lvOff"){if(!isOwner())return denyMsg();if(armed==="lvoff"){const B=S.board;SB.rpc("delete_board",{p_board:B.id,p_read_key:B.rk}).catch(()=>{});S.board=null;armed=null;save();toast("Live updates off");renderLive()}else{armed="lvoff";renderLive()}return}
   const lc=e.target.closest("[data-lvcopy]");if(lc){const u=boardLink(lc.dataset.lvcopy);try{navigator.clipboard.writeText(u).then(()=>toast(lc.dataset.lvcopy+" link copied"),()=>toast(u))}catch(err){toast(u)}return}
   if(e.target.id==="jYes"&&sheetCtx&&sheetCtx.kind==="join"){const c=sheetCtx;const me=($("#jMe").value||"").toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim();if(!me){toast("Enter your rank and last name.");return}
-    S.myName=me;S.link={board:c.bid,wk:c.wk,ek:c.ek||"",sec:c.sec,unit:c.unit||"OIC",mysec:$("#jSec").value,me,sig:"",sent:0,err:""};save();closeSheet();view="live";render();linkPush(true);toast("Linked. Sending "+S.link.mysec+" now.");return}
-  if(e.target.id==="lkNow"){linkPush(true);toast("Sending…");return}
+    S.myName=me;S.link={board:c.bid,wk:c.wk,ek:c.ek||"",sec:c.sec,unit:c.unit||"OIC",mysec:$("#jSec").value,me,sig:"",sent:0,err:"",rk2:c.rk2||"",pulled:false,pt:0};if(c.rk2){S.leaderMode=true;if(!S.mode)S.mode="military";S.onb=true}save();closeSheet();view="live";render();if(c.rk2){rosterPull(true);toast("Linked. Loading "+c.sec+" from "+(c.unit||"your OIC")+"…")}else{linkPush(true);toast("Linked. Sending "+S.link.mysec+" now.")}return}
+  if(e.target.id==="lkNow"){if(S.link&&S.link.rk2)rosterPull(true);linkPush(true);toast("Sending…");return}
   if(e.target.id==="lkOff"){if(armed==="lkoff"){S.link=null;armed=null;save();toast("Unlinked");renderLive()}else{armed="lkoff";renderLive()}return}
   if(e.target.id==="ciGo"){const r=applyCheckins($("#ciIn").value);const y=window.scrollY;renderRecall();window.scrollTo(0,y);const o=$("#ciOut");if(o)o.textContent=r;return}
   if(e.target.id==="ciClip"){const fail=()=>{const o=$("#ciOut");if(o)o.textContent="This phone blocked clipboard reading. Long-press the box, tap Paste, then Mark replies.";};

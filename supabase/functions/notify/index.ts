@@ -59,11 +59,11 @@ async function board(id: string) {
 }
 
 async function feed(id: string, lk: string, urg: boolean) {
-  const { data: f } = await db.from("feeds").select("leader_key_hash,last_push_id").eq("id", id).maybeSingle();
+  const { data: f } = await db.from("feeds").select("*").eq("id", id).maybeSingle();
   if (!f) return out("no feed");
   const dig = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(lk)));
   const hex = Array.from(dig).map((b) => b.toString(16).padStart(2, "0")).join("");
-  if (hex !== f.leader_key_hash) return out("not allowed", 403);
+  if (hex !== f.leader_key_hash && !(f.poster_key_hash && hex === f.poster_key_hash)) return out("not allowed", 403);
   const { data: p } = await db.from("feed_posts").select("id").eq("feed_id", id).order("id", { ascending: false }).limit(1).maybeSingle();
   if (!p || p.id <= (f.last_push_id ?? 0)) return out("nothing new");
   const { data: claimed } = await db.from("feeds").update({ last_push_id: p.id })
