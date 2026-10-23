@@ -68,6 +68,8 @@ button{cursor:pointer}
 .banner{margin:12px 0 0;padding:10px 12px;border-radius:8px;background:var(--brass-soft);font-size:13px;display:flex;gap:10px;align-items:center;justify-content:space-between}
 .banner button{border:0;background:var(--olive);color:var(--olive-ink);border-radius:6px;padding:6px 10px;font-weight:600;font-size:13px;white-space:nowrap}
 .note{color:var(--muted);font-size:12.5px}
+.tabrow{display:grid;grid-template-columns:30px 76px 1fr 40px;gap:6px;align-items:center;margin:6px 0}.tabrow input{min-width:0;padding:9px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);font:inherit;font-size:16px}
+.tabmv{display:flex;flex-direction:column;gap:2px}.tabmv button,.tabrow>button{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;padding:2px 0;font-size:11px}.tabrow>button{height:40px;font-size:14px;color:var(--muted)}.tabrow button:disabled{opacity:.3}.tabcnt{grid-column:3/5;margin-top:-4px}
 .drop{border:2px dashed var(--line);border-radius:14px;padding:10px;transition:border-color .2s,background .2s}.drop.over{border-color:var(--accent,#3b82f6);background:rgba(59,130,246,.08)}
 #rvBox{scroll-margin-top:200px}.rv .addph input{font-size:16px;padding:8px 10px}.rv .addph input:first-child{flex:1.3}.rv .addph button{padding:0 10px}.rv select{font-size:15px}
 
@@ -320,6 +322,33 @@ const SHORT={"On Hand":"On Hand","Appointment on Base":"Appt On Base","Appointme
 const SVAR={"On Hand":"--s-onhand","Appointment on Base":"--s-aob","Appointment off Base":"--s-aoff","Company Duties":"--s-duty","Operation":"--s-op","TAD":"--s-tad","Leave":"--s-leave"};
 const PRESENT=["On Hand","Appointment on Base","Company Duties"];
 const SECTIONS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
+const DEF_SECS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
+const RESERVED=["BOARD","ATT","PT","W6","TEXT","DATA","MUSTER","ALERTS","RECALL","EVENTS","ARMORY"];
+let secDraft=null;
+function secFix(){for(const m of S.roster){if(m.sec!=="ATT"&&!SECTIONS.some(s=>s[0]===m.sec))m.sec=SECTIONS[0][0]}}
+function tabsHTML(){if(!secDraft)secDraft=SECTIONS.map(([k,n])=>({o:k,k,n}));const D=secDraft;
+  const cnt=k=>S.roster.filter(m=>m.sec===k).length;const gone=SECTIONS.filter(([k])=>!D.some(d=>d.o===k)&&cnt(k));
+  return `<h2>Tabs</h2><div class="panel" id="tabEd"><p class="note">Rename, add, remove or reorder your tabs (up to 10). Short name shows on the tab bar and in text reports; full name shows on the tab's page. ATT always stays.</p>
+    ${D.map((d,i)=>`<div class="tabrow"><div class="tabmv"><button type="button" data-tup="${i}" aria-label="Move up"${i?"":" disabled"}>▲</button><button type="button" data-tdn="${i}" aria-label="Move down"${i<D.length-1?"":" disabled"}>▼</button></div>
+      <input type="text" data-tk="${i}" value="${esc(d.k)}" maxlength="6" placeholder="Short" aria-label="Short name" autocapitalize="characters" style="text-transform:uppercase">
+      <input type="text" data-tn="${i}" value="${esc(d.n)}" maxlength="30" placeholder="Full name" aria-label="Full name">
+      <button type="button" data-tdel="${i}" aria-label="Remove tab"${D.length>1?"":" disabled"}>✕</button>
+      ${d.o&&cnt(d.o)?`<div class="note tabcnt">${cnt(d.o)} people</div>`:""}</div>`).join("")}
+    ${gone.length?`<label for="tabMove">People in removed tabs (${gone.map(g=>g[0]+": "+cnt(g[0])).join(", ")}) move to</label><select id="tabMove" class="wsel">${D.map((d,i)=>`<option value="${i}">${esc(d.k||"(new tab)")}</option>`).join("")}<option value="ATT">ATT</option></select>`:""}
+    <div class="row2" style="margin-top:8px"><button class="btn alt" id="tabAdd"${D.length>=10?" disabled":""}>+ Add tab</button><button class="btn alt" id="tabUndo">Undo changes</button></div>
+    <button class="btn" id="tabSave" style="width:100%;margin-top:6px">Save tabs</button>
+    <button class="btn alt" id="tabDef" style="width:100%;margin-top:6px">Reset to HQ / HE / CE / ORD / UT</button></div>`}
+function tabRedraw(){const y=window.scrollY;renderData();window.scrollTo(0,y)}
+function tabSave(){const D=secDraft;const keys=D.map(d=>d.k.trim().toUpperCase());
+  for(let i=0;i<D.length;i++){const k=keys[i];if(!/^[A-Z0-9]{1,6}$/.test(k))return toast("Short names: 1–6 letters or numbers, no spaces."),false;
+    if(RESERVED.includes(k))return toast(k+" is used by the app. Pick another short name."),false;if(keys.indexOf(k)!==i)return toast(k+" is used twice."),false}
+  const mv=$("#tabMove");const dest=mv?(mv.value==="ATT"?"ATT":keys[+mv.value]):keys[0];
+  const map={};D.forEach((d,i)=>{if(d.o)map[d.o]=keys[i]});
+  for(const m of S.roster){if(m.sec==="ATT")continue;m.sec=map[m.sec]||dest}
+  for(const ev of S.events||[]){if(Array.isArray(ev.secs))ev.secs=[...new Set(ev.secs.map(k=>map[k]).filter(Boolean))]}
+  const nw=D.map((d,i)=>[keys[i],d.n.trim()||keys[i]]);SECTIONS.splice(0,SECTIONS.length,...nw);
+  S.secs=JSON.stringify(nw)===JSON.stringify(DEF_SECS)?null:nw;secDraft=null;save();return true}
+
 const ATT=["ATT","Attached"];
 const DUTIES=["Full Duty","Light Duty","LIMDU"];
 const EVENTS=["Unit PT","Hike","Run","PFT","CFT","Field event"];
@@ -343,6 +372,7 @@ function sampleRoster(){
 let S={roster:sampleRoster(),source:"sample",loadedAt:"",recipients:"",names:false,pt:{event:"Unit PT",when:"",inc:["On Hand"],att:true}};
 let storageOK=true;
 try{const raw=localStorage.getItem(KEY); if(raw){const v=JSON.parse(raw); if(v&&Array.isArray(v.roster)) S=Object.assign(S,v);} }catch(e){storageOK=false}
+if(Array.isArray(S.secs)&&S.secs.length&&S.secs.every(x=>Array.isArray(x)&&x[0])){SECTIONS.splice(0,SECTIONS.length,...S.secs.slice(0,10))}secFix();
 S.w6=Array.isArray(S.w6)?S.w6:[];
 S.hist=Array.isArray(S.hist)?S.hist:[];
 S.events=Array.isArray(S.events)?S.events:[];
@@ -497,6 +527,7 @@ function renderData(){
     <button class="btn alt" id="exp" hidden>Export backup (.csv)</button>
     <button class="btn warn" id="reset">${armed==="reset"?"Tap again to clear the roster":"Clear roster and show sample"}</button>
   </div>
+  ${tabsHTML()}
   <h2>Recall roster (phone numbers)</h2><div class="panel">
     <label for="rcFile">Load recall roster (Excel, CSV, PDF, Word, .vcf)</label><input type="file" id="rcFile" accept=".csv,.txt,.xlsx,.xls,.vcf,.pdf,.docx,text/csv,text/plain,text/vcard,application/pdf">
     <label for="rcPaste">Or paste lines like: CPL SMITH, JOHN A. 808-555-0100</label>
@@ -976,7 +1007,7 @@ function parseCSV(text){const rows=[];let row=[],f="",q=false;
 function mapStatus(d){d=d||"";if(STATUSES.includes(d))return d;const l=d.toLowerCase();
   if(l.startsWith("leave"))return"Leave";if(l.startsWith("tad")||l.startsWith("fap"))return"TAD";
   if(l.startsWith("field"))return"Operation";if(l.startsWith("medical")||l.includes("siq"))return"Appointment on Base";return"On Hand"}
-function mapSec(u){const t=(u||"").toUpperCase().split("-").pop();return {HQ:"HQ",EE:"HE",HE:"HE",CE:"CE",ORD:"ORD",UT:"UT"}[t]||"HQ"}
+function mapSec(u){const t=(u||"").toUpperCase().split("-").pop();const v={HQ:"HQ",EE:"HE",HE:"HE",CE:"CE",ORD:"ORD",UT:"UT"}[t]||t;return SECTIONS.some(s=>s[0]===v)?v:(SECTIONS.find(s=>s[1].toUpperCase()===(u||"").toUpperCase())||SECTIONS[0])[0]}
 function fmtD(s){if(!s)return"";const m=s.match(/(\d{4})[\/-](\d{2})[\/-](\d{2})/);if(!m)return s;
   const M=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];return m[3]+" "+M[+m[2]-1]+" "+m[1].slice(2)}
 function importCSV(text){
@@ -986,7 +1017,7 @@ function importCSV(text){
   const own=col("section")>=0&&col("status")>=0;
   const out=[];let n=0;
   for(const r of rows.slice(hi+1)){const rank=(r[col("rank")]||"").toUpperCase();const name=r[col("name")]||"";if(!rank||!name)continue;
-    if(own) out.push({id:"m"+(++n),rank,name,sec:(SECTIONS.some(s=>s[0]===r[col("section")])||r[col("section")]==="ATT")?r[col("section")]:"HQ",parent:col("parent unit")>=0?(r[col("parent unit")]||""):"",duty:col("duty")>=0&&DUTIES.includes(r[col("duty")])?r[col("duty")]:"Full Duty",status:mapStatus(r[col("status")]),detail:r[col("detail")]||"",loc:r[col("location")]||"",edd:r[col("edd")]||"",phone:normPh(r[col("phone")]||""),phone2:normPh(r[col("alt phone")]||""),wpn:(r[col("weapon")]||"")?{t:r[col("weapon")],rack:r[col("rack")]||"",s4:digits(r[col("serial4")]||"").slice(-4)}:undefined,start:r[col("start")]||"",end:r[col("end")]||""});
+    if(own) out.push({id:"m"+(++n),rank,name,sec:(SECTIONS.some(s=>s[0]===r[col("section")])||r[col("section")]==="ATT")?r[col("section")]:SECTIONS[0][0],parent:col("parent unit")>=0?(r[col("parent unit")]||""):"",duty:col("duty")>=0&&DUTIES.includes(r[col("duty")])?r[col("duty")]:"Full Duty",status:mapStatus(r[col("status")]),detail:r[col("detail")]||"",loc:r[col("location")]||"",edd:r[col("edd")]||"",phone:normPh(r[col("phone")]||""),phone2:normPh(r[col("alt phone")]||""),wpn:(r[col("weapon")]||"")?{t:r[col("weapon")],rack:r[col("rack")]||"",s4:digits(r[col("serial4")]||"").slice(-4)}:undefined,start:r[col("start")]||"",end:r[col("end")]||""});
     else{const det=r[col("duty status")]||"";out.push({id:"m"+(++n),rank,name,sec:mapSec(r[col("unit")]),status:mapStatus(det),detail:det,loc:r[col("location")]||"",start:fmtD(r[col("start date")]),end:fmtD(r[col("end date")]),edd:fmtD(r[col("edd")]||"")})}}
   if(!out.length)throw new Error("The file had a header but no Marines under it.");
   return {roster:out,own};
@@ -1031,6 +1062,13 @@ document.addEventListener("click",e=>{
   const ap=e.target.closest("[data-addph]");if(ap){editPh=ap.dataset.addph;const y=window.scrollY;renderRecall();window.scrollTo(0,y);const i=$("#phIn");if(i)i.focus();return}
   const sp=e.target.closest("[data-saveph]");if(sp){const d=normPh($("#phIn").value);if(!d){toast("Enter a 10-digit number.");return}const m=S.roster.find(x=>x.id===sp.dataset.saveph);if(m){m.phone=d;save()}editPh=null;const y=window.scrollY;renderRecall();window.scrollTo(0,y);toast("Number saved");return}
   if(e.target.id==="rcPasteRGo"){const r=importRecall($("#rcPasteR").value,"Pasted text");renderRecall();const o=$("#rcOutR");if(o)o.innerHTML=rcResult(r);const bx=$("#rvBox");if(bx)bx.scrollIntoView({behavior:"smooth",block:"start"});return}
+  if(e.target.id==="tabAdd"){if(secDraft.length<10)secDraft.push({o:"",k:"",n:""});tabRedraw();const i=$(`[data-tk="${secDraft.length-1}"]`);if(i)i.focus();return}
+  if(e.target.id==="tabUndo"){secDraft=null;tabRedraw();return}
+  if(e.target.id==="tabDef"){secDraft=DEF_SECS.map(([k,n])=>({o:SECTIONS.some(s=>s[0]===k)?k:"",k,n}));tabRedraw();toast("Defaults loaded. Tap Save tabs to keep.");return}
+  if(e.target.id==="tabSave"){if(tabSave()){render();toast("Tabs saved")}return}
+  const tu=e.target.closest("[data-tup]");if(tu){const i=+tu.dataset.tup;if(i>0){[secDraft[i-1],secDraft[i]]=[secDraft[i],secDraft[i-1]];tabRedraw()}return}
+  const td=e.target.closest("[data-tdn]");if(td){const i=+td.dataset.tdn;if(i<secDraft.length-1){[secDraft[i+1],secDraft[i]]=[secDraft[i],secDraft[i+1]];tabRedraw()}return}
+  const tx=e.target.closest("[data-tdel]");if(tx){if(secDraft.length>1){secDraft.splice(+tx.dataset.tdel,1);tabRedraw()}return}
   if(e.target.id==="rvAdd"){rvSync();S.rcRev.rows.push({t:"Typed in",id:"",p1:"",p2:"",on:true});save();rvRedraw();const i=S.rcRev.rows.length-1;const s=$("#rvm"+i);if(s){s.scrollIntoView({block:"center"});s.focus()}return}
   if(e.target.id==="rvType"){const R0=S.rcRev;if(R0)rvSync();const have=new Set(R0?R0.rows.map(r=>r.id):[]);const add=sorted(recallPool().filter(m=>!m.phone&&!have.has(m.id))).map(m=>({t:m.rank+" "+m.name,id:m.id,p1:"",p2:"",on:true}));
     S.rcRev=R0||{src:"Typed in",rows:[]};S.rcRev.rows.push(...add);if(!S.rcRev.rows.length)S.rcRev.rows.push({t:"Typed in",id:"",p1:"",p2:"",on:true});save();rvRedraw();const b=$("#rvBox");if(b)b.scrollIntoView({behavior:"smooth",block:"start"});toast(add.length?add.length+" Marines without a number":"Everyone has a number");return}
@@ -1059,7 +1097,7 @@ document.addEventListener("click",e=>{
   const ev=e.target.closest("[data-evt]");if(ev){S.pt.event=ev.dataset.evt;save();renderPT();return}
   if(e.target.id==="ptCopy"){const t=ptText();try{navigator.clipboard.writeText(t).then(()=>toast("Roster copied"),()=>toast("Copy blocked here. Use Text list."))}catch(err){toast("Copy blocked here. Use Text list.")}return}
   if(e.target.closest("#bText")){view=view==="text"?"board":"text";armed=null;render();window.scrollTo(0,0);return}
-  if(e.target.closest("#bData")){view=view==="data"?"board":"data";armed=null;render();window.scrollTo(0,0);return}
+  if(e.target.closest("#bData")){secDraft=null;view=view==="data"?"board":"data";armed=null;render();window.scrollTo(0,0);return}
   const rm=e.target.closest("[data-rm]");
   if(rm){const id=rm.dataset.rm;if(armed===id){S.roster=S.roster.filter(m=>m.id!==id);armed=null;save();toast("Marine removed")}else armed=id;render();return}
   if(e.target.id==="reset"){if(armed==="reset"){S.roster=sampleRoster();S.source="sample";S.loadedAt="";armed=null;save();toast("Roster cleared")}else armed="reset";render();return}
@@ -1107,6 +1145,7 @@ document.addEventListener("change",e=>{
     rd.onerror=()=>toast("Couldn't read that file.");rd.readAsText(f);return}
 });
 document.addEventListener("input",e=>{
+  if(secDraft&&e.target.dataset&&(e.target.dataset.tk!==undefined||e.target.dataset.tn!==undefined)){const i=+(e.target.dataset.tk??e.target.dataset.tn);if(secDraft[i]){if(e.target.dataset.tk!==undefined)secDraft[i].k=e.target.value.toUpperCase();else secDraft[i].n=e.target.value}return}
   if(e.target.id==="wq"){rq=e.target.value.toLowerCase();const pos=e.target.selectionStart;renderArmory();const q=$("#wq");q.focus();q.setSelectionRange(pos,pos);return}
   if(e.target.id==="rq"){rq=e.target.value.toLowerCase();const pos=e.target.selectionStart;renderRecall();const q=$("#rq");q.focus();q.setSelectionRange(pos,pos);return}
   if(e.target.matches("[data-wf]")){W[e.target.dataset.wf]=e.target.value;refreshW();return}
