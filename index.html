@@ -434,8 +434,32 @@ function ciPage(q){const esc=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<"
         .then(()=>{SB.notify(rid);msg.innerHTML="<b style='color:var(--s-onhand)'>✓ Checked in: "+word+".</b> Your leader sees it now. You can close this page.";m.querySelectorAll("[data-c]").forEach(x=>x.disabled=false)})
         .catch(()=>{msg.textContent="Couldn't reach the server. Opening a text instead…";m.querySelectorAll("[data-c]").forEach(x=>x.disabled=false);setTimeout(sms,700)});return}
     sms()});}
+/* broadcast page: shows the leader's message; one tap says "Got it". Message rides in the link, never on the server. */
+function bcPage(q){const esc=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const rid=(q.get("bc")||"").replace(/[^a-z0-9]/gi,"").slice(0,16),unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24),to=(q.get("to")||"").replace(/\D/g,"").slice(-10),msgT=(q.get("m")||"").slice(0,320);
+  const live=/^[a-z0-9]{8,16}$/.test(rid);const KM=K+"-ci-me";let me="";try{me=localStorage.getItem(KM)||""}catch(e){}
+  document.title="Message";const m=document.createElement("main");m.className="wrap ci-page";
+  m.innerHTML=`<h2 style="margin-top:18px">Message from ${esc(unit||"your leader")}</h2><div class="panel">
+    <div style="font-size:18px;line-height:1.45;white-space:pre-wrap;font-weight:600">${esc(msgT)||"(no message text)"}</div>
+    <label for="ciN">Your rank and last name</label><input type="text" id="ciN" value="${esc(me)}" maxlength="30" placeholder="CPL SMITH" autocapitalize="characters" style="text-transform:uppercase">
+    <button class="btn" data-c="1" style="min-height:56px;font-size:18px">✓ Got it</button>
+    <label for="ciE">Problem or question? Add a short note</label><input type="text" id="ciE" maxlength="40" placeholder="On duty till 0800">
+    <button class="btn alt" data-c="2" style="min-height:52px">Got it, but I have a problem</button>
+    <p class="note" id="ciMsg">Tap once. Your leader sees it right away.</p>
+    <p class="note">Your name is scrambled before it leaves this phone; the server never stores it or the message. Your name is remembered on this phone only.</p></div>`;
+  document.body.appendChild(m);document.querySelectorAll(".top").forEach(x=>x.hidden=true);
+  m.addEventListener("click",e=>{const b=e.target.closest("[data-c]");if(!b)return;const n=document.getElementById("ciN").value.toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim();
+    const out=document.getElementById("ciMsg");if(!n){out.textContent="Enter your rank and last name first.";document.getElementById("ciN").focus();return}
+    try{localStorage.setItem(KM,n)}catch(err){}const c=+b.dataset.c;const note=document.getElementById("ciE").value.replace(/[|#]/g," ").replace(/\s+/g," ").trim();
+    const word=c===1?"GOT IT":"GOT IT, PROBLEM";const body=word+" - "+n+(note?" ("+note+")":"");
+    const sms=()=>{location.href="sms:"+(to?"+1"+to:"")+"?&body="+encodeURIComponent(body)};
+    if(!live||navigator.onLine===false||!crypto.subtle){sms();return}
+    m.querySelectorAll("[data-c]").forEach(x=>x.disabled=true);out.textContent="Sending…";
+    Promise.all(SB.words(n).map(w=>SB.h(rid,w))).then(hs=>SB.rpc("checkin",{p_recall:rid,p_words:hs,p_code:c,p_note:note}))
+      .then(()=>{out.innerHTML="<b style='color:var(--s-onhand)'>✓ Sent: "+word+".</b> You can close this page.";m.querySelectorAll("[data-c]").forEach(x=>x.disabled=false)})
+      .catch(err=>{const closed=/closed/i.test(String(err&&err.message));out.textContent=closed?"This message has been closed out. Text your leader if needed.":"Couldn't reach the server. Opening a text instead…";m.querySelectorAll("[data-c]").forEach(x=>x.disabled=false);if(!closed)setTimeout(sms,700)})});}
 window.addEventListener("DOMContentLoaded",()=>{
-  {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("ci")){ciPage(q);return}}
+  {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("ci")){ciPage(q);return}if(q.get("bc")){bcPage(q);return}}
   if(!V.cfg||!localStorage.getItem(KE)){if(V.cfg&&!localStorage.getItem(KE)){try{localStorage.removeItem(KC)}catch(e){}V.cfg=null}startApp();return}
   const L=document.getElementById("lock"),dots=document.getElementById("lockDots"),err=document.getElementById("lockErr"),pad=document.getElementById("lockPad");
   const c=V.cfg;document.getElementById("lockT").textContent=c.title||"MusterBoard";let pin="",busy=false,until=0;
@@ -468,7 +492,7 @@ const SVAR={"On Hand":"--s-onhand","Appointment on Base":"--s-aob","Appointment 
 const PRESENT=["On Hand","Appointment on Base","Company Duties"];
 const SECTIONS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
 const DEF_SECS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
-const RESERVED=["BOARD","ATT","PT","W6","TEXT","DATA","MUSTER","ALERTS","RECALL","EVENTS","ARMORY","ROLLUP","LIVE"];
+const RESERVED=["BOARD","ATT","PT","W6","TEXT","DATA","MUSTER","ALERTS","RECALL","EVENTS","ARMORY","ROLLUP","LIVE","SEND"];
 const MIL_SECS=DEF_SECS.map(s=>s.slice());
 let secDraft=null;
 /* ---------- versions: one app, five vocabularies ---------- */
@@ -518,7 +542,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="1.5.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="1.6.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -653,6 +677,7 @@ S.events=Array.isArray(S.events)?S.events:[];
 S.arm=Object.assign({open:false,start:0,st:{},only:false,last:""},S.arm||{});
 S.rcMiss=Array.isArray(S.rcMiss)?S.rcMiss:[];if(S.rcRev&&!Array.isArray(S.rcRev.rows))S.rcRev=null;
 S.rc=Object.assign({open:false,start:0,end:0,res:{},att:true,only:false,ci:{}},S.rc||{});if(!S.rc.ci||typeof S.rc.ci!=="object")S.rc.ci={};
+S.bc=Array.isArray(S.bc)?S.bc:[];
 S.roll=Object.assign({units:{},own:true,name:""},S.roll||{});if(!S.roll.units||typeof S.roll.units!=="object")S.roll.units={};
 S.mus=Object.assign({open:false,seen:{},inc:["On Hand"],att:true,only:false,last:null},S.mus||{});
 S.pt=Object.assign({event:"Unit PT",when:"",inc:["On Hand"],att:true},S.pt||{});
@@ -661,7 +686,7 @@ function save(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.
 
 let view="board", armed=null, query="";
 const h0=(location.hash||"").slice(1).toLowerCase();
-if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live"].includes(h0)) view=h0;
+if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send"].includes(h0)) view=h0;
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -717,6 +742,8 @@ function renderBoard(){
       <button class="bigbtn${S.rc.open?" live":""}" data-go="recall"><b>RECALL</b><span>${S.rc.open?"In progress · "+recallPool().filter(m=>(S.rc.res||{})[m.id]==="ok").length+"/"+recallPool().length:S.roster.filter(m=>m.phone).length+" numbers loaded"}</span></button>
       <button class="bigbtn" data-go="events"><b>EVENTS</b><span>${S.events.length?S.events.length+(S.events.length===1?" event · ":" events · ")+S.events.reduce((a,e)=>a+evReq(e).filter(m=>!evDone(e,m)).length,0)+" owe":"Attendance"}</span></button>
       <button class="bigbtn${S.arm.open?" live":""}" data-go="armory"><b>ARMORY</b><span>${S.arm.open?"Muster in progress":S.roster.filter(hasW).length+" weapons"}</span></button>
+      ${(()=>{const a=bcActive();if(!a)return `<button class="bigbtn" data-go="send"><b>SEND</b><span>Message with read receipts</span></button>`;const st=bcStats(a);
+        return `<button class="bigbtn${st.prob?" hot":" live"}" data-go="send"><b>SEND</b><span>${st.prob?`<span class="w">${st.prob} problem${st.prob>1?"s":""}</span> · `:""}${st.got}/${st.pool} got it</span></button>`})()}
       ${(()=>{const n=Object.keys(S.roll.units).length;if(!n)return `<button class="bigbtn" data-go="rollup"><b>ROLLUP</b><span>Add up units under you</span></button>`;const R=rollSum(rollUnits());const st=rollStale();
         return `<button class="bigbtn${st.length?" hot":""}" data-go="rollup"><b>ROLLUP</b><span>${st.length?`<span class="w">${st.length} old</span> · `:""}${R.oh}/${R.str} · ${n+(S.roll.own?1:0)} units</span></button>`})()}</div>`})()}
     ${liveStrip()}
@@ -1178,6 +1205,65 @@ function joinPrompt(q){const bid=(q.get("join")||"").replace(/[^a-z0-9]/g,"").sl
     <button class="btn" id="jYes">Link and send now</button><button class="btn alt" data-sclose="1">Not now</button></div>`;
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));try{history.replaceState(null,"",location.pathname)}catch(e){}}
 
+/* ---------- SEND: broadcast with read receipts ----------
+   Uses the recall tables: one "recall" per message; each "Got it" is a check-in (1 = got it, 2 = got it with a problem).
+   The message text only travels in the text and the link, never to the server. */
+const BC_TTL=72*3600000;let bcBusy=false,bcDraft={msg:"",secs:null,att:true},bcOpenId=null;const bcIdx={};
+function bcActive(){return S.bc.find(b=>!b.closed&&Date.now()-b.t<BC_TTL)||null}
+function bcPoolOf(b){return S.roster.filter(m=>m.sec==="ATT"?b.att:b.secs.includes(m.sec))}
+function bcStats(b){const pool=bcPoolOf(b);const A=b.ack||{};return {pool:pool.length,got:pool.filter(m=>A[m.id]).length,prob:pool.filter(m=>A[m.id]&&A[m.id].c===2).length}}
+function bcLink(b){const q=new URLSearchParams();q.set("bc",b.rid);q.set("u",unitName());if(S.myPh)q.set("to",S.myPh);q.set("m",b.msg);return location.origin+location.pathname+"#"+q.toString()}
+function bcBody(b){return unitName()+" MESSAGE:\n"+b.msg+"\n\nTap to confirm you got it: "+bcLink(b)}
+async function bcIndexFor(rid){const c=bcIdx[rid];if(c&&c.n===S.roster.length)return c;const map=[];
+  for(const m of S.roster){const last=SB.words(lastOf(m)),first=SB.words((m.name.split(",")[1]||"").trim().split(/\s+/)[0]||"");
+    map.push({m,last:await Promise.all(last.map(w=>SB.h(rid,w))),rank:await SB.h(rid,String(m.rank).toUpperCase().replace(/[^A-Z0-9]/g,"")),first:first[0]?await SB.h(rid,first[0]):""})}
+  return bcIdx[rid]={n:S.roster.length,map}}
+async function bcPoll(){const b=bcActive();if(!b||bcBusy)return;bcBusy=true;
+  try{if(!b.ok){await SB.rpc("create_recall",{p_id:b.rid,p_read_key:b.key});b.ok=true;b.err="";save();if(view==="send")rerenderSend()}
+    const rows=await SB.rpc("get_checkins",{p_recall:b.rid,p_read_key:b.key,p_after:b.after||0});b.err="";
+    if(rows&&rows.length){const idx=await bcIndexFor(b.rid);b.ack=b.ack||{};let n=0,pr=0;
+      for(const r of rows){b.after=Math.max(b.after||0,+r.id);const set=new Set(r.words||[]);
+        const sc=idx.map.filter(x=>x.last.length&&x.last.every(h=>set.has(h))).map(x=>({m:x.m,s:(set.has(x.rank)?2:0)+(x.first&&set.has(x.first)?1:0)}));
+        const best=sc.length?Math.max(...sc.map(x=>x.s)):-1;const top=sc.filter(x=>x.s===best);
+        if(top.length===1){b.ack[top[0].m.id]={c:+r.code===2?2:1,note:String(r.note||"").slice(0,40),t:Date.parse(r.created_at)||Date.now()};n++;if(+r.code===2)pr++}
+        else b.un=(b.un||0)+1}
+      save();renderTabs();if(view==="send")rerenderSend();else if(view==="board"){const y=window.scrollY;render();window.scrollTo(0,y)}
+      if(pr)toast(pr+" problem"+(pr>1?"s":"")+" reported");else if(n)toast(n+" got it")}
+  }catch(e){b.err=String(e.message||e).slice(0,80);save()}finally{bcBusy=false}}
+setInterval(()=>{if(!document.hidden&&bcActive())bcPoll()},8000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&bcActive())bcPoll()});
+function rerenderSend(){const a=document.activeElement&&document.activeElement.id;if(a==="bcMsg"||a==="bcMe")return;const y=window.scrollY;renderSend();window.scrollTo(0,y)}
+function bcMissText(b){const A=b.ack||{};const miss=sorted(bcPoolOf(b).filter(m=>!A[m.id]));const pr=sorted(bcPoolOf(b).filter(m=>A[m.id]&&A[m.id].c===2));const st=bcStats(b);
+  const L=[unitName()+" MESSAGE "+dtg(new Date(b.t)),"GOT IT: "+st.got+"/"+st.pool+" ("+pct(st.got,st.pool)+"%)"];
+  if(pr.length){L.push("");L.push("PROBLEMS ("+pr.length+")");pr.forEach(m=>L.push("- "+(m.sec==="ATT"?"ATT":m.sec)+" "+m.rank+" "+m.name.split(",")[0]+(A[m.id].note?" ("+A[m.id].note.toUpperCase()+")":"")))}
+  if(miss.length){L.push("");L.push("NOT CONFIRMED ("+miss.length+")");miss.forEach(m=>L.push("- "+(m.sec==="ATT"?"ATT":m.sec)+" "+m.rank+" "+m.name.split(",")[0]))}
+  return RT(L.join("\n"))}
+function bcBatches(list,body){const ph=list.filter(m=>m.phone);const out=[];for(let i=0;i<ph.length;i+=CI_BATCH){const g=ph.slice(i,i+CI_BATCH);out.push({n:g.length,href:"sms:"+g.map(m=>"+1"+m.phone).join(",")+"?&body="+encodeURIComponent(body)})}return out}
+function renderSend(){let h=banner();const a=bcActive();
+  if(a){const st=bcStats(a);const A=a.ack||{};const pool=bcPoolOf(a);const miss=pool.filter(m=>!A[m.id]);const pr=sorted(pool.filter(m=>A[m.id]&&A[m.id].c===2));
+    h+=`<div class="mbar"><div class="ct">${st.got}/${st.pool}<small>got it · sent ${ago(a.t)}</small></div><button class="btn" id="bcClose">Close out</button></div>
+      <div class="panel" style="margin-top:8px"><div style="white-space:pre-wrap;font-weight:600">${esc(a.msg)}</div>
+      <div class="note">${a.ok?`<span style="color:var(--s-onhand);font-weight:700">● Live</span> · confirmations appear here by themselves`:`Connecting…${a.err?" ("+esc(a.err)+")":""}`}${a.un?` · <span style="color:var(--warn)">${a.un} reply didn't match a roster name</span>`:""}</div>
+      ${bcBatches(pool,bcBody(a)).map((x,i,arr)=>`<a class="btn${(a.sent||{})[i]?" alt":""}" data-bcsent="${i}" href="${esc(x.href)}">${(a.sent||{})[i]?"✓ Sent · ":""}Text it${arr.length>1?" · group "+(i+1)+" of "+arr.length:""} (${x.n})</a>`).join("")||`<p class="note" style="color:var(--warn)">No phone numbers loaded. Load them in RECALL.</p>`}
+      ${pool.filter(m=>!m.phone).length?`<p class="note">${pool.filter(m=>!m.phone).length} people have no number and won't get the text.</p>`:""}</div>`;
+    if(pr.length)h+=`<div class="panel" style="border-color:var(--warn)"><b style="color:var(--warn)">⚠ PROBLEMS (${pr.length})</b>${pr.map(m=>`<div class="rtop"><div class="who"><b>${esc(m.rank)}</b> ${esc(m.name)}${A[m.id].note?`<div class="ph">${esc(A[m.id].note)}</div>`:""}</div>${m.phone?`<a class="call" href="${telHref(m.phone)}">Call</a>`:""}</div>`).join("")}</div>`;
+    if(miss.length){const rb=bcBatches(miss,"REMINDER: "+bcBody(a));
+      h+=`<h2>Not confirmed (${miss.length})</h2>${rb.map((x,i,arr)=>`<a class="btn alt" href="${esc(x.href)}" style="width:100%;margin-top:6px">Remind the ${x.n} not confirmed${arr.length>1?" · group "+(i+1):""}</a>`).join("")}`;
+      const groups=SECTIONS.map(s=>s[0]).concat("ATT").map(k=>[k,sorted(miss.filter(m=>m.sec===k))]).filter(g=>g[1].length);
+      for(const [k,ms] of groups)h+=`<div class="mgrp"><h3><span>${k} · ${ms.length}</span></h3>${ms.map(m=>`<div class="rrow"><div class="rtop"><div class="who"><b>${esc(m.rank)}</b> ${esc(m.name)}<div class="ph">${esc(SHORT[m.status]||m.status)}${m.phone?"":" · no number"}</div></div>${m.phone?`<a class="call" href="${telHref(m.phone)}">Call</a><a class="txt" href="${smsTo(m.phone)}">Text</a>`:""}</div></div>`).join("")}</div>`}
+    else h+=`<p class="note" style="margin-top:12px;color:var(--s-onhand);font-weight:700">Everyone confirmed.</p>`;
+    h+=`<h2>Status report</h2><div class="panel"><textarea readonly id="bcRpt">${esc(bcMissText(a))}</textarea><div class="row2"><a class="btn" href="${esc(smsHref(bcMissText(a)))}">Text it</a><button class="btn alt" id="bcCopy">Copy</button></div></div>`}
+  else{const D=bcDraft;if(!D.secs)D.secs=SECTIONS.map(s=>s[0]);const tmp={secs:D.secs,att:D.att};const pool=bcPoolOf(tmp);
+    h+=`<h2>Send a message</h2><div class="panel"><p class="note">Text everyone at once. Each person taps <b>Got it</b> and you watch confirmations come in live, with who hasn't seen it yet.</p>
+      <label for="bcMsg">Message</label><textarea id="bcMsg" maxlength="300" style="min-height:100px" placeholder="Formation moved to 0700 tomorrow, PT gear.">${esc(D.msg)}</textarea><div class="note" id="bcLen">${D.msg.length}/300</div>
+      <div class="note">Send to:</div><div class="evts">${SECTIONS.map(([k])=>`<label class="tog"><input type="checkbox" data-bcsec="${k}"${D.secs.includes(k)?" checked":""}> ${k}</label>`).join("")}<label class="tog"><input type="checkbox" id="bcAtt"${D.att?" checked":""}> ATT</label></div>
+      <div><b>${pool.length}</b> people · ${pool.filter(m=>m.phone).length} with a number</div>
+      <label for="bcMe">My cell (only used if their phone has no data)</label><input type="tel" id="bcMe" value="${esc(fmtPh(S.myPh||""))}" placeholder="808 555 0100">
+      <button class="btn" id="bcGo">Create message</button><p class="note">Next you'll get Text it buttons (20 people per text). The message itself never goes to the server.</p></div>`;
+    const past=S.bc.filter(b=>b!==a).slice(-5).reverse();
+    if(past.length)h+=`<h2>Past messages</h2><div class="panel hist">${past.map(b=>{const st=bcStats(b);return `<div><b>${dtg(new Date(b.t)).slice(0,7)}</b> · ${st.got}/${st.pool} got it · ${esc(b.msg.slice(0,60))}${b.msg.length>60?"…":""}</div>`}).join("")}</div>`}
+  $("#main").innerHTML=h}
+
 /* ---------- recall roster ---------- */
 function digits(p){return String(p||"").replace(/\D/g,"")}
 function normPh(p){let d=digits(p);if(d.length===11&&d[0]==="1")d=d.slice(1);return d.length===10?d:""}
@@ -1506,7 +1592,7 @@ function animateNums(){document.querySelectorAll("[data-n]").forEach(el=>{const 
 document.addEventListener("click",e=>{
   if(e.target.closest("#bMode,[data-mode-open]")){e.stopImmediatePropagation();openModeSheet();return}
   const mo=e.target.closest("[data-mopt]");if(mo){e.stopImmediatePropagation();const k=mo.dataset.mopt;const wasFirst=sheetCtx&&sheetCtx.first;closeSheet();if(!S.mode){S.mode=k==="military"?"military":S.mode;save()}
-    if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live"].includes(view))view="board";render();window.scrollTo(0,0);if(!wasFirst)toast(MODES[k].name+" version on. Same people, new labels.")}if(wasFirst&&!S.onb)setTimeout(()=>showOnb(0),300);return}
+    if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send"].includes(view))view="board";render();window.scrollTo(0,0);if(!wasFirst)toast(MODES[k].name+" version on. Same people, new labels.")}if(wasFirst&&!S.onb)setTimeout(()=>showOnb(0),300);return}
   const msh=e.target.closest("[data-mshare]");if(msh){e.stopImmediatePropagation();shareMode(msh.dataset.mshare);return}
   const pk=e.target.closest("[data-pick]");if(pk){e.stopImmediatePropagation();openSheet(pk.dataset.pick,pk.dataset.pid);return}
   if(e.target.closest("[data-sclose]")){e.stopImmediatePropagation();closeSheet();return}
@@ -1519,7 +1605,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetCtx)closeSheet
 document.addEventListener("dragleave",e=>{const d=$("#rcDrop");if(d&&!e.relatedTarget)d.classList.remove("over")});
 document.addEventListener("drop",e=>{if(view!=="recall"&&view!=="data")return;const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;e.preventDefault();const d=$("#rcDrop");if(d)d.classList.remove("over");rcLoadFile(f,view==="recall"?"#rcOutR":"#rcOut")});
 function render(){renderTabs();
-  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="rollup")renderRollup();else if(view==="live")renderLive();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
+  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="rollup")renderRollup();else if(view==="live")renderLive();else if(view==="send")renderSend();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
 
 /* ---------- CSV import ---------- */
 function parseCSV(text){const rows=[];let row=[],f="",q=false;
@@ -1587,6 +1673,12 @@ document.addEventListener("click",e=>{
   if(e.target.id==="rcCancel"){if(armed==="rccancel"){liveClose();S.rc.open=false;S.rc.res={};S.rc.ci={};S.rc.start=0;armed=null;save();toast("Recall discarded")}else armed="rccancel";renderRecall();return}
   if(e.target.id==="pushOn"){e.target.disabled=true;e.target.textContent="Asking…";pushSub(true).then(sub=>{if(sub){S.pushOn=true;save();pushAttach().then(()=>{const y=window.scrollY;renderRecall();window.scrollTo(0,y)});toast("Alerts on")}else{toast("Alerts not allowed");const y=window.scrollY;renderRecall();window.scrollTo(0,y)}}).catch(()=>{toast("Couldn't turn on alerts here.");const y=window.scrollY;renderRecall();window.scrollTo(0,y)});return}
   if(e.target.id==="bpushOn"){e.target.disabled=true;e.target.textContent="Asking…";pushSub(true).then(sub=>{if(!sub){toast("Alerts not allowed");renderLive();return}S.pushOn=true;save();boardPush().then(()=>{renderLive();toast(S.board&&S.board.push?"Alerts on":"Couldn't connect alerts. Try again.")})}).catch(()=>{toast("Couldn't turn on alerts here.");renderLive()});return}
+  if(e.target.id==="bcGo"){const D=bcDraft;const msg=($("#bcMsg").value||"").trim();if(!msg){toast("Type the message first.");return}if(!D.secs.length&&!D.att){toast("Pick who gets it.");return}
+    const b={rid:Date.now().toString(36)+rndId(4),key:rndId(32),msg:msg.slice(0,300),t:Date.now(),secs:D.secs.slice(),att:D.att,ack:{},after:0,ok:false,sent:{},un:0};
+    S.bc=S.bc.filter(x=>x.closed||Date.now()-x.t>BC_TTL).concat(b).slice(-10);bcDraft={msg:"",secs:null,att:true};save();renderSend();window.scrollTo(0,0);bcPoll();return}
+  const bs=e.target.closest("[data-bcsent]");if(bs){const a=bcActive();if(a){a.sent=Object.assign({},a.sent,{[bs.dataset.bcsent]:1});save();setTimeout(()=>{if(view==="send")rerenderSend()},400)}return}
+  if(e.target.id==="bcClose"){const a=bcActive();if(!a)return;if(armed==="bcclose"){a.closed=Date.now();if(a.ok)SB.rpc("close_recall",{p_recall:a.rid,p_read_key:a.key}).catch(()=>{});armed=null;save();renderSend();toast("Message closed out")}else{armed="bcclose";e.target.textContent="Tap again to close";setTimeout(()=>{if(armed==="bcclose"){armed=null;if(view==="send")rerenderSend()}},3000)}return}
+  if(e.target.id==="bcCopy"){const a=bcActive();if(a){try{navigator.clipboard.writeText(bcMissText(a)).then(()=>toast("Copied"),()=>toast("Copy blocked here."))}catch(err){toast("Copy blocked here.")}}return}
   if(e.target.id==="lvOn"){e.target.disabled=true;e.target.textContent="Connecting…";boardCreate().then(()=>{renderLive();toast("Live updates on. Send each section its link.")}).catch(err=>{e.target.disabled=false;e.target.textContent="Turn on live updates for my board";const o=$("#lvOut");if(o)o.textContent="Couldn't connect: "+(err.message||err)});return}
   if(e.target.id==="lvOff"){if(armed==="lvoff"){const B=S.board;SB.rpc("delete_board",{p_board:B.id,p_read_key:B.rk}).catch(()=>{});S.board=null;armed=null;save();toast("Live updates off");renderLive()}else{armed="lvoff";renderLive()}return}
   const lc=e.target.closest("[data-lvcopy]");if(lc){const u=boardLink(lc.dataset.lvcopy);try{navigator.clipboard.writeText(u).then(()=>toast(lc.dataset.lvcopy+" link copied"),()=>toast(u))}catch(err){toast(u)}return}
@@ -1665,6 +1757,9 @@ document.addEventListener("change",e=>{
   if(e.target.id==="evOnly"){evOnly=e.target.checked;renderEvents();return}
   if(e.target.id==="arOnly"){S.arm.only=e.target.checked;save();renderArmory();return}
   if(e.target.id==="wFile"){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const r=importWeapons(String(rd.result));renderArmory();const o=$("#wOut");if(o)o.textContent=r.ok+" weapons assigned"+(r.miss.length?" · not matched: "+r.miss.slice(0,8).join("; "):"");toast(r.ok+" weapons assigned")}catch(err){const o=$("#wOut");if(o)o.textContent=err.message}};rd.readAsText(f);return}
+  if(e.target.matches&&e.target.matches("input[data-bcsec]")){const k=e.target.dataset.bcsec;bcDraft.msg=($("#bcMsg")||{}).value||bcDraft.msg;bcDraft.secs=e.target.checked?[...new Set(bcDraft.secs.concat(k))]:bcDraft.secs.filter(x=>x!==k);renderSend();return}
+  if(e.target.id==="bcAtt"){bcDraft.msg=($("#bcMsg")||{}).value||bcDraft.msg;bcDraft.att=e.target.checked;renderSend();return}
+  if(e.target.id==="bcMe"){const d=normPh(e.target.value);if(e.target.value.trim()&&!d){toast("Enter a 10-digit number.");return}S.myPh=d;save();return}
   if(e.target.id==="liveTog"){S.live=e.target.checked;save();toast(S.live?"Live check-in on. Starts with your next recall.":"Live check-in off. Text replies only.");return}
   if(e.target.id==="rcAtt"){S.rc.att=e.target.checked;save();renderRecall();return}
   if(e.target.id==="ciMe"){const d=normPh(e.target.value);if(e.target.value.trim()&&!d){toast("Enter a 10-digit number.");return}S.myPh=d;save();const y=window.scrollY;renderRecall();window.scrollTo(0,y);toast(d?"Replies will come to "+fmtPh(d):"Number cleared");return}
@@ -1704,6 +1799,7 @@ document.addEventListener("input",e=>{
   if(e.target.id==="wRep"){S.reporter=e.target.value;save();refreshW();return}
   if(e.target.id==="wWhen"){W.when=e.target.value;refreshW();return}
   if(e.target.id==="ptEvt"||e.target.id==="ptWhen"){S.pt[e.target.id==="ptEvt"?"event":"when"]=e.target.value;save();const a=$("#ptSms");if(a)a.href=smsHref(ptText());document.querySelectorAll("[data-evt]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.evt===S.pt.event));return}
+  if(e.target.id==="bcMsg"){bcDraft.msg=e.target.value;const l=$("#bcLen");if(l)l.textContent=e.target.value.length+"/300";return}
   if(e.target.id==="unitNm"){S.unit=cleanName(e.target.value);save();const t=reportText();const m=$("#msg");if(m)m.value=t;const a=$("#sms");if(a)a.href=smsHref(t);return}
   if(e.target.id==="rollNm"){S.roll.name=cleanName(e.target.value);save();const t=rollText();const m=$("#rollMsg");if(m)m.value=t;const a=$("#rollSms");if(a)a.href=smsHref(t);return}
   if(e.target.id==="rcp"){S.recipients=e.target.value;save();const a=$("#sms");if(a)a.href=smsHref($("#msg").value);return}
@@ -1804,11 +1900,12 @@ let firstPick=false;{const qm=new URLSearchParams(location.search).get("m");if(!
 startXL();
 render();
 {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join"))setTimeout(()=>joinPrompt(q),firstPick?900:300)}
+if(bcActive())setTimeout(bcPoll,1000);
 if(S.board){setTimeout(livePollBoard,800);if(S.pushOn&&!S.board.push)setTimeout(boardPush,1500)}if(S.link)setTimeout(()=>linkPush(),1200);
 if(firstPick)setTimeout(()=>openModeSheet(true),350);
 if("serviceWorker" in navigator&&document.querySelector("link[rel=manifest]")&&(location.protocol==="https:"||location.hostname==="localhost")){navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(()=>{const o=document.getElementById("offStat");if(o&&navigator.serviceWorker.controller)o.textContent="Ready: this app opens and works with no signal. Text reports once you have service."}).catch(()=>{})}
 setInterval(()=>{if(view==="recall"&&S.rc.open){const c=document.querySelector(".mbar .ct small");if(c)c.textContent="contacted · "+Math.round((Date.now()-S.rc.start)/60000)+" min"}},20000);
-window.addEventListener("hashchange",()=>{{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){joinPrompt(q);return}}const h=(location.hash||"").slice(1).toLowerCase();if(["recall","rollup","board","muster","alerts","live"].includes(h)&&h!==view){view=h;armed=null;render();window.scrollTo(0,0)}});
+window.addEventListener("hashchange",()=>{{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){joinPrompt(q);return}}const h=(location.hash||"").slice(1).toLowerCase();if(["recall","rollup","board","muster","alerts","live","send"].includes(h)&&h!==view){view=h;armed=null;render();window.scrollTo(0,0)}});
 setInterval(()=>{const d=$("#dtg");if(d)d.textContent="AS OF "+dtg()},30000);
 </script>
 </body></html>
