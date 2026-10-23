@@ -572,7 +572,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="2.6.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="2.7.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -773,7 +773,7 @@ function renderBoard(){
     <div class="pct"><b>${P}%</b><div class="bar"><i style="width:${P}%"></i></div><span>Present ${present(T)} · Off deck ${T.total-present(T)}</span></div>
     ${(()=>{const al=alerts();const M=S.mus;const pool=M.open?musPool():[];const sn=M.open?pool.filter(m=>M.seen[m.id]).length:0;
       return `<div class="bigbtns"><button class="bigbtn${M.open?" live":""}" data-go="muster"><b>MUSTER</b><span>${M.open?"In progress · "+sn+"/"+pool.length:M.last?"Last "+dtg(new Date(M.last.t)).slice(0,7)+" · "+M.last.present+"/"+M.last.expected:"Start formation muster"}</span></button>
-      <button class="bigbtn${al.over.length?" hot":""}" data-go="alerts"><b>ALERTS</b><span>${al.over.length?`<span class="w">${al.over.length} overdue</span> · `:""}${al.ret.length} returning · ${al.dep.length} departing</span></button>
+      <button class="bigbtn${al.over.length||upcomingConflicts(14).length?" hot":""}" data-go="alerts"><b>ALERTS</b><span>${upcomingConflicts(14).length?`<span class="w">${upcomingConflicts(14).length} conflict${upcomingConflicts(14).length>1?"s":""}</span> · `:""}${al.over.length?`<span class="w">${al.over.length} overdue</span> · `:""}${al.ret.length} returning · ${al.dep.length} departing</span></button>
       <button class="bigbtn${S.rc.open?" live":""}" data-go="recall"><b>RECALL</b><span>${S.rc.open?"In progress · "+recallPool().filter(m=>(S.rc.res||{})[m.id]==="ok").length+"/"+recallPool().length:S.roster.filter(m=>m.phone).length+" numbers loaded"}</span></button>
       <button class="bigbtn" data-go="events"><b>EVENTS</b><span>${S.events.length?S.events.length+(S.events.length===1?" event · ":" events · ")+S.events.reduce((a,e)=>a+evReq(e).filter(m=>!evDone(e,m)).length,0)+" owe":"Attendance"}</span></button>
       <button class="bigbtn${S.arm.open?" live":""}" data-go="armory"><b>ARMORY</b><span>${S.arm.open?"Muster in progress":S.roster.filter(hasW).length+" weapons"}</span></button>
@@ -1022,11 +1022,13 @@ function alerts(){const over=[],ret=[],dep=[];
 function arow(a,label,col){const m=a.m;return `<div class="arow" style="--sc:var(${col})"><div style="min-width:0"><b>${esc(m.rank)}</b> ${esc(m.name)}<div class="note">${m.sec==="ATT"?"ATT":m.sec} · ${esc(a.why)}</div></div><div class="when">${label}</div></div>`}
 function alertsText(){const {over,ret,dep}=alerts();const L=["EOOP ALERTS "+dtg()];
   const line=(a,t)=>"- "+(a.m.sec==="ATT"?"ATT":a.m.sec)+" "+a.m.rank+" "+a.m.name.split(",")[0]+": "+a.why+(t?" ("+t+")":"");
+  {const cf=upcomingConflicts(14);if(cf.length){L.push("");L.push("CONFLICTS NEXT 14 DAYS ("+cf.length+")");cf.forEach(c=>{const d=parseD(c.d);L.push("- "+DOW[d.getDay()]+" "+short(d)+" "+c.what.toUpperCase()+": "+c.m.sec+" "+c.m.rank+" "+lastOf(c.m)+" ("+c.cf.map(x=>x.s.toUpperCase()).join(", ")+")")})}}
   L.push("");L.push("OVERDUE ("+over.length+")");over.forEach(a=>L.push(line(a,(-a.dd)+"D")));
   L.push("");L.push("RETURNING 7 DAYS ("+ret.length+")");ret.forEach(a=>L.push(line(a,a.dd?"IN "+a.dd+"D":"TODAY")));
   L.push("");L.push("DEPARTING 90 DAYS ("+dep.length+")");dep.forEach(a=>L.push(line(a,a.dd<0?"PAST":a.dd+"D")));
   return L.join("\n")}
 function renderAlerts(){const {over,ret,dep}=alerts();let h=banner();
+  {const cf=upcomingConflicts(14);h+=`<div class="ahead"><h2>Conflicts · next 14 days</h2><span>${cf.length}</span></div>`;h+=cf.length?`<div class="alist">${cf.map(cfRow).join("")}</div>`:`<p class="note">No one is double-booked on duty or events.</p>`}
   h+=`<div class="ahead"><h2>Overdue</h2><span>${over.length}</span></div>`;
   h+=over.length?`<div class="alist">${over.map(a=>arow(a,(-a.dd)+"d late","--warn")).join("")}</div>`:`<p class="note">No one is past their leave, TAD or attachment end date.</p>`;
   h+=`<div class="ahead"><h2>Returning ≤ 7 days</h2><span>${ret.length}</span></div>`;
@@ -1344,9 +1346,11 @@ function reqDates(r){const a=parseD(r.from),b=parseD(r.to);return (a?DOW[a.getDa
 function reqApprove(r){const m=S.roster.find(x=>x.id===r.mid);r.st="approved";r.dt=Date.now();if(!m)return;
   const ty=r.ty==="Leave"?"LEAVE":r.ty==="Appointment"?"APPT":"OTHER";
   if(["Leave","Special liberty","Appointment"].includes(r.ty)&&r.from){m.cal=(m.cal||[]).concat({id:"c"+Date.now().toString(36)+rndId(3),d:r.from,end:r.to&&r.to>r.from?r.to:"",tm:r.tm||"",ty,ti:r.ty+(r.note?" · "+r.note.slice(0,40):""),no:"Approved request"})}
-  if(r.ty==="Leave"&&r.from&&r.from<=dkey()){m.status="Leave";m.start=fmtD(r.from);if(r.to)m.end=fmtD(r.to)}}
+  if(r.ty==="Leave"&&r.from&&r.from<=dkey()){m.status="Leave";m.start=fmtD(r.from);if(r.to)m.end=fmtD(r.to)}
+  const freed=[];if(["Leave","Special liberty"].includes(r.ty)&&r.from)for(const k of daysIn(r.from,r.to,60))for(const ro of S.duty.rosters)if((ro.assign||{})[k]===m.id){delete ro.assign[k];freed.push(ro.name+" "+short(parseD(k)))}
+  return freed}
 function reqHTML(f){if(!f.lk)return"";const mine=S.reqs.filter(r=>r.feed===f.id);if(!mine.length)return"";const pend=mine.filter(r=>r.st==="pending");const done=mine.filter(r=>r.st!=="pending").slice(0,15);
-  const row=r=>{const m=S.roster.find(x=>x.id===r.mid);return `<div class="rrow" style="--sc:var(${r.st==="pending"?"--brass":r.st==="approved"?"--s-onhand":"--warn"})"><div class="who"><b>${esc(r.ty)}</b> · ${esc(reqDates(r))}<div class="ph">${m?`<span data-pcard="${m.id}" style="cursor:pointer;text-decoration:underline">${esc(m.rank+" "+m.name)}</span> · ${esc(m.sec)}`:`<span style="color:var(--warn)">${esc(r.who)} (not matched to roster)</span>`} · sent ${ago(r.t)}</div>${r.note?`<div class="ph">“${esc(r.note)}”</div>`:""}${r.st!=="pending"?`<div class="ph"><b style="color:var(${r.st==="approved"?"--s-onhand":"--warn"})">${r.st==="approved"?"Approved":"Denied"}</b>${r.dnote?" · "+esc(r.dnote):""}</div>`:""}</div>
+  const row=r=>{const m=S.roster.find(x=>x.id===r.mid);return `<div class="rrow" style="--sc:var(${r.st==="pending"?"--brass":r.st==="approved"?"--s-onhand":"--warn"})"><div class="who"><b>${esc(r.ty)}</b> · ${esc(reqDates(r))}<div class="ph">${m?`<span data-pcard="${m.id}" style="cursor:pointer;text-decoration:underline">${esc(m.rank+" "+m.name)}</span> · ${esc(m.sec)}`:`<span style="color:var(--warn)">${esc(r.who)} (not matched to roster)</span>`} · sent ${ago(r.t)}</div>${r.note?`<div class="ph">“${esc(r.note)}”</div>`:""}${r.st==="pending"&&m&&r.from?(()=>{const hits=[];for(const k of daysIn(r.from,r.to,31)){const cf=busyOn(m,k,{});cf.forEach(x=>hits.push(DOW[parseD(k).getDay()]+" "+short(parseD(k))+": "+x.why))}return hits.length?`<div class="ph" style="color:var(--warn);font-weight:700">⚠ ${esc(hits.slice(0,4).join(" · "))}${hits.length>4?" +"+(hits.length-4)+" more":""}</div>`:`<div class="ph" style="color:var(--s-onhand)">✓ No conflicts</div>`})():""}${r.st!=="pending"?`<div class="ph"><b style="color:var(${r.st==="approved"?"--s-onhand":"--warn"})">${r.st==="approved"?"Approved":"Denied"}</b>${r.dnote?" · "+esc(r.dnote):""}</div>`:""}</div>
     ${r.st==="pending"?`${m?"":`<select class="wsel" data-rqwho="${r.rid}"><option value="">Who is this?</option>${sorted(S.roster).map(x=>`<option value="${x.id}">${esc(x.rank+" "+x.name)}</option>`).join("")}</select>`}<input type="text" id="rqn${r.rid}" maxlength="80" placeholder="Note back (optional)" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)">
       <div class="row2"><button class="btn" data-rqok="${r.rid}">Approve</button><button class="btn warn" data-rqno="${r.rid}">Deny</button></div>`:m&&m.phone?`<a class="btn alt" href="${esc("sms:+1"+m.phone+"?&body="+encodeURIComponent(unitName()+": your "+r.ty.toLowerCase()+" request ("+reqDates(r)+") was "+r.st.toUpperCase()+"."+(r.dnote?" "+r.dnote:"")))}">Text them the answer</a>`:""}</div>`};
   return `<div class="panel" style="border-color:var(${pend.length?"--brass":"--line"})"><b>📨 Requests${pend.length?` · <span style="color:var(--brass)">${pend.length} waiting</span>`:""}</b>${pend.length?`<div class="alist">${pend.map(row).join("")}</div>`:`<p class="note">No requests waiting.</p>`}
@@ -1517,7 +1521,7 @@ function calForm(pre){const D=new Date();const iso=calDay||dkey(D);const sec=cal
     <div class="row2"><div><label for="caTy">Type</label><select id="caTy" class="wsel">${CAL_TYPES.filter(x=>!["DUTY","DUE"].includes(x[0])).map(x=>`<option value="${x[0]}">${x[1]}</option>`).join("")}</select></div><div><label for="caE">Ends (optional)</label><input type="date" id="caE" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)"></div></div>
     <label for="caTi">What</label><input type="text" id="caTi" maxlength="60" placeholder="Dental, BAS appt, range, leave…">
     <label for="caNo">Note (optional)</label><input type="text" id="caNo" maxlength="80" placeholder="Where, who to see">
-    <button class="btn" id="caSave"${pre?` data-cafor="${pre.id}"`:""}>Add</button>${pre?"":`<button class="btn alt" id="caCancel">Cancel</button>`}</div>`}
+    <div id="caWarn"></div><button class="btn" id="caSave"${pre?` data-cafor="${pre.id}"`:""}>Add</button>${pre?"":`<button class="btn alt" id="caCancel">Cancel</button>`}</div>`}
 function icsFor(list,name){const z=d=>d.replace(/-/g,"");const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//EOP Numbers//EN","CALSCALE:GREGORIAN"];const now=new Date().toISOString().replace(/[-:]/g,"").slice(0,15)+"Z";
   const esc2=s=>String(s||"").replace(/[\;,]/g,m=>"\\"+m).replace(/\n/g,"\\n");
   list.forEach((e,i)=>{L.push("BEGIN:VEVENT","UID:eop-"+z(e.d)+"-"+i+"-"+Math.random().toString(36).slice(2,8)+"@eopnumbers","DTSTAMP:"+now);
@@ -1739,12 +1743,35 @@ function renderReady(){let h=banner();const its=readyItems();const pool=S.roster
     <div class="row2"><input type="text" id="rdNew" maxlength="30" placeholder="New item (e.g. Swim qual)"><select id="rdMo" class="wsel">${[[0,"One time"],[1,"Monthly"],[3,"Every 3 months"],[6,"Every 6 months"],[12,"Yearly"],[24,"Every 2 years"],[36,"Every 3 years"]].map(([v,l])=>`<option value="${v}"${v===12?" selected":""}>${l}</option>`).join("")}</select></div><button class="btn alt" id="rdAdd">Add item</button></details>`;
   $("#main").innerHTML=h}
 
+/* ---------- CONFLICT CHECKER ---------- */
+const CF_HARD=new Set(["LEAVE","TAD"]);
+function cfCovers(e,day){return e.d<=day&&(e.end&&e.end>e.d?e.end:e.d)>=day}
+function busyOn(m,day,ctx){ctx=ctx||{};const out=[];const add=(ty,hard,why,sh)=>out.push({ty,hard,why,s:sh||why});
+  if(AWAY.includes(m.status)){const s0=isoOf(m.start),e0=isoOf(m.end);if((!s0||day>=s0)&&(!e0||day<=e0)&&(e0||day>=dkey()))add("STATUS",true,(SHORT[m.status]||m.status)+(e0?" thru "+short(parseD(e0)):" (no return date)"),SHORT[m.status]||m.status)}
+  const seen=new Set();const calE=(e,src)=>{if(ctx.cal&&e.id===ctx.cal)return;if(!cfCovers(e,day))return;const key=e.d+"|"+e.ti+"|"+(e.tm||"");if(seen.has(key))return;seen.add(key);
+    const hard=CF_HARD.has(e.ty)||(e.ty==="TRNG"&&!e.tm);add(e.ty,hard,ctype(e.ty)[1]+": "+e.ti+(e.tm?" "+e.tm:"")+(src?" (from "+src+")":""),(e.tm?e.tm+" ":"")+e.ti)};
+  (m.cal||[]).forEach(e=>calE(e,""));
+  const nk=fullK(m);for(const [sec,c] of Object.entries(S.secCal||{}))for(const e of c.e||[])if(e.nk===nk)calE(e,sec+" leader");
+  for(const r of S.duty.rosters)if(r.id!==ctx.roster&&(r.assign||{})[day]===m.id)add("DUTY",true,"Duty: "+r.name,r.name);
+  for(const ev of S.events||[]){if(ev.id===ctx.event)continue;const d=isoOf(ev.date)||ev.date;if(d===day&&evReq(ev).some(x=>x.id===m.id))add("EVENT",false,"Event: "+ev.name,ev.name)}
+  if(ctx.lim&&dutyOf(m)==="LIMDU")add("LIMDU",false,"LIMDU","LIMDU");
+  return out}
+const cfCol=list=>list.some(x=>x.hard)?"--warn":"--s-duty";
+function cfLine(list){return list.map(x=>`<span style="color:var(${x.hard?"--warn":"--s-duty"});font-weight:700">⚠ ${esc(x.why)}</span>`).join(" · ")}
+function daysIn(a,b,cap){const out=[];const d=parseD(a);const e=parseD(b&&b>a?b:a);if(!d||!e)return out;for(let i=0;i<(cap||31)&&d<=e;i++){out.push(dkey(d));d.setDate(d.getDate()+1)}return out}
+function upcomingConflicts(n){n=n||14;const out=[];const t=today0();
+  for(let i=0;i<n;i++){const d=new Date(t);d.setDate(d.getDate()+i);const k=dkey(d);
+    for(const r of S.duty.rosters){const id=(r.assign||{})[k];const m=id&&S.roster.find(x=>x.id===id);if(!m)continue;const cf=busyOn(m,k,{roster:r.id,lim:r.skipLim});if(cf.length)out.push({d:k,m,what:r.name,kind:"duty",cf})}
+    for(const ev of S.events||[]){const ed=isoOf(ev.date)||ev.date;if(ed!==k)continue;for(const m of evReq(ev)){const cf=busyOn(m,k,{event:ev.id}).filter(x=>x.hard);if(cf.length)out.push({d:k,m,what:ev.name,kind:"event",cf})}}}
+  return out}
+function cfRow(c){const dd=parseD(c.d);return `<div class="rrow" style="--sc:var(${cfCol(c.cf)})"><div class="who"><b>${DOW[dd.getDay()]} ${short(dd)} · ${esc(c.what)}</b><div class="ph"><span data-pcard="${c.m.id}" style="cursor:pointer;text-decoration:underline">${esc(c.m.rank+" "+c.m.name)}</span> · ${esc(c.m.sec)}</div><div class="ph">${cfLine(c.cf)}</div></div>${c.kind==="duty"?`<button class="chip" data-go="duty" style="cursor:pointer">Fix in DUTY</button>`:""}</div>`}
+
 /* ---------- DUTY roster ---------- */
 const DUTY_SKIP=["Leave","TAD","Operation","Appointment off Base"];let dSel=null,dSetup=false,dSwap=null;
 function dCur(){return S.duty.rosters.find(r=>r.id===dSel)||S.duty.rosters[0]||null}
 function dPool(r){const ex=r.excl||{};return sorted(S.roster.filter(m=>(m.sec==="ATT"?r.att:r.secs.includes(m.sec))&&!ex[m.id]))}
 function dOrder(r){const pool=dPool(r);const ids=new Set(pool.map(m=>m.id));r.order=(r.order||[]).filter(id=>ids.has(id));for(const m of pool)if(!r.order.includes(m.id))r.order.push(m.id);return r.order}
-function dElig(r,m,day){if(r.skipLim&&dutyOf(m)==="LIMDU")return false;if((r.skip||[]).includes(m.status)){const e=parseD(m.end);if(!e)return dkey(today0())!==day&&false;return day>dkey(e)}return true}
+function dElig(r,m,day){if(r.skipLim&&dutyOf(m)==="LIMDU")return false;if((r.skip||[]).includes(m.status)){const e=parseD(m.end);if(!e)return dkey(today0())!==day&&false;if(day<=dkey(e))return false}if(busyOn(m,day,{roster:r.id}).some(x=>x.hard&&x.ty!=="STATUS"))return false;return true}
 function dGen(r,n,fromToday){const order=dOrder(r);if(!order.length)return 0;r.assign=r.assign||{};const t=today0();let made=0;
   if(fromToday)for(const k of Object.keys(r.assign))if(k>=dkey(t))delete r.assign[k];
   let last=null;for(let i=0;i<n;i++){const d=new Date(t);d.setDate(d.getDate()+i);const k=dkey(d);if(r.assign[k]){last=r.assign[k];continue}
@@ -1761,9 +1788,9 @@ function renderDuty(){let h=banner();const r=dCur();
   h+=`<div class="sechead" style="margin-top:12px"><h2>${esc(r.name)}</h2><div class="ratio" style="font-size:13px">${pool.length} in rotation ${xlBtn("duty")}</div></div>`;
   if(!pool.length)h+=`<p class="note" style="color:var(--warn)">No one in this rotation. Open Setup and pick sections.</p>`;
   h+=`<div class="row2"><button class="btn" id="dGen">Fill next 30 days</button><button class="btn alt" id="dRedo">${armed==="dredo"?"Tap again: redo from today":"Redo from today"}</button></div><div class="alist" style="margin-top:8px">`;
-  for(let i=0;i<30;i++){const d=new Date(t);d.setDate(d.getDate()+i);const k=dkey(d);const id=(r.assign||{})[k];const m=id&&S.roster.find(x=>x.id===id);const bad=m&&!dElig(r,m,k);
-    h+=`<div class="rrow" style="--sc:var(${!m?"--line":bad?"--warn":i===0?"--s-onhand":"--line"})"><div class="rtop"><div class="who"><b>${i===0?"TODAY · ":""}${DOW[d.getDay()]} ${short(d)}</b><div class="ph"${m?` data-pcard="${m.id}" style="cursor:pointer"`:""}>${m?esc(m.sec+" · "+m.rank+" "+m.name)+(bad?` · <b style="color:var(--warn)">now ${esc(SHORT[m.status]||m.status)}</b>`:""):"Open"}</div></div>${m&&m.phone?`<a class="call" href="${telHref(m.phone)}">Call</a>`:""}<button class="chip" data-dswap="${k}" style="cursor:pointer">${dSwap===k?"Pick below":"Change"}</button></div>
-      ${dSwap===k?`<select class="wsel" data-dpick="${k}"><option value="">Pick who…</option>${pool.map(p=>`<option value="${p.id}"${!dElig(r,p,k)?" disabled":""}>${esc(p.sec+" "+p.rank+" "+p.name)}${!dElig(r,p,k)?" ("+esc(SHORT[p.status]||p.status)+")":""}</option>`).join("")}<option value="-">— Leave open —</option></select>`:""}</div>`}
+  for(let i=0;i<30;i++){const d=new Date(t);d.setDate(d.getDate()+i);const k=dkey(d);const id=(r.assign||{})[k];const m=id&&S.roster.find(x=>x.id===id);const cf=m?busyOn(m,k,{roster:r.id,lim:r.skipLim}):[];const bad=m&&(!dElig(r,m,k)||cf.length);
+    h+=`<div class="rrow" style="--sc:var(${!m?"--line":bad?cfCol(cf.length?cf:[{hard:true}]):i===0?"--s-onhand":"--line"})"><div class="rtop"><div class="who"><b>${i===0?"TODAY · ":""}${DOW[d.getDay()]} ${short(d)}</b><div class="ph"${m?` data-pcard="${m.id}" style="cursor:pointer"`:""}>${m?esc(m.sec+" · "+m.rank+" "+m.name):"Open"}</div>${cf.length?`<div class="ph">${cfLine(cf)}</div>`:""}</div>${m&&m.phone?`<a class="call" href="${telHref(m.phone)}">Call</a>`:""}<button class="chip" data-dswap="${k}" style="cursor:pointer">${dSwap===k?"Pick below":"Change"}</button></div>
+      ${dSwap===k?`<select class="wsel" data-dpick="${k}"><option value="">Pick who…</option>${pool.map(p=>`<option value="${p.id}"${!dElig(r,p,k)?" disabled":""}>${esc(p.sec+" "+p.rank+" "+p.name)}${(()=>{const c=busyOn(p,k,{roster:r.id,lim:r.skipLim});return c.length?" ⚠ "+esc(c.map(x=>x.s).join(", ")):""})()}</option>`).join("")}<option value="-">— Leave open —</option></select>`:""}</div>`}
   h+=`</div><div class="panel"><textarea readonly>${esc(dutyText(r,14))}</textarea><div class="row2"><a class="btn" href="${esc(smsHref(dutyText(r,14)))}">Text 14 days</a><button class="btn alt" id="dCopy">Copy</button></div><p class="note">Goes to the numbers set in TEXT.</p></div>`;
   h+=`<details class="panel"${dSetup?" open":""}><summary><b>Setup</b> · who's in, who's skipped</summary>
     <label for="dName">Name</label><input type="text" id="dName" maxlength="24" value="${esc(r.name)}">
@@ -1797,6 +1824,7 @@ function renderPerson(){const m=S.roster.find(x=>x.id===pid);if(!m){view=pBack||
   h+=pSec("Dates",`<div class="row2">${dRow("start","Status start")}${dRow("end","Status end / return")}</div><div class="row2">${dRow("edd","EDD / leaving unit")}${dRow("eas","EAS / contract end")}</div>`);
   // due-outs
   if(typeof dueRows==="function"){const rows=dueRows(m);h+=pSec(`Due-outs${rows.some(r=>r.st==="over")?` <span style="color:var(--warn)">· ${rows.filter(r=>r.st==="over").length} overdue</span>`:""}`,rows.length?rows.map(r=>`<div class="rtop" style="gap:8px"><div class="who"><b style="color:var(${r.col})">●</b> ${esc(r.item)}<div class="ph">${r.txt}</div></div><button class="chip" data-pdone="${esc(r.item)}" style="cursor:pointer">Done today</button><input type="date" data-pdue="${esc(r.item)}" value="${esc(r.iso)}" aria-label="${esc(r.item)} due date" style="width:132px;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)"></div>`).join(""):`<p class="note">No readiness items set up. See READY on the board.</p>`)}
+  {const cf=upcomingConflicts(30).filter(c=>c.m.id===m.id);if(cf.length)h+=`<h2 style="color:var(--warn)">⚠ Conflicts</h2><div class="alist">${cf.map(cfRow).join("")}</div>`}
   // duty
   if(typeof nextDuties==="function"){const nd=nextDuties(m);h+=pSec("Duty",nd.length?nd.map(x=>`<div>${esc(x.roster)}: <b>${esc(x.day)}</b></div>`).join(""):`<p class="note">No upcoming duty.</p>`)}
   // calendar
@@ -2268,6 +2296,8 @@ function renderEvents(){let h=banner();
   if(ev){const req=evReq(ev);const got=req.filter(m=>evDone(ev,m)).length;
     h+=`<div class="mbar"><div class="ct">${got}/${req.length}<small>attended</small></div><button class="btn alt" id="evBack">All events</button></div>
       <h2 style="margin-top:6px">${esc(ev.name)}</h2><div class="note">${esc(ev.type||"")}${ev.date?" · "+esc(ev.date):""} · required: ${ev.secs.join(", ")}${ev.att?", attached":""}</div>
+      ${(()=>{const d=isoOf(ev.date)||ev.date;if(!/^\d{4}-\d{2}-\d{2}$/.test(d||"")||d<dkey())return"";const c=sorted(req).map(m=>({m,cf:busyOn(m,d,{event:ev.id,lim:true})})).filter(x=>x.cf.length);
+        return c.length?`<div class="panel" style="border-color:var(${c.some(x=>x.cf.some(y=>y.hard))?"--warn":"--s-duty"})"><b>⚠ Conflicts on ${short(parseD(d))} (${c.length})</b>${c.map(x=>`<div class="rtop"><div class="who"><span data-pcard="${x.m.id}" style="cursor:pointer;text-decoration:underline"><b>${esc(x.m.rank)}</b> ${esc(x.m.name)}</span><div class="ph">${cfLine(x.cf)}</div></div></div>`).join("")}</div>`:`<p class="note" style="color:var(--s-onhand)">✓ No conflicts on the event date.</p>`})()}
       <label class="tog" style="margin:8px 0"><input type="checkbox" id="evOnly"${evOnly?" checked":""}> Show who still owes only</label>
       <div class="row2"><a class="btn" href="${esc(smsHref(evText(ev)))}">Text owe list</a><button class="btn alt" id="evCopy">Copy</button></div>`;
     const groups=SECTIONS.map(s=>s[0]).concat("ATT").map(k=>[k,sorted(req.filter(m=>m.sec===k))]).filter(g=>g[1].length);
@@ -2490,7 +2520,10 @@ document.addEventListener("click",e=>{
   if(e.target.id==="caCancel"){calAdd=false;renderCal();return}
   if(e.target.id==="caSave"){const who=e.target.dataset.cafor||($("#caWho")||{}).value||"";const d=$("#caD").value,ti=($("#caTi").value||"").trim().slice(0,60);if(!who){toast("Pick who.");return}if(!d){toast("Pick a date.");return}if(!ti){toast("Say what it is.");return}
     const end=$("#caE").value;const e2={d,tm:$("#caT").value||"",end:end&&end>d?end:"",ty:$("#caTy").value,ti,no:($("#caNo").value||"").trim().slice(0,80)};
-    const ms=who.startsWith("SEC:")?S.roster.filter(m=>m.sec===who.slice(4)):S.roster.filter(m=>m.id===who);ms.forEach(m=>{m.cal=(m.cal||[]).concat(Object.assign({id:"c"+Date.now().toString(36)+rndId(3)},e2)).filter(x=>(x.end||x.d)>=dkey(new Date(Date.now()-120*86400000)))});
+    const ms=who.startsWith("SEC:")?S.roster.filter(m=>m.sec===who.slice(4)):S.roster.filter(m=>m.id===who);
+    if(armed!=="caforce"){const hits=[];for(const m of ms)for(const k of daysIn(d,e2.end,31)){const cf=busyOn(m,k,{});if(cf.length)hits.push({m,k,cf})}
+      if(hits.length){armed="caforce";const w=$("#caWarn");if(w)w.innerHTML=`<div class="panel" style="margin:6px 0;border-color:var(${hits.some(x=>x.cf.some(y=>y.hard))?"--warn":"--s-duty"})"><b>⚠ ${hits.length} conflict${hits.length>1?"s":""}</b>${hits.slice(0,8).map(x=>`<div class="ph">${ms.length>1?esc(x.m.rank+" "+lastOf(x.m))+" · ":""}${DOW[parseD(x.k).getDay()]} ${short(parseD(x.k))}: ${cfLine(x.cf)}</div>`).join("")}${hits.length>8?`<div class="ph">+${hits.length-8} more</div>`:""}</div>`;e.target.textContent="Add anyway";return}}
+    armed=null;ms.forEach(m=>{m.cal=(m.cal||[]).concat(Object.assign({id:"c"+Date.now().toString(36)+rndId(3)},e2)).filter(x=>(x.end||x.d)>=dkey(new Date(Date.now()-120*86400000)))});
     save();calAdd=false;calDay=d;toast("Added for "+(ms.length>1?ms.length+" people":ms[0].rank+" "+lastOf(ms[0])));const y=window.scrollY;render();window.scrollTo(0,y);return}
   const cdl=e.target.closest("[data-cdel]");if(cdl){const [mid,cid]=cdl.dataset.cdel.split(":");if(armed==="cd"+cid){const m=S.roster.find(x=>x.id===mid);if(m)m.cal=(m.cal||[]).filter(x=>x.id!==cid);armed=null;save()}else armed="cd"+cid;const y=window.scrollY;render();window.scrollTo(0,y);return}
   if(e.target.id==="caIcs"){const from=dkey(),to=dkey(new Date(Date.now()+180*86400000));const list=calEntries(from,to,calSec);if(!list.length){toast("Nothing coming up.");return}shareFile(icsFor(list,""),"EOP_Calendar_"+(calSec==="ALL"?"All":calSec)+".ics","text/calendar");return}
@@ -2522,7 +2555,7 @@ document.addEventListener("click",e=>{
     fdEnc(f.ek,o).then(ct=>SB.rpc("feed_req",{p_feed:f.id,p_member_key:f.mk,p_ct:ct})).then(()=>{f.myReqs=[{rid:o.rid,ty:o.ty,from:o.from,to:o.to,tm:o.tm,t:Date.now()}].concat(f.myReqs||[]).slice(0,30);fdReqForm=false;save();renderFeed();toast("Request sent")})
       .catch(err=>{e.target.disabled=false;e.target.textContent="Send request";toast(/find the function/i.test(err.message)?"Requests aren't set up on the server yet. Tell your leader to run System check.":"Couldn't send. Check signal and try again.")});return}
   const rqo=e.target.closest("[data-rqok],[data-rqno]");if(rqo){if(!canEdit())return denyMsg();const id=rqo.dataset.rqok||rqo.dataset.rqno;const r=S.reqs.find(x=>x.rid===id);if(!r)return;if(!r.mid){toast("Pick who sent it first.");return}
-    r.dnote=(($("#rqn"+id)||{}).value||"").trim().slice(0,80);if(rqo.dataset.rqok)reqApprove(r);else{r.st="denied";r.dt=Date.now()}r.by=(S.unit||unitName());fdReqOpen=true;save();const y=window.scrollY;renderFeed();window.scrollTo(0,y);toast(r.st==="approved"?"Approved"+(["Leave","Special liberty","Appointment"].includes(r.ty)?" · added to their calendar":""):"Denied");return}
+    r.dnote=(($("#rqn"+id)||{}).value||"").trim().slice(0,80);let freed=[];if(rqo.dataset.rqok)freed=reqApprove(r)||[];else{r.st="denied";r.dt=Date.now()}if(freed.length)setTimeout(()=>toast("Duty now open: "+freed.join(", ")+". Fill it in DUTY."),2300);r.by=(S.unit||unitName());fdReqOpen=true;save();const y=window.scrollY;renderFeed();window.scrollTo(0,y);toast(r.st==="approved"?"Approved"+(["Leave","Special liberty","Appointment"].includes(r.ty)?" · added to their calendar":""):"Denied");return}
   if(e.target.id==="pdOpen"){fdPod=true;const y=window.scrollY;renderFeed();window.scrollTo(0,y);return}
   if(e.target.id==="pdCancel"){fdPod=false;renderFeed();return}
   if(e.target.id==="pdPost"){const f=fdCur();const o={d:$("#pdD").value,f:($("#pdF").value||"").trim(),u:($("#pdU").value||"").trim(),s:($("#pdS").value||"").trim(),du:($("#pdDu").value||"").trim(),n:($("#pdN").value||"").trim()};if(!o.d){toast("Pick the date.");return}
