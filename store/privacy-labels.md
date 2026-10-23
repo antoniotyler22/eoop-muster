@@ -12,6 +12,11 @@ These match how the app works today. Re-check them if features change.
 - **Is all of the user data collected by your app encrypted in transit?** Yes (HTTPS, plus end-to-end encryption for shared features).
 - **Do you provide a way for users to request that their data is deleted?** Yes: DATA → "Erase all app data on this phone" and "Delete cloud copy"; relay data expires automatically (72 hours to 120 days).
 
+## If you turn on Ask (AI)
+Questions a person types are sent to a third-party AI service (Anthropic) to generate an answer. They aren't stored or linked to the person, but to be safe declare it:
+- Apple: Data collected → **Other User Content**, used for **App Functionality**, **not linked** to identity, **not used for tracking**.
+- Google: Data shared → **Other in-app messages / user-generated content**, processed ephemerally, for **App functionality**.
+
 ## Permissions the app may ask for
 - Notifications (optional): push alerts for check-ins, section updates and new word in FEED.
 - Camera: not used by the app itself; members scan the formation QR code with their phone's own camera.

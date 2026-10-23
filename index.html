@@ -522,7 +522,7 @@ const SVAR={"On Hand":"--s-onhand","Appointment on Base":"--s-aob","Appointment 
 const PRESENT=["On Hand","Appointment on Base","Company Duties"];
 const SECTIONS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
 const DEF_SECS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
-const RESERVED=["BOARD","ATT","PT","W6","TEXT","DATA","MUSTER","ALERTS","RECALL","EVENTS","ARMORY","ROLLUP","LIVE","SEND","FEED","TRENDS","READY","DUTY","P","CAL","LOG","ME","SYS","TODAY"];
+const RESERVED=["BOARD","ATT","PT","W6","TEXT","DATA","MUSTER","ALERTS","RECALL","EVENTS","ARMORY","ROLLUP","LIVE","SEND","FEED","TRENDS","READY","DUTY","P","CAL","LOG","ME","SYS","TODAY","ASK"];
 const MIL_SECS=DEF_SECS.map(s=>s.slice());
 let secDraft=null;
 /* ---------- versions: one app, five vocabularies ---------- */
@@ -572,7 +572,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="2.7.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="2.8.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -709,7 +709,7 @@ S.rcMiss=Array.isArray(S.rcMiss)?S.rcMiss:[];if(S.rcRev&&!Array.isArray(S.rcRev.
 S.rc=Object.assign({open:false,start:0,end:0,res:{},att:true,only:false,ci:{}},S.rc||{});if(!S.rc.ci||typeof S.rc.ci!=="object")S.rc.ci={};
 S.bc=Array.isArray(S.bc)?S.bc:[];
 S.feeds=Array.isArray(S.feeds)?S.feeds:[];
-S.days=S.days&&typeof S.days==="object"?S.days:{};S.log=Array.isArray(S.log)?S.log:[];S.reqs=Array.isArray(S.reqs)?S.reqs:[];if(S.me&&typeof S.me!=="object")S.me=null;S.secCal=S.secCal&&typeof S.secCal==="object"?S.secCal:{};if(S.sync&&typeof S.sync!=="object")S.sync=null;
+S.days=S.days&&typeof S.days==="object"?S.days:{};S.log=Array.isArray(S.log)?S.log:[];S.reqs=Array.isArray(S.reqs)?S.reqs:[];S.ask=Array.isArray(S.ask)?S.ask:[];if(S.me&&typeof S.me!=="object")S.me=null;S.secCal=S.secCal&&typeof S.secCal==="object"?S.secCal:{};if(S.sync&&typeof S.sync!=="object")S.sync=null;
 S.ready=S.ready&&typeof S.ready==="object"?S.ready:{};S.duty=Object.assign({rosters:[]},S.duty||{});if(!Array.isArray(S.duty.rosters))S.duty.rosters=[];S.tl=S.tl&&typeof S.tl==="object"?S.tl:{};
 S.roll=Object.assign({units:{},own:true,name:""},S.roll||{});if(!S.roll.units||typeof S.roll.units!=="object")S.roll.units={};
 S.mus=Object.assign({open:false,seen:{},inc:["On Hand"],att:true,only:false,last:null},S.mus||{});
@@ -719,7 +719,7 @@ function save(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.
 
 let view="board", armed=null, query="";
 const h0=(location.hash||"").slice(1).toLowerCase();
-if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty","cal","log","me","sys","today"].includes(h0)) view=h0;
+if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty","cal","log","me","sys","today","ask"].includes(h0)) view=h0;
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -782,6 +782,7 @@ function renderBoard(){
       ${(()=>{const r=S.duty.rosters[0];const t=r&&r.assign[dkey()];const m=t&&S.roster.find(x=>x.id===t);return `<button class="bigbtn" data-go="duty"><b>DUTY</b><span>${r?(m?"Today: "+esc(m.rank+" "+lastOf(m)):"Not assigned today"):"Duty roster"}</span></button>`})()}
       ${(()=>{const t=calOn(dkey()).length;return `<button class="bigbtn" data-go="cal"><b>CALENDAR</b><span>${t?t+" today":"Nothing today"}</span></button>`})()}
       ${(()=>{const n=S.log.filter(x=>x.d===dkey()).length;const st=logStreak();return `<button class="bigbtn${n?" live":""}" data-go="log"><b>MY LOG</b><span>${n?n+" today":"Log today"}${st>1?" · 🔥"+st:""}</span></button>`})()}
+      <button class="bigbtn" data-go="ask"><b>ASK</b><span>Orders, admin, anything</span></button>
       <button class="bigbtn" data-go="trends"><b>TRENDS</b><span>Numbers over time</span></button>
       ${S.me?`<button class="bigbtn live" data-go="me"><b>MY PAGE</b><span>${S.me.d?esc(S.me.d.statusShort):"Your info"}</span></button>`:""}
       ${(()=>{const a=bcActive();if(!a)return `<button class="bigbtn" data-go="send"><b>SEND</b><span>Message with read receipts</span></button>`;const st=bcStats(a);
@@ -1293,6 +1294,42 @@ function joinPrompt(q){const bid=(q.get("join")||"").replace(/[^a-z0-9]/g,"").sl
     <button class="btn" id="jYes">Link and send now</button><button class="btn alt" data-sclose="1">Not now</button></div>`;
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));try{history.replaceState(null,"",location.pathname)}catch(e){}}
 
+/* ---------- ASK: questions about orders, admin and anything military ---------- */
+let akBusy=false,akDraft="",akErr="";
+const AK_EX={military:["How many days of leave can I carry over at the end of the fiscal year?","What are the PFT pull-up and run standards for a male Marine age 22?","What's the process for requesting special liberty?","What does the leave order say about leave en route on PCS?","How do I start a Tuition Assistance request?"],
+ police:["What are OSHA rules for bloodborne pathogen exposure on duty?","What does FLSA say about overtime for officers?"],
+ jobs:["When is fall protection required on a job site?","How often do forklift operators need re-evaluation?"],
+ hr:["What does FMLA cover and who qualifies?","How long must I keep I-9 forms?"],
+ civilian:["What should be in a group emergency kit?","How do I plan a safe outdoor event in heat?"]};
+function akPII(q){if(/\b\d{3}-\d{2}-\d{4}\b/.test(q))return "That looks like a Social Security number.";if(/\b\d{9,10}\b/.test(q))return "That looks like an ID number (SSN or EDIPI).";
+  if((q.match(PH_RE)||[]).length)return "That looks like a phone number.";if(/@[a-z0-9.-]+\.[a-z]{2,}/i.test(q))return "That looks like an email address.";
+  if(S.source!=="sample"){const U=" "+q.toUpperCase().replace(/[^A-Z]/g," ")+" ";for(const m of S.roster){const l=lastOf(m);if(l.length>=4&&U.includes(" "+l+" ")&&!["SMITH","JONES","BROWN"].includes(l)&&!/^(LEAVE|DUTY|ORDER|RANGE|MARINE)$/.test(l))return "It includes a name from your roster ("+l+")."}}return ""}
+function akFmt(t){return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[-•*]\s+/gm,"• ").replace(/\n/g,"<br>")}
+async function akSend(q){akBusy=true;akErr="";renderAsk();
+  const hist=S.ask.slice(0,2).reverse().map(x=>({q:x.q,a:x.a}));const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),75000);
+  try{const r=await fetch(SB.url+"/functions/v1/ask",{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify({q,mode:MODES[S.mode]?S.mode:"military",hist}),signal:ac.signal});
+    let o={};try{o=await r.json()}catch(e){}
+    if(r.status===404)throw new Error("Ask isn't set up on your server yet. Leader: DATA → System check.");
+    if(r.status===401||r.status===403)throw new Error("Ask is set up but JWT checking is on. Leader: turn off Enforce JWT verification for the ask function.");
+    if(!r.ok||o.error)throw new Error(o.error||"Something went wrong. Try again.");
+    S.ask.unshift({q,a:String(o.answer||""),src:Array.isArray(o.sources)?o.sources.slice(0,6):[],t:Date.now()});S.ask=S.ask.slice(0,30);akDraft="";save()}
+  catch(e){akErr=e.name==="AbortError"?"That took too long. Try again or shorten the question.":String(e.message||e)}
+  finally{clearTimeout(tm);akBusy=false;if(view==="ask"){renderAsk();window.scrollTo(0,0)}}}
+function renderAsk(){const ex=AK_EX[MODES[S.mode]?S.mode:"military"]||AK_EX.military;
+  let h=`<h2>💬 Ask</h2><div class="panel"><label for="akQ">Ask about orders, admin, leave, pay, fitness, anything ${S.mode&&S.mode!=="military"?"for your team":"military"}</label>
+    <textarea id="akQ" maxlength="600" style="min-height:80px" placeholder="${esc(ex[0])}"${akBusy?" disabled":""}>${esc(akDraft)}</textarea>
+    <button class="btn" id="akGo"${akBusy?" disabled":""}>${akBusy?"Searching official sources…":"Ask"}</button>
+    ${akErr?`<div class="note" style="color:var(--warn);font-weight:700">${esc(akErr)}</div>`:""}
+    <p class="note">Searches official sources (.mil and .gov) and shows them. <b>Answers can be wrong or out of date: check the order or your admin shop before acting.</b> Don't type names, SSNs, phone numbers or anything sensitive or classified. Not official guidance.</p></div>`;
+  if(!S.ask.length)h+=`<h2>Try</h2><div class="alist">${ex.map(x=>`<button class="rrow" data-akex="${esc(x)}" style="text-align:left;cursor:pointer">${esc(x)}</button>`).join("")}</div>`;
+  h+=S.ask.map((x,i)=>`<div class="panel"><div class="note"><b>You</b> · ${ago(x.t)}</div><div style="font-weight:700">${esc(x.q)}</div>
+    <div style="line-height:1.5">${akFmt(x.a)}</div>
+    ${x.src.length?`<div class="note"><b>Sources</b>${x.src.map(s2=>`<div>• <a href="${esc(s2.url)}" target="_blank" rel="noopener">${esc(s2.title||s2.url)}</a></div>`).join("")}</div>`:`<div class="note" style="color:var(--s-duty)">No official source was cited for this answer. Verify it.</div>`}
+    <div class="row2"><button class="btn alt" data-akcopy="${i}">Copy</button>${navigator.share?`<button class="btn alt" data-akshare="${i}">Share</button>`:`<button class="btn alt" data-akdel="${i}">Remove</button>`}</div></div>`).join("");
+  if(S.ask.length)h+=`<button class="btn alt" id="akClear" style="width:100%;margin-top:8px">${armed==="akclr"?"Tap again to clear your questions":"Clear my questions"}</button><p class="note">Your questions stay on this phone only.</p>`;
+  $("#main").innerHTML=h}
+function akText(x){return "Q: "+x.q+"\n\n"+x.a+(x.src.length?"\n\nSources:\n"+x.src.map(s2=>"- "+(s2.title||"")+" "+s2.url).join("\n"):"")+"\n\n(Answer from EOP Numbers Ask. Verify with the current order.)"}
+
 /* ---------- TODAY: the member's daily home screen ---------- */
 let tdLast=0;
 function memberMode(){return !S.leaderMode&&S.source==="sample"&&!S.board&&!S.link&&!S.feeds.some(f=>f.lk)&&(!!S.me||S.feeds.some(f=>!f.lk))}
@@ -1335,7 +1372,7 @@ function renderToday(){const D=S.me&&S.me.d;const mf=S.feeds.filter(f=>!f.lk);
   const lt=S.log.filter(x=>x.d===k);const st=logStreak();
   h+=`<h2>📝 My log ${st>1?`<span class="note" style="font-weight:700">🔥 ${st}-day streak</span>`:""}</h2><div class="panel">${lt.length?lt.map(x=>`<div>• ${esc(x.txt)}</div>`).join(""):`<div class="note">What did you get done today?</div>`}
     <div class="addph"><input type="text" id="tdLog" maxlength="500" placeholder="${lt.length?"Add another…":"Led PMCS on 3 dozers…"}"><button id="tdLogAdd">Add</button></div></div>`;
-  h+=`<div class="row2" style="margin-top:12px">${mf.length?`<button class="btn alt" data-go="feed">FEED</button>`:"<span></span>"}${S.me?`<button class="btn alt" data-go="me">My page</button>`:`<button class="btn alt" data-go="log">My log</button>`}</div>
+  h+=`<button class="btn alt" data-go="ask" style="width:100%;margin-top:12px">💬 Ask a question (orders, leave, pay, PFT…)</button><div class="row2" style="margin-top:8px">${mf.length?`<button class="btn alt" data-go="feed">FEED</button>`:"<span></span>"}${S.me?`<button class="btn alt" data-go="me">My page</button>`:`<button class="btn alt" data-go="log">My log</button>`}</div>
     ${memberMode()?`<p class="note" style="text-align:center;margin-top:14px"><button class="chip" id="tdLeader" style="cursor:pointer">I'm a leader: show leader tools</button></p>`:""}`;
   $("#main").innerHTML=h}
 
@@ -1399,6 +1436,7 @@ const HELP={
  cal:["Calendar","Everyone's dates in one place.",["Leave, TAD, duty, due-outs, events, EDD and EAS show up by themselves.","+ Add puts an appointment on a person or a whole section.","Section leaders see their section; what they add reaches the OIC.","Add these to my phone calendar sends them to your phone's calendar."]],
  log:["My log","Write down what you got done each day.",["Add as many entries a day as you want; tag them.","Look back by week, month or all time; search.","Copy as bullets for fitreps, evals and awards, or export to Excel."]],
  me:["My page","Your own status, duty, due-outs and calendar from your leader.",["It updates by itself when your leader changes something.","Add to phone calendar puts your dates in your phone's calendar.","Only you can read it."]],
+ ask:["Ask","Questions about orders, admin, leave, pay, fitness and more.",["Type a question; it searches official .mil and .gov sources and lists them.","Check the source before acting: answers can be wrong or out of date.","Never type names, SSNs, phone numbers or anything sensitive.","Your questions stay on this phone."]],
  sys:["System check","Tests your server setup.",["Run it; anything with ❌ shows which part to copy and paste in Supabase SQL Editor.","Safe to re-run any part."]],
  data:["Data and setup","Roster files, tabs, security, backup, live features and help.",["Load your MOL list or Excel; export everything to Excel.","Turn on backup and save your recovery code.","PIN lock encrypts the data on this phone."]]};
 function helpFor(v){if(HELP[v])return HELP[v];if(v==="att"||SECTIONS.some(x=>x[0].toLowerCase()===v))return HELP.sec;return HELP.board}
@@ -1425,7 +1463,11 @@ async function scRun(){scBusy=true;scRes={at:Date.now(),g:{},nt:null};renderSys(
   await Promise.all(SC.map(async g=>{const r=await Promise.all(g.t.map(one));scRes.g[g.k]={ok:r.every(x=>x.ok),miss:r.filter(x=>x.miss).map(x=>x.fn),perm:r.filter(x=>x.perm).map(x=>x.fn),net:r.some(x=>x.net)}}));
   const nt={};try{const r=await fetch(SB.url+"/functions/v1/notify",{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:"{}"});nt.s=r.status;nt.t=(await r.text()).slice(0,120);
     if(r.status===400&&/bad/.test(nt.t)){const r2=await fetch(SB.url+"/functions/v1/notify",{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify({feed:"aaaaaaaaaa",lk:"a".repeat(24)})});nt.s2=r2.status;nt.t2=(await r2.text()).slice(0,60)}}catch(e){nt.err=String(e.message||e)}
-  scRes.nt=nt;scBusy=false;renderSys()}
+  scRes.nt=nt;{const ak={};try{const r=await fetch(SB.url+"/functions/v1/ask",{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify({ping:1})});ak.s=r.status;try{Object.assign(ak,await r.json())}catch(e){}}catch(e){ak.err=1}scRes.ak=ak}
+  scBusy=false;renderSys()}
+function akState(a){if(!a)return null;if(a.err)return {ok:0,msg:"Couldn't reach it. Check signal."};if(a.s===404)return {ok:0,msg:"Optional. Not set up: create the Edge Function named ask, add ANTHROPIC_API_KEY, run part 10."};
+  if(a.s===401||a.s===403)return {ok:0,msg:"JWT checking is on. Open ask → Details and turn off Enforce JWT verification."};if(a.s>=500)return {ok:0,msg:"It crashed. Usually the code was cut off when pasted."};
+  if(a.ok&&!a.key)return {ok:0,msg:"Deployed, but the ANTHROPIC_API_KEY secret is missing."};if(a.ok&&!a.db)return {ok:0,msg:"Deployed, but the usage table is missing. Run part 10."};if(a.ok)return {ok:1,msg:"Ready."};return {ok:0,msg:"Unexpected answer ("+a.s+")."}}
 function ntState(nt){if(!nt)return null;if(nt.err)return {ok:0,msg:"Couldn't reach it. Check signal."};if(nt.s===404)return {ok:0,msg:"Not deployed. Create the Edge Function named notify."};
   if(nt.s===401||nt.s===403)return {ok:0,msg:"JWT checking is on. Open notify → Details and turn off Enforce JWT verification."};
   if(nt.s>=500)return {ok:0,msg:"It crashed. Usually the VAPID_PUBLIC / VAPID_PRIVATE secrets are missing, or the code was cut off when pasted."};
@@ -1439,6 +1481,7 @@ function renderSys(){let h=`<h2>System check</h2><div class="panel"><p class="no
     h+=`<div class="alist">${SC.map(g=>{const r=scRes.g[g.k];return `<div class="rrow" style="--sc:var(${r.ok?"--s-onhand":"--warn"})"><div class="rtop"><div class="who"><b>${r.ok?"✅":"❌"} ${esc(g.n)}</b>${r.ok?"":`<div class="ph">${r.net?"Couldn't reach the server. Check signal and run again.":r.perm.length?"Permissions missing ("+r.perm.join(", ")+"). Run the last part again.":"Missing: "+r.miss.join(", ")}</div>`}</div></div>
       ${r.ok||r.net?"":`<div class="note">Run these in Supabase → SQL Editor, one at a time (New query → paste → Run). Safe to re-run.</div><div class="evts">${g.f.map((f,i)=>`<button data-scf="${f}">Copy part ${i+1} of ${g.f.length}</button>`).join("")}</div>`}</div>`}).join("")}
       <div class="rrow" style="--sc:var(${nt.ok?"--s-onhand":"--warn"})"><div class="who"><b>${nt.ok?"✅":"❌"} Push alerts (notify function)</b><div class="ph">${esc(nt.msg)}</div></div>${nt.ok?"":`<button class="btn alt" id="scNt">Copy notify code</button><p class="note">Also check Edge Functions → Secrets has VAPID_PUBLIC and VAPID_PRIVATE.</p>`}</div></div>
+    ${(()=>{const a=akState(scRes.ak);return a?`<h2>Ask (AI) · optional</h2><div class="rrow" style="--sc:var(${a.ok?"--s-onhand":"--s-duty"})"><div class="who"><b>${a.ok?"✅":"○"} Ask questions</b><div class="ph">${esc(a.msg)}</div></div>${a.ok?"":`<div class="evts"><button data-scf="10_ask">Copy part 10 (SQL)</button><button id="scAsk">Copy ask code</button></div>`}</div>`:""})()}
     <h2>Server protection</h2><div class="panel"><p class="note">Limits that stop anyone from flooding your free server, and a nightly cleanup of expired data. The app can't test these from here; run each once.</p><div class="evts">${["09a_limits","09b_limits_apply","09c_cleanup"].map((f,i)=>`<button data-scf="${f}">Copy part ${i+1} of 3</button>`).join("")}</div><p class="note">If part 3 errors, turn on <b>pg_cron</b> in Database → Extensions, then run it again.</p></div>`}
   $("#main").innerHTML=h}
 
@@ -1599,7 +1642,7 @@ async function exportXL(kind){try{const X=await loadXLSX();const wb=X.utils.book
 const xlBtn=k=>`<button class="chip" data-xl="${k}" style="cursor:pointer;font-size:13px">⬇ Excel</button>`;
 
 /* ---------- backup + sync: encrypted with a recovery code; server stores an unreadable blob ---------- */
-const SYNC_SKIP=["sync","pushOn","link","ts","onb","role","me"];const CODE_AB="23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+const SYNC_SKIP=["sync","pushOn","link","ts","onb","role","me","ask"];const CODE_AB="23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 let syncT=null,syncBusy=false,syncShow=false;
 const fnv=str=>{let h=0x811c9dc5;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)}return (h>>>0).toString(36)+str.length.toString(36)};
 const sig=v=>fnv(JSON.stringify(v===undefined?null:v));
@@ -2397,7 +2440,7 @@ document.addEventListener("click",e=>{
   if(S.role==="view"&&e.target.closest("[data-pick],[data-rm],#addf button,[data-mtog],[data-mall],[data-r],[data-evtog],[data-evall],[data-ws],[data-rddone],[data-pdone],#caSave,[data-cdel],#fdPost,[data-fdpin],[data-fddel],#bcGo,#reset,#tabSave,#mStart,#rcStart,#dGen,#dRedo,[data-dpick],#pNoteAdd,[data-mpon],#lvOn,#fdCreate")){e.stopImmediatePropagation();e.preventDefault();denyMsg();return}
   if(e.target.closest("#bMode,[data-mode-open]")){e.stopImmediatePropagation();openModeSheet();return}
   const mo=e.target.closest("[data-mopt]");if(mo){e.stopImmediatePropagation();const k=mo.dataset.mopt;const wasFirst=sheetCtx&&sheetCtx.first;closeSheet();if(!S.mode){S.mode=k==="military"?"military":S.mode;save()}
-    if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty","p","cal","log","me","sys","today"].includes(view))view="board";render();window.scrollTo(0,0);if(!wasFirst)toast(MODES[k].name+" version on. Same people, new labels.")}if(wasFirst&&!S.onb)setTimeout(()=>showOnb(0),300);return}
+    if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty","p","cal","log","me","sys","today","ask"].includes(view))view="board";render();window.scrollTo(0,0);if(!wasFirst)toast(MODES[k].name+" version on. Same people, new labels.")}if(wasFirst&&!S.onb)setTimeout(()=>showOnb(0),300);return}
   const msh=e.target.closest("[data-mshare]");if(msh){e.stopImmediatePropagation();shareMode(msh.dataset.mshare);return}
   const pk=e.target.closest("[data-pick]");if(pk){e.stopImmediatePropagation();openSheet(pk.dataset.pick,pk.dataset.pid);return}
   if(e.target.closest("[data-sclose]")){e.stopImmediatePropagation();closeSheet();return}
@@ -2410,7 +2453,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetCtx)closeSheet
 document.addEventListener("dragleave",e=>{const d=$("#rcDrop");if(d&&!e.relatedTarget)d.classList.remove("over")});
 document.addEventListener("drop",e=>{if(view!=="recall"&&view!=="data")return;const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;e.preventDefault();const d=$("#rcDrop");if(d)d.classList.remove("over");rcLoadFile(f,view==="recall"?"#rcOutR":"#rcOut")});
 function render(){renderTabs();
-  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="rollup")renderRollup();else if(view==="live")renderLive();else if(view==="send")renderSend();else if(view==="feed")renderFeed();else if(view==="trends")renderTrends();else if(view==="ready")renderReady();else if(view==="duty")renderDuty();else if(view==="p")renderPerson();else if(view==="cal")renderCal();else if(view==="log")renderLog();else if(view==="me")renderMe();else if(view==="sys")renderSys();else if(view==="today")renderToday();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
+  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="rollup")renderRollup();else if(view==="live")renderLive();else if(view==="send")renderSend();else if(view==="feed")renderFeed();else if(view==="trends")renderTrends();else if(view==="ready")renderReady();else if(view==="duty")renderDuty();else if(view==="p")renderPerson();else if(view==="cal")renderCal();else if(view==="log")renderLog();else if(view==="me")renderMe();else if(view==="sys")renderSys();else if(view==="today")renderToday();else if(view==="ask")renderAsk();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
 
 /* ---------- CSV import ---------- */
 function parseCSV(text){const rows=[];let row=[],f="",q=false;
@@ -2545,6 +2588,13 @@ document.addEventListener("click",e=>{
   if(e.target.id==="meIcs"){const D=S.me&&S.me.d;if(!D||!D.cal.length){toast("Nothing coming up.");return}shareFile(icsFor(D.cal,D.name),"My_calendar.ics","text/calendar");return}
   if(e.target.id==="meOff"){if(armed==="meoff"){S.me=null;armed=null;save();view="board";render();toast("Removed")}else{armed="meoff";renderMe()}return}
   if(e.target.id==="scGo"){scRun();return}
+  if(e.target.id==="akGo"){const q=($("#akQ").value||"").trim();akDraft=q;if(q.length<3){toast("Type a question.");return}const bad=akPII(q);if(bad){akErr=bad+" Remove it and ask again.";renderAsk();return}akSend(q);return}
+  const akx=e.target.closest("[data-akex]");if(akx){akDraft=akx.dataset.akex;renderAsk();const t=$("#akQ");if(t)t.focus();return}
+  const akc=e.target.closest("[data-akcopy]");if(akc){const x=S.ask[+akc.dataset.akcopy];try{navigator.clipboard.writeText(akText(x)).then(()=>toast("Copied"),()=>toast("Copy blocked here."))}catch(err){toast("Copy blocked here.")}return}
+  const aks=e.target.closest("[data-akshare]");if(aks){navigator.share({text:akText(S.ask[+aks.dataset.akshare])}).catch(()=>{});return}
+  const akd=e.target.closest("[data-akdel]");if(akd){S.ask.splice(+akd.dataset.akdel,1);save();renderAsk();return}
+  if(e.target.id==="akClear"){if(armed==="akclr"){S.ask=[];armed=null;save()}else armed="akclr";renderAsk();return}
+  if(e.target.id==="scAsk"){(async()=>{try{const r=await fetch("supabase/functions/ask/index.ts",{cache:"no-cache"});await navigator.clipboard.writeText(await r.text());toast("ask code copied. Edge Functions → new function named ask → paste → Deploy.")}catch(err){toast("Copy blocked here.")}})();return}
   if(e.target.closest("#bToday")){view="today";armed=null;tdLast=0;render();window.scrollTo(0,0);return}
   const tda=e.target.closest("[data-tdack]");if(tda){const [fid,pid2]=tda.dataset.tdack.split("|");const f=S.feeds.find(x=>x.id===fid);if(!f)return;tda.disabled=true;fdAck(f,+pid2,1).then(()=>{const y=window.scrollY;renderToday();window.scrollTo(0,y);toast("Got it sent")}).catch(err=>{tda.disabled=false;toast(/gone/.test(String(err&&err.message))?"That post was deleted.":"Couldn't send. Check signal and try again.")});return}
   if(e.target.id==="tdLogAdd"){const t=($("#tdLog").value||"").trim();if(!t){toast("Write what you got done.");return}S.log.push({id:"l"+Date.now().toString(36),d:dkey(),t:Date.now(),txt:t.slice(0,500),tag:logTag||"Other"});save();const y=window.scrollY;renderToday();window.scrollTo(0,y);toast(logStreak()>1?"Logged · 🔥 "+logStreak()+"-day streak":"Logged");return}
@@ -2742,6 +2792,7 @@ document.addEventListener("input",e=>{
   if(e.target.id==="wWhen"){W.when=e.target.value;refreshW();return}
   if(e.target.id==="ptEvt"||e.target.id==="ptWhen"){S.pt[e.target.id==="ptEvt"?"event":"when"]=e.target.value;save();const a=$("#ptSms");if(a)a.href=smsHref(ptText());document.querySelectorAll("[data-evt]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.evt===S.pt.event));return}
   if(e.target.id==="fdTxt"){fdDraft.txt=e.target.value;return}
+  if(e.target.id==="akQ"){akDraft=e.target.value;return}
   if(e.target.id==="lgQ"){logQ=e.target.value;const pos=e.target.selectionStart;renderLog();const q=$("#lgQ");if(q){q.focus();q.setSelectionRange(pos,pos)}return}
   if(e.target.id==="fdQ"){fdQ=e.target.value;const pos=e.target.selectionStart;renderFeed();const q=$("#fdQ");if(q){q.focus();q.setSelectionRange(pos,pos)}return}
   if(e.target.id==="bcMsg"){bcDraft.msg=e.target.value;const l=$("#bcLen");if(l)l.textContent=e.target.value.length+"/300";return}
@@ -2860,7 +2911,7 @@ if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("messag
 document.addEventListener("click",e=>{if(e.target.id==="updNow")location.reload()});
 if("serviceWorker" in navigator&&document.querySelector("link[rel=manifest]")&&(location.protocol==="https:"||location.hostname==="localhost")){navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(()=>{const o=document.getElementById("offStat");if(o&&navigator.serviceWorker.controller)o.textContent="Ready: this app opens and works with no signal. Text reports once you have service."}).catch(()=>{})}
 setInterval(()=>{if(view==="recall"&&S.rc.open){const c=document.querySelector(".mbar .ct small");if(c)c.textContent="contacted · "+Math.round((Date.now()-S.rc.start)/60000)+" min"}},20000);
-window.addEventListener("hashchange",()=>{{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){joinPrompt(q);return}if(q.get("feed")){fdJoinPrompt(q);return}if(q.get("sync")){syncJoinPrompt(q.get("sync"),q.get("r"));return}if(q.get("me")){mePrompt(q);return}}const h=(location.hash||"").slice(1).toLowerCase();if(["recall","rollup","board","muster","alerts","live","send","feed","today","me","log","cal"].includes(h)&&h!==view){view=h;armed=null;render();window.scrollTo(0,0);if(h==="feed")fdPollAll(true)}});
+window.addEventListener("hashchange",()=>{{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){joinPrompt(q);return}if(q.get("feed")){fdJoinPrompt(q);return}if(q.get("sync")){syncJoinPrompt(q.get("sync"),q.get("r"));return}if(q.get("me")){mePrompt(q);return}}const h=(location.hash||"").slice(1).toLowerCase();if(["recall","rollup","board","muster","alerts","live","send","feed","today","me","log","cal","ask"].includes(h)&&h!==view){view=h;armed=null;render();window.scrollTo(0,0);if(h==="feed")fdPollAll(true)}});
 setInterval(()=>{const d=$("#dtg");if(d)d.textContent="AS OF "+dtg()},30000);
 </script>
 </body></html>
