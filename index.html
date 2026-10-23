@@ -1305,12 +1305,12 @@ function liveStrip(){const B=S.board;if(!B)return `<button class="att" data-go="
   return `<button class="att" data-go="live" style="text-align:left;width:100%;cursor:pointer"><div><div class="lbl">● Live sections</div><div class="note" style="display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:4px">${SECTIONS.map(([k])=>{const r=B.last[k];const old=r&&Date.now()-r.t>4*3600000;
     return `<span><b>${k}</b> <span style="color:var(${!r?"--muted":old?"--warn":"--s-onhand"})">${r?ago(r.t):"waiting"}</span></span>`}).join("")}</div></div></button>`}
 function renderLive(){let h=banner();const B=S.board,L=S.link;
-  h+=`<h2>Live section updates</h2>`;
+  h+=`<h2>Live section updates</h2>`;if(!B)h+=accessHTML();
   if(!B){h+=`<div class="panel"><p class="note">Section leaders change their people's statuses on their own phones, and your board updates by itself. You see which section updated, who sent it and when. Names never go to the server: only scrambled codes your phone matches to your roster.</p>
       <button class="btn" id="lvOn">Turn on live updates for my board</button><div class="note" id="lvOut"></div></div>`}
   else{h+=`<div class="panel"><div><b style="color:var(--s-onhand)">● Live</b> · checks every 15 seconds while the app is open${B.err?` · <span style="color:var(--warn)">${esc(B.err)}</span>`:""}</div>
       ${boardPushHTML()}
-      <p class="note">Send each section leader their link. Their section roster loads from your board, so they don't load anything. Every change they make shows up here, and they land in your FEED where you see every post.</p>${hubHTML()}</div>
+      <p class="note">Send each section leader their link. Their section roster loads from your board, so they don't load anything. Every change they make shows up here, and they land in your FEED where you see every post.</p>${hubHTML()}${accessHTML()}</div>
     <div class="alist" style="margin-top:10px">${SECTIONS.map(([k,n])=>{const r=B.last[k];const old=r&&Date.now()-r.t>4*3600000;
       return `<div class="rrow" style="--sc:var(${!r?"--line":old?"--warn":"--s-onhand"})"><div class="rtop"><div class="who"><b>${k}</b> ${esc(n)}
         <div class="ph">${B.rsig&&B.rsig[k]?`<b style="color:var(--s-onhand)">✓ Roster shared</b> · `:S.source==="sample"?"":`Roster sharing… · `}${r?`Updated ${ago(r.t)} (${dtg(new Date(r.t)).slice(0,7)})${r.by?" by "+esc(r.by):""} · ${r.ch} change${r.ch===1?"":"s"}`:"No update yet"}</div>
@@ -1379,6 +1379,13 @@ async function ensureHub(){if(hubBusy||S.role==="view"||!S.board)return;hubBusy=
     S.hubErr="";if(ch){save();rpPublish(true);mpSchedule()}}
   catch(e){const t=String(e.message||e);S.hubErr=/could not find|schema cache|404/i.test(t)?"Server needs setup part 11b.":t.slice(0,80);rawSave()}
   finally{hubBusy=false}}
+function accLink(r){return location.origin+location.pathname+"#sync="+normCode(S.sync.code)+"&r="+r}
+function accessHTML(){if(!isOwner())return"";const R=[["view","View only","Sees everything, changes nothing"],["sncoic","Can edit","Updates statuses, posts, runs musters"],["co","Same as me","Full OIC rights on their phone"]];
+  if(!S.sync||!S.sync.on)return `<div class="panel" style="margin:10px 0 0"><b>Give someone access</b><p class="note">Send a link that puts your whole board on their phone: roster, FEED, Activity, live sections. Pick view only, can edit, or same rights as you.</p><button class="btn" id="accOn">Set up access links</button></div>`;
+  return `<div class="panel" style="margin:10px 0 0"><b>Give someone access</b><p class="note">They open the link and get your board, kept in sync with your phone. Keep these links private.</p>${R.map(([r,l,d])=>`<div class="rrow" style="--sc:var(--line)"><div class="who"><b>${l}</b><div class="ph">${d}</div></div><div class="row2"><a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent(unitName()+" · EOP Numbers: open this to get my board on your phone ("+ROLE_N[r]+"). Keep it private: "+accLink(r)))}">Text link</a><button class="btn alt" data-acccopy="${r}">Copy</button></div></div>`).join("")}
+    <p class="note">To cut someone off later: DATA → Backup and sync → new code, then resend links to the people you keep.</p></div>`}
+document.addEventListener("click",e=>{if(e.target.id==="accOn"){if(!isOwner())return denyMsg();const code=newCode();S.sync={on:true,code,ver:0,at:0,err:"",last:""};save();e.target.disabled=true;e.target.textContent="Setting up…";syncPush(true).then(()=>{if(S.sync&&S.sync.err)toast("Couldn't set up: "+S.sync.err);else toast("Access links ready");render()});return}
+  const ac=e.target.closest("[data-acccopy]");if(ac){const u=accLink(ac.dataset.acccopy);try{navigator.clipboard.writeText(u).then(()=>toast(ROLE_N[ac.dataset.acccopy]+" link copied"),()=>toast(u))}catch(err){toast(u)}return}});
 function hubHTML(){const f=mainFeed();const B=S.board;const err=S.source==="sample"?"Leaders can't get your roster: this phone is on sample Marines. Load your roster in DATA first.":(S.hubErr||(B&&B.rerr)||"");
   const lp=f?(f.posts||[]).filter(p=>p.sl&&Date.now()-p.t<7*86400000).length:0;const mp=S.roster.filter(m=>m.pk).length;
   return `<div class="panel" style="margin:10px 0 0"><b>Your hub</b><div class="note">${err?`<span style="color:var(--warn)">${esc(err)} DATA → System check.</span>`:f&&f.pk?`● One FEED for the unit: <b>${esc(f.unit)}</b>. Section leaders post to it from their link; Marines with My page land in it. You see every post${lp?` · ${lp} from section leaders this week`:""}.${mp?` · ${mp} My page${mp>1?"s":""} on`:""}`:"Setting up your unit FEED…"}</div><div class="row2">${f?`<button class="btn alt" data-go="feed">Open FEED</button>`:""}<button class="btn alt" data-go="act">Activity${actNew()?" · "+actNew()+" new":""}</button></div>${f&&f.pk&&pushOK()&&!f.oicPush?`<button class="btn alt" id="hubPush" style="width:100%">🔔 Buzz my phone when a leader posts in FEED</button>`:f&&f.oicPush?`<p class="note" style="color:var(--s-onhand);font-weight:700">🔔 Alerts on for FEED posts</p>`:""}</div>`}
@@ -1947,8 +1954,8 @@ function mergeRemote(R){const Y=S.sync;const bs=Y.baseSig||{},bm=Y.baseMem||{};
     if(l&&!r){if(!b||sig(l)!==b)out.push(l);return}
     if(!l&&r){if(!b||sig(r)!==b)out.push(r)}};
   (R.roster||[]).forEach(m=>pick(m.id));S.roster.forEach(m=>pick(m.id));S.roster=out;setBase(R)}
-const ROLE_N={oic:"OIC (owner)",sncoic:"SNCOIC (can edit)",view:"View only",newoic:"Incoming OIC"};
-const role=()=>S.role||"oic";const canEdit=()=>role()!=="view";const isOwner=()=>role()==="oic"||role()==="newoic";
+const ROLE_N={oic:"OIC (owner)",co:"Same rights as the OIC",sncoic:"SNCOIC (can edit)",view:"View only",newoic:"Incoming OIC"};
+const role=()=>S.role||"oic";const canEdit=()=>role()!=="view";const isOwner=()=>role()==="oic"||role()==="newoic"||role()==="co";
 function denyMsg(){toast(role()==="view"?"This phone is view-only.":"Only the OIC's phone can do that.")}
 function syncSchedule(){if(!S.sync||!S.sync.on||!canEdit())return;clearTimeout(syncT);syncT=setTimeout(()=>syncPush(),8000)}
 async function syncPush(force){const Y=S.sync;if(!Y||!Y.on||syncBusy||!canEdit())return;if(S.source==="sample"&&!force)return;syncBusy=true;
@@ -1971,7 +1978,7 @@ async function syncRestore(code){const K=await codeKeys(code);const rows=await S
   const R=await openBlob(K,r.ct);return {R,ver:+r.ver,at:Date.parse(r.updated_at)||Date.now()}}
 function applyRestore(code,x,r){const keep={};for(const k of SYNC_SKIP)if(k in S)keep[k]=S[k];
   for(const k of Object.keys(S))if(!SYNC_SKIP.includes(k))delete S[k];Object.assign(S,x.R);
-  S.sync={on:true,code:normCode(code).match(/.{4}/g).join("-"),ver:x.ver,at:x.at,err:"",last:""};S.role=["sncoic","view","newoic"].includes(r)?r:"sncoic";S.onb=true;for(const k of ["pushOn","ts","link"])if(k in keep)S[k]=keep[k];
+  S.sync={on:true,code:normCode(code).match(/.{4}/g).join("-"),ver:x.ver,at:x.at,err:"",last:""};S.role=["sncoic","view","newoic","co"].includes(r)?r:"sncoic";S.onb=true;for(const k of ["pushOn","ts","link"])if(k in keep)S[k]=keep[k];
   setBase(x.R);S.sync.last=sig(syncObj());rawSave();location.replace(location.pathname)}
 function syncHTML(){const Y=S.sync;
   if(!Y||!Y.on)return `<h2>Backup and sync</h2><div class="panel"><p class="note">Back up everything (roster, numbers, feeds, readiness, duty, history) to your server, <b>encrypted on this phone</b> with a recovery code. Restore on a new phone, or keep a second phone (your SNCOIC's) in sync. The server can't read it.</p>
@@ -1983,7 +1990,7 @@ function syncHTML(){const Y=S.sync;
     ${syncShow?`<div style="font-family:ui-monospace,Menlo,monospace;font-size:18px;font-weight:800;letter-spacing:.06em;text-align:center;padding:10px;border:2px dashed var(--brass);border-radius:10px" data-noxl>${esc(Y.code)}</div>
       <p class="note"><b>Write this down or save it in your password manager.</b> Without it, a lost phone means lost data; there is no reset. Anyone with it can read and change your board.</p>
       <div class="row2"><button class="btn alt" id="syCopy">Copy code</button><span></span></div>
-      ${isOwner()?`<div class="note"><b>Add another phone:</b></div><div class="row2">${[["sncoic","SNCOIC (can edit)"],["view","View only"]].map(([r,l])=>`<a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent("EOP Numbers: open this on your phone to link to my board as "+ROLE_N[r]+" (keep it private): "+location.origin+location.pathname+"#sync="+normCode(Y.code)+"&r="+r))}">${l}</a>`).join("")}</div>`:""}`:""}
+      ${isOwner()?`<div class="note"><b>Add another phone:</b></div><div class="row2">${[["co","Same as me"],["sncoic","SNCOIC (can edit)"],["view","View only"]].map(([r,l])=>`<a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent("EOP Numbers: open this on your phone to link to my board as "+ROLE_N[r]+" (keep it private): "+location.origin+location.pathname+"#sync="+normCode(Y.code)+"&r="+r))}">${l}</a>`).join("")}</div>`:""}`:""}
     <div class="note">This phone: <b>${esc(ROLE_N[role()]||role())}</b>. Roles are enforced by the app; anyone holding the recovery code can read the board, so share it only with people you trust.</div>
     <div class="row2"><button class="btn alt" id="syOff">${armed==="syoff"?"Tap again to stop":"Stop on this phone"}</button>${isOwner()?`<button class="btn warn" id="syDel">${armed==="sydel"?"Tap again: delete cloud copy":"Delete cloud copy"}</button>`:"<span></span>"}</div></div>${turnoverHTML()}`}
 function turnoverHTML(){const Y=S.sync;if(!Y||!Y.on)return"";
@@ -2003,7 +2010,7 @@ async function turnoverGo(){const o=$("#toOut");const say=t=>{if(o)o.textContent
     save();syncShow=true;tabRedraw();toast("You're the OIC. Save your new recovery code.")}
   catch(e){say("Couldn't finish: "+(e.message||e)+". Nothing was lost; try again with signal.")}}
 function syncJoinPrompt(code,r){try{history.replaceState(null,"",location.pathname)}catch(e){}sheetCtx={kind:"sync",code,r};
-  $("#sheetT").innerHTML=`Link this phone?<small>Loads the backed-up board from the other phone and keeps both in sync. This phone will be: <b>${esc(ROLE_N[["sncoic","view","newoic"].includes(r)?r:"sncoic"])}</b>.</small>`;
+  $("#sheetT").innerHTML=`Link this phone?<small>Loads the backed-up board from the other phone and keeps both in sync. This phone will be: <b>${esc(ROLE_N[["sncoic","view","newoic","co"].includes(r)?r:"sncoic"])}</b>.</small>`;
   $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><p class="note"><b>This replaces what's on this phone</b> with the backup. Your PIN lock and text size stay.</p><button class="btn" id="syJoin">Load and link</button><button class="btn alt" data-sclose="1">Not now</button><div class="note" id="syJOut"></div></div>`;
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")))}
 
