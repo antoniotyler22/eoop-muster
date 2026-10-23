@@ -642,7 +642,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="3.1.3";const APP_BUILD="2026-10-23";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="3.1.4";const APP_BUILD="2026-10-23";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -1428,6 +1428,7 @@ function needsYou(){const out=[];const al=alerts();
   if(S.rc.open){const pool=recallPool();out.push({n:pool.filter(m=>(S.rc.res||{})[m.id]!=="ok").length,tone:"g",t:"Recall in progress",s:"Not yet contacted",go:"recall"})}
   const b=bcActive();if(b){const st=bcStats(b);if(st.pool-st.got>0)out.push({n:st.pool-st.got,tone:"b",t:"Message not confirmed",s:b.msg.slice(0,60),go:"send"})}
   if(S.board){const old=SECTIONS.filter(([k])=>{const r=S.board.last[k];return !r||Date.now()-r.t>4*3600000});if(old.length)out.push({n:old.length,tone:"a",t:"Section numbers old or missing",s:old.map(x=>x[0]).join(", "),go:"live"})}
+  if(S.mpErr&&S.roster.some(m=>m.pk))out.push({n:"!",tone:"r",t:"My pages aren't updating",s:"Run setup part 07 in System check",go:"sys"});
   const rs=rollStale();if(rs.length)out.push({n:rs.length,tone:"a",t:"Rollup reports over 12 h old",s:rs.map(u=>u.name).join(", "),go:"rollup"});
   if(al.ret.length)out.push({n:al.ret.length,tone:"g",t:"Returning this week",s:al.ret.slice(0,2).map(a=>a.m.rank+" "+lastOf(a.m)+" "+a.why.split(" ").pop()).join(", "),go:"alerts"});
   return out}
@@ -1677,17 +1678,17 @@ function mpDigest(m){const t=dkey();const to=dkey(new Date(Date.now()+60*8640000
   const owe=(S.events||[]).filter(e=>evReq(e).some(x=>x.id===m.id)&&!evDone(e,m)).map(e=>({n:e.name,d:e.date||""}));
   const reqs=S.reqs.filter(r=>r.mid===m.id).slice(0,10).map(r=>({rid:r.rid,ty:r.ty,from:r.from,to:r.to,st:r.st,dnote:r.dnote||""}));const pod=latestPod();
   return {v:1,reqs,pod,unit:unitName(),rank:m.rank,name:m.name,sec:m.sec,secName:((SECTIONS.find(x=>x[0]===m.sec)||[])[1]||m.sec),status:m.status,statusShort:SHORT[m.status]||m.status,duty:dutyOf(m),since:sn||0,start:isoOf(m.start),end:isoOf(m.end),edd:isoOf(m.edd),eas:isoOf(m.eas),duties:duties.sort((a,b)=>a.d.localeCompare(b.d)),due,cal,owe}}
-function mpSchedule(){if(!S.roster.some(m=>m.pk))return;clearTimeout(mpT);mpT=setTimeout(mpPublish,15000)}
-async function mpPublish(force){if(mpBusy)return;mpBusy=true;let n=0;
+function mpSchedule(){if(!S.roster.some(m=>m.pk))return;clearTimeout(mpT);mpT=setTimeout(mpPublish,5000)}
+async function mpPublish(force){if(mpBusy){clearTimeout(mpT);mpT=setTimeout(()=>mpPublish(force),4000);return 0}mpBusy=true;let n=0;
   try{for(const m of S.roster.filter(m=>m.pk)){const d=mpDigest(m);const sg=sigF(d);if(!force&&sg===m.pkSig)continue;
       const K=await mpKeys(m.pk);const ct=await sealObj(K,d);await SB.rpc("put_page",{p_id:K.id,p_wk:K.wk,p_ct:ct});m.pkSig=sg;m.pkAt=Date.now();n++}
-    if(n)rawSave()}
+    if(n||S.mpErr){S.mpErr="";rawSave()}}
   catch(e){S.mpErr=String(e.message||e).slice(0,80);rawSave()}finally{mpBusy=false}return n}
 async function mpTurnOn(m){if(!m.pk){m.pk=rndId(28);m.pkSig="";save()}await mpPublish();return mpLink(m)}
 async function mpFetch(){const M=S.me;if(!M)return;try{const K=await mpKeys(M.pk);const rows=await SB.rpc("get_page",{p_id:K.id});const r=rows&&rows[0];
   if(!r){M.err="Your leader hasn't published your page yet.";rawSave();return}const t=Date.parse(r.updated_at)||0;if(M.t===t&&M.d){M.err="";return}
-  M.d=await openBlob(K,r.ct);M.t=t;M.err="";rawSave();if(view==="me"||view==="today"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;view==="me"?renderMe():renderToday();window.scrollTo(0,y)}}}catch(e){M.err=String(e.message||e).slice(0,80);rawSave()}}
-setInterval(()=>{if(S.me&&!document.hidden)mpFetch()},300000);
+  M.d=await openBlob(K,r.ct);M.t=t;M.err="";rawSave();if(view==="me"||view==="today"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;view==="me"?renderMe():renderToday();window.scrollTo(0,y)}}}catch(e){const t=String(e.message||e);M.err=/could not find|schema cache|404/i.test(t)?"Your unit's server isn't set up for My page yet. Tell your leader: setup part 07.":/fetch|network/i.test(t)?"No signal. Pull down or tap Refresh to try again.":t.slice(0,80);rawSave();if(view==="me")renderMe()}}
+setInterval(()=>{if(S.me&&!document.hidden)mpFetch()},60000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.me)mpFetch()});
 const daysTo=iso=>{const d=parseD(iso);return d?Math.round((d-today0())/86400000):null};
 function renderMe(){const M=S.me;let h="";
@@ -1705,7 +1706,7 @@ function renderMe(){const M=S.me;let h="";
   const row=(lead,t,sub,extra)=>`<div class="lrow">${lead}<span style="flex:1;min-width:0"><span class="t" style="display:block">${t}</span>${sub?`<span class="s" style="display:block">${sub}</span>`:""}</span>${extra||""}</div>`;
   const tone=st=>st==="over"?"r":st==="soon"?"a":"g";
   h+=`<div style="margin-top:14px"><div class="hm-k">${esc(D.sec)} · ${esc(D.secName).toUpperCase()} · ${esc(D.unit)}</div><div class="hm-h">${esc(cap(D.rank))} ${esc(last.split(" ").map(cap).join(" "))}</div></div>`;
-  h+=`<div class="card hero"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">MY STATUS</span><span style="font-size:12px;font-weight:700;color:var(--muted)">Updated ${ago(M.t)}</span></div>
+  h+=`<div class="card hero"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">MY STATUS</span><button class="chip" id="meRe" style="cursor:pointer">↻ Updated ${ago(M.t)}</button></div>
     <div style="display:flex;align-items:center;gap:10px"><span style="width:14px;height:14px;border-radius:50%;background:var(${SVAR[D.status]||"--line"})"></span><span style="font-size:32px;font-weight:800;letter-spacing:-.01em">${esc(D.statusShort)}</span></div>
     <div class="note" style="margin:0">${D.since?"Since "+short(new Date(D.since)):""}${D.end&&D.status!=="On Hand"?" · through "+short(parseD(D.end)):""}${D.duty!=="Full Duty"?` · <b style="color:var(--warn)">${esc(D.duty)}</b>`:" · Full duty"}</div></div>`;
   if(cd.length)h+=`<div class="tgrid">${cd.sort((a,b)=>a.n-b.n).slice(0,4).map(c=>`<div class="cdt"><div class="k">${esc(c.lab).toUpperCase()}</div><div class="v" style="color:var(${c.col})">${c.n}<small> ${c.n===1?"day":"days"}</small></div></div>`).join("")}</div>`;
@@ -2065,7 +2066,7 @@ function renderPerson(){const m=S.roster.find(x=>x.id===pid);if(!m){view=pBack||
   // calendar
   {const up=calEntries(dkey(),dkey(new Date(Date.now()+90*86400000)),"ALL").filter(e=>e.m&&e.m.id===m.id);h+=`<h2 style="display:flex;justify-content:space-between;align-items:center">Calendar <button class="chip" id="pcIcs" style="cursor:pointer">Add to phone calendar</button></h2>`+(up.length?`<div class="alist">${up.slice(0,12).map(e=>calRow(e,true)).join("")}</div>`:`<p class="note">Nothing in the next 90 days.</p>`)+calForm(m)}
   // my page
-  h+=pSec("My page",m.pk?`<div class="note">${m.pkAt?"<b style='color:var(--s-onhand)'>● Updated "+ago(m.pkAt)+"</b>":"Publishing…"} · ${esc(m.rank+" "+lastOf(m))} sees their status, duty, due-outs and calendar.</div>
+  h+=pSec("My page",m.pk?`<div class="note">${m.pkAt&&!S.mpErr?"<b style='color:var(--s-onhand)'>● Sent to their page "+ago(m.pkAt)+"</b>":S.mpErr?"<b style='color:var(--warn)'>✕ Not reaching their page: "+esc(S.mpErr)+"</b> Open Tools → System check and run part 07 (My page).":"Publishing…"} · ${esc(m.rank+" "+lastOf(m))} sees their status, duty, due-outs and calendar.</div>
     <div class="row2">${m.phone?`<a class="btn" href="${esc("sms:+1"+m.phone+"?&body="+encodeURIComponent(unitName()+": your private My page (status, duty, due-outs, calendar). Keep this link to yourself: "+mpLink(m)))}">Text their link</a>`:`<button class="btn alt" data-pedit="ph">Add phone first</button>`}<button class="btn alt" data-mpcopy="${m.id}">Copy link</button></div>
     <button class="btn warn" data-mpoff="${m.id}">${armed==="mpoff"+m.id?"Tap again: turn off and delete their page":"Turn off My page"}</button>`
     :`<p class="note">Give ${esc(m.rank+" "+lastOf(m))} a private page on their phone with their status, next duty, due-outs and calendar. It updates by itself as you change things here.</p><button class="btn" data-mpon="${m.id}">Turn on My page</button>`);
@@ -2807,7 +2808,7 @@ document.addEventListener("click",e=>{
   const mpf=e.target.closest("[data-mpoff]");if(mpf){const m=S.roster.find(x=>x.id===mpf.dataset.mpoff);if(armed==="mpoff"+m.id){armed=null;const pk=m.pk;delete m.pk;delete m.pkSig;delete m.pkAt;delete m.pkSent;save();mpKeys(pk).then(K=>SB.rpc("delete_page",{p_id:K.id,p_wk:K.wk})).catch(()=>{});toast("My page turned off")}else armed="mpoff"+m.id;const y=window.scrollY;renderPerson();window.scrollTo(0,y);return}
   const mps=e.target.closest("[data-mpsent]");if(mps){const m=S.roster.find(x=>x.id===mps.dataset.mpsent);if(m){m.pkSent=Date.now();save()}setTimeout(()=>{if(view==="data")tabRedraw()},500);return}
   if(e.target.id==="mpAll"){let n=0;for(const m of S.roster)if(m.phone&&!m.pk){m.pk=rndId(28);n++}save();e.target.disabled=true;e.target.textContent="Publishing "+n+" pages…";mpPublish().then(()=>{tabRedraw();toast(n+" pages on. Text each link below.")});return}
-  if(e.target.id==="meRe"){mpFetch().then(()=>renderMe());return}
+  if(e.target.id==="meRe"){e.target.textContent="Checking…";mpFetch().then(()=>{renderMe();toast(S.me&&S.me.err?S.me.err:"Up to date.")});return}
   if(e.target.id==="meIcs"){const D=S.me&&S.me.d;if(!D||!D.cal.length){toast("Nothing coming up.");return}shareFile(icsFor(D.cal,D.name),"My_calendar.ics","text/calendar");return}
   if(e.target.id==="meOff"){if(armed==="meoff"){S.me=null;armed=null;save();view="board";render();toast("Removed")}else{armed="meoff";renderMe()}return}
   if(e.target.id==="scGo"){scRun();return}
