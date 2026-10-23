@@ -552,7 +552,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="2.1.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="2.1.1";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -1196,7 +1196,7 @@ async function livePollBoard(){const B=S.board;if(!B||lvBusy)return;lvBusy=true;
 setInterval(()=>{if(S.board&&!document.hidden)livePollBoard()},15000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.board)livePollBoard()});
 const ago=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?"just now":m<60?m+" min ago":m<1440?Math.round(m/60)+" hr ago":Math.round(m/1440)+" d ago"};
-function liveStrip(){const B=S.board;if(!B)return"";
+function liveStrip(){const B=S.board;if(!B)return `<button class="att" data-go="live" style="text-align:left;width:100%;cursor:pointer"><div><div class="lbl">Live sections · off</div><div class="note" style="margin-top:4px">Let section leaders update your board from their phones. Tap to set up.</div></div></button>`;
   return `<button class="att" data-go="live" style="text-align:left;width:100%;cursor:pointer"><div><div class="lbl">● Live sections</div><div class="note" style="display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:4px">${SECTIONS.map(([k])=>{const r=B.last[k];const old=r&&Date.now()-r.t>4*3600000;
     return `<span><b>${k}</b> <span style="color:var(${!r?"--muted":old?"--warn":"--s-onhand"})">${r?ago(r.t):"waiting"}</span></span>`}).join("")}</div></div></button>`}
 function renderLive(){let h=banner();const B=S.board,L=S.link;
