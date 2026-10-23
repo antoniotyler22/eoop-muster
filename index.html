@@ -502,7 +502,7 @@ const SVAR={"On Hand":"--s-onhand","Appointment on Base":"--s-aob","Appointment 
 const PRESENT=["On Hand","Appointment on Base","Company Duties"];
 const SECTIONS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
 const DEF_SECS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
-const RESERVED=["BOARD","ATT","PT","W6","TEXT","DATA","MUSTER","ALERTS","RECALL","EVENTS","ARMORY","ROLLUP","LIVE","SEND","FEED"];
+const RESERVED=["BOARD","ATT","PT","W6","TEXT","DATA","MUSTER","ALERTS","RECALL","EVENTS","ARMORY","ROLLUP","LIVE","SEND","FEED","TRENDS","READY","DUTY","P"];
 const MIL_SECS=DEF_SECS.map(s=>s.slice());
 let secDraft=null;
 /* ---------- versions: one app, five vocabularies ---------- */
@@ -552,7 +552,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="1.9.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="2.0.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -689,15 +689,17 @@ S.rcMiss=Array.isArray(S.rcMiss)?S.rcMiss:[];if(S.rcRev&&!Array.isArray(S.rcRev.
 S.rc=Object.assign({open:false,start:0,end:0,res:{},att:true,only:false,ci:{}},S.rc||{});if(!S.rc.ci||typeof S.rc.ci!=="object")S.rc.ci={};
 S.bc=Array.isArray(S.bc)?S.bc:[];
 S.feeds=Array.isArray(S.feeds)?S.feeds:[];
+S.days=S.days&&typeof S.days==="object"?S.days:{};
+S.ready=S.ready&&typeof S.ready==="object"?S.ready:{};S.duty=Object.assign({rosters:[]},S.duty||{});if(!Array.isArray(S.duty.rosters))S.duty.rosters=[];S.tl=S.tl&&typeof S.tl==="object"?S.tl:{};
 S.roll=Object.assign({units:{},own:true,name:""},S.roll||{});if(!S.roll.units||typeof S.roll.units!=="object")S.roll.units={};
 S.mus=Object.assign({open:false,seen:{},inc:["On Hand"],att:true,only:false,last:null},S.mus||{});
 S.pt=Object.assign({event:"Unit PT",when:"",inc:["On Hand"],att:true},S.pt||{});
 const dutyOf=m=>DUTIES.includes(m.duty)?m.duty:"Full Duty";
-function save(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.write(t);else localStorage.setItem(KEY,t);storageOK=true}catch(e){storageOK=false}if(S.link&&typeof linkSchedule==="function")linkSchedule()}
+function save(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.write(t);else localStorage.setItem(KEY,t);storageOK=true}catch(e){storageOK=false}if(S.link&&typeof linkSchedule==="function")linkSchedule();if(typeof histTick==="function")histTick();if(typeof syncSchedule==="function")syncSchedule()}
 
 let view="board", armed=null, query="";
 const h0=(location.hash||"").slice(1).toLowerCase();
-if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed"].includes(h0)) view=h0;
+if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty"].includes(h0)) view=h0;
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -743,6 +745,7 @@ function dutyChips(list){const d=dutyCounts(list);return `<span class="chip">Ful
 function renderBoard(){
   const {c,T,A}=counts();const P=pct(T["On Hand"],T.total);
   let h=banner();
+  h+=`<div style="position:relative;margin-top:12px"><input class="search" id="gq" type="search" placeholder="Find anyone: name, rank or section" autocomplete="off" style="margin:0"><div id="gqr" class="alist" style="margin-top:6px"></div></div>`;
   h+=`<div class="tiles">
     <div class="tile on"><div class="lbl">On Hand</div><div class="num" data-n="oh">${T["On Hand"]}</div></div>
     <div class="tile"><div class="lbl">Total Strength</div><div class="num" data-n="ts">${T.total}</div></div>
@@ -753,6 +756,9 @@ function renderBoard(){
       <button class="bigbtn${S.rc.open?" live":""}" data-go="recall"><b>RECALL</b><span>${S.rc.open?"In progress · "+recallPool().filter(m=>(S.rc.res||{})[m.id]==="ok").length+"/"+recallPool().length:S.roster.filter(m=>m.phone).length+" numbers loaded"}</span></button>
       <button class="bigbtn" data-go="events"><b>EVENTS</b><span>${S.events.length?S.events.length+(S.events.length===1?" event · ":" events · ")+S.events.reduce((a,e)=>a+evReq(e).filter(m=>!evDone(e,m)).length,0)+" owe":"Attendance"}</span></button>
       <button class="bigbtn${S.arm.open?" live":""}" data-go="armory"><b>ARMORY</b><span>${S.arm.open?"Muster in progress":S.roster.filter(hasW).length+" weapons"}</span></button>
+      ${(()=>{const R=readySum();if(!R.items)return `<button class="bigbtn" data-go="ready"><b>READY</b><span>Due-outs tracker</span></button>`;
+        return `<button class="bigbtn${R.over?" hot":""}" data-go="ready"><b>READY</b><span>${R.over?`<span class="w">${R.over} overdue</span> · `:""}${R.soon} due 30d</span></button>`})()}
+      ${(()=>{const r=S.duty.rosters[0];const t=r&&r.assign[dkey()];const m=t&&S.roster.find(x=>x.id===t);return `<button class="bigbtn" data-go="duty"><b>DUTY</b><span>${r?(m?"Today: "+esc(m.rank+" "+lastOf(m)):"Not assigned today"):"Duty roster"}</span></button>`})()}
       ${(()=>{const a=bcActive();if(!a)return `<button class="bigbtn" data-go="send"><b>SEND</b><span>Message with read receipts</span></button>`;const st=bcStats(a);
         return `<button class="bigbtn${st.prob?" hot":" live"}" data-go="send"><b>SEND</b><span>${st.prob?`<span class="w">${st.prob} problem${st.prob>1?"s":""}</span> · `:""}${st.got}/${st.pool} got it</span></button>`})()}
       ${(()=>{const n=Object.keys(S.roll.units).length;if(!n)return `<button class="bigbtn" data-go="rollup"><b>ROLLUP</b><span>Add up units under you</span></button>`;const R=rollSum(rollUnits());const st=rollStale();
@@ -761,7 +767,7 @@ function renderBoard(){
     <div class="dutyline">${dutyChips(S.roster.filter(m=>m.sec!=="ATT"))}<button class="chip" data-go="pt" style="cursor:pointer">PT roster ▸</button></div>
     <div class="att"><div><div class="lbl">Attached · not on our numbers</div><div class="big">${A.total}<small>${A["On Hand"]} on hand</small></div><div class="note">Total accounted for: <b>${T.total+A.total}</b> · Physically here: <b>${present(T)+present(A)}</b></div></div><button data-go="att">${A.total?"View":"Add"}</button></div>
   </div>`;
-  h+=`<h2>By status</h2><div class="gridwrap"><table><thead><tr><th>Status</th>${SECTIONS.map(([k])=>`<th><button data-go="${k.toLowerCase()}">${k}</button></th>`).join("")}<th class="tot">Total</th></tr></thead><tbody>`;
+  h+=`<h2 style="display:flex;justify-content:space-between;align-items:center">By status <button class="chip" data-go="trends" style="cursor:pointer;font-size:13px">Trends ▸</button></h2><div class="gridwrap"><table><thead><tr><th>Status</th>${SECTIONS.map(([k])=>`<th><button data-go="${k.toLowerCase()}">${k}</button></th>`).join("")}<th class="tot">Total</th></tr></thead><tbody>`;
   for(const s of STATUSES){h+=`<tr><td><span class="dot" style="background:var(${SVAR[s]})"></span>${SHORT[s]}</td>${SECTIONS.map(([k])=>`<td class="${c[k][s]?"":"z"}">${c[k][s]}</td>`).join("")}<td class="tot">${T[s]}</td></tr>`}
   h+=`<tr class="sum"><td>Present on deck</td>${SECTIONS.map(([k])=>`<td>${present(c[k])}</td>`).join("")}<td>${present(T)}</td></tr>`;
   h+=`<tr class="sum"><td>% On hand</td>${SECTIONS.map(([k])=>`<td>${pct(c[k]["On Hand"],c[k].total)}%</td>`).join("")}<td>${P}%</td></tr>`;
@@ -779,7 +785,7 @@ function renderSection(code){
   if(o.total>8) h+=`<input class="search" id="q" type="search" placeholder="Find a Marine" value="${esc(query)}">`;
   h+=`<div class="list">${list.map(m=>{
     const det=[m.parent?("From "+m.parent):"",m.detail,m.end?("thru "+m.end):""].filter(Boolean).join(" · ");
-    return `<div class="m" style="--sc:var(${SVAR[m.status]})"><div class="who"><div><b>${esc(m.rank)}</b><span class="nm">${esc(m.name)}</span>${dutyOf(m)==="Light Duty"?'<span class="tag ld">LD</span>':dutyOf(m)==="LIMDU"?'<span class="tag lim">LIMDU</span>':""}${m.upd&&Date.now()-m.upd.t<86400000?`<span class="tag" style="color:var(--s-onhand)" title="Updated live by section leader">↻ ${dtg(new Date(m.upd.t)).slice(2,6)}</span>`:""}</div>
+    return `<div class="m" style="--sc:var(${SVAR[m.status]})"><div class="who"><div data-pcard="${m.id}" style="cursor:pointer"><b>${esc(m.rank)}</b><span class="nm" style="text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px">${esc(m.name)}</span>${dutyOf(m)==="Light Duty"?'<span class="tag ld">LD</span>':dutyOf(m)==="LIMDU"?'<span class="tag lim">LIMDU</span>':""}${m.upd&&Date.now()-m.upd.t<86400000?`<span class="tag" style="color:var(--s-onhand)" title="Updated live by section leader">↻ ${dtg(new Date(m.upd.t)).slice(2,6)}</span>`:""}</div>
       ${det?`<div class="det">${esc(det)}</div>`:""}<button class="rm${armed===m.id?" arm":""}" data-rm="${m.id}">${armed===m.id?"Tap again to remove":"Remove"}</button><button class="w6" data-w6="${m.id}">6W</button>${m.phone?`<a class="tel" href="${telHref(m.phone)}">Call</a>`:""}</div><div class="pick">${statusSelect(m.id,m.status)}${dutySelect(m.id,dutyOf(m))}</div></div>`}).join("")}</div>`;
   h+=`<form class="addbox" id="addf"><h3>${isAtt?"Add an attached Marine":"Add a Marine to "+code}</h3>
     <select id="aRank" aria-label="Rank">${RANKS.map(r=>`<option${r===(MODE().rankDef||"LCPL")?" selected":""}>${r}</option>`).join("")}</select>
@@ -807,6 +813,7 @@ function reportText(){
   L.push("");
   for(const s of STATUSES.slice(1)) L.push(SHORT[s].toUpperCase()+": "+T[s]);
   {const al=alerts();if(al.over.length||al.ret.length){L.push("");if(al.over.length)L.push("OVERDUE: "+al.over.length+(S.names?" ("+al.over.map(a=>a.m.rank+" "+a.m.name.split(",")[0]).join(", ")+")":""));if(al.ret.length)L.push("RETURNING 7 DAYS: "+al.ret.length)}}
+  {const R=readySum();if(R.items&&(R.over||R.soon)){L.push("");L.push("READINESS: "+R.over+" OVERDUE / "+R.soon+" DUE 30 DAYS")}}
   if(S.chg!==false&&S.snap){L.push("");changeLines().forEach(x=>L.push(x))}
   if(A.total){L.push("");L.push("ATTACHED (NOT ON STRENGTH): "+A.total+" (ON HAND "+A["On Hand"]+")");L.push("TOTAL ACCOUNTED FOR: "+(T.total+A.total));
     if(S.names) sorted(S.roster.filter(m=>m.sec==="ATT")).forEach(m=>L.push("- "+m.rank+" "+m.name.split(",")[0]+(m.parent?" ("+m.parent+")":"")+" "+SHORT[m.status].toUpperCase()))}
@@ -1215,6 +1222,176 @@ function joinPrompt(q){const bid=(q.get("join")||"").replace(/[^a-z0-9]/g,"").sl
     <p class="note">Only scrambled codes leave this phone; names don't. ${S.source==="sample"?"<b style='color:var(--warn)'>Load your roster first, or the names won't match theirs.</b>":""}</p>
     <button class="btn" id="jYes">Link and send now</button><button class="btn alt" data-sclose="1">Not now</button></div>`;
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));try{history.replaceState(null,"",location.pathname)}catch(e){}}
+
+/* ---------- READY: readiness and due-outs ---------- */
+const READY_DEF={
+ military:[["Initial counseling",0],["Quarterly counseling",3],["PFT",12],["CFT",12],["Rifle qual",12],["Annual training",12],["PHA",12],["Dental",12],["Driver's license",48],["Fitness report",6]],
+ police:[["Evaluation",12],["Firearms qual",6],["Use of force training",12],["CPR / First aid",24],["Physical",12],["Driver's license",48],["Annual training",12]],
+ jobs:[["Safety orientation",0],["OSHA 10/30",60],["First aid / CPR",24],["Forklift cert",36],["Driver's license",48],["Drug test",12],["Performance review",12]],
+ hr:[["Performance review",12],["Compliance training",12],["Harassment training",12],["Certification",24],["Benefits enrollment",12],["Onboarding paperwork",0]],
+ civilian:[["Waiver",12],["Background check",24],["CPR / First aid",24],["Training",12],["Dues",12]]};
+function readyItems(){const k=MODES[S.mode]?S.mode:"military";if(!Array.isArray(S.ready[k]))S.ready[k]=READY_DEF[k].map(([n,mo])=>({n,mo}));return S.ready[k]}
+const isoToday=()=>dkey();
+function addMonths(iso,mo){const [y,m,d]=iso.split("-").map(Number);const t=new Date(y,m-1+mo,d);return dkey(t)}
+function dueState(m,it){const r=((m.due||{})[it.n])||{};const t=today0();
+  if(r.due){const d=parseD(r.due);const dd=d?Math.round((d-t)/86400000):0;if(dd<0)return {st:"over",col:"--warn",dd,iso:r.due,txt:"Overdue "+(-dd)+" d · was due "+short(d)};if(dd<=30)return {st:"soon",col:"--s-duty",dd,iso:r.due,txt:"Due in "+dd+" d · "+short(d)};return {st:"ok",col:"--s-onhand",dd,iso:r.due,txt:"Due "+short(d)+" "+String(d.getFullYear()).slice(2)}}
+  if(r.done){const d=parseD(r.done);return {st:"ok",col:"--s-onhand",dd:9999,iso:"",txt:"Done "+(d?short(d)+" "+String(d.getFullYear()).slice(2):"")}}
+  return {st:"none",col:"--muted",dd:99999,iso:"",txt:"Not set"}}
+function dueRows(m){return readyItems().map(it=>Object.assign({item:it.n},dueState(m,it)))}
+function readySum(){const its=readyItems();let over=0,soon=0,none=0;const pool=S.source==="sample"?[]:S.roster.filter(m=>m.sec!=="ATT");
+  for(const m of pool)for(const it of its){const st=dueState(m,it).st;if(st==="over")over++;else if(st==="soon")soon++;else if(st==="none")none++}
+  return {items:pool.some(m=>m.due&&Object.keys(m.due).length)?its.length:0,over,soon,none}}
+function markDone(m,name){const it=readyItems().find(x=>x.n===name);if(!it)return;m.due=m.due||{};const today=isoToday();m.due[name]=it.mo?{due:addMonths(today,it.mo),done:today}:{due:"",done:today}}
+function parseAnyDate(v){if(v==null)return"";let s=String(v).trim();if(!s)return"";
+  if(/^\d{5}(\.\d+)?$/.test(s)){const n=+s;if(n>20000&&n<80000){const d=new Date(Date.UTC(1899,11,30)+Math.round(n)*86400000);return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0")}}
+  let m=s.match(/^(\d{4})(\d{2})(\d{2})$/);if(m)return m[1]+"-"+m[2]+"-"+m[3];
+  m=s.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);if(m)return m[1]+"-"+m[2].padStart(2,"0")+"-"+m[3].padStart(2,"0");
+  m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);if(m){const y=m[3].length===2?"20"+m[3]:m[3];return y+"-"+m[1].padStart(2,"0")+"-"+m[2].padStart(2,"0")}
+  m=s.toUpperCase().match(/^(\d{1,2})\s*([A-Z]{3})[A-Z]*\s*(\d{2,4})$/);if(m){const mo=MON.indexOf(m[2]);if(mo>=0){const y=m[3].length===2?"20"+m[3]:m[3];return y+"-"+String(mo+1).padStart(2,"0")+"-"+m[1].padStart(2,"0")}}
+  return ""}
+function importReady(text){const rows=parseCSV(text).filter(r=>r.some(x=>x));const its=readyItems();let hi=-1,cols={},nameC=[];
+  for(let i=0;i<Math.min(rows.length,15);i++){const h=rows[i].map(x=>x.toLowerCase());const nc=h.map((x,j)=>/name|last|first|marine|member|employee|rank/.test(x)?j:-1).filter(j=>j>=0);
+    const ic={};its.forEach(it=>{const k=it.n.toLowerCase().replace(/[^a-z0-9]/g,"");const j=h.findIndex(x=>{const y=x.replace(/[^a-z0-9]/g,"");return y&&(y===k||y.includes(k)||k.includes(y)&&y.length>=3)});if(j>=0&&!nc.includes(j))ic[it.n]=j});
+    if(nc.length&&Object.keys(ic).length){hi=i;cols=ic;nameC=nc;break}}
+  if(hi<0)throw new Error("Couldn't find a header row with a name column and at least one item column ("+its.map(x=>x.n).slice(0,4).join(", ")+"…). Item columns must use the same names as in READY.");
+  let ok=0,set=0;const miss=[];
+  for(const r of rows.slice(hi+1)){const who=nameC.map(j=>r[j]||"").join(" ").replace(/[^A-Za-z ,.'-]/g," ");if(!who.trim())continue;const m=matchMarine(who);if(!m){miss.push(who.trim().slice(0,30));continue}ok++;
+    for(const [n,j] of Object.entries(cols)){const d=parseAnyDate(r[j]);if(!d)continue;m.due=m.due||{};m.due[n]={due:d,done:(m.due[n]||{}).done||""};set++}}
+  save();return {ok,set,miss,items:Object.keys(cols)}}
+let rdItem="",rdEdit=false;
+function readyText(){const its=readyItems();const pool=S.roster.filter(m=>m.sec!=="ATT");const L=[unitName()+" READINESS "+dtg()];const R=readySum();L.push("OVERDUE: "+R.over+" · DUE 30 DAYS: "+R.soon);
+  for(const it of its){const o=sorted(pool.filter(m=>dueState(m,it).st==="over"));const sn=sorted(pool.filter(m=>dueState(m,it).st==="soon"));if(!o.length&&!sn.length)continue;
+    L.push("");L.push(it.n.toUpperCase()+": "+o.length+" OVERDUE"+(sn.length?", "+sn.length+" DUE SOON":""));o.forEach(m=>L.push("- "+m.sec+" "+m.rank+" "+lastOf(m)+" (OVERDUE)"));sn.forEach(m=>L.push("- "+m.sec+" "+m.rank+" "+lastOf(m)+" ("+short(parseD(m.due[it.n].due))+")"))}
+  return RT(L.join("\n"))}
+function renderReady(){let h=banner();const its=readyItems();const pool=S.roster.filter(m=>m.sec!=="ATT");const R=readySum();
+  h+=`<h2>Readiness</h2><div class="tiles"><div class="tile${R.over?"":" on"}"><div class="lbl">Overdue</div><div class="num" style="color:var(${R.over?"--warn":"--s-onhand"})">${R.over}</div></div><div class="tile"><div class="lbl">Due in 30 days</div><div class="num" style="color:var(--s-duty)">${R.soon}</div></div></div>`;
+  h+=`<div class="gridwrap" style="margin-top:12px"><table><thead><tr><th>Item</th>${SECTIONS.map(([k])=>`<th>${k}</th>`).join("")}<th class="tot">Total</th></tr></thead><tbody>${its.map(it=>{const cell=ms=>{const o=ms.filter(m=>dueState(m,it).st==="over").length,sn=ms.filter(m=>dueState(m,it).st==="soon").length,no=ms.filter(m=>dueState(m,it).st==="none").length;
+      return o?`<b style="color:var(--warn)">${o}</b>${sn?` <span style="color:var(--s-duty)">+${sn}</span>`:""}`:sn?`<span style="color:var(--s-duty)">${sn}</span>`:no===ms.length&&ms.length?`<span class="z">—</span>`:`<span style="color:var(--s-onhand)">✓</span>`};
+    return `<tr><td><button class="chip" data-rditem="${esc(it.n)}" aria-pressed="${rdItem===it.n}" style="cursor:pointer">${esc(it.n)}</button></td>${SECTIONS.map(([k])=>`<td>${cell(pool.filter(m=>m.sec===k))}</td>`).join("")}<td class="tot">${cell(pool)}</td></tr>`}).join("")}</tbody></table></div>
+    <p class="note"><b style="color:var(--warn)">Red</b> = overdue · <span style="color:var(--s-duty)">yellow</span> = due in 30 days · ✓ all set · — not entered yet. Tap an item to list people.</p>`;
+  const list=[];for(const m of pool)for(const it of its){if(rdItem&&it.n!==rdItem)continue;const d=dueState(m,it);if(d.st==="over"||d.st==="soon"||(rdItem&&d.st==="none"))list.push({m,it,d})}
+  list.sort((a,b)=>a.d.dd-b.d.dd);
+  h+=`<h2>${rdItem?esc(rdItem)+" · needs action":"Overdue and due in 30 days"} (${list.length})</h2>${rdItem?`<button class="chip" data-rditem="" style="cursor:pointer">Show all items</button>`:""}`;
+  h+=list.length?`<div class="alist" style="margin-top:6px">${list.slice(0,150).map(x=>`<div class="rrow" style="--sc:var(${x.d.col})"><div class="rtop"><div class="who" data-pcard="${x.m.id}" style="cursor:pointer"><b>${esc(x.m.rank)}</b> ${esc(x.m.name)}<div class="ph">${x.m.sec} · ${esc(x.it.n)} · ${x.d.txt}</div></div><button class="chip" data-rddone="${x.m.id}" data-rdn="${esc(x.it.n)}" style="cursor:pointer">Done today</button></div></div>`).join("")}</div>`:`<p class="note">Nothing needs action${R.items?"":" yet. Load dates below or set them on each person's card"}.</p>`;
+  if(list.length)h+=`<div class="panel"><textarea readonly>${esc(readyText())}</textarea><div class="row2"><a class="btn" href="${esc(smsHref(readyText()))}">Text it</a><button class="btn alt" id="rdCopy">Copy</button></div></div>`;
+  h+=`<h2>Load dates</h2><div class="panel"><label for="rdFile">Excel or CSV with a name column and one column per item (next due date)</label><input type="file" id="rdFile" accept=".csv,.txt,.xlsx,.xls,text/csv">
+    <label for="rdPaste">Or paste rows</label><textarea id="rdPaste" style="min-height:70px" placeholder="Name,PFT,CFT,Rifle qual&#10;SMITH JOHN,2027-06-30,2027-09-30,15 MAR 27"></textarea><button class="btn" id="rdGo">Read dates</button><div class="note" id="rdOut"></div>
+    <p class="note">Dates like 2027-06-30, 06/30/2027, 30 JUN 27 or Excel dates all work. Names match your roster. You can also set or update any date on the person's card. Store due dates only, not medical details.</p></div>`;
+  h+=`<details class="panel"${rdEdit?" open":""}><summary><b>Items tracked</b> · ${its.length}</summary>${its.map((it,i)=>`<div class="rtop"><div class="who">${esc(it.n)}<div class="ph">${it.mo?"Repeats every "+it.mo+" months":"One time"}</div></div><button class="chip" data-rdrm="${i}" style="cursor:pointer">${armed==="rdrm"+i?"Remove?":"✕"}</button></div>`).join("")}
+    <div class="row2"><input type="text" id="rdNew" maxlength="30" placeholder="New item (e.g. Swim qual)"><select id="rdMo" class="wsel">${[[0,"One time"],[1,"Monthly"],[3,"Every 3 months"],[6,"Every 6 months"],[12,"Yearly"],[24,"Every 2 years"],[36,"Every 3 years"]].map(([v,l])=>`<option value="${v}"${v===12?" selected":""}>${l}</option>`).join("")}</select></div><button class="btn alt" id="rdAdd">Add item</button></details>`;
+  $("#main").innerHTML=h}
+
+/* ---------- DUTY roster ---------- */
+const DUTY_SKIP=["Leave","TAD","Operation","Appointment off Base"];let dSel=null,dSetup=false,dSwap=null;
+function dCur(){return S.duty.rosters.find(r=>r.id===dSel)||S.duty.rosters[0]||null}
+function dPool(r){const ex=r.excl||{};return sorted(S.roster.filter(m=>(m.sec==="ATT"?r.att:r.secs.includes(m.sec))&&!ex[m.id]))}
+function dOrder(r){const pool=dPool(r);const ids=new Set(pool.map(m=>m.id));r.order=(r.order||[]).filter(id=>ids.has(id));for(const m of pool)if(!r.order.includes(m.id))r.order.push(m.id);return r.order}
+function dElig(r,m,day){if(r.skipLim&&dutyOf(m)==="LIMDU")return false;if((r.skip||[]).includes(m.status)){const e=parseD(m.end);if(!e)return dkey(today0())!==day&&false;return day>dkey(e)}return true}
+function dGen(r,n,fromToday){const order=dOrder(r);if(!order.length)return 0;r.assign=r.assign||{};const t=today0();let made=0;
+  if(fromToday)for(const k of Object.keys(r.assign))if(k>=dkey(t))delete r.assign[k];
+  let last=null;for(let i=0;i<n;i++){const d=new Date(t);d.setDate(d.getDate()+i);const k=dkey(d);if(r.assign[k]){last=r.assign[k];continue}
+    for(let tries=0;tries<order.length;tries++){const id=order[(r.ptr||0)%order.length];r.ptr=((r.ptr||0)+1)%order.length;const m=S.roster.find(x=>x.id===id);if(m&&id!==last&&dElig(r,m,k)){r.assign[k]=id;last=id;made++;break}}}
+  for(const k of Object.keys(r.assign)){const d=parseD(k);if(d&&(t-d)/86400000>60)delete r.assign[k]}save();return made}
+function nextDuties(m){const out=[];const t=dkey(today0());for(const r of S.duty.rosters){const k=Object.keys(r.assign||{}).filter(k=>k>=t&&r.assign[k]===m.id).sort()[0];if(k){const d=parseD(k);out.push({roster:r.name,day:(k===t?"TODAY ":"")+["SUN","MON","TUE","WED","THU","FRI","SAT"][d.getDay()]+" "+short(d)})}}return out}
+const DOW=["SUN","MON","TUE","WED","THU","FRI","SAT"];
+function dutyText(r,n){const t=today0();const L=[(r.name||"DUTY").toUpperCase()+" ROSTER "+dtg()];for(let i=0;i<n;i++){const d=new Date(t);d.setDate(d.getDate()+i);const id=(r.assign||{})[dkey(d)];const m=id&&S.roster.find(x=>x.id===id);L.push(DOW[d.getDay()]+" "+short(d)+": "+(m?m.sec+" "+m.rank+" "+lastOf(m):"OPEN"))}return RT(L.join("\n"))}
+function renderDuty(){let h=banner();const r=dCur();
+  if(S.duty.rosters.length>1)h+=`<div class="evts" style="margin-top:10px">${S.duty.rosters.map(x=>`<button data-dsel="${x.id}" aria-pressed="${x===r}">${esc(x.name)}</button>`).join("")}</div>`;
+  if(!r||dSetup==="new"){h+=`<h2>Duty roster</h2><div class="panel"><p class="note">Build a rotation that skips people on leave, TAD or ops (until their return date) and LIMDU if you want. Swap any day with one tap. Each person's card shows their next duty.</p>
+      <label for="dNm">Roster name</label><input type="text" id="dNm" maxlength="24" placeholder="Duty NCO" value="${r?"":"Duty NCO"}"><button class="btn" id="dMake">Create roster</button>${r?`<button class="btn alt" id="dCancel">Cancel</button>`:""}</div>`;$("#main").innerHTML=h;return}
+  const pool=dPool(r);const t=today0();
+  h+=`<div class="sechead" style="margin-top:12px"><h2>${esc(r.name)}</h2><div class="ratio" style="font-size:13px">${pool.length} in rotation</div></div>`;
+  if(!pool.length)h+=`<p class="note" style="color:var(--warn)">No one in this rotation. Open Setup and pick sections.</p>`;
+  h+=`<div class="row2"><button class="btn" id="dGen">Fill next 30 days</button><button class="btn alt" id="dRedo">${armed==="dredo"?"Tap again: redo from today":"Redo from today"}</button></div><div class="alist" style="margin-top:8px">`;
+  for(let i=0;i<30;i++){const d=new Date(t);d.setDate(d.getDate()+i);const k=dkey(d);const id=(r.assign||{})[k];const m=id&&S.roster.find(x=>x.id===id);const bad=m&&!dElig(r,m,k);
+    h+=`<div class="rrow" style="--sc:var(${!m?"--line":bad?"--warn":i===0?"--s-onhand":"--line"})"><div class="rtop"><div class="who"><b>${i===0?"TODAY · ":""}${DOW[d.getDay()]} ${short(d)}</b><div class="ph"${m?` data-pcard="${m.id}" style="cursor:pointer"`:""}>${m?esc(m.sec+" · "+m.rank+" "+m.name)+(bad?` · <b style="color:var(--warn)">now ${esc(SHORT[m.status]||m.status)}</b>`:""):"Open"}</div></div>${m&&m.phone?`<a class="call" href="${telHref(m.phone)}">Call</a>`:""}<button class="chip" data-dswap="${k}" style="cursor:pointer">${dSwap===k?"Pick below":"Change"}</button></div>
+      ${dSwap===k?`<select class="wsel" data-dpick="${k}"><option value="">Pick who…</option>${pool.map(p=>`<option value="${p.id}"${!dElig(r,p,k)?" disabled":""}>${esc(p.sec+" "+p.rank+" "+p.name)}${!dElig(r,p,k)?" ("+esc(SHORT[p.status]||p.status)+")":""}</option>`).join("")}<option value="-">— Leave open —</option></select>`:""}</div>`}
+  h+=`</div><div class="panel"><textarea readonly>${esc(dutyText(r,14))}</textarea><div class="row2"><a class="btn" href="${esc(smsHref(dutyText(r,14)))}">Text 14 days</a><button class="btn alt" id="dCopy">Copy</button></div><p class="note">Goes to the numbers set in TEXT.</p></div>`;
+  h+=`<details class="panel"${dSetup?" open":""}><summary><b>Setup</b> · who's in, who's skipped</summary>
+    <label for="dName">Name</label><input type="text" id="dName" maxlength="24" value="${esc(r.name)}">
+    <div class="note">Sections in rotation:</div><div class="evts">${SECTIONS.map(([k])=>`<label class="tog"><input type="checkbox" data-dsec="${k}"${r.secs.includes(k)?" checked":""}> ${k}</label>`).join("")}<label class="tog"><input type="checkbox" id="dAtt"${r.att?" checked":""}> ATT</label></div>
+    <div class="note">Skip people who are:</div><div class="evts">${STATUSES.filter(x=>x!=="On Hand").map(x=>`<label class="tog"><input type="checkbox" data-dskip="${esc(x)}"${(r.skip||[]).includes(x)?" checked":""}> ${esc(SHORT[x])}</label>`).join("")}<label class="tog"><input type="checkbox" id="dLim"${r.skipLim?" checked":""}> LIMDU</label></div>
+    <p class="note">People on a skipped status come back into the rotation the day after their end date (set it on their card).</p>
+    <div class="note">Leave out of this rotation:</div><div class="alist">${sorted(S.roster.filter(m=>m.sec==="ATT"?r.att:r.secs.includes(m.sec))).map(m=>`<label class="tog" style="margin:0"><input type="checkbox" data-dexcl="${m.id}"${(r.excl||{})[m.id]?" checked":""}> ${esc(m.rank+" "+m.name)}</label>`).join("")}</div>
+    <div class="row2" style="margin-top:8px"><button class="btn alt" id="dNew">New roster</button><button class="btn warn" id="dDel">${armed==="ddel"?"Tap again to delete":"Delete roster"}</button></div></details>`;
+  $("#main").innerHTML=h}
+
+/* ---------- person card + search ---------- */
+let pid=null,pBack="board",pEdit=null;
+function findPeople(q){q=q.trim().toUpperCase();if(!q)return[];const w=q.split(/\s+/);
+  return sorted(S.roster.filter(m=>{const t=(m.rank+" "+m.name+" "+m.sec+" "+(m.parent||"")).toUpperCase();return w.every(x=>t.includes(x))})).slice(0,10)}
+function gqHTML(q){const r=findPeople(q);if(!q.trim())return"";if(!r.length)return `<p class="note">No one matches.</p>`;
+  return r.map(m=>`<button class="rrow" data-pcard="${m.id}" style="--sc:var(${SVAR[m.status]||"--line"});text-align:left;cursor:pointer"><div class="who"><b>${esc(m.rank)}</b> ${esc(m.name)}<div class="ph">${m.sec} · ${esc(SHORT[m.status]||m.status)}${dutyOf(m)!=="Full Duty"?" · "+esc(dutyOf(m)):""}</div></div></button>`).join("")}
+function openCard(id){if(view!=="p")pBack=view;pid=id;pEdit=null;view="p";armed=null;render();window.scrollTo(0,0)}
+const isoOf=s=>{const d=parseD(s);return d?dkey(d):""};
+function pSec(t,body){return body?`<h2>${t}</h2><div class="panel">${body}</div>`:""}
+function renderPerson(){const m=S.roster.find(x=>x.id===pid);if(!m){view=pBack||"board";return render()}
+  let h=`<button class="chip" data-pback="1" style="cursor:pointer;margin-top:12px">◂ Back</button>`;
+  const since=sinceOf(m);const secName=m.sec==="ATT"?"Attached"+(m.parent?" · from "+m.parent:""):((SECTIONS.find(x=>x[0]===m.sec)||[])[1]||m.sec);
+  h+=`<div class="sechead" style="margin-top:8px"><h2 style="margin:0">${esc(m.rank)} ${esc(m.name)}</h2></div><div class="note">${esc(m.sec)} · ${esc(secName)}</div>
+    <div class="panel"><div class="pick">${statusSelect(m.id,m.status)}${dutySelect(m.id,dutyOf(m))}</div>
+    <div class="note">${since?`${esc(SHORT[m.status]||m.status)} since ${dtg(new Date(since)).slice(0,7)} ${dtg(new Date(since)).slice(8)} (${ago(since).replace(" ago","")})`:"No history yet for this person."}${m.detail?" · "+esc(m.detail):""}${m.loc?" · "+esc(m.loc):""}</div>
+    <div class="row2">${m.phone?`<a class="btn" href="${telHref(m.phone)}">Call ${fmtPh(m.phone)}</a><a class="btn alt" href="${smsTo(m.phone)}">Text</a>`:`<button class="btn alt" data-pedit="ph">Add phone</button><span></span>`}</div>
+    ${m.phone2?`<a class="btn alt" href="${telHref(m.phone2)}">Call alt ${fmtPh(m.phone2)}</a>`:""}
+    ${pEdit==="ph"?`<div class="addph"><input type="tel" id="pPh" placeholder="808 555 0100" value="${esc(fmtPh(m.phone||""))}"><button data-psave="ph">Save</button></div>`:""}</div>`;
+  // dates
+  const dRow=(k,l)=>`<div><label for="pd_${k}">${l}</label><input type="date" id="pd_${k}" data-pdate="${k}" value="${esc(isoOf(m[k]))}" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)"></div>`;
+  h+=pSec("Dates",`<div class="row2">${dRow("start","Status start")}${dRow("end","Status end / return")}</div><div class="row2">${dRow("edd","EDD / leaving unit")}${dRow("eas","EAS / contract end")}</div>`);
+  // due-outs
+  if(typeof dueRows==="function"){const rows=dueRows(m);h+=pSec(`Due-outs${rows.some(r=>r.st==="over")?` <span style="color:var(--warn)">· ${rows.filter(r=>r.st==="over").length} overdue</span>`:""}`,rows.length?rows.map(r=>`<div class="rtop" style="gap:8px"><div class="who"><b style="color:var(${r.col})">●</b> ${esc(r.item)}<div class="ph">${r.txt}</div></div><button class="chip" data-pdone="${esc(r.item)}" style="cursor:pointer">Done today</button><input type="date" data-pdue="${esc(r.item)}" value="${esc(r.iso)}" aria-label="${esc(r.item)} due date" style="width:132px;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)"></div>`).join(""):`<p class="note">No readiness items set up. See READY on the board.</p>`)}
+  // duty
+  if(typeof nextDuties==="function"){const nd=nextDuties(m);h+=pSec("Duty",nd.length?nd.map(x=>`<div>${esc(x.roster)}: <b>${esc(x.day)}</b></div>`).join(""):`<p class="note">No upcoming duty.</p>`)}
+  // gear
+  if(m.wpn&&m.wpn.t)h+=pSec("Gear",`<div><b>${esc(m.wpn.t)}</b>${m.wpn.rack?" · rack "+esc(m.wpn.rack):""}${m.wpn.s4?" · serial …"+esc(m.wpn.s4):""}</div>`);
+  // accountability
+  const acc=[];const ci=(S.rc.ci||{})[m.id];if(S.rc.start&&(S.rc.res||{})[m.id])acc.push(`Recall ${dtg(new Date(S.rc.start)).slice(0,7)}: ${ci?(ci.c===3?"⚠ NEED HELP":ci.c===2?"Delayed":"Checked in good"):({ok:"Reached",vm:"Voicemail",na:"No answer"})[S.rc.res[m.id]]||""}${ci&&ci.eta?" ("+esc(ci.eta)+")":""}`);
+  if(S.mus.last&&S.mus.last.un)acc.push("Last muster "+dtg(new Date(S.mus.last.t)).slice(0,7)+": "+(S.mus.last.un.some(x=>x.includes(" "+m.rank+" "+m.name))?"<b style='color:var(--warn)'>unaccounted</b>":"accounted for"));
+  for(const f of S.feeds.filter(f=>f.lk)){const ps=(f.posts||[]).filter(p=>fdPool(p).some(x=>x.id===m.id));if(!ps.length)continue;const ok=ps.filter(p=>((f.acks||{})[String(p.id)]||{})[m.id]).length;acc.push(esc(f.unit)+" feed: confirmed "+ok+"/"+ps.length+" posts"+(ps.length-ok?` · <b style="color:var(--warn)">${ps.length-ok} not confirmed</b>`:""))}
+  const ev=(S.events||[]).filter(e=>evReq(e).some(x=>x.id===m.id)&&!evDone(e,m));if(ev.length)acc.push("Owes: "+ev.map(e=>esc(e.name)).join(", "));
+  h+=pSec("Accountability",acc.length?acc.map(x=>`<div>${x}</div>`).join(""):`<p class="note">Nothing recorded yet.</p>`);
+  // 6W
+  const w6=(S.w6||[]).filter(r=>r.mid===m.id);h+=pSec("6Ws",(w6.length?w6.slice().reverse().map(r=>`<button class="chip" data-wopen="${r.id}" style="cursor:pointer;text-align:left">${esc((r.when||"").replace("T"," "))} · ${esc(r.type||r.kind)}</button>`).join(""):`<p class="note">None.</p>`)+`<button class="btn alt" data-w6="${m.id}">New 6W</button>`);
+  // notes
+  const notes=m.notes||[];h+=pSec("Notes",`<textarea id="pNote" maxlength="500" style="min-height:60px" placeholder="Counseling given, good work, follow-up…"></textarea><button class="btn alt" id="pNoteAdd">Add note</button>${notes.slice().reverse().map((n,i)=>`<div class="rtop"><div class="who" style="white-space:pre-wrap">${esc(n.txt)}<div class="ph">${dtg(new Date(n.t)).slice(0,7)} ${dtg(new Date(n.t)).slice(8)}</div></div><button class="chip" data-pndel="${notes.length-1-i}" style="cursor:pointer">${armed==="pn"+(notes.length-1-i)?"Delete?":"✕"}</button></div>`).join("")}`);
+  // timeline
+  const tl=(S.tl[m.id]||[]).slice(-12).reverse();if(tl.length)h+=pSec("Status history",tl.map(x=>`<div class="note"><b>${dtg(new Date(x[0])).slice(0,7)} ${dtg(new Date(x[0])).slice(8)}</b> · ${esc(SHORT[x[1]]||x[1])}${x[2]!=="Full Duty"?" · "+esc(x[2]):""}</div>`).join(""));
+  $("#main").innerHTML=h}
+
+/* ---------- history: daily numbers + each person's status timeline ---------- */
+const dkey=(d=new Date())=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+let histT=null;
+function histTick(){if(S.source==="sample")return;clearTimeout(histT);histT=setTimeout(histNow,1500)}
+function histNow(){const {c,T}=counts();const sec={};SECTIONS.forEach(([k])=>sec[k]=[c[k]["On Hand"],c[k].total,present(c[k])]);
+  const st={};STATUSES.forEach(x=>st[x]=T[x]);S.days[dkey()]={str:T.total,oh:T["On Hand"],pr:present(T),st,sec};
+  const ks=Object.keys(S.days).sort();if(ks.length>400)ks.slice(0,ks.length-400).forEach(k=>delete S.days[k]);
+  const now=Date.now();for(const m of S.roster){const L=S.tl[m.id]=S.tl[m.id]||[];const last=L[L.length-1];const d=dutyOf(m);
+    if(!last||last[1]!==m.status||last[2]!==d){L.push([now,m.status,d]);if(L.length>60)L.splice(0,L.length-60)}}
+  for(const id of Object.keys(S.tl))if(!S.roster.some(m=>m.id===id))delete S.tl[id];
+  try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.write(t);else localStorage.setItem(KEY,t)}catch(e){}}
+function sinceOf(m){const L=S.tl[m.id];if(!L||!L.length)return null;let i=L.length-1;while(i>0&&L[i-1][1]===m.status)i--;return L[i][0]}
+function awayDays(m,from){const L=(S.tl[m.id]||[]).filter(x=>x);let days=0;const now=Date.now();
+  for(let i=0;i<L.length;i++){const a=Math.max(L[i][0],from),b=i+1<L.length?L[i+1][0]:now;if(b<=a)continue;if(AWAY.includes(L[i][1]))days+=(b-a)/86400000}return days}
+let trRange=30;
+function lineChart(series,h){const W=340,H=h||150,P=28;const n=series[0].pts.length;if(n<2)return `<p class="note">Not enough days yet. The chart fills in as you use the app each day.</p>`;
+  const x=i=>P+(W-P-8)*i/(n-1),y=v=>8+(H-8-22)*(1-v/100);
+  const grid=[0,50,100].map(v=>`<line x1="${P}" x2="${W-8}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="2" y="${y(v)+4}" font-size="10" fill="var(--muted)">${v}%</text>`).join("");
+  const lines=series.map(s=>`<polyline fill="none" stroke="var(${s.col})" stroke-width="2.2" stroke-linejoin="round" points="${s.pts.map((v,i)=>v==null?"":x(i).toFixed(1)+","+y(v).toFixed(1)).filter(Boolean).join(" ")}"/>`).join("");
+  const lab=series[0].lab||[];const lx=[0,Math.floor((n-1)/2),n-1].map((i,j)=>`<text x="${x(i)}" y="${H-4}" font-size="10" fill="var(--muted)" text-anchor="${["start","middle","end"][j]}">${esc(lab[i]||"")}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Chart">${grid}${lines}${lx}</svg><div class="note">${series.map(s=>`<span style="color:var(${s.col});font-weight:700">■</span> ${esc(s.name)}`).join(" &nbsp; ")}</div>`}
+function renderTrends(){let h=banner();const keys=[];for(let i=trRange-1;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);keys.push(dkey(d))}
+  const D=keys.map(k=>S.days[k]||null);const have=D.filter(Boolean);
+  h+=`<h2>Trends</h2><div class="evts">${[[30,"30 days"],[90,"90 days"],[365,"1 year"]].map(([v,l])=>`<button data-trr="${v}" aria-pressed="${trRange===v}">${l}</button>`).join("")}</div>`;
+  if(!have.length){h+=`<div class="panel"><p class="note">${S.source==="sample"?"Load your roster to start keeping history.":"History starts today. The app saves your numbers each day you use it."}</p></div>`;$("#main").innerHTML=h;return}
+  const lab=keys.map(k=>{const [y,mo,dd]=k.split("-");return dd+" "+MON[+mo-1]});
+  h+=`<div class="panel"><b>% on hand and present, by day</b>${lineChart([{name:"On hand",col:"--s-onhand",pts:D.map(d=>d&&d.str?Math.round(100*d.oh/d.str):null),lab},{name:"Present",col:"--s-aob",pts:D.map(d=>d&&d.str?Math.round(100*d.pr/d.str):null),lab}])}</div>`;
+  const avg=a=>a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length):0;
+  h+=`<h2>By section · average over ${have.length} day${have.length>1?"s":""}</h2><div class="gridwrap"><table><thead><tr><th>Section</th><th>% on hand</th><th>% present</th><th>Today</th></tr></thead><tbody>${SECTIONS.map(([k])=>{const r=have.map(d=>d.sec&&d.sec[k]).filter(x=>x&&x[1]);
+    const t=(S.days[dkey()]||{}).sec;const tt=t&&t[k];return `<tr><td><b>${k}</b></td><td>${avg(r.map(x=>100*x[0]/x[1]))}%</td><td>${avg(r.map(x=>100*(x[2]??x[0])/x[1]))}%</td><td>${tt?tt[0]+"/"+tt[1]:"—"}</td></tr>`}).join("")}
+    <tr class="sum"><td>Total</td><td>${avg(have.map(d=>100*d.oh/(d.str||1)))}%</td><td>${avg(have.map(d=>100*d.pr/(d.str||1)))}%</td><td>${(S.days[dkey()]||{}).oh??"—"}/${(S.days[dkey()]||{}).str??"—"}</td></tr></tbody></table></div>`;
+  const from=Date.now()-trRange*86400000;const top=S.roster.filter(m=>m.sec!=="ATT").map(m=>({m,d:awayDays(m,from)})).filter(x=>x.d>=0.5).sort((a,b)=>b.d-a.d).slice(0,12);
+  h+=`<h2>Most days away · last ${trRange} days</h2><p class="note">Leave, TAD, operations and appointments off base, from the app's own history.</p>`;
+  h+=top.length?`<div class="alist">${top.map(x=>`<button class="rrow" data-pcard="${x.m.id}" style="text-align:left;cursor:pointer"><div class="rtop"><div class="who"><b>${esc(x.m.rank)}</b> ${esc(x.m.name)}<div class="ph">${x.m.sec} · now ${esc(SHORT[x.m.status]||x.m.status)}</div></div><b>${Math.round(x.d)} d</b></div></button>`).join("")}</div>`:`<p class="note">No one away yet in this window.</p>`;
+  $("#main").innerHTML=h}
 
 /* ---------- SEND: broadcast with read receipts ----------
    Uses the recall tables: one "recall" per message; each "Got it" is a check-in (1 = got it, 2 = got it with a problem).
@@ -1700,7 +1877,7 @@ function animateNums(){document.querySelectorAll("[data-n]").forEach(el=>{const 
 document.addEventListener("click",e=>{
   if(e.target.closest("#bMode,[data-mode-open]")){e.stopImmediatePropagation();openModeSheet();return}
   const mo=e.target.closest("[data-mopt]");if(mo){e.stopImmediatePropagation();const k=mo.dataset.mopt;const wasFirst=sheetCtx&&sheetCtx.first;closeSheet();if(!S.mode){S.mode=k==="military"?"military":S.mode;save()}
-    if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed"].includes(view))view="board";render();window.scrollTo(0,0);if(!wasFirst)toast(MODES[k].name+" version on. Same people, new labels.")}if(wasFirst&&!S.onb)setTimeout(()=>showOnb(0),300);return}
+    if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty","p"].includes(view))view="board";render();window.scrollTo(0,0);if(!wasFirst)toast(MODES[k].name+" version on. Same people, new labels.")}if(wasFirst&&!S.onb)setTimeout(()=>showOnb(0),300);return}
   const msh=e.target.closest("[data-mshare]");if(msh){e.stopImmediatePropagation();shareMode(msh.dataset.mshare);return}
   const pk=e.target.closest("[data-pick]");if(pk){e.stopImmediatePropagation();openSheet(pk.dataset.pick,pk.dataset.pid);return}
   if(e.target.closest("[data-sclose]")){e.stopImmediatePropagation();closeSheet();return}
@@ -1713,7 +1890,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetCtx)closeSheet
 document.addEventListener("dragleave",e=>{const d=$("#rcDrop");if(d&&!e.relatedTarget)d.classList.remove("over")});
 document.addEventListener("drop",e=>{if(view!=="recall"&&view!=="data")return;const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;e.preventDefault();const d=$("#rcDrop");if(d)d.classList.remove("over");rcLoadFile(f,view==="recall"?"#rcOutR":"#rcOut")});
 function render(){renderTabs();
-  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="rollup")renderRollup();else if(view==="live")renderLive();else if(view==="send")renderSend();else if(view==="feed")renderFeed();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
+  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="rollup")renderRollup();else if(view==="live")renderLive();else if(view==="send")renderSend();else if(view==="feed")renderFeed();else if(view==="trends")renderTrends();else if(view==="ready")renderReady();else if(view==="duty")renderDuty();else if(view==="p")renderPerson();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
 
 /* ---------- CSV import ---------- */
 function parseCSV(text){const rows=[];let row=[],f="",q=false;
@@ -1748,6 +1925,12 @@ function exportCSV(){const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
 
 /* ---------- events ---------- */
 document.addEventListener("click",e=>{
+  const pc=e.target.closest("[data-pcard]");if(pc&&!e.target.closest("button[data-rm],button[data-w6],a,select,[data-pick]")){openCard(pc.dataset.pcard);return}
+  if(e.target.closest("[data-pback]")){view=pBack||"board";armed=null;render();window.scrollTo(0,0);return}
+  const pe=e.target.closest("[data-pedit]");if(pe){pEdit=pe.dataset.pedit;renderPerson();const i=$("#pPh");if(i)i.focus();return}
+  const ps=e.target.closest("[data-psave]");if(ps){const m=S.roster.find(x=>x.id===pid);const d=normPh(($("#pPh")||{}).value||"");if(!d){toast("Enter a 10-digit number.");return}if(m){m.phone=d;save()}pEdit=null;renderPerson();toast("Phone saved");return}
+  if(e.target.id==="pNoteAdd"){const m=S.roster.find(x=>x.id===pid);const t=($("#pNote").value||"").trim();if(!t){toast("Type the note first.");return}if(m){m.notes=(m.notes||[]).concat({t:Date.now(),txt:t.slice(0,500)}).slice(-50);save()}renderPerson();toast("Note added");return}
+  const pnd=e.target.closest("[data-pndel]");if(pnd){const m=S.roster.find(x=>x.id===pid);const i=+pnd.dataset.pndel;if(armed==="pn"+i){if(m&&m.notes){m.notes.splice(i,1);save()}armed=null}else armed="pn"+i;const y=window.scrollY;renderPerson();window.scrollTo(0,y);return}
   const go=e.target.closest("[data-v],[data-go]");
   if(go){view=go.dataset.v||go.dataset.go;armed=null;query="";render();window.scrollTo(0,0);return}
   if(e.target.closest("#b6W")){view=view==="w6"?"board":"w6";armed=null;render();window.scrollTo(0,0);return}
@@ -1757,7 +1940,7 @@ document.addEventListener("click",e=>{
   if(e.target.id==="wCopy"){const t=wText(W);try{navigator.clipboard.writeText(t).then(()=>toast("6W copied"),()=>toast("Copy blocked here. Use Text it."))}catch(err){toast("Copy blocked here. Use Text it.")}return}
   if(e.target.id==="wSave"){if(!W.mid&&!W.other.trim()){toast("Select a Marine first.");return}const i=S.w6.findIndex(r=>r.id===W.id);const rec=Object.assign({},W,{created:W.created||new Date().toISOString()});if(i>=0)S.w6[i]=rec;else S.w6.push(rec);save();renderW();toast("6W saved");return}
   if(e.target.id==="wNew"){W=newW("");renderW();window.scrollTo(0,0);return}
-  const wo=e.target.closest("[data-wopen]");if(wo){const r=S.w6.find(x=>x.id===wo.dataset.wopen);if(r){W=Object.assign({},r);renderW();window.scrollTo(0,0)}return}
+  const wo=e.target.closest("[data-wopen]");if(wo){const r=S.w6.find(x=>x.id===wo.dataset.wopen);if(r){W=Object.assign({},r);view="w6";armed=null;renderTabs();renderW();window.scrollTo(0,0)}return}
   const wd=e.target.closest("[data-wdel]");if(wd){const id=wd.dataset.wdel;if(armed===id){S.w6=S.w6.filter(r=>r.id!==id);armed=null;save();toast("6W deleted")}else armed=id;renderW();return}
   if(e.target.id==="evNewBtn"){evNew=true;renderEvents();const n=$("#evName");if(n)n.focus();return}
   if(e.target.id==="evCancel"){evNew=false;renderEvents();return}
@@ -1781,6 +1964,23 @@ document.addEventListener("click",e=>{
   if(e.target.id==="rcCancel"){if(armed==="rccancel"){liveClose();S.rc.open=false;S.rc.res={};S.rc.ci={};S.rc.start=0;armed=null;save();toast("Recall discarded")}else armed="rccancel";renderRecall();return}
   if(e.target.id==="pushOn"){e.target.disabled=true;e.target.textContent="Asking…";pushSub(true).then(sub=>{if(sub){S.pushOn=true;save();pushAttach().then(()=>{const y=window.scrollY;renderRecall();window.scrollTo(0,y)});toast("Alerts on")}else{toast("Alerts not allowed");const y=window.scrollY;renderRecall();window.scrollTo(0,y)}}).catch(()=>{toast("Couldn't turn on alerts here.");const y=window.scrollY;renderRecall();window.scrollTo(0,y)});return}
   if(e.target.id==="bpushOn"){e.target.disabled=true;e.target.textContent="Asking…";pushSub(true).then(sub=>{if(!sub){toast("Alerts not allowed");renderLive();return}S.pushOn=true;save();boardPush().then(()=>{renderLive();toast(S.board&&S.board.push?"Alerts on":"Couldn't connect alerts. Try again.")})}).catch(()=>{toast("Couldn't turn on alerts here.");renderLive()});return}
+  const trr=e.target.closest("[data-trr]");if(trr){trRange=+trr.dataset.trr;renderTrends();return}
+  const rdi=e.target.closest("[data-rditem]");if(rdi){rdItem=rdItem===rdi.dataset.rditem?"":rdi.dataset.rditem;renderReady();return}
+  const rdd=e.target.closest("[data-rddone]");if(rdd){const m=S.roster.find(x=>x.id===rdd.dataset.rddone);if(m){markDone(m,rdd.dataset.rdn);save();toast(rdd.dataset.rdn+" done for "+m.rank+" "+lastOf(m))}const y=window.scrollY;renderReady();window.scrollTo(0,y);return}
+  const pdn=e.target.closest("[data-pdone]");if(pdn){const m=S.roster.find(x=>x.id===pid);if(m){markDone(m,pdn.dataset.pdone);save();toast("Marked done")}const y=window.scrollY;renderPerson();window.scrollTo(0,y);return}
+  if(e.target.id==="rdGo"){try{const r=importReady($("#rdPaste").value);renderReady();$("#rdOut").textContent=r.ok+" people matched · "+r.set+" dates set ("+r.items.join(", ")+")"+(r.miss.length?" · not matched: "+r.miss.slice(0,6).join("; "):"")}catch(err){$("#rdOut").textContent=err.message}return}
+  if(e.target.id==="rdCopy"){try{navigator.clipboard.writeText(readyText()).then(()=>toast("Copied"),()=>toast("Copy blocked here."))}catch(err){toast("Copy blocked here.")}return}
+  if(e.target.id==="rdAdd"){const n=($("#rdNew").value||"").trim().slice(0,30);if(!n){toast("Name the item.");return}const its=readyItems();if(its.some(x=>x.n.toLowerCase()===n.toLowerCase())){toast("Already tracked.");return}its.push({n,mo:+$("#rdMo").value});rdEdit=true;save();renderReady();toast(n+" added");return}
+  const rdr=e.target.closest("[data-rdrm]");if(rdr){const i=+rdr.dataset.rdrm;if(armed==="rdrm"+i){readyItems().splice(i,1);armed=null;save()}else armed="rdrm"+i;rdEdit=true;const y=window.scrollY;renderReady();window.scrollTo(0,y);return}
+  const dsl=e.target.closest("[data-dsel]");if(dsl){dSel=dsl.dataset.dsel;dSwap=null;renderDuty();return}
+  if(e.target.id==="dMake"){const n=($("#dNm").value||"").trim().slice(0,24)||"Duty";const r={id:"d"+Date.now(),name:n,secs:SECTIONS.map(x=>x[0]),att:false,skip:DUTY_SKIP.slice(),skipLim:true,order:[],ptr:0,assign:{},excl:{}};S.duty.rosters.push(r);dSel=r.id;dSetup=true;dGen(r,30,false);renderDuty();toast("Roster created and filled for 30 days");return}
+  if(e.target.id==="dCancel"){dSetup=false;renderDuty();return}
+  if(e.target.id==="dNew"){dSetup="new";renderDuty();return}
+  if(e.target.id==="dGen"){const r=dCur();const n=dGen(r,30,false);renderDuty();toast(n?n+" days filled":"Already filled");return}
+  if(e.target.id==="dRedo"){if(armed==="dredo"){const r=dCur();armed=null;dGen(r,30,true);renderDuty();toast("Redone from today")}else{armed="dredo";renderDuty()}return}
+  const dsw=e.target.closest("[data-dswap]");if(dsw){dSwap=dSwap===dsw.dataset.dswap?null:dsw.dataset.dswap;const y=window.scrollY;renderDuty();window.scrollTo(0,y);return}
+  if(e.target.id==="dCopy"){try{navigator.clipboard.writeText(dutyText(dCur(),14)).then(()=>toast("Copied"),()=>toast("Copy blocked here."))}catch(err){toast("Copy blocked here.")}return}
+  if(e.target.id==="dDel"){if(armed==="ddel"){S.duty.rosters=S.duty.rosters.filter(x=>x!==dCur());dSel=null;armed=null;dSetup=false;save();renderDuty();toast("Roster deleted")}else{armed="ddel";dSetup=true;renderDuty()}return}
   if(e.target.id==="fdCreate"){e.target.disabled=true;e.target.textContent="Creating…";fdCreate().then(()=>{fdNew=false;renderFeed();toast("Feed created. Invite your people.")}).catch(err=>{e.target.disabled=false;e.target.textContent="Start a feed";const o=$("#fdOut");if(o)o.textContent="Couldn't create: "+(err.message||err)});return}
   if(e.target.id==="fdPushOn"){const f=fdCur();e.target.disabled=true;e.target.textContent="Asking…";pushSub(true).then(sub=>{if(!sub){toast("Alerts not allowed");renderFeed();return}S.pushOn=true;save();fdPushAttach(f).then(()=>{renderFeed();toast(f.push?"Alerts on":"Couldn't connect alerts. Try again.")})}).catch(()=>{toast("Couldn't turn on alerts here.");renderFeed()});return}
   const fto=e.target.closest("[data-fdto]");if(fto){fdDraft.txt=($("#fdTxt")||{}).value||fdDraft.txt;fdDraft.to=fto.dataset.fdto;if(fdDraft.to==="secs"&&!fdDraft.secs.length)fdDraft.secs=SECTIONS.map(x=>x[0]);const y=window.scrollY;renderFeed();window.scrollTo(0,y);return}
@@ -1897,7 +2097,17 @@ document.addEventListener("change",e=>{
   if(e.target.matches&&e.target.matches("input[data-bcsec]")){const k=e.target.dataset.bcsec;bcDraft.msg=($("#bcMsg")||{}).value||bcDraft.msg;bcDraft.secs=e.target.checked?[...new Set(bcDraft.secs.concat(k))]:bcDraft.secs.filter(x=>x!==k);renderSend();return}
   if(e.target.id==="bcAtt"){bcDraft.msg=($("#bcMsg")||{}).value||bcDraft.msg;bcDraft.att=e.target.checked;renderSend();return}
   if(e.target.id==="bcMe"){const d=normPh(e.target.value);if(e.target.value.trim()&&!d){toast("Enter a 10-digit number.");return}S.myPh=d;save();return}
+  if(e.target.id==="rdFile"){const f=e.target.files[0];if(!f)return;const o=$("#rdOut");if(o)o.textContent="Reading "+f.name+"…";readRecallFile(f).then(x=>{const r=importReady(x.t);renderReady();$("#rdOut").textContent=r.ok+" people matched · "+r.set+" dates set ("+r.items.join(", ")+")"+(r.miss.length?" · not matched: "+r.miss.slice(0,6).join("; "):"")}).catch(err=>{const o2=$("#rdOut");if(o2)o2.textContent=err.message});e.target.value="";return}
+  if(e.target.matches&&e.target.matches("input[data-pdue]")){const m=S.roster.find(x=>x.id===pid);if(m){m.due=m.due||{};const n=e.target.dataset.pdue;m.due[n]={due:e.target.value||"",done:(m.due[n]||{}).done||""};save();const y=window.scrollY;renderPerson();window.scrollTo(0,y);toast("Saved")}return}
+  if(e.target.matches&&e.target.matches("select[data-dpick]")){const r=dCur();const k=e.target.dataset.dpick;if(e.target.value==="-")delete r.assign[k];else if(e.target.value)r.assign[k]=e.target.value;dSwap=null;save();const y=window.scrollY;renderDuty();window.scrollTo(0,y);toast("Changed");return}
+  if(e.target.matches&&e.target.matches("input[data-dsec]")){const r=dCur();const k=e.target.dataset.dsec;r.secs=e.target.checked?[...new Set(r.secs.concat(k))]:r.secs.filter(x=>x!==k);dSetup=true;save();renderDuty();return}
+  if(e.target.id==="dAtt"){const r=dCur();r.att=e.target.checked;dSetup=true;save();renderDuty();return}
+  if(e.target.matches&&e.target.matches("input[data-dskip]")){const r=dCur();const k=e.target.dataset.dskip;r.skip=e.target.checked?[...new Set((r.skip||[]).concat(k))]:(r.skip||[]).filter(x=>x!==k);dSetup=true;save();renderDuty();return}
+  if(e.target.id==="dLim"){const r=dCur();r.skipLim=e.target.checked;dSetup=true;save();renderDuty();return}
+  if(e.target.matches&&e.target.matches("input[data-dexcl]")){const r=dCur();r.excl=r.excl||{};if(e.target.checked)r.excl[e.target.dataset.dexcl]=1;else delete r.excl[e.target.dataset.dexcl];dSetup=true;save();return}
+  if(e.target.id==="dName"){const r=dCur();r.name=(e.target.value||"").trim().slice(0,24)||r.name;save();renderDuty();return}
   if(e.target.id==="fdUrg"){fdDraft.urg=e.target.checked;return}
+  if(e.target.matches&&e.target.matches("input[data-pdate]")){const m=S.roster.find(x=>x.id===pid);if(m){m[e.target.dataset.pdate]=e.target.value?fmtD(e.target.value):"";save();toast("Saved")}return}
   if(e.target.matches&&e.target.matches("input[data-fdsec]")){const k=e.target.dataset.fdsec;fdDraft.secs=e.target.checked?[...new Set(fdDraft.secs.concat(k))]:fdDraft.secs.filter(x=>x!==k);return}
   if(e.target.id==="fdAtt"){fdDraft.att=e.target.checked;return}
   if(e.target.id==="fdWho"){fdDraft.mid=e.target.value;return}
@@ -1945,6 +2155,7 @@ document.addEventListener("input",e=>{
   if(e.target.id==="unitNm"){S.unit=cleanName(e.target.value);save();const t=reportText();const m=$("#msg");if(m)m.value=t;const a=$("#sms");if(a)a.href=smsHref(t);return}
   if(e.target.id==="rollNm"){S.roll.name=cleanName(e.target.value);save();const t=rollText();const m=$("#rollMsg");if(m)m.value=t;const a=$("#rollSms");if(a)a.href=smsHref(t);return}
   if(e.target.id==="rcp"){S.recipients=e.target.value;save();const a=$("#sms");if(a)a.href=smsHref($("#msg").value);return}
+  if(e.target.id==="gq"){const r=$("#gqr");if(r)r.innerHTML=gqHTML(e.target.value);return}
   if(e.target.id==="q"){query=e.target.value.toLowerCase();const pos=e.target.selectionStart;renderSection(view.toUpperCase());const q=$("#q");q.focus();q.setSelectionRange(pos,pos);return}
 });
 document.addEventListener("submit",e=>{
