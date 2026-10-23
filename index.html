@@ -397,7 +397,30 @@ let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.hidden){hiddenAt=Date.now();return}
   const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
 function startApp(){const s=document.createElement("script");s.textContent=document.getElementById("app").textContent;document.body.appendChild(s)}
+/* check-in page for the person receiving a recall link (#ci=...). Shows nothing from this phone's roster. */
+function ciPage(q){const esc=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const rid=(q.get("ci")||"").replace(/[^a-z0-9]/gi,"").slice(0,12),unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24),to=(q.get("to")||"").replace(/\D/g,"").slice(-10);
+  const KM=K+"-ci-me";let me="";try{me=localStorage.getItem(KM)||""}catch(e){}
+  const t=parseInt(rid,36);const when=Number.isFinite(t)&&t>0?new Date(t).toLocaleString([],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}):"";
+  document.title="Check in";const m=document.createElement("main");m.className="wrap ci-page";
+  m.innerHTML=`<h2 style="margin-top:18px">Check in</h2><div class="panel">
+    <div><b>${esc(unit||"Your unit")}</b> recall${when?" · sent "+esc(when):""}</div>
+    <label for="ciN">Your rank and last name</label><input type="text" id="ciN" value="${esc(me)}" maxlength="30" placeholder="CPL SMITH" autocapitalize="characters" style="text-transform:uppercase">
+    <button class="btn" data-c="1" style="min-height:56px;font-size:18px">✓ I'm good</button>
+    <label for="ciE">Delayed or need help? Add ETA or a short note</label><input type="text" id="ciE" maxlength="40" placeholder="ETA 1400">
+    <button class="btn alt" data-c="2" style="min-height:52px">Good, but delayed</button>
+    <button class="btn warn" data-c="3" style="min-height:52px">I need help</button>
+    <p class="note" id="ciMsg">${to?"Opens a text to your leader. Hit Send.":"Opens a text. Pick your leader as the recipient and hit Send."}</p>
+    <p class="note">Nothing is sent until you hit Send in Messages. Your name is remembered on this phone only.</p></div>`;
+  document.body.appendChild(m);document.querySelectorAll(".top").forEach(x=>x.hidden=true);
+  m.addEventListener("click",e=>{const b=e.target.closest("[data-c]");if(!b)return;const n=document.getElementById("ciN").value.toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim();
+    if(!n){document.getElementById("ciMsg").textContent="Enter your rank and last name first.";document.getElementById("ciN").focus();return}
+    try{localStorage.setItem(KM,n)}catch(err){}const c=+b.dataset.c;const eta=document.getElementById("ciE").value.replace(/[|#]/g," ").replace(/\s+/g," ").trim();
+    const word=c===1?"GOOD":c===2?"DELAYED":"NEED HELP";
+    const body="CHECK-IN: "+word+" - "+n+(eta?" ("+eta+")":"")+"\n#EOOP-CI|"+rid+"|"+c+"|"+n+"|"+eta;
+    location.href="sms:"+(to?"+1"+to:"")+"?&body="+encodeURIComponent(body)});}
 window.addEventListener("DOMContentLoaded",()=>{
+  {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("ci")){ciPage(q);return}}
   if(!V.cfg||!localStorage.getItem(KE)){if(V.cfg&&!localStorage.getItem(KE)){try{localStorage.removeItem(KC)}catch(e){}V.cfg=null}startApp();return}
   const L=document.getElementById("lock"),dots=document.getElementById("lockDots"),err=document.getElementById("lockErr"),pad=document.getElementById("lockPad");
   const c=V.cfg;document.getElementById("lockT").textContent=c.title||"MusterBoard";let pin="",busy=false,until=0;
@@ -430,7 +453,7 @@ const SVAR={"On Hand":"--s-onhand","Appointment on Base":"--s-aob","Appointment 
 const PRESENT=["On Hand","Appointment on Base","Company Duties"];
 const SECTIONS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
 const DEF_SECS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
-const RESERVED=["BOARD","ATT","PT","W6","TEXT","DATA","MUSTER","ALERTS","RECALL","EVENTS","ARMORY"];
+const RESERVED=["BOARD","ATT","PT","W6","TEXT","DATA","MUSTER","ALERTS","RECALL","EVENTS","ARMORY","ROLLUP"];
 const MIL_SECS=DEF_SECS.map(s=>s.slice());
 let secDraft=null;
 /* ---------- versions: one app, five vocabularies ---------- */
@@ -480,7 +503,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="1.0.1";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="1.1.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -515,7 +538,7 @@ function modeDict(md){const v=md.v;if(!v)return null;const t=[];const add=(a,b)=
   return {map,mapU,re:new RegExp("(?<![A-Za-z0-9])(?:"+keys.join("|")+")(?![A-Za-z0-9])","g"),ex}}
 let XL=null;
 function xs(s,U){if(!XL||!s)return s;const M=U?XL.mapU:XL.map;return String(s).replace(XL.re,m=>M[m]??m)}
-function RT(txt){if(!XL)return txt;return String(txt).split("\n").map(l=>l.startsWith("#EOOP1|")?l:xs(l,l===l.toUpperCase())).join("\n")}
+function RT(txt){if(!XL)return txt;return String(txt).split("\n").map(l=>l.startsWith("#EOOP")?l:xs(l,l===l.toUpperCase())).join("\n")}
 const XSKIP=new Set(["SCRIPT","STYLE","TEXTAREA","INPUT"]);
 const XREC=new WeakMap();
 function xlText(n){const p=n.parentNode;if(!p||XSKIP.has(p.nodeName)||p.closest&&p.closest("[data-noxl]"))return;const cur=n.nodeValue;if(!cur||!cur.trim())return;
@@ -614,7 +637,8 @@ S.hist=Array.isArray(S.hist)?S.hist:[];
 S.events=Array.isArray(S.events)?S.events:[];
 S.arm=Object.assign({open:false,start:0,st:{},only:false,last:""},S.arm||{});
 S.rcMiss=Array.isArray(S.rcMiss)?S.rcMiss:[];if(S.rcRev&&!Array.isArray(S.rcRev.rows))S.rcRev=null;
-S.rc=Object.assign({open:false,start:0,end:0,res:{},att:true,only:false},S.rc||{});
+S.rc=Object.assign({open:false,start:0,end:0,res:{},att:true,only:false,ci:{}},S.rc||{});if(!S.rc.ci||typeof S.rc.ci!=="object")S.rc.ci={};
+S.roll=Object.assign({units:{},own:true,name:""},S.roll||{});if(!S.roll.units||typeof S.roll.units!=="object")S.roll.units={};
 S.mus=Object.assign({open:false,seen:{},inc:["On Hand"],att:true,only:false,last:null},S.mus||{});
 S.pt=Object.assign({event:"Unit PT",when:"",inc:["On Hand"],att:true},S.pt||{});
 const dutyOf=m=>DUTIES.includes(m.duty)?m.duty:"Full Duty";
@@ -622,7 +646,7 @@ function save(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.
 
 let view="board", armed=null, query="";
 const h0=(location.hash||"").slice(1).toLowerCase();
-if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory"].includes(h0)) view=h0;
+if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup"].includes(h0)) view=h0;
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -677,7 +701,9 @@ function renderBoard(){
       <button class="bigbtn${al.over.length?" hot":""}" data-go="alerts"><b>ALERTS</b><span>${al.over.length?`<span class="w">${al.over.length} overdue</span> · `:""}${al.ret.length} returning · ${al.dep.length} departing</span></button>
       <button class="bigbtn${S.rc.open?" live":""}" data-go="recall"><b>RECALL</b><span>${S.rc.open?"In progress · "+recallPool().filter(m=>(S.rc.res||{})[m.id]==="ok").length+"/"+recallPool().length:S.roster.filter(m=>m.phone).length+" numbers loaded"}</span></button>
       <button class="bigbtn" data-go="events"><b>EVENTS</b><span>${S.events.length?S.events.length+(S.events.length===1?" event · ":" events · ")+S.events.reduce((a,e)=>a+evReq(e).filter(m=>!evDone(e,m)).length,0)+" owe":"Attendance"}</span></button>
-      <button class="bigbtn${S.arm.open?" live":""}" data-go="armory"><b>ARMORY</b><span>${S.arm.open?"Muster in progress":S.roster.filter(hasW).length+" weapons"}</span></button></div>`})()}
+      <button class="bigbtn${S.arm.open?" live":""}" data-go="armory"><b>ARMORY</b><span>${S.arm.open?"Muster in progress":S.roster.filter(hasW).length+" weapons"}</span></button>
+      ${(()=>{const n=Object.keys(S.roll.units).length;if(!n)return `<button class="bigbtn" data-go="rollup"><b>ROLLUP</b><span>Add up units under you</span></button>`;const R=rollSum(rollUnits());const st=rollStale();
+        return `<button class="bigbtn${st.length?" hot":""}" data-go="rollup"><b>ROLLUP</b><span>${st.length?`<span class="w">${st.length} old</span> · `:""}${R.oh}/${R.str} · ${n+(S.roll.own?1:0)} units</span></button>`})()}</div>`})()}
     <div class="dutyline">${dutyChips(S.roster.filter(m=>m.sec!=="ATT"))}<button class="chip" data-go="pt" style="cursor:pointer">PT roster ▸</button></div>
     <div class="att"><div><div class="lbl">Attached · not on our numbers</div><div class="big">${A.total}<small>${A["On Hand"]} on hand</small></div><div class="note">Total accounted for: <b>${T.total+A.total}</b> · Physically here: <b>${present(T)+present(A)}</b></div></div><button data-go="att">${A.total?"View":"Add"}</button></div>
   </div>`;
@@ -716,7 +742,7 @@ function renderSection(code){
 }
 function reportText(){
   const {c,T,A}=counts();const L=[];
-  L.push("EOOP ACCOUNTABILITY "+dtg());
+  L.push((S.unit?S.unit.toUpperCase():"EOOP")+" ACCOUNTABILITY "+dtg());
   L.push("TOTAL STRENGTH: "+T.total);
   L.push("ON HAND: "+T["On Hand"]+" ("+pct(T["On Hand"],T.total)+"%)");
   L.push("PRESENT ON DECK: "+present(T));
@@ -733,6 +759,7 @@ function reportText(){
     for(const s of STATUSES.slice(1)){const ms=sorted(S.roster.filter(m=>m.status===s&&m.sec!=="ATT"));if(!ms.length)continue;
       L.push("");L.push(SHORT[s].toUpperCase()+":");ms.forEach(m=>L.push("- "+m.sec+" "+m.rank+" "+m.name.split(",")[0]))}
   }
+  if(S.rollCode!==false){L.push("");L.push(rollCode(ownNums()))}
   return L.join("\n");
 }
 function smsHref(txt){const to=S.recipients.split(/[,;\s]+/).map(x=>x.replace(/[^\d+]/g,"")).filter(Boolean).join(",");
@@ -743,7 +770,10 @@ function renderText(){
   h+=`<h2>Text the numbers</h2><div class="panel">
     <label for="rcp">Send to (phone numbers, comma separated)</label>
     <input type="tel" id="rcp" value="${esc(S.recipients)}" placeholder="808 555 0100, 808 555 0101">
+    <label for="unitNm">Your unit's name on reports</label>
+    <input type="text" id="unitNm" value="${esc(S.unit||"")}" maxlength="24" placeholder="${esc(unitName())}" autocapitalize="characters" style="text-transform:uppercase">
     <label class="tog"><input type="checkbox" id="nm"${S.names?" checked":""}> Include last names of Marines off deck</label>
+    <label class="tog"><input type="checkbox" id="rollc"${S.rollCode!==false?" checked":""}> Add rollup code line (lets the next level up add your numbers in ROLLUP)</label>
     <label class="tog"><input type="checkbox" id="chg"${S.chg!==false?" checked":""}> Include changes since last report${S.snap?"":" (starts after your first send)"}</label>
     <textarea id="msg" readonly aria-label="Report text">${esc(t)}</textarea>
     <div class="row2"><a class="btn" id="sms" href="${esc(smsHref(t))}">Text it</a><button class="btn alt" id="copy">Copy text</button></div>
@@ -990,6 +1020,63 @@ function applySectionUpdates(text){const lines=String(text).split(/\r?\n/).map(x
     const sent=+p[2];res.push(code+": "+ch+" changed"+(miss.length?", "+miss.length+" not found ("+miss.join(", ")+")":"")+(sent!==ms.length?" · their strength "+sent+", yours "+ms.length:""))}
   save();return res}
 
+/* ---------- unit rollup: platoon → company → battalion, by text ----------
+   Code line: #EOOP2|NAME|time36|STR|OnHand|AOB|AOFF|DUTY|OP|TAD|LV|LD|LIM|ATT|ATTOH
+   Counts only, no names. A rollup sends its own #EOOP2 line, so it chains up any number of levels. */
+const RSTAT=["On Hand","Appointment on Base","Appointment off Base","Company Duties","Operation","TAD","Leave"];
+const STALE_H=12;
+const cleanName=s=>String(s||"").toUpperCase().replace(/[|#\r\n]/g," ").replace(/\s+/g," ").trim().slice(0,24);
+function unitName(){return cleanName(S.unit)||(MODE().v?MODE().v.eo:"EOOP")}
+function ownNums(){const {T,A}=counts();const d=dutyCounts(S.roster.filter(m=>m.sec!=="ATT"));const st={};RSTAT.forEach(s=>st[s]=T[s]||0);
+  return {name:unitName(),t:Date.now(),str:T.total,st,ld:d["Light Duty"],lim:d["LIMDU"],att:A.total,attoh:A["On Hand"],own:true}}
+function rollCode(u){return "#EOOP2|"+cleanName(u.name)+"|"+Math.floor(u.t).toString(36)+"|"+[u.str].concat(RSTAT.map(s=>u.st[s]||0),[u.ld,u.lim,u.att,u.attoh]).map(n=>Math.max(0,+n||0)).join("|")}
+function parseRoll(text){const out=[];
+  for(const raw of String(text).split(/\r?\n/)){const ln=raw.trim();const i=ln.indexOf("#EOOP2|");if(i<0)continue;const p=ln.slice(i).split("|");if(p.length<15)continue;
+    const n=p.slice(3,15).map(x=>parseInt(x,10));if(n.some(x=>!Number.isFinite(x)||x<0))continue;const t=parseInt(p[2],36);if(!Number.isFinite(t))continue;
+    const st={};RSTAT.forEach((s,j)=>st[s]=n[1+j]);out.push({name:cleanName(p[1])||"UNIT",t,str:n[0],st,ld:n[8],lim:n[9],att:n[10],attoh:n[11]})}
+  return out}
+function addRoll(text){const got=parseRoll(text);if(!got.length)throw new Error("No rollup code found. Paste the whole report, including the line that starts with #EOOP2.");
+  const res=[];for(const u of got){const k=u.name;const old=S.roll.units[k];
+    if(S.roll.own&&k===unitName()){res.push(k+": same name as your board, skipped (rename one)");continue}
+    if(old&&old.t>u.t){res.push(k+": older than the one you have, skipped");continue}
+    S.roll.units[k]=u;res.push(k+(old?" updated":" added")+" · "+u.st["On Hand"]+"/"+u.str)}
+  save();return res}
+function rollUnits(){const L=Object.values(S.roll.units).sort((a,b)=>a.name.localeCompare(b.name));return S.roll.own?[ownNums()].concat(L):L}
+function rollSum(L){const R={str:0,oh:0,st:{},ld:0,lim:0,att:0,attoh:0};RSTAT.forEach(s=>R.st[s]=0);
+  for(const u of L){R.str+=u.str;RSTAT.forEach(s=>R.st[s]+=u.st[s]||0);R.ld+=u.ld;R.lim+=u.lim;R.att+=u.att;R.attoh+=u.attoh}R.oh=R.st["On Hand"];return R}
+const presentOf=st=>PRESENT.reduce((a,s)=>a+(st[s]||0),0);
+function rollStale(){return Object.values(S.roll.units).filter(u=>Date.now()-u.t>STALE_H*3600000)}
+function rollName(){return cleanName(S.roll.name)||"ROLLUP"}
+function rollText(){const L0=rollUnits();const R=rollSum(L0);const L=[rollName()+" ROLLUP "+dtg()];
+  L.push("UNITS REPORTING: "+L0.length);
+  L.push("TOTAL STRENGTH: "+R.str);L.push("ON HAND: "+R.oh+" ("+pct(R.oh,R.str)+"%)");L.push("PRESENT ON DECK: "+presentOf(R.st));
+  L.push("FULL DUTY "+Math.max(0,R.str-R.ld-R.lim)+" / LIGHT DUTY "+R.ld+" / LIMDU "+R.lim);
+  L.push("");for(const u of L0){const old=!u.own&&Date.now()-u.t>STALE_H*3600000;L.push(u.name+" "+u.st["On Hand"]+"/"+u.str+(u.own?"":" (AS OF "+dtg(new Date(u.t)).slice(0,7)+(old?" OLD":"")+")"))}
+  L.push("");for(const s of RSTAT.slice(1))L.push(SHORT[s].toUpperCase()+": "+R.st[s]);
+  if(R.att){L.push("");L.push("ATTACHED (NOT ON STRENGTH): "+R.att+" (ON HAND "+R.attoh+")");L.push("TOTAL ACCOUNTED FOR: "+(R.str+R.att))}
+  L.push("");L.push(rollCode({name:rollName(),t:Date.now(),str:R.str,st:R.st,ld:R.ld,lim:R.lim,att:R.att,attoh:R.attoh}));
+  return L.join("\n")}
+function renderRollup(){const L0=rollUnits();const R=rollSum(L0);const others=Object.keys(S.roll.units).length;
+  let h=`<h2>Rollup</h2><div class="panel">
+    <p class="note">Add up the units under you. Each unit sends you its report from <b>TEXT</b> (the rollup code is on by default). Paste one or many here. Your rollup carries its own code, so the next level up can add yours the same way. Counts only: no names travel in the code.</p>
+    <label for="rollNm">Rollup name (what the next level up sees)</label>
+    <input type="text" id="rollNm" value="${esc(S.roll.name||"")}" maxlength="24" placeholder="e.g. ALPHA CO" autocapitalize="characters" style="text-transform:uppercase">
+    <label class="tog"><input type="checkbox" id="rollOwn"${S.roll.own?" checked":""}> Include my own board as <b>${esc(unitName())}</b></label>
+    <label for="rollIn">Paste unit reports</label>
+    <textarea id="rollIn" style="min-height:90px" placeholder="1ST PLT ACCOUNTABILITY ...&#10;#EOOP2|1ST PLT|..."></textarea>
+    <div class="row2"><button class="btn" id="rollGo">Add reports</button><button class="btn alt" id="rollClip">Paste from clipboard</button></div>
+    <div class="note" id="rollOut"></div></div>`;
+  if(L0.length){h+=`<h2>${esc(rollName())} · ${R.oh}/${R.str}</h2><div class="gridwrap"><table><thead><tr><th>Unit</th><th>On hand</th><th>Present</th>${RSTAT.slice(1).map(s=>`<th>${SHORT[s]}</th>`).join("")}<th>As of</th><th></th></tr></thead><tbody>
+      ${L0.map(u=>{const old=!u.own&&Date.now()-u.t>STALE_H*3600000;return `<tr><td><b>${esc(u.name)}</b></td><td>${u.st["On Hand"]}/${u.str}</td><td>${presentOf(u.st)}</td>${RSTAT.slice(1).map(s=>`<td class="${u.st[s]?"":"z"}">${u.st[s]}</td>`).join("")}<td${old?' style="color:var(--warn);font-weight:700"':""}>${u.own?"Live":dtg(new Date(u.t)).slice(0,7)+(old?" OLD":"")}</td><td>${u.own?"":`<button data-rdel="${esc(u.name)}" aria-label="Remove ${esc(u.name)}" style="border:0;background:none;color:var(--muted);font-weight:700;min-width:32px;min-height:32px">${armed==="rd"+u.name?"Remove?":"✕"}</button>`}</td></tr>`}).join("")}
+      <tr class="sum"><td>Total</td><td>${R.oh}/${R.str}</td><td>${presentOf(R.st)}</td>${RSTAT.slice(1).map(s=>`<td>${R.st[s]}</td>`).join("")}<td></td><td></td></tr></tbody></table></div>
+      <p class="note">${pct(R.oh,R.str)}% on hand · Light Duty ${R.ld} · LIMDU ${R.lim}${R.att?" · Attached "+R.att+" (not on strength)":""}. Reports older than ${STALE_H} hours are marked OLD. A newer report from the same unit replaces the old one.</p>
+      <h2>Rollup report</h2><div class="panel"><textarea id="rollMsg" readonly aria-label="Rollup report text">${esc(rollText())}</textarea>
+      <div class="row2"><a class="btn" id="rollSms" href="${esc(smsHref(rollText()))}">Text it</a><button class="btn alt" id="rollCopy">Copy</button></div>
+      ${navigator.share?'<button class="btn alt" id="rollShare">Share to Signal, Teams, email…</button>':""}
+      <p class="note">Goes to the numbers set in TEXT.</p></div>`}
+  if(others) h+=`<button class="btn warn" id="rollClear" style="margin-top:16px;width:100%">${armed==="rollclr"?"Tap again to clear all unit reports":"Clear all unit reports"}</button>`;
+  $("#main").innerHTML=h}
+
 /* ---------- recall roster ---------- */
 function digits(p){return String(p||"").replace(/\D/g,"")}
 function normPh(p){let d=digits(p);if(d.length===11&&d[0]==="1")d=d.slice(1);return d.length===10?d:""}
@@ -1079,20 +1166,73 @@ function recallText(){const pool=recallPool();const res=S.rc.res||{};const got=p
   const L=["EOOP RECALL "+dtg(new Date(S.rc.start||Date.now())),"CONTACTED: "+got.length+"/"+pool.length+" ("+pct(got.length,pool.length)+"%) IN "+el+" MIN"];
   const vm=pool.filter(m=>res[m.id]==="vm"),na=pool.filter(m=>res[m.id]==="na"),nt=pool.filter(m=>!res[m.id]);
   const nm=m=>"- "+(m.sec==="ATT"?"ATT":m.sec)+" "+m.rank+" "+m.name.split(",")[0];
+  const ci=S.rc.ci||{};const note=m=>ci[m.id]&&ci[m.id].eta?" ("+ci[m.id].eta.toUpperCase()+")":"";
+  const hp=pool.filter(m=>ci[m.id]&&ci[m.id].c===3),dl=pool.filter(m=>ci[m.id]&&ci[m.id].c===2);
+  if(hp.length){L.push("");L.push("NEED HELP ("+hp.length+")");sorted(hp).forEach(m=>L.push(nm(m)+note(m)))}
+  if(dl.length){L.push("");L.push("DELAYED ("+dl.length+")");sorted(dl).forEach(m=>L.push(nm(m)+note(m)))}
   if(vm.length){L.push("");L.push("LEFT VOICEMAIL ("+vm.length+")");sorted(vm).forEach(m=>L.push(nm(m)))}
   if(na.length){L.push("");L.push("NO ANSWER ("+na.length+")");sorted(na).forEach(m=>L.push(nm(m)))}
   if(nt.length){L.push("");L.push("NOT YET CALLED ("+nt.length+")");sorted(nt).forEach(m=>L.push(nm(m)))}
   return L.join("\n")}
+/* ---------- one-tap check-in (recall) ----------
+   Leader texts a link; each person taps Good / Delayed / Need help, which opens a text back to the leader
+   with a code line. Leader pastes replies here. No server: link details ride in the # part of the URL,
+   which browsers never send to the website. */
+const CI_BATCH=20;
+function ciRid(){return (S.rc.start||0).toString(36)}
+function ciLink(){const q=new URLSearchParams();q.set("ci",ciRid());q.set("u",unitName());if(S.myPh)q.set("to",S.myPh);return location.origin+location.pathname+"#"+q.toString()}
+function ciBody(){return unitName()+" RECALL "+dtg(new Date(S.rc.start))+"\nCheck in with one tap: "+ciLink()+"\nNo data? Text back your last name and 1 = good, 2 = delayed + ETA, 3 = need help."}
+function ciHTML(){const pool=recallPool().filter(m=>m.phone);const ci=S.rc.ci||{};const sent=S.rc.sent||{};
+  const hp=sorted(recallPool().filter(m=>ci[m.id]&&ci[m.id].c===3));
+  const batches=[];for(let i=0;i<pool.length;i+=CI_BATCH)batches.push(pool.slice(i,i+CI_BATCH));
+  const href=b=>"sms:"+b.map(m=>"+1"+m.phone).join(",")+"?&body="+encodeURIComponent(RT(ciBody()));
+  let h="";
+  if(hp.length)h+=`<div class="panel" style="border-color:var(--warn)"><b style="color:var(--warn)">⚠ NEED HELP (${hp.length})</b>${hp.map(m=>`<div class="rtop"><div class="who"><b>${esc(m.rank)}</b> ${esc(m.name)}${ci[m.id].eta?`<div class="ph">${esc(ci[m.id].eta)}</div>`:""}</div>${m.phone?`<a class="call" href="${telHref(m.phone)}">Call</a>`:""}</div>`).join("")}</div>`;
+  h+=`<details class="panel"${Object.keys(ci).length||!Object.keys(sent).length?" open":""}><summary><b>Check-in by text</b> · ${Object.keys(ci).length} replied</summary>
+    <label for="ciMe">My cell (check-in replies come here)</label>
+    <input type="tel" id="ciMe" inputmode="tel" value="${esc(fmtPh(S.myPh||""))}" placeholder="808 555 0100">
+    ${pool.length?batches.map((b,i)=>`<a class="btn${sent[i]?" alt":""}" data-ciblast="${i}" href="${esc(href(b))}">${sent[i]?"✓ Sent · ":""}Text check-in${batches.length>1?" group "+(i+1)+" of "+batches.length:""} (${b.length})</a>`).join(""):`<p class="note">No phone numbers loaded yet. Load them below.</p>`}
+    ${S.myPh?"":`<p class="note" style="color:var(--warn)">Add your cell first so the one-tap link texts you back.</p>`}
+    <label for="ciIn">Paste replies</label>
+    <textarea id="ciIn" style="min-height:70px" placeholder="CHECK-IN: GOOD - CPL SMITH&#10;#EOOP-CI|...&#10;or: Doe 2 eta 1400"></textarea>
+    <div class="row2"><button class="btn" id="ciGo">Mark replies</button><button class="btn alt" id="ciClip">Paste from clipboard</button></div>
+    <div class="note" id="ciOut"></div>
+    <p class="note">Each person gets a link. They tap <b>Good</b>, <b>Delayed</b> or <b>Need help</b> and hit Send; the text comes to you. Copy a reply, tap <b>Paste from clipboard</b>, and the app marks them. Plain replies work too if the name or their number is in the text. Sent ${CI_BATCH} at a time because carriers limit group texts.</p></details>`;
+  return h}
+function ciTag(m){const x=(S.rc.ci||{})[m.id];if(!x)return"";const t=x.c===3?"⚠ NEED HELP":x.c===2?"Delayed":"✓ Checked in: good";
+  return `<div class="ph" style="font-weight:700;color:var(${x.c===3?"--warn":x.c===2?"--s-duty":"--s-onhand"})">${t}${x.eta?" · "+esc(x.eta):""}</div>`}
+function ciCode(t){const s=String(t).toLowerCase();
+  if(/\b(help|sos|emergenc\w*|hurt|injur\w*|hospital)\b/.test(s))return 3;
+  if(/\b(delay\w*|late|eta|en ?route|omw|on my way|running behind)\b/.test(s))return 2;
+  if(/\b(good|ok|okay|up|here|safe|accounted|present|copy|roger)\b|👍|✅/.test(s))return 1;
+  const d=s.match(/(?:^|[^\w:])([123])(?![\w:])(?!\s*(?:min|mins|minutes|hr|hrs|hour|hours|mi|miles|pm|am)\b)/);return d?+d[1]:0}
+function applyCheckins(text){const rid=ciRid();const ci=S.rc.ci=S.rc.ci||{};let n=0,help=0,old=0;const miss=[];
+  const lines=String(text).split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const mark=(m,c,eta)=>{ci[m.id]={c,eta:String(eta||"").replace(/\s+/g," ").trim().slice(0,40),t:Date.now()};S.rc.res[m.id]="ok";n++;if(c===3)help++};
+  for(let i=0;i<lines.length;i++){const ln=lines[i];
+    const k=ln.indexOf("#EOOP-CI|");
+    if(k>=0){const p=ln.slice(k).split("|");if(p[1]!==rid){old++;continue}const c=+p[2];const m=matchMarine(p[3]||"");
+      if(m&&c>=1&&c<=3)mark(m,c,p[4]);else miss.push(p[3]||"(no name)");continue}
+    if(/^CHECK-IN:/i.test(ln)&&lines[i+1]&&lines[i+1].includes("#EOOP-CI|"))continue;
+    let m=null;const ph=(ln.match(PH_RE)||[]).map(normPh).filter(Boolean);
+    if(ph.length)m=S.roster.find(x=>ph.includes(x.phone)||ph.includes(x.phone2))||null;
+    const rest=ln.replace(PH_RE," ");if(!m)m=matchMarine(rest.replace(/[^A-Za-z ,.'-]/g," "));
+    const c=ciCode(rest);
+    if(m&&c){const e=(rest.match(/\beta\b[:\s]*([^,;]{1,30})/i)||[])[1]||"";mark(m,c,e?"ETA "+e:c>1?rest.replace(/\s+/g," ").trim():"")}
+    else if(c||m)miss.push(ln.slice(0,40))}
+  save();
+  return n?`${n} marked${help?` · ${help} need help`:""}${miss.length?` · not matched: ${miss.slice(0,5).join("; ")}`:""}${old?` · ${old} from an older recall skipped`:""}`
+    :miss.length?`Couldn't match: ${miss.slice(0,5).join("; ")}. Make sure the name or phone number is in the text.`:old?"Those replies are from an older recall.":"No check-in replies found in that text."}
 function renderRecall(){const pool=recallPool();const withPh=pool.filter(m=>m.phone).length;const rc=S.rc;const res=rc.res||{};
   let h=banner();
   const got=pool.filter(m=>res[m.id]==="ok").length;
   if(rc.open){const el=Math.round((Date.now()-rc.start)/60000);
     h+=`<div class="mbar"><div class="ct">${got}/${pool.length}<small>contacted · ${el} min</small></div><button class="btn" id="rcClose">Close out</button></div>
-      <label class="tog" style="margin:4px 0 6px"><input type="checkbox" id="rcOnly"${rc.only?" checked":""}> Show not yet contacted only</label>`}
+      <label class="tog" style="margin:4px 0 6px"><input type="checkbox" id="rcOnly"${rc.only?" checked":""}> Show not yet contacted only</label>`+ciHTML()}
   else{h+=`<h2>Recall roster</h2><div class="panel"><div><b>${withPh}</b> of ${pool.length} Marines have a phone number.</div>
       <label class="tog"><input type="checkbox" id="rcAtt"${rc.att?" checked":""}> Include attached Marines</label>
       <div class="row2"><button class="btn" id="rcStart">Start recall drill</button><button class="btn alt" type="button" onclick="document.getElementById('rcFileR').scrollIntoView({behavior:'smooth',block:'center'})">Load numbers</button></div>
-      <p class="note">Tap <b>Call</b> to dial. In a drill, mark each Marine Reached, Voicemail or No answer; the app times it and builds the report.</p></div>
+      <p class="note">Tap <b>Call</b> to dial. In a drill, mark each Marine Reached, Voicemail or No answer; the app times it and builds the report. Once the drill starts you can also text everyone a one-tap check-in link.</p></div>
       <h2>Load phone numbers</h2><div class="panel">
         <div id="rcDrop" class="drop"><label for="rcFileR">Drop or pick the recall roster: Excel, CSV, PDF, Word (.docx) or contacts (.vcf)</label><input type="file" id="rcFileR" accept=".csv,.txt,.xlsx,.xls,.vcf,.pdf,.docx,text/csv,text/plain,text/vcard,application/pdf"></div>
         <label for="rcPasteR">Or paste names and numbers</label><textarea id="rcPasteR" style="min-height:80px" placeholder="CPL SMITH, JOHN A. 808-555-0100&#10;Doe Jane (808) 555-0101"></textarea>
@@ -1103,7 +1243,7 @@ function renderRecall(){const pool=recallPool();const withPh=pool.filter(m=>m.ph
   const groups=SECTIONS.map(s=>s[0]).concat("ATT").map(k=>[k,sorted(pool.filter(m=>m.sec===k))]).filter(g=>g[1].length);
   for(const [k,ms] of groups){let show=ms.filter(m=>!rq||(m.rank+" "+m.name).toLowerCase().includes(rq));if(rc.open&&rc.only)show=show.filter(m=>res[m.id]!=="ok");if(!show.length)continue;
     h+=`<div class="mgrp"><h3><span>${k}</span><span class="note">${ms.filter(m=>m.phone).length}/${ms.length} numbers</span></h3>${show.map(m=>{const r=res[m.id];const col=r==="ok"?"--s-onhand":r==="vm"?"--s-duty":r==="na"?"--warn":"--line";
-      return `<div class="rrow" style="--sc:var(${col})"><div class="rtop"><div class="who"><b>${esc(m.rank)}</b> ${esc(m.name)}<div class="ph">${m.phone?fmtPh(m.phone)+(m.phone2?" · alt "+fmtPh(m.phone2):""):"No number"} · ${esc(SHORT[m.status]||m.status)}</div></div>
+      return `<div class="rrow" style="--sc:var(${col})"><div class="rtop"><div class="who"><b>${esc(m.rank)}</b> ${esc(m.name)}<div class="ph">${m.phone?fmtPh(m.phone)+(m.phone2?" · alt "+fmtPh(m.phone2):""):"No number"} · ${esc(SHORT[m.status]||m.status)}</div>${ciTag(m)}</div>
         ${m.phone?`<a class="call" href="${telHref(m.phone)}" data-called="${m.id}">Call</a><a class="txt" href="${smsTo(m.phone)}">Text</a>`:`<button class="btn alt" data-addph="${m.id}" style="padding:8px 10px">Add #</button>`}</div>
         ${editPh===m.id?`<div class="addph"><input type="tel" id="phIn" placeholder="808 555 0100" value="${esc(fmtPh(m.phone||""))}"><button data-saveph="${m.id}">Save</button></div>`:""}
         ${m.phone2?`<div><a class="txt" style="min-width:0;padding:0 10px;height:32px" href="${telHref(m.phone2)}">Call alt ${fmtPh(m.phone2)}</a></div>`:""}
@@ -1225,7 +1365,7 @@ function animateNums(){document.querySelectorAll("[data-n]").forEach(el=>{const 
 document.addEventListener("click",e=>{
   if(e.target.closest("#bMode,[data-mode-open]")){e.stopImmediatePropagation();openModeSheet();return}
   const mo=e.target.closest("[data-mopt]");if(mo){e.stopImmediatePropagation();const k=mo.dataset.mopt;const wasFirst=sheetCtx&&sheetCtx.first;closeSheet();if(!S.mode){S.mode=k==="military"?"military":S.mode;save()}
-    if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory"].includes(view))view="board";render();window.scrollTo(0,0);if(!wasFirst)toast(MODES[k].name+" version on. Same people, new labels.")}if(wasFirst&&!S.onb)setTimeout(()=>showOnb(0),300);return}
+    if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup"].includes(view))view="board";render();window.scrollTo(0,0);if(!wasFirst)toast(MODES[k].name+" version on. Same people, new labels.")}if(wasFirst&&!S.onb)setTimeout(()=>showOnb(0),300);return}
   const msh=e.target.closest("[data-mshare]");if(msh){e.stopImmediatePropagation();shareMode(msh.dataset.mshare);return}
   const pk=e.target.closest("[data-pick]");if(pk){e.stopImmediatePropagation();openSheet(pk.dataset.pick,pk.dataset.pid);return}
   if(e.target.closest("[data-sclose]")){e.stopImmediatePropagation();closeSheet();return}
@@ -1238,7 +1378,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetCtx)closeSheet
 document.addEventListener("dragleave",e=>{const d=$("#rcDrop");if(d&&!e.relatedTarget)d.classList.remove("over")});
 document.addEventListener("drop",e=>{if(view!=="recall"&&view!=="data")return;const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;e.preventDefault();const d=$("#rcDrop");if(d)d.classList.remove("over");rcLoadFile(f,view==="recall"?"#rcOutR":"#rcOut")});
 function render(){renderTabs();
-  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
+  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="rollup")renderRollup();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
 
 /* ---------- CSV import ---------- */
 function parseCSV(text){const rows=[];let row=[],f="",q=false;
@@ -1300,10 +1440,14 @@ document.addEventListener("click",e=>{
   const we=e.target.closest("[data-wedit]");if(we){wEdit=we.dataset.wedit;const y=window.scrollY;renderArmory();window.scrollTo(0,y);return}
   const wsv=e.target.closest("[data-wsave]");if(wsv){const m=S.roster.find(x=>x.id===wsv.dataset.wsave);if(m){m.wpn={t:$("#wT").value,rack:$("#wR").value.trim(),s4:digits($("#wS").value).slice(-4)};save()}wEdit=null;const y=window.scrollY;renderArmory();window.scrollTo(0,y);toast("Weapon saved");return}
   const wc=e.target.closest("[data-wclear]");if(wc){const m=S.roster.find(x=>x.id===wc.dataset.wclear);if(m&&hasW(m)&&wEdit===m.id&&armed==="wclr"+m.id){delete m.wpn;save();armed=null;wEdit=null;toast("Weapon removed")}else if(m&&hasW(m)){armed="wclr"+m.id;toast("Tap Remove weapon again to confirm");return}else{wEdit=null}const y=window.scrollY;renderArmory();window.scrollTo(0,y);return}
-  if(e.target.id==="rcStart"){S.rc.open=true;S.rc.start=Date.now();S.rc.end=0;S.rc.res={};S.rc.only=false;armed=null;save();renderRecall();window.scrollTo(0,0);return}
+  if(e.target.id==="rcStart"){S.rc.open=true;S.rc.start=Date.now();S.rc.end=0;S.rc.res={};S.rc.ci={};S.rc.sent={};S.rc.only=false;armed=null;save();renderRecall();window.scrollTo(0,0);return}
   const rr=e.target.closest("[data-rid]");if(rr){const id=rr.dataset.rid,c=rr.dataset.r;if(S.rc.res[id]===c)delete S.rc.res[id];else S.rc.res[id]=c;save();const y=window.scrollY;renderRecall();window.scrollTo(0,y);return}
   if(e.target.id==="rcClose"){S.rc.open=false;S.rc.end=Date.now();S.hist=(S.hist||[]).concat({type:"recall",t:S.rc.start}).slice(-60);save();renderRecall();window.scrollTo(0,0);toast("Recall closed");return}
-  if(e.target.id==="rcCancel"){if(armed==="rccancel"){S.rc.open=false;S.rc.res={};S.rc.start=0;armed=null;save();toast("Recall discarded")}else armed="rccancel";renderRecall();return}
+  if(e.target.id==="rcCancel"){if(armed==="rccancel"){S.rc.open=false;S.rc.res={};S.rc.ci={};S.rc.start=0;armed=null;save();toast("Recall discarded")}else armed="rccancel";renderRecall();return}
+  if(e.target.id==="ciGo"){const r=applyCheckins($("#ciIn").value);const y=window.scrollY;renderRecall();window.scrollTo(0,y);const o=$("#ciOut");if(o)o.textContent=r;return}
+  if(e.target.id==="ciClip"){const fail=()=>{const o=$("#ciOut");if(o)o.textContent="This phone blocked clipboard reading. Long-press the box, tap Paste, then Mark replies.";};
+    try{navigator.clipboard.readText().then(t=>{const r=applyCheckins(t);const y=window.scrollY;renderRecall();window.scrollTo(0,y);const o=$("#ciOut");if(o)o.textContent=r},fail)}catch(err){fail()}return}
+  const cb=e.target.closest("[data-ciblast]");if(cb){S.rc.sent=Object.assign({},S.rc.sent,{[cb.dataset.ciblast]:1});save();setTimeout(()=>{if(view==="recall"){const y=window.scrollY;renderRecall();window.scrollTo(0,y)}},400);return}
   if(e.target.id==="rcCopy"){try{navigator.clipboard.writeText(recallText()).then(()=>toast("Recall copied"),()=>toast("Copy blocked here. Use Text it."))}catch(err){toast("Copy blocked here.")}return}
   const ap=e.target.closest("[data-addph]");if(ap){editPh=ap.dataset.addph;const y=window.scrollY;renderRecall();window.scrollTo(0,y);const i=$("#phIn");if(i)i.focus();return}
   const sp=e.target.closest("[data-saveph]");if(sp){const d=normPh($("#phIn").value);if(!d){toast("Enter a 10-digit number.");return}const m=S.roster.find(x=>x.id===sp.dataset.saveph);if(m){m.phone=d;save()}editPh=null;const y=window.scrollY;renderRecall();window.scrollTo(0,y);toast("Number saved");return}
@@ -1337,6 +1481,13 @@ document.addEventListener("click",e=>{
   if(e.target.id==="alCopy"){try{navigator.clipboard.writeText(alertsText()).then(()=>toast("Alerts copied"),()=>toast("Copy blocked here. Use Text alerts."))}catch(err){toast("Copy blocked here.")}return}
   const sc=e.target.closest("[data-scopy]");if(sc){const t=sectionUpdateText(sc.dataset.scopy);try{navigator.clipboard.writeText(t).then(()=>toast("Section update copied"),()=>toast("Copy blocked here. Use Text update."))}catch(err){toast("Copy blocked here.")}return}
   if(e.target.id==="syncGo"){try{const r=applySectionUpdates($("#syncIn").value);$("#syncOut").textContent=r.join(" · ");renderTabs();toast("Section updates applied")}catch(err){$("#syncOut").textContent=err.message}return}
+  if(e.target.id==="rollGo"){try{const r=addRoll($("#rollIn").value);renderRollup();$("#rollOut").textContent=r.join(" · ");toast("Rollup updated")}catch(err){$("#rollOut").textContent=err.message}return}
+  if(e.target.id==="rollClip"){const fail=()=>{const o=$("#rollOut");if(o)o.textContent="This phone blocked clipboard reading. Long-press the box and tap Paste, then Add reports.";};
+    try{navigator.clipboard.readText().then(t=>{const i=$("#rollIn");if(i)i.value=t;try{const r=addRoll(t);renderRollup();$("#rollOut").textContent=r.join(" · ");toast("Rollup updated")}catch(err){$("#rollOut").textContent=err.message}},fail)}catch(err){fail()}return}
+  const rd=e.target.closest("[data-rdel]");if(rd){const k=rd.dataset.rdel;if(armed==="rd"+k){delete S.roll.units[k];armed=null;save();toast(k+" removed")}else armed="rd"+k;const y=window.scrollY;renderRollup();window.scrollTo(0,y);return}
+  if(e.target.id==="rollClear"){if(armed==="rollclr"){S.roll.units={};armed=null;save();toast("Unit reports cleared")}else armed="rollclr";renderRollup();return}
+  if(e.target.id==="rollCopy"){try{navigator.clipboard.writeText(rollText()).then(()=>toast("Rollup copied"),()=>toast("Copy blocked here. Use Text it."))}catch(err){toast("Copy blocked here.")}return}
+  if(e.target.id==="rollShare"){navigator.share({text:rollText()}).catch(()=>{});return}
   if(e.target.id==="markSent"){markSent("report");renderText();toast("Marked as sent");return}
   if(e.target.closest("#sms")){setTimeout(()=>{markSent("report")},300)}
   if(e.target.closest("#bPT")){view=view==="pt"?"board":"pt";armed=null;render();window.scrollTo(0,0);return}
@@ -1365,6 +1516,7 @@ document.addEventListener("change",e=>{
   if(e.target.id==="arOnly"){S.arm.only=e.target.checked;save();renderArmory();return}
   if(e.target.id==="wFile"){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const r=importWeapons(String(rd.result));renderArmory();const o=$("#wOut");if(o)o.textContent=r.ok+" weapons assigned"+(r.miss.length?" · not matched: "+r.miss.slice(0,8).join("; "):"");toast(r.ok+" weapons assigned")}catch(err){const o=$("#wOut");if(o)o.textContent=err.message}};rd.readAsText(f);return}
   if(e.target.id==="rcAtt"){S.rc.att=e.target.checked;save();renderRecall();return}
+  if(e.target.id==="ciMe"){const d=normPh(e.target.value);if(e.target.value.trim()&&!d){toast("Enter a 10-digit number.");return}S.myPh=d;save();const y=window.scrollY;renderRecall();window.scrollTo(0,y);toast(d?"Replies will come to "+fmtPh(d):"Number cleared");return}
   if(e.target.id==="rcOnly"){S.rc.only=e.target.checked;save();renderRecall();return}
   if(e.target.id==="rcFileR"||e.target.id==="rcFile"){const f=e.target.files[0];if(!f)return;rcLoadFile(f,e.target.id==="rcFileR"?"#rcOutR":"#rcOut");e.target.value="";return}
   if(e.target.closest&&e.target.closest("#rvBox")&&e.target.matches("select,input[type=checkbox]")){rvSync();if(e.target.tagName==="SELECT")rvRedraw();return}
@@ -1373,6 +1525,8 @@ document.addEventListener("change",e=>{
   if(e.target.id==="mAtt"){S.mus.att=e.target.checked;save();renderMuster();return}
   if(e.target.id==="mOnly"){S.mus.only=e.target.checked;save();renderMuster();return}
   if(e.target.id==="chg"){S.chg=e.target.checked;save();renderText();return}
+  if(e.target.id==="rollc"){S.rollCode=e.target.checked;save();renderText();return}
+  if(e.target.id==="rollOwn"){S.roll.own=e.target.checked;save();renderRollup();return}
   if(e.target.id==="wMar"){W.mid=e.target.value;renderW();return}
   if(e.target.id==="wWhen"){W.when=e.target.value;refreshW();return}
   const ds=e.target.closest("select[data-duty]");
@@ -1399,6 +1553,8 @@ document.addEventListener("input",e=>{
   if(e.target.id==="wRep"){S.reporter=e.target.value;save();refreshW();return}
   if(e.target.id==="wWhen"){W.when=e.target.value;refreshW();return}
   if(e.target.id==="ptEvt"||e.target.id==="ptWhen"){S.pt[e.target.id==="ptEvt"?"event":"when"]=e.target.value;save();const a=$("#ptSms");if(a)a.href=smsHref(ptText());document.querySelectorAll("[data-evt]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.evt===S.pt.event));return}
+  if(e.target.id==="unitNm"){S.unit=cleanName(e.target.value);save();const t=reportText();const m=$("#msg");if(m)m.value=t;const a=$("#sms");if(a)a.href=smsHref(t);return}
+  if(e.target.id==="rollNm"){S.roll.name=cleanName(e.target.value);save();const t=rollText();const m=$("#rollMsg");if(m)m.value=t;const a=$("#rollSms");if(a)a.href=smsHref(t);return}
   if(e.target.id==="rcp"){S.recipients=e.target.value;save();const a=$("#sms");if(a)a.href=smsHref($("#msg").value);return}
   if(e.target.id==="q"){query=e.target.value.toLowerCase();const pos=e.target.selectionStart;renderSection(view.toUpperCase());const q=$("#q");q.focus();q.setSelectionRange(pos,pos);return}
 });
@@ -1491,8 +1647,8 @@ document.addEventListener("change",e=>{const V=window.VAULT;if(!V||!V.on())retur
   if(e.target.id==="secWipe"){V.set({wipe:e.target.checked});toast(e.target.checked?"Data erases after 10 wrong PINs.":"Auto-erase off.")}});
 
 applyLists();applyTS();
-for(const f of ["reportText","ptText","wText","alertsText","musText","sectionUpdateText","recallText","evText","armText"]){const o=window[f];if(typeof o==="function")window[f]=(...a)=>RT(o(...a))}
-reportText=window.reportText;ptText=window.ptText;wText=window.wText;alertsText=window.alertsText;musText=window.musText;sectionUpdateText=window.sectionUpdateText;recallText=window.recallText;evText=window.evText;armText=window.armText;
+for(const f of ["reportText","ptText","wText","alertsText","musText","sectionUpdateText","recallText","evText","armText","rollText"]){const o=window[f];if(typeof o==="function")window[f]=(...a)=>RT(o(...a))}
+reportText=window.reportText;ptText=window.ptText;wText=window.wText;alertsText=window.alertsText;musText=window.musText;sectionUpdateText=window.sectionUpdateText;recallText=window.recallText;evText=window.evText;armText=window.armText;rollText=window.rollText;
 let firstPick=false;{const qm=new URLSearchParams(location.search).get("m");if(!qm&&!S.mode)firstPick=true;if(qm&&MODES[qm]){if(!S.mode&&qm==="military"){S.mode="military";save()}setMode(qm);try{history.replaceState(null,"",location.pathname+location.hash)}catch(e){}}}
 startXL();
 render();
