@@ -552,7 +552,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="2.0.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="2.1.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -689,7 +689,7 @@ S.rcMiss=Array.isArray(S.rcMiss)?S.rcMiss:[];if(S.rcRev&&!Array.isArray(S.rcRev.
 S.rc=Object.assign({open:false,start:0,end:0,res:{},att:true,only:false,ci:{}},S.rc||{});if(!S.rc.ci||typeof S.rc.ci!=="object")S.rc.ci={};
 S.bc=Array.isArray(S.bc)?S.bc:[];
 S.feeds=Array.isArray(S.feeds)?S.feeds:[];
-S.days=S.days&&typeof S.days==="object"?S.days:{};
+S.days=S.days&&typeof S.days==="object"?S.days:{};if(S.sync&&typeof S.sync!=="object")S.sync=null;
 S.ready=S.ready&&typeof S.ready==="object"?S.ready:{};S.duty=Object.assign({rosters:[]},S.duty||{});if(!Array.isArray(S.duty.rosters))S.duty.rosters=[];S.tl=S.tl&&typeof S.tl==="object"?S.tl:{};
 S.roll=Object.assign({units:{},own:true,name:""},S.roll||{});if(!S.roll.units||typeof S.roll.units!=="object")S.roll.units={};
 S.mus=Object.assign({open:false,seen:{},inc:["On Hand"],att:true,only:false,last:null},S.mus||{});
@@ -856,6 +856,7 @@ function renderData(){
     <button class="btn alt" id="exp" hidden>Export backup (.csv)</button>
     <button class="btn warn" id="reset">${armed==="reset"?"Tap again to clear the roster":"Clear roster and show sample"}</button>
   </div>
+  ${syncHTML()}
   ${tabsHTML()}
   ${displayHTML()}
   ${secHTML()}
@@ -1222,6 +1223,72 @@ function joinPrompt(q){const bid=(q.get("join")||"").replace(/[^a-z0-9]/g,"").sl
     <p class="note">Only scrambled codes leave this phone; names don't. ${S.source==="sample"?"<b style='color:var(--warn)'>Load your roster first, or the names won't match theirs.</b>":""}</p>
     <button class="btn" id="jYes">Link and send now</button><button class="btn alt" data-sclose="1">Not now</button></div>`;
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));try{history.replaceState(null,"",location.pathname)}catch(e){}}
+
+/* ---------- backup + sync: encrypted with a recovery code; server stores an unreadable blob ---------- */
+const SYNC_SKIP=["sync","pushOn","link","ts","onb"];const CODE_AB="23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+let syncT=null,syncBusy=false,syncShow=false;
+const fnv=str=>{let h=0x811c9dc5;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)}return (h>>>0).toString(36)+str.length.toString(36)};
+const sig=v=>fnv(JSON.stringify(v===undefined?null:v));
+function newCode(){const a=crypto.getRandomValues(new Uint8Array(24));return [...a].map(x=>CODE_AB[x%31]).join("").match(/.{4}/g).join("-")}
+const normCode=c=>String(c||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+async function sha(str){return new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(str)))}
+const hexOf=u=>[...u].map(b=>b.toString(16).padStart(2,"0")).join("");
+async function codeKeys(code){const c=normCode(code);if(c.length!==24)throw new Error("The code has 24 letters and numbers.");
+  return {id:hexOf(await sha("id:"+c)).slice(0,20),wk:hexOf(await sha("wk:"+c)),ek:await crypto.subtle.importKey("raw",await sha("ek:"+c),"AES-GCM",false,["encrypt","decrypt"])}}
+async function gz(bytes,dir){const cs=dir?new CompressionStream("gzip"):new DecompressionStream("gzip");const st=new Blob([bytes]).stream().pipeThrough(cs);return new Uint8Array(await new Response(st).arrayBuffer())}
+function syncObj(){const o={};for(const k of Object.keys(S))if(!SYNC_SKIP.includes(k))o[k]=S[k];return o}
+async function sealObj(K,o){let b=new TextEncoder().encode(JSON.stringify(o));let flag=0;if(window.CompressionStream){try{b=await gz(b,true);flag=1}catch(e){}}
+  const pl=new Uint8Array(b.length+1);pl[0]=flag;pl.set(b,1);const iv=crypto.getRandomValues(new Uint8Array(12));const ct=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},K.ek,pl));const a=new Uint8Array(12+ct.length);a.set(iv);a.set(ct,12);return b64e(a)}
+async function openBlob(K,s){const a=b64d(s);let pl;try{pl=new Uint8Array(await crypto.subtle.decrypt({name:"AES-GCM",iv:a.slice(0,12)},K.ek,a.slice(12)))}catch(e){throw new Error("Couldn't unlock that backup. Check the code.")}
+  let b=pl.slice(1);if(pl[0]===1){if(!window.DecompressionStream)throw new Error("This browser can't open compressed backups. Update it and try again.");b=await gz(b,false)}return JSON.parse(new TextDecoder().decode(b))}
+function setBase(o){const Y=S.sync;Y.baseSig={};for(const k of Object.keys(o))if(k!=="roster")Y.baseSig[k]=sig(o[k]);Y.baseMem={};for(const m of o.roster||[])Y.baseMem[m.id]=sig(m)}
+function mergeRemote(R){const Y=S.sync;const bs=Y.baseSig||{},bm=Y.baseMem||{};
+  const keys=new Set(Object.keys(S).concat(Object.keys(R)));
+  for(const k of keys){if(SYNC_SKIP.includes(k)||k==="roster")continue;const localChanged=(k in bs)?sig(S[k])!==bs[k]:(k in S);if(!localChanged){if(k in R)S[k]=R[k];else delete S[k]}}
+  const L={},RR={};S.roster.forEach(m=>L[m.id]=m);(R.roster||[]).forEach(m=>RR[m.id]=m);const out=[];const seen=new Set();
+  const pick=id=>{if(seen.has(id))return;seen.add(id);const l=L[id],r=RR[id],b=bm[id];
+    if(l&&r){out.push(sig(l)!==b?l:r);return}
+    if(l&&!r){if(!b||sig(l)!==b)out.push(l);return}
+    if(!l&&r){if(!b||sig(r)!==b)out.push(r)}};
+  (R.roster||[]).forEach(m=>pick(m.id));S.roster.forEach(m=>pick(m.id));S.roster=out;setBase(R)}
+function syncSchedule(){if(!S.sync||!S.sync.on)return;clearTimeout(syncT);syncT=setTimeout(()=>syncPush(),8000)}
+async function syncPush(force){const Y=S.sync;if(!Y||!Y.on||syncBusy)return;if(S.source==="sample"&&!force)return;syncBusy=true;
+  try{const o=syncObj();const h=sig(o);if(!force&&h===Y.last)return;const K=await codeKeys(Y.code);const ct=await sealObj(K,o);
+    try{const v=await SB.rpc("backup_put",{p_id:K.id,p_key:K.wk,p_ct:ct,p_base:Y.ver||null});Y.ver=+v;Y.last=h;Y.at=Date.now();Y.err="";setBase(o)}
+    catch(e){if(/conflict/.test(e.message)){syncBusy=false;await syncPull(true);syncBusy=true;const o2=syncObj();const ct2=await sealObj(K,o2);const v=await SB.rpc("backup_put",{p_id:K.id,p_key:K.wk,p_ct:ct2,p_base:Y.ver});Y.ver=+v;Y.last=sig(o2);Y.at=Date.now();Y.err="";setBase(o2)}else throw e}
+    rawSave()}
+  catch(e){Y.err=String(e.message||e).slice(0,90);rawSave();clearTimeout(syncT);syncT=setTimeout(()=>syncPush(),60000)}finally{syncBusy=false;if(view==="data")tabRedraw()}}
+async function syncPull(quiet){const Y=S.sync;if(!Y||!Y.on||syncBusy)return false;syncBusy=true;let changed=false;
+  try{const K=await codeKeys(Y.code);const v=await SB.rpc("backup_ver",{p_id:K.id,p_key:K.wk});if(v==null){Y.err="Backup not found in the cloud. Tap Back up now.";return false}
+    if(+v>(Y.ver||0)){const rows=await SB.rpc("backup_get",{p_id:K.id,p_key:K.wk});const r=rows&&rows[0];if(r){const R=await openBlob(K,r.ct);mergeRemote(R);Y.ver=+r.ver;Y.pulled=Date.now();changed=true;
+      const {secs}=S;if(Array.isArray(secs)&&secs.length)SECTIONS.splice(0,SECTIONS.length,...secs);secFix()}}
+    Y.err="";rawSave();
+    if(changed){if(!quiet){const y=window.scrollY;const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){render();window.scrollTo(0,y)}toast("Synced from your other phone")}if(sig(syncObj())!==Y.last)syncSchedule()}}
+  catch(e){Y.err=String(e.message||e).slice(0,90);rawSave()}finally{syncBusy=false}return changed}
+function rawSave(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.write(t);else localStorage.setItem(KEY,t)}catch(e){}}
+setInterval(()=>{if(S.sync&&S.sync.on&&!document.hidden)syncPull()},60000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.sync&&S.sync.on)syncPull()});
+async function syncRestore(code){const K=await codeKeys(code);const rows=await SB.rpc("backup_get",{p_id:K.id,p_key:K.wk});const r=rows&&rows[0];if(!r)throw new Error("No backup found for that code.");
+  const R=await openBlob(K,r.ct);return {R,ver:+r.ver,at:Date.parse(r.updated_at)||Date.now()}}
+function applyRestore(code,x){const keep={};for(const k of SYNC_SKIP)if(k in S)keep[k]=S[k];
+  for(const k of Object.keys(S))if(!SYNC_SKIP.includes(k))delete S[k];Object.assign(S,x.R);
+  S.sync={on:true,code:normCode(code).match(/.{4}/g).join("-"),ver:x.ver,at:x.at,err:"",last:""};S.onb=true;for(const k of ["pushOn","ts","link"])if(k in keep)S[k]=keep[k];
+  setBase(x.R);S.sync.last=sig(syncObj());rawSave();location.replace(location.pathname)}
+function syncHTML(){const Y=S.sync;
+  if(!Y||!Y.on)return `<h2>Backup and sync</h2><div class="panel"><p class="note">Back up everything (roster, numbers, feeds, readiness, duty, history) to your server, <b>encrypted on this phone</b> with a recovery code. Restore on a new phone, or keep a second phone (your SNCOIC's) in sync. The server can't read it.</p>
+    <button class="btn" id="syOn">Turn on backup</button>
+    <label for="syCode">Have a code? Restore here or link this phone</label><input type="text" id="syCode" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" autocapitalize="characters" autocomplete="off" style="text-transform:uppercase"><button class="btn alt" id="syRestore">Restore from code</button><div class="note" id="syOut"></div></div>`;
+  return `<h2>Backup and sync</h2><div class="panel"><div><b style="color:var(${Y.err?"--warn":"--s-onhand"})">${Y.err?"⚠ "+esc(Y.err):"● Backed up"}</b>${Y.at?" · last "+ago(Y.at):""}${Y.ver?" · version "+Y.ver:""}</div>
+    <p class="note">Changes back up about 8 seconds after you make them. Other phones using this code pick them up within a minute.</p>
+    <div class="row2"><button class="btn" id="syNow">Back up now</button><button class="btn alt" id="syShow">${syncShow?"Hide code":"Show recovery code"}</button></div>
+    ${syncShow?`<div style="font-family:ui-monospace,Menlo,monospace;font-size:18px;font-weight:800;letter-spacing:.06em;text-align:center;padding:10px;border:2px dashed var(--brass);border-radius:10px" data-noxl>${esc(Y.code)}</div>
+      <p class="note"><b>Write this down or save it in your password manager.</b> Without it, a lost phone means lost data; there is no reset. Anyone with it can read and change your board.</p>
+      <div class="row2"><button class="btn alt" id="syCopy">Copy code</button><a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent("EOP Numbers: open this on the second phone to link it to my board (keep it private): "+location.origin+location.pathname+"#sync="+normCode(Y.code)))}">Text link to 2nd phone</a></div>`:""}
+    <div class="row2"><button class="btn alt" id="syOff">${armed==="syoff"?"Tap again to stop":"Stop on this phone"}</button><button class="btn warn" id="syDel">${armed==="sydel"?"Tap again: delete cloud copy":"Delete cloud copy"}</button></div></div>`}
+function syncJoinPrompt(code){try{history.replaceState(null,"",location.pathname)}catch(e){}sheetCtx={kind:"sync",code};
+  $("#sheetT").innerHTML=`Link this phone?<small>Loads the backed-up board from the other phone and keeps both in sync.</small>`;
+  $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><p class="note"><b>This replaces what's on this phone</b> with the backup. Your PIN lock and text size stay.</p><button class="btn" id="syJoin">Load and link</button><button class="btn alt" data-sclose="1">Not now</button><div class="note" id="syJOut"></div></div>`;
+  const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")))}
 
 /* ---------- READY: readiness and due-outs ---------- */
 const READY_DEF={
@@ -1981,6 +2048,16 @@ document.addEventListener("click",e=>{
   const dsw=e.target.closest("[data-dswap]");if(dsw){dSwap=dSwap===dsw.dataset.dswap?null:dsw.dataset.dswap;const y=window.scrollY;renderDuty();window.scrollTo(0,y);return}
   if(e.target.id==="dCopy"){try{navigator.clipboard.writeText(dutyText(dCur(),14)).then(()=>toast("Copied"),()=>toast("Copy blocked here."))}catch(err){toast("Copy blocked here.")}return}
   if(e.target.id==="dDel"){if(armed==="ddel"){S.duty.rosters=S.duty.rosters.filter(x=>x!==dCur());dSel=null;armed=null;dSetup=false;save();renderDuty();toast("Roster deleted")}else{armed="ddel";dSetup=true;renderDuty()}return}
+  if(e.target.id==="syOn"){const code=newCode();S.sync={on:true,code,ver:0,at:0,err:"",last:""};syncShow=true;save();tabRedraw();syncPush(true).then(()=>toast(S.sync&&!S.sync.err?"Backed up. Save your code.":"Backup failed: "+(S.sync&&S.sync.err)));return}
+  if(e.target.id==="syNow"){syncPush(true).then(()=>{toast(S.sync.err?"Backup failed":"Backed up");tabRedraw()});return}
+  if(e.target.id==="syShow"){syncShow=!syncShow;tabRedraw();return}
+  if(e.target.id==="syCopy"){try{navigator.clipboard.writeText(S.sync.code).then(()=>toast("Code copied"),()=>toast(S.sync.code))}catch(err){toast(S.sync.code)}return}
+  if(e.target.id==="syOff"){if(armed==="syoff"){S.sync.on=false;armed=null;save();tabRedraw();toast("Backup stopped on this phone")}else{armed="syoff";tabRedraw()}return}
+  if(e.target.id==="syDel"){if(armed==="sydel"){armed=null;codeKeys(S.sync.code).then(K=>SB.rpc("backup_delete",{p_id:K.id,p_key:K.wk})).then(()=>{S.sync=null;save();tabRedraw();toast("Cloud copy deleted")}).catch(err=>toast("Couldn't delete: "+err.message))}else{armed="sydel";tabRedraw()}return}
+  if(e.target.id==="syRestore"){const code=$("#syCode").value;const o=$("#syOut");o.textContent="Unlocking…";syncRestore(code).then(x=>{const n=(x.R.roster||[]).length;
+      o.innerHTML=`Found a backup from ${ago(x.at)} with <b>${n}</b> people. <button class="btn warn" id="syApply" style="width:100%;margin-top:6px">Replace this phone's data with it</button>`;window.__syx={code,x}}).catch(err=>{o.textContent=err.message});return}
+  if(e.target.id==="syApply"&&window.__syx){applyRestore(window.__syx.code,window.__syx.x);return}
+  if(e.target.id==="syJoin"&&sheetCtx&&sheetCtx.kind==="sync"){const code=sheetCtx.code;const o=$("#syJOut");o.textContent="Unlocking…";syncRestore(code).then(x=>applyRestore(code,x)).catch(err=>{o.textContent=err.message});return}
   if(e.target.id==="fdCreate"){e.target.disabled=true;e.target.textContent="Creating…";fdCreate().then(()=>{fdNew=false;renderFeed();toast("Feed created. Invite your people.")}).catch(err=>{e.target.disabled=false;e.target.textContent="Start a feed";const o=$("#fdOut");if(o)o.textContent="Couldn't create: "+(err.message||err)});return}
   if(e.target.id==="fdPushOn"){const f=fdCur();e.target.disabled=true;e.target.textContent="Asking…";pushSub(true).then(sub=>{if(!sub){toast("Alerts not allowed");renderFeed();return}S.pushOn=true;save();fdPushAttach(f).then(()=>{renderFeed();toast(f.push?"Alerts on":"Couldn't connect alerts. Try again.")})}).catch(()=>{toast("Couldn't turn on alerts here.");renderFeed()});return}
   const fto=e.target.closest("[data-fdto]");if(fto){fdDraft.txt=($("#fdTxt")||{}).value||fdDraft.txt;fdDraft.to=fto.dataset.fdto;if(fdDraft.to==="secs"&&!fdDraft.secs.length)fdDraft.secs=SECTIONS.map(x=>x[0]);const y=window.scrollY;renderFeed();window.scrollTo(0,y);return}
@@ -2253,13 +2330,15 @@ let firstPick=false;{const qm=new URLSearchParams(location.search).get("m");if(!
 startXL();
 render();
 {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join"))setTimeout(()=>joinPrompt(q),firstPick?900:300);if(q.get("feed")){firstPick=false;setTimeout(()=>fdJoinPrompt(q),300)}}
+{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("sync")){firstPick=false;setTimeout(()=>syncJoinPrompt(q.get("sync")),300)}}
+if(S.sync&&S.sync.on)setTimeout(()=>syncPull(),700);
 if(S.feeds.length){S.feeds.filter(f=>!f.lk&&f.me&&!f.meH).forEach(fdMeHash);setTimeout(()=>fdPollAll(true),900);if(S.pushOn)setTimeout(()=>S.feeds.filter(f=>!f.lk&&!f.push).forEach(fdPushAttach),1600)}
 if(bcActive())setTimeout(bcPoll,1000);
 if(S.board){setTimeout(livePollBoard,800);if(S.pushOn&&!S.board.push)setTimeout(boardPush,1500)}if(S.link)setTimeout(()=>linkPush(),1200);
 if(firstPick)setTimeout(()=>openModeSheet(true),350);
 if("serviceWorker" in navigator&&document.querySelector("link[rel=manifest]")&&(location.protocol==="https:"||location.hostname==="localhost")){navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(()=>{const o=document.getElementById("offStat");if(o&&navigator.serviceWorker.controller)o.textContent="Ready: this app opens and works with no signal. Text reports once you have service."}).catch(()=>{})}
 setInterval(()=>{if(view==="recall"&&S.rc.open){const c=document.querySelector(".mbar .ct small");if(c)c.textContent="contacted · "+Math.round((Date.now()-S.rc.start)/60000)+" min"}},20000);
-window.addEventListener("hashchange",()=>{{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){joinPrompt(q);return}if(q.get("feed")){fdJoinPrompt(q);return}}const h=(location.hash||"").slice(1).toLowerCase();if(["recall","rollup","board","muster","alerts","live","send","feed"].includes(h)&&h!==view){view=h;armed=null;render();window.scrollTo(0,0);if(h==="feed")fdPollAll(true)}});
+window.addEventListener("hashchange",()=>{{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){joinPrompt(q);return}if(q.get("feed")){fdJoinPrompt(q);return}if(q.get("sync")){syncJoinPrompt(q.get("sync"));return}}const h=(location.hash||"").slice(1).toLowerCase();if(["recall","rollup","board","muster","alerts","live","send","feed"].includes(h)&&h!==view){view=h;armed=null;render();window.scrollTo(0,0);if(h==="feed")fdPollAll(true)}});
 setInterval(()=>{const d=$("#dtg");if(d)d.textContent="AS OF "+dtg()},30000);
 </script>
 </body></html>
