@@ -29,5 +29,81 @@
   ],
   "lang": "en",
   "dir": "ltr",
-  "orientation": "portrait"
+  "orientation": "portrait",
+  "shortcuts": [
+    {
+      "name": "Feed",
+      "short_name": "Feed",
+      "url": "./#feed",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Muster",
+      "short_name": "Muster",
+      "url": "./#muster",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Calendar",
+      "short_name": "Calendar",
+      "url": "./#cal",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "My log",
+      "short_name": "My log",
+      "url": "./#log",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "store/screenshots/1_board.png",
+      "sizes": "1290x2796",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Your board"
+    },
+    {
+      "src": "store/screenshots/2_feed.png",
+      "sizes": "1290x2796",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Pass the word"
+    },
+    {
+      "src": "store/screenshots/3_calendar.png",
+      "sizes": "1290x2796",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Calendar"
+    },
+    {
+      "src": "store/screenshots/4_my_page.png",
+      "sizes": "1290x2796",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "My page"
+    }
+  ]
 }
