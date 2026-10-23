@@ -400,7 +400,7 @@ function startApp(){const s=document.createElement("script");s.textContent=docum
 /* live check-ins: Supabase relay. Stores no names: only salted hashes of the words a person types, a code and a short note. */
 const SB=window.SB={url:"https://vdhxhvklwbimjpoomnui.supabase.co",key:"sb_publishable_e1VOssMquS5UkOnwEWTrfA_fPwZqorM",
   vapid:"BGWkOoK35r0UiMWL6bYX1uwz9L_8qXwQvp4Qc_4Bv_8Ddy3c-iKPpU_ynvIxt116eKBQvlFvtBobyHKB910S3q4",
-  notify(rid){try{fetch(this.url+"/functions/v1/notify",{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify({recall:rid}),keepalive:true}).catch(()=>{})}catch(e){}},
+  notify(rid,body){try{fetch(this.url+"/functions/v1/notify",{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify(body||{recall:rid}),keepalive:true}).catch(()=>{})}catch(e){}},
   async rpc(fn,args){const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),12000);
     try{const r=await fetch(this.url+"/rest/v1/rpc/"+fn,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify(args),signal:ac.signal});
       const t=await r.text();if(!r.ok)throw new Error((()=>{try{return JSON.parse(t).message}catch(e){return t}})()||("HTTP "+r.status));return t?JSON.parse(t):null}finally{clearTimeout(tm)}},
@@ -518,7 +518,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="1.4.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="1.5.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -1115,7 +1115,7 @@ async function linkPush(force){const L=S.link;if(!L||lkBusy)return;const ms=S.ro
   lkBusy=true;try{const items=await itemsFor(L.board,ms);const sig=ms.length+"|"+items.join(",");if(!force&&sig===L.sig)return;
     const me=await Promise.all(SB.words(L.me).map(w=>SB.h(L.board,w)));
     await SB.rpc("push_update",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_sender:me,p_strength:ms.length,p_items:items});
-    L.sig=sig;L.sent=Date.now();L.err="";save()}
+    L.sig=sig;L.sent=Date.now();L.err="";save();SB.notify(null,{board:L.board})}
   catch(e){L.err=String(e.message||e).slice(0,80);save();clearTimeout(lkTimer);lkTimer=setTimeout(linkPush,60000)}
   finally{lkBusy=false;if(view==="live"||view===(L.mysec||"").toLowerCase()){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;render();window.scrollTo(0,y)}}}}
 function linkStatus(){const L=S.link;if(!L)return"";if(L.err)return `<span style="color:var(--warn)">Not sent yet (${esc(L.err)}). Retrying.</span>`;
@@ -1123,6 +1123,11 @@ function linkStatus(){const L=S.link;if(!L)return"";if(L.err)return `<span style
 window.addEventListener("online",()=>{if(S.link)linkPush();if(S.board)livePollBoard()});
 /* OIC side */
 function boardLink(sec){const q=new URLSearchParams();q.set("join",S.board.id);q.set("k",S.board.wk);q.set("s",sec);q.set("u",unitName());return location.origin+location.pathname+"#"+q.toString()}
+async function boardPush(){const B=S.board;if(!B||!S.pushOn)return;try{const sub=await pushSub(false);if(!sub)return;await SB.rpc("set_board_push",{p_board:B.id,p_read_key:B.rk,p_sub:sub.toJSON()});B.push=true;save()}catch(e){}}
+function boardPushHTML(){if(!pushOK())return isIOS()&&!standalone()?`<p class="note">For alerts with your phone locked: Share → <b>Add to Home Screen</b>, then open the app from there.</p>`:"";
+  if(Notification.permission==="denied")return `<p class="note">Alerts are blocked for this app in your phone settings.</p>`;
+  if(S.pushOn&&Notification.permission==="granted"&&S.board.push)return `<p class="note" style="color:var(--s-onhand);font-weight:700">🔔 Alerts on: this phone buzzes when a section updates</p>`;
+  return `<button class="btn alt" id="bpushOn">🔔 Alert me when a section updates, even when locked</button>`}
 async function boardCreate(){const id=rndId(14),rk=rndId(32),wk=rndId(32);await SB.rpc("create_board",{p_id:id,p_read_key:rk,p_write_key:wk});S.board={id,rk,wk,after:0,last:{}};save()}
 async function livePollBoard(){const B=S.board;if(!B||lvBusy)return;lvBusy=true;
   try{const rows=await SB.rpc("get_board_updates",{p_board:B.id,p_read_key:B.rk,p_after:B.after||0});B.err="";
@@ -1153,6 +1158,7 @@ function renderLive(){let h=banner();const B=S.board,L=S.link;
   if(!B){h+=`<div class="panel"><p class="note">Section leaders change their people's statuses on their own phones, and your board updates by itself. You see which section updated, who sent it and when. Names never go to the server: only scrambled codes your phone matches to your roster.</p>
       <button class="btn" id="lvOn">Turn on live updates for my board</button><div class="note" id="lvOut"></div></div>`}
   else{h+=`<div class="panel"><div><b style="color:var(--s-onhand)">● Live</b> · checks every 15 seconds while the app is open${B.err?` · <span style="color:var(--warn)">${esc(B.err)}</span>`:""}</div>
+      ${boardPushHTML()}
       <p class="note">Send each section leader their link. They open it in this app, on a phone that has your roster loaded (same names). After that, every change they make to their section shows up here.</p></div>
     <div class="alist" style="margin-top:10px">${SECTIONS.map(([k,n])=>{const r=B.last[k];const old=r&&Date.now()-r.t>4*3600000;
       return `<div class="rrow" style="--sc:var(${!r?"--line":old?"--warn":"--s-onhand"})"><div class="rtop"><div class="who"><b>${k}</b> ${esc(n)}
@@ -1580,6 +1586,7 @@ document.addEventListener("click",e=>{
   if(e.target.id==="rcClose"){liveClose();S.rc.open=false;S.rc.end=Date.now();S.hist=(S.hist||[]).concat({type:"recall",t:S.rc.start}).slice(-60);save();renderRecall();window.scrollTo(0,0);toast("Recall closed");return}
   if(e.target.id==="rcCancel"){if(armed==="rccancel"){liveClose();S.rc.open=false;S.rc.res={};S.rc.ci={};S.rc.start=0;armed=null;save();toast("Recall discarded")}else armed="rccancel";renderRecall();return}
   if(e.target.id==="pushOn"){e.target.disabled=true;e.target.textContent="Asking…";pushSub(true).then(sub=>{if(sub){S.pushOn=true;save();pushAttach().then(()=>{const y=window.scrollY;renderRecall();window.scrollTo(0,y)});toast("Alerts on")}else{toast("Alerts not allowed");const y=window.scrollY;renderRecall();window.scrollTo(0,y)}}).catch(()=>{toast("Couldn't turn on alerts here.");const y=window.scrollY;renderRecall();window.scrollTo(0,y)});return}
+  if(e.target.id==="bpushOn"){e.target.disabled=true;e.target.textContent="Asking…";pushSub(true).then(sub=>{if(!sub){toast("Alerts not allowed");renderLive();return}S.pushOn=true;save();boardPush().then(()=>{renderLive();toast(S.board&&S.board.push?"Alerts on":"Couldn't connect alerts. Try again.")})}).catch(()=>{toast("Couldn't turn on alerts here.");renderLive()});return}
   if(e.target.id==="lvOn"){e.target.disabled=true;e.target.textContent="Connecting…";boardCreate().then(()=>{renderLive();toast("Live updates on. Send each section its link.")}).catch(err=>{e.target.disabled=false;e.target.textContent="Turn on live updates for my board";const o=$("#lvOut");if(o)o.textContent="Couldn't connect: "+(err.message||err)});return}
   if(e.target.id==="lvOff"){if(armed==="lvoff"){const B=S.board;SB.rpc("delete_board",{p_board:B.id,p_read_key:B.rk}).catch(()=>{});S.board=null;armed=null;save();toast("Live updates off");renderLive()}else{armed="lvoff";renderLive()}return}
   const lc=e.target.closest("[data-lvcopy]");if(lc){const u=boardLink(lc.dataset.lvcopy);try{navigator.clipboard.writeText(u).then(()=>toast(lc.dataset.lvcopy+" link copied"),()=>toast(u))}catch(err){toast(u)}return}
@@ -1797,7 +1804,7 @@ let firstPick=false;{const qm=new URLSearchParams(location.search).get("m");if(!
 startXL();
 render();
 {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join"))setTimeout(()=>joinPrompt(q),firstPick?900:300)}
-if(S.board)setTimeout(livePollBoard,800);if(S.link)setTimeout(()=>linkPush(),1200);
+if(S.board){setTimeout(livePollBoard,800);if(S.pushOn&&!S.board.push)setTimeout(boardPush,1500)}if(S.link)setTimeout(()=>linkPush(),1200);
 if(firstPick)setTimeout(()=>openModeSheet(true),350);
 if("serviceWorker" in navigator&&document.querySelector("link[rel=manifest]")&&(location.protocol==="https:"||location.hostname==="localhost")){navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(()=>{const o=document.getElementById("offStat");if(o&&navigator.serviceWorker.controller)o.textContent="Ready: this app opens and works with no signal. Text reports once you have service."}).catch(()=>{})}
 setInterval(()=>{if(view==="recall"&&S.rc.open){const c=document.querySelector(".mbar .ct small");if(c)c.textContent="contacted · "+Math.round((Date.now()-S.rc.start)/60000)+" min"}},20000);

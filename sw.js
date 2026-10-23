@@ -1,6 +1,6 @@
 // Offline cache. Network first for the app so updates arrive; cache as fallback with no signal.
 // Everything the app uses is served from this site: no outside fonts, scripts or trackers.
-const CACHE = "eop-numbers-v21";
+const CACHE = "eop-numbers-v22";
 const CORE = ["./", "./index.html", "./privacy.html", "./support.html", "./manifest.webmanifest",
   "./icon-180.png", "./icon-192.png", "./icon-512.png",
   "./fonts/pjs-400.woff2", "./fonts/pjs-500.woff2", "./fonts/pjs-600.woff2", "./fonts/pjs-700.woff2", "./fonts/pjs-800.woff2"];
@@ -26,14 +26,15 @@ self.addEventListener("push", e => {
   let d = {}; try { d = e.data ? e.data.json() : {}; } catch (x) {}
   const title = d.title || "New check-in";
   e.waitUntil(self.registration.showNotification(title, {
-    body: d.body || "Open the recall to see who.", tag: d.help ? "recall-help" : "recall", renotify: true,
-    icon: "./icon-192.png", badge: "./icon-192.png", requireInteraction: !!d.help, vibrate: d.help ? [300, 100, 300, 100, 300] : [120]
+    body: d.body || "Open the recall to see who.", tag: d.help ? "recall-help" : (d.open === "live" ? "board" : "recall"), renotify: true,
+    icon: "./icon-192.png", badge: "./icon-192.png", requireInteraction: !!d.help, data: { open: d.open === "live" ? "live" : "recall" }, vibrate: d.help ? [300, 100, 300, 100, 300] : [120]
   }));
 });
 self.addEventListener("notificationclick", e => {
   e.notification.close();
+  const dest = "./#" + ((e.notification.data && e.notification.data.open) || "recall");
   e.waitUntil(clients.matchAll({ type: "window", includeUncontrolled: true }).then(ws => {
-    for (const w of ws) { if (w.url.includes(self.registration.scope)) { w.navigate("./#recall").catch(() => {}); return w.focus(); } }
-    return clients.openWindow("./#recall");
+    for (const w of ws) { if (w.url.includes(self.registration.scope)) { w.navigate(dest).catch(() => {}); return w.focus(); } }
+    return clients.openWindow(dest);
   }));
 });
