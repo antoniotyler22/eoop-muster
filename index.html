@@ -572,7 +572,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="2.8.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="2.9.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -782,7 +782,7 @@ function renderBoard(){
       ${(()=>{const r=S.duty.rosters[0];const t=r&&r.assign[dkey()];const m=t&&S.roster.find(x=>x.id===t);return `<button class="bigbtn" data-go="duty"><b>DUTY</b><span>${r?(m?"Today: "+esc(m.rank+" "+lastOf(m)):"Not assigned today"):"Duty roster"}</span></button>`})()}
       ${(()=>{const t=calOn(dkey()).length;return `<button class="bigbtn" data-go="cal"><b>CALENDAR</b><span>${t?t+" today":"Nothing today"}</span></button>`})()}
       ${(()=>{const n=S.log.filter(x=>x.d===dkey()).length;const st=logStreak();return `<button class="bigbtn${n?" live":""}" data-go="log"><b>MY LOG</b><span>${n?n+" today":"Log today"}${st>1?" · 🔥"+st:""}</span></button>`})()}
-      <button class="bigbtn" data-go="ask"><b>ASK</b><span>Orders, admin, anything</span></button>
+      <button class="bigbtn" data-go="ask"><b>ASK</b><span>${S.askSt&&S.askSt.on===false?"Off · tap to manage":"Orders, admin, anything"}</span></button>
       <button class="bigbtn" data-go="trends"><b>TRENDS</b><span>Numbers over time</span></button>
       ${S.me?`<button class="bigbtn live" data-go="me"><b>MY PAGE</b><span>${S.me.d?esc(S.me.d.statusShort):"Your info"}</span></button>`:""}
       ${(()=>{const a=bcActive();if(!a)return `<button class="bigbtn" data-go="send"><b>SEND</b><span>Message with read receipts</span></button>`;const st=bcStats(a);
@@ -1294,6 +1294,32 @@ function joinPrompt(q){const bid=(q.get("join")||"").replace(/[^a-z0-9]/g,"").sl
     <button class="btn" id="jYes">Link and send now</button><button class="btn alt" data-sclose="1">Not now</button></div>`;
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));try{history.replaceState(null,"",location.pathname)}catch(e){}}
 
+/* ---------- ASK: OIC controls + status ---------- */
+let akCtl=null,akCtlBusy=false,akCtlErr="",akShowKey=false;
+const akHidden=()=>!!(S.askSt&&S.askSt.on===false);
+async function akStatus(force){if(!force&&S.askSt&&Date.now()-S.askSt.t<6*3600000)return;try{const r=await fetch(SB.url+"/functions/v1/ask",{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify({ping:1})});
+  if(r.status===404){S.askSt={on:false,setup:false,t:Date.now()}}else{const o=await r.json();S.askSt={on:o.on!==false&&!!o.key,who:o.who||"all",admin:!!o.admin,setup:!!o.key,t:Date.now()}}rawSave();if(["board","today","ask"].includes(view)){const y=window.scrollY;render();window.scrollTo(0,y)}}catch(e){}}
+async function akManage(set){akCtlBusy=true;akCtlErr="";renderAsk();
+  try{const r=await fetch(SB.url+"/functions/v1/ask",{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify({manage:1,admin:S.askAdmin,set})});const o=await r.json().catch(()=>({}));
+    if(r.status===404)throw new Error("The ask function isn't deployed yet.");if(!r.ok)throw new Error(o.error||"Couldn't reach Ask controls.");akCtl=o;S.askSt={on:o.cfg.on,who:o.cfg.who,admin:true,setup:true,t:Date.now()};save();if(set)toast("Ask settings saved")}
+  catch(e){akCtlErr=String(e.message||e)}finally{akCtlBusy=false;if(view==="ask")renderAsk()}}
+function akCtlHTML(){if(!canEdit()||memberMode())return"";
+  if(!S.askAdmin)return `<details class="panel"><summary><b>⚙ OIC controls</b> · turn Ask on/off, who can use it, limits</summary>
+    <p class="note">One-time setup so your phone (and your SNCOIC's) can control Ask for the whole unit.</p><button class="btn alt" id="akKeyNew">Set up OIC controls</button></details>`;
+  const keyBox=`<div class="note">1. Supabase → Edge Functions → <b>Secrets</b> → add <b>AI_ADMIN_KEY</b> with this value:</div><div style="font-family:ui-monospace,Menlo,monospace;font-weight:800;word-break:break-all;padding:8px;border:2px dashed var(--brass);border-radius:10px" data-noxl>${esc(S.askAdmin)}</div>
+    <div class="row2"><button class="btn alt" id="akKeyCopy">Copy key</button><button class="btn alt" data-scf="10b_ask_controls">Copy SQL part 10b</button></div><div class="note">2. Run SQL part 10b in SQL Editor. 3. Tap Connect.</div>`;
+  if(!akCtl)return `<div class="panel"><b>⚙ OIC controls</b>${keyBox}<button class="btn" id="akConnect"${akCtlBusy?" disabled":""}>${akCtlBusy?"Connecting…":"Connect"}</button>${akCtlErr?`<div class="note" style="color:var(--warn);font-weight:700">${esc(akCtlErr)}</div>`:""}</div>`;
+  const c=akCtl.cfg,d=akCtl.defaults;const U=akCtl.usage||[];const tdy=(U.find(x=>x.day===dkey())||{}).n||0;const wk=U.reduce((a,x)=>a+x.n,0);const mx=Math.max(1,...U.map(x=>x.n));
+  return `<div class="panel" style="border-color:var(${c.on?"--s-onhand":"--warn"})"><div style="display:flex;justify-content:space-between;align-items:center"><b>⚙ OIC controls</b><b style="color:var(${c.on?"--s-onhand":"--warn"})">${c.on?"● ON":"○ OFF"}</b></div>
+    <label class="tog"><input type="checkbox" id="akOn"${c.on?" checked":""}> Ask is on for my unit</label>
+    <div class="note">Who can use it:</div><div class="evts">${[["all","Anyone with the app"],["feed","Only people in my FEED"],["leaders","Leaders only (OIC/SNCOIC phones)"]].map(([k,l])=>`<button data-akwho="${k}" aria-pressed="${c.who===k}">${l}</button>`).join("")}</div>
+    ${c.who==="feed"&&!S.feeds.some(f=>f.lk)?`<p class="note" style="color:var(--warn)">You don't have a FEED yet, so no one but leaders could ask. Start one in FEED.</p>`:""}
+    <div class="row2"><div><label for="akCap">Unit limit / day</label><input type="number" id="akCap" min="1" max="5000" value="${c.cap??d.cap}" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)"></div><div><label for="akPer">Per phone / day</label><input type="number" id="akPer" min="1" max="500" value="${c.per??d.per}" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)"></div></div>
+    <button class="btn" id="akSave"${akCtlBusy?" disabled":""}>${akCtlBusy?"Saving…":"Save settings"}</button>${akCtlErr?`<div class="note" style="color:var(--warn);font-weight:700">${esc(akCtlErr)}</div>`:""}
+    <div class="note"><b>Usage:</b> today ${tdy} / ${c.cap??d.cap} · last 7 days ${wk} questions · about $${(wk*0.05).toFixed(2)} (rough estimate; exact spend is in the Anthropic Console)</div>
+    ${U.length?`<div style="display:flex;gap:4px;align-items:flex-end;height:46px">${U.map(x=>`<div title="${esc(x.day)}: ${x.n}" style="flex:1;background:var(--s-aob);height:${Math.max(3,Math.round(44*x.n/mx))}px;border-radius:3px"></div>`).join("")}</div>`:""}
+    <details><summary class="note">OIC key</summary>${keyBox}<button class="btn warn" id="akKeyReset">${armed==="akreset"?"Tap again: make a new key (update the secret too)":"Make a new key"}</button></details></div>`}
+
 /* ---------- ASK: questions about orders, admin and anything military ---------- */
 let akBusy=false,akDraft="",akErr="";
 const AK_EX={military:["How many days of leave can I carry over at the end of the fiscal year?","What are the PFT pull-up and run standards for a male Marine age 22?","What's the process for requesting special liberty?","What does the leave order say about leave en route on PCS?","How do I start a Tuition Assistance request?"],
@@ -1307,16 +1333,18 @@ function akPII(q){if(/\b\d{3}-\d{2}-\d{4}\b/.test(q))return "That looks like a S
 function akFmt(t){return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[-•*]\s+/gm,"• ").replace(/\n/g,"<br>")}
 async function akSend(q){akBusy=true;akErr="";renderAsk();
   const hist=S.ask.slice(0,2).reverse().map(x=>({q:x.q,a:x.a}));const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),75000);
-  try{const r=await fetch(SB.url+"/functions/v1/ask",{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify({q,mode:MODES[S.mode]?S.mode:"military",hist}),signal:ac.signal});
+  try{const r=await fetch(SB.url+"/functions/v1/ask",{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify(Object.assign({q,mode:MODES[S.mode]?S.mode:"military",hist},(()=>{const f=S.feeds.find(f=>!f.lk);return f?{feed:f.id,mk:f.mk}:{}})(),S.askAdmin&&canEdit()?{admin:S.askAdmin}:{})),signal:ac.signal});
     let o={};try{o=await r.json()}catch(e){}
     if(r.status===404)throw new Error("Ask isn't set up on your server yet. Leader: DATA → System check.");
-    if(r.status===401||r.status===403)throw new Error("Ask is set up but JWT checking is on. Leader: turn off Enforce JWT verification for the ask function.");
+    if((r.status===401||r.status===403)&&!o.error)throw new Error("Ask is set up but JWT checking is on. Leader: turn off Enforce JWT verification for the ask function.");
+    if(o.off){S.askSt=Object.assign({},S.askSt,{t:0});setTimeout(()=>akStatus(true),100)}
     if(!r.ok||o.error)throw new Error(o.error||"Something went wrong. Try again.");
     S.ask.unshift({q,a:String(o.answer||""),src:Array.isArray(o.sources)?o.sources.slice(0,6):[],t:Date.now()});S.ask=S.ask.slice(0,30);akDraft="";save()}
   catch(e){akErr=e.name==="AbortError"?"That took too long. Try again or shorten the question.":String(e.message||e)}
   finally{clearTimeout(tm);akBusy=false;if(view==="ask"){renderAsk();window.scrollTo(0,0)}}}
-function renderAsk(){const ex=AK_EX[MODES[S.mode]?S.mode:"military"]||AK_EX.military;
-  let h=`<h2>💬 Ask</h2><div class="panel"><label for="akQ">Ask about orders, admin, leave, pay, fitness, anything ${S.mode&&S.mode!=="military"?"for your team":"military"}</label>
+function renderAsk(){const ex=AK_EX[MODES[S.mode]?S.mode:"military"]||AK_EX.military;akStatus();
+  if(akHidden()&&!(canEdit()&&!memberMode())){$("#main").innerHTML=`<h2>💬 Ask</h2><div class="panel"><p class="note">${S.askSt&&S.askSt.setup===false?"Ask isn't set up for your unit.":"Ask is turned off by your leader."}</p></div>`;return}
+  let h=akCtlHTML()+`<h2>💬 Ask</h2><div class="panel"><label for="akQ">Ask about orders, admin, leave, pay, fitness, anything ${S.mode&&S.mode!=="military"?"for your team":"military"}</label>
     <textarea id="akQ" maxlength="600" style="min-height:80px" placeholder="${esc(ex[0])}"${akBusy?" disabled":""}>${esc(akDraft)}</textarea>
     <button class="btn" id="akGo"${akBusy?" disabled":""}>${akBusy?"Searching official sources…":"Ask"}</button>
     ${akErr?`<div class="note" style="color:var(--warn);font-weight:700">${esc(akErr)}</div>`:""}
@@ -1372,7 +1400,7 @@ function renderToday(){const D=S.me&&S.me.d;const mf=S.feeds.filter(f=>!f.lk);
   const lt=S.log.filter(x=>x.d===k);const st=logStreak();
   h+=`<h2>📝 My log ${st>1?`<span class="note" style="font-weight:700">🔥 ${st}-day streak</span>`:""}</h2><div class="panel">${lt.length?lt.map(x=>`<div>• ${esc(x.txt)}</div>`).join(""):`<div class="note">What did you get done today?</div>`}
     <div class="addph"><input type="text" id="tdLog" maxlength="500" placeholder="${lt.length?"Add another…":"Led PMCS on 3 dozers…"}"><button id="tdLogAdd">Add</button></div></div>`;
-  h+=`<button class="btn alt" data-go="ask" style="width:100%;margin-top:12px">💬 Ask a question (orders, leave, pay, PFT…)</button><div class="row2" style="margin-top:8px">${mf.length?`<button class="btn alt" data-go="feed">FEED</button>`:"<span></span>"}${S.me?`<button class="btn alt" data-go="me">My page</button>`:`<button class="btn alt" data-go="log">My log</button>`}</div>
+  h+=`${akHidden()?"":`<button class="btn alt" data-go="ask" style="width:100%;margin-top:12px">💬 Ask a question (orders, leave, pay, PFT…)</button>`}<div class="row2" style="margin-top:8px">${mf.length?`<button class="btn alt" data-go="feed">FEED</button>`:"<span></span>"}${S.me?`<button class="btn alt" data-go="me">My page</button>`:`<button class="btn alt" data-go="log">My log</button>`}</div>
     ${memberMode()?`<p class="note" style="text-align:center;margin-top:14px"><button class="chip" id="tdLeader" style="cursor:pointer">I'm a leader: show leader tools</button></p>`:""}`;
   $("#main").innerHTML=h}
 
@@ -1467,7 +1495,7 @@ async function scRun(){scBusy=true;scRes={at:Date.now(),g:{},nt:null};renderSys(
   scBusy=false;renderSys()}
 function akState(a){if(!a)return null;if(a.err)return {ok:0,msg:"Couldn't reach it. Check signal."};if(a.s===404)return {ok:0,msg:"Optional. Not set up: create the Edge Function named ask, add ANTHROPIC_API_KEY, run part 10."};
   if(a.s===401||a.s===403)return {ok:0,msg:"JWT checking is on. Open ask → Details and turn off Enforce JWT verification."};if(a.s>=500)return {ok:0,msg:"It crashed. Usually the code was cut off when pasted."};
-  if(a.ok&&!a.key)return {ok:0,msg:"Deployed, but the ANTHROPIC_API_KEY secret is missing."};if(a.ok&&!a.db)return {ok:0,msg:"Deployed, but the usage table is missing. Run part 10."};if(a.ok)return {ok:1,msg:"Ready."};return {ok:0,msg:"Unexpected answer ("+a.s+")."}}
+  if(a.ok&&!a.key)return {ok:0,msg:"Deployed, but the ANTHROPIC_API_KEY secret is missing."};if(a.ok&&!a.db)return {ok:0,msg:"Deployed, but the usage table is missing. Run part 10."};if(a.ok&&!a.ctl)return {ok:0,msg:"Ready, but OIC controls aren't set up. Run part 10b."};if(a.ok)return {ok:1,msg:"Ready"+(a.admin?" · OIC controls on":" · add AI_ADMIN_KEY to use OIC controls")+" · "+(a.on===false?"turned OFF":a.who==="feed"?"FEED members only":a.who==="leaders"?"leaders only":"open to everyone")+"."};return {ok:0,msg:"Unexpected answer ("+a.s+")."}}
 function ntState(nt){if(!nt)return null;if(nt.err)return {ok:0,msg:"Couldn't reach it. Check signal."};if(nt.s===404)return {ok:0,msg:"Not deployed. Create the Edge Function named notify."};
   if(nt.s===401||nt.s===403)return {ok:0,msg:"JWT checking is on. Open notify → Details and turn off Enforce JWT verification."};
   if(nt.s>=500)return {ok:0,msg:"It crashed. Usually the VAPID_PUBLIC / VAPID_PRIVATE secrets are missing, or the code was cut off when pasted."};
@@ -1481,7 +1509,7 @@ function renderSys(){let h=`<h2>System check</h2><div class="panel"><p class="no
     h+=`<div class="alist">${SC.map(g=>{const r=scRes.g[g.k];return `<div class="rrow" style="--sc:var(${r.ok?"--s-onhand":"--warn"})"><div class="rtop"><div class="who"><b>${r.ok?"✅":"❌"} ${esc(g.n)}</b>${r.ok?"":`<div class="ph">${r.net?"Couldn't reach the server. Check signal and run again.":r.perm.length?"Permissions missing ("+r.perm.join(", ")+"). Run the last part again.":"Missing: "+r.miss.join(", ")}</div>`}</div></div>
       ${r.ok||r.net?"":`<div class="note">Run these in Supabase → SQL Editor, one at a time (New query → paste → Run). Safe to re-run.</div><div class="evts">${g.f.map((f,i)=>`<button data-scf="${f}">Copy part ${i+1} of ${g.f.length}</button>`).join("")}</div>`}</div>`}).join("")}
       <div class="rrow" style="--sc:var(${nt.ok?"--s-onhand":"--warn"})"><div class="who"><b>${nt.ok?"✅":"❌"} Push alerts (notify function)</b><div class="ph">${esc(nt.msg)}</div></div>${nt.ok?"":`<button class="btn alt" id="scNt">Copy notify code</button><p class="note">Also check Edge Functions → Secrets has VAPID_PUBLIC and VAPID_PRIVATE.</p>`}</div></div>
-    ${(()=>{const a=akState(scRes.ak);return a?`<h2>Ask (AI) · optional</h2><div class="rrow" style="--sc:var(${a.ok?"--s-onhand":"--s-duty"})"><div class="who"><b>${a.ok?"✅":"○"} Ask questions</b><div class="ph">${esc(a.msg)}</div></div>${a.ok?"":`<div class="evts"><button data-scf="10_ask">Copy part 10 (SQL)</button><button id="scAsk">Copy ask code</button></div>`}</div>`:""})()}
+    ${(()=>{const a=akState(scRes.ak);return a?`<h2>Ask (AI) · optional</h2><div class="rrow" style="--sc:var(${a.ok?"--s-onhand":"--s-duty"})"><div class="who"><b>${a.ok?"✅":"○"} Ask questions</b><div class="ph">${esc(a.msg)}</div></div>${a.ok?"":`<div class="evts"><button data-scf="10_ask">Copy part 10 (SQL)</button><button data-scf="10b_ask_controls">Copy part 10b</button><button id="scAsk">Copy ask code</button></div>`}</div>`:""})()}
     <h2>Server protection</h2><div class="panel"><p class="note">Limits that stop anyone from flooding your free server, and a nightly cleanup of expired data. The app can't test these from here; run each once.</p><div class="evts">${["09a_limits","09b_limits_apply","09c_cleanup"].map((f,i)=>`<button data-scf="${f}">Copy part ${i+1} of 3</button>`).join("")}</div><p class="note">If part 3 errors, turn on <b>pg_cron</b> in Database → Extensions, then run it again.</p></div>`}
   $("#main").innerHTML=h}
 
@@ -1642,7 +1670,7 @@ async function exportXL(kind){try{const X=await loadXLSX();const wb=X.utils.book
 const xlBtn=k=>`<button class="chip" data-xl="${k}" style="cursor:pointer;font-size:13px">⬇ Excel</button>`;
 
 /* ---------- backup + sync: encrypted with a recovery code; server stores an unreadable blob ---------- */
-const SYNC_SKIP=["sync","pushOn","link","ts","onb","role","me","ask"];const CODE_AB="23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+const SYNC_SKIP=["sync","pushOn","link","ts","onb","role","me","ask","askSt"];const CODE_AB="23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 let syncT=null,syncBusy=false,syncShow=false;
 const fnv=str=>{let h=0x811c9dc5;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)}return (h>>>0).toString(36)+str.length.toString(36)};
 const sig=v=>fnv(JSON.stringify(v===undefined?null:v));
@@ -2588,6 +2616,12 @@ document.addEventListener("click",e=>{
   if(e.target.id==="meIcs"){const D=S.me&&S.me.d;if(!D||!D.cal.length){toast("Nothing coming up.");return}shareFile(icsFor(D.cal,D.name),"My_calendar.ics","text/calendar");return}
   if(e.target.id==="meOff"){if(armed==="meoff"){S.me=null;armed=null;save();view="board";render();toast("Removed")}else{armed="meoff";renderMe()}return}
   if(e.target.id==="scGo"){scRun();return}
+  if(e.target.id==="akKeyNew"){if(!isOwner())return denyMsg();S.askAdmin=rndId(32);save();renderAsk();return}
+  if(e.target.id==="akKeyCopy"){try{navigator.clipboard.writeText(S.askAdmin).then(()=>toast("Key copied. Paste it as AI_ADMIN_KEY."),()=>toast(S.askAdmin))}catch(err){toast(S.askAdmin)}return}
+  if(e.target.id==="akConnect"){akManage(null);return}
+  if(e.target.id==="akKeyReset"){if(!isOwner())return denyMsg();if(armed==="akreset"){S.askAdmin=rndId(32);akCtl=null;armed=null;save()}else armed="akreset";renderAsk();return}
+  const akw=e.target.closest("[data-akwho]");if(akw&&akCtl){akCtl.cfg.who=akw.dataset.akwho;renderAsk();return}
+  if(e.target.id==="akSave"){if(!akCtl)return;const c=akCtl.cfg;akManage({on:$("#akOn").checked,who:c.who,cap:+$("#akCap").value||undefined,per:+$("#akPer").value||undefined,feeds:S.feeds.filter(f=>f.lk).map(f=>f.id)});return}
   if(e.target.id==="akGo"){const q=($("#akQ").value||"").trim();akDraft=q;if(q.length<3){toast("Type a question.");return}const bad=akPII(q);if(bad){akErr=bad+" Remove it and ask again.";renderAsk();return}akSend(q);return}
   const akx=e.target.closest("[data-akex]");if(akx){akDraft=akx.dataset.akex;renderAsk();const t=$("#akQ");if(t)t.focus();return}
   const akc=e.target.closest("[data-akcopy]");if(akc){const x=S.ask[+akc.dataset.akcopy];try{navigator.clipboard.writeText(akText(x)).then(()=>toast("Copied"),()=>toast("Copy blocked here."))}catch(err){toast("Copy blocked here.")}return}
@@ -2748,6 +2782,7 @@ document.addEventListener("change",e=>{
   if(e.target.id==="fdUrg"){fdDraft.urg=e.target.checked;return}
   if(e.target.matches&&e.target.matches("select[data-rqwho]")){const r=S.reqs.find(x=>x.rid===e.target.dataset.rqwho);if(r&&e.target.value){r.mid=e.target.value;save();const y=window.scrollY;renderFeed();window.scrollTo(0,y)}return}
   if(e.target.id==="fdRa"){fdDraft.ra=+e.target.value;return}
+  if(e.target.id==="akOn"&&akCtl){akCtl.cfg.on=e.target.checked;return}
   if(e.target.matches&&e.target.matches("input[data-pdate]")){const m=S.roster.find(x=>x.id===pid);if(m){m[e.target.dataset.pdate]=e.target.value?fmtD(e.target.value):"";save();toast("Saved")}return}
   if(e.target.matches&&e.target.matches("input[data-fdsec]")){const k=e.target.dataset.fdsec;fdDraft.secs=e.target.checked?[...new Set(fdDraft.secs.concat(k))]:fdDraft.secs.filter(x=>x!==k);return}
   if(e.target.id==="fdAtt"){fdDraft.att=e.target.checked;return}
@@ -2901,6 +2936,7 @@ render();
 if(memberMode()&&!location.hash&&view==="board"){view="today";render()}
 if(S.me){setTimeout(()=>mpFetch(),600)}
 if(S.roster.some(m=>m.pk))setTimeout(()=>mpPublish(),2500);
+setTimeout(()=>akStatus(),3000);
 {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("sync")){firstPick=false;setTimeout(()=>syncJoinPrompt(q.get("sync"),q.get("r")),300)}}
 if(S.sync&&S.sync.on)setTimeout(()=>syncPull(),700);
 if(S.feeds.length){S.feeds.filter(f=>!f.lk&&f.me&&!f.meH).forEach(fdMeHash);setTimeout(()=>fdPollAll(true),900);if(S.pushOn)setTimeout(()=>S.feeds.filter(f=>!f.lk&&!f.push).forEach(fdPushAttach),1600)}

@@ -1,6 +1,7 @@
 // Supabase Edge Function "ask": answers questions with Claude, searching official sources only.
 // Turn OFF "Enforce JWT verification". Secrets: ANTHROPIC_API_KEY (required),
-// optional AI_MODEL (default claude-sonnet-5-5), AI_DAILY_CAP (default 150), AI_PER_DEVICE (default 20).
+// optional AI_MODEL (default claude-sonnet-5-5), AI_DAILY_CAP (default 150), AI_PER_DEVICE (default 20),
+// AI_ADMIN_KEY (lets the OIC's phone turn Ask on/off, choose who can use it and set limits).
 // Question text is never stored. Only daily counters are kept (ai_usage table).
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -40,6 +41,16 @@ Rules:
 Style: the reader is on a phone. Lead with the direct answer in 1-2 sentences, then short bullets with the key details. Plain text only: no tables, no headings, at most light **bold**. Keep it under 220 words unless they ask for more.`;
 }
 
+type Cfg = { on: boolean; who: "all" | "feed" | "leaders"; cap?: number; per?: number; feeds?: string[] };
+async function getCfg(): Promise<Cfg> {
+  const { data } = await db.from("ai_settings").select("cfg").eq("id", 1).maybeSingle();
+  const c = (data?.cfg ?? {}) as Partial<Cfg>;
+  return { on: c.on !== false, who: (["all", "feed", "leaders"].includes(c.who as string) ? c.who : "all") as Cfg["who"], cap: c.cap, per: c.per, feeds: Array.isArray(c.feeds) ? c.feeds : [] };
+}
+async function hex(s: string) {
+  const d = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)));
+  return Array.from(d).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 async function sha(s: string) {
   const d = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)));
   return Array.from(d).map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 24);
@@ -48,13 +59,52 @@ async function sha(s: string) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "method" }, 405);
-  let body: { q?: unknown; mode?: unknown; hist?: unknown; ping?: unknown } = {};
+  // deno-lint-ignore no-explicit-any
+  let body: any = {};
   try { body = await req.json(); } catch { return json({ error: "bad request" }, 400); }
 
   const key = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+  const adminKey = Deno.env.get("AI_ADMIN_KEY") ?? "";
+  const isAdmin = adminKey.length >= 24 && typeof body.admin === "string" && body.admin === adminKey;
+  const cfg = await getCfg();
   if (body.ping) {
     const { error } = await db.from("ai_usage").select("day").limit(1);
-    return json({ ok: true, key: key.length > 20, db: !error });
+    const st = await db.from("ai_settings").select("id").limit(1);
+    return json({ ok: true, key: key.length > 20, db: !error, ctl: !st.error, admin: adminKey.length >= 24, on: cfg.on, who: cfg.who });
+  }
+
+  // OIC controls
+  if (body.manage) {
+    if (adminKey.length < 24) return json({ error: "Add the AI_ADMIN_KEY secret in Supabase first." }, 403);
+    if (!isAdmin) return json({ error: "That OIC key doesn't match the server." }, 403);
+    if (body.set && typeof body.set === "object") {
+      const s = body.set;
+      const n = (v: unknown, lo: number, hi: number) => (typeof v === "number" && v >= lo && v <= hi ? Math.round(v) : undefined);
+      const next: Cfg = {
+        on: s.on !== false,
+        who: ["all", "feed", "leaders"].includes(s.who) ? s.who : "all",
+        cap: n(s.cap, 1, 5000), per: n(s.per, 1, 500),
+        feeds: Array.isArray(s.feeds) ? s.feeds.filter((x: unknown) => typeof x === "string" && /^[a-z0-9]{10,20}$/.test(x as string)).slice(0, 20) : cfg.feeds,
+      };
+      const { error } = await db.from("ai_settings").upsert({ id: 1, cfg: next, updated_at: new Date().toISOString() });
+      if (error) return json({ error: "Run SQL part 10b first." }, 503);
+      Object.assign(cfg, next);
+    }
+    const since = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
+    const { data: use } = await db.from("ai_usage").select("day,n").eq("k", "all").gte("day", since).order("day");
+    return json({ cfg, defaults: { cap: Number(Deno.env.get("AI_DAILY_CAP") ?? 150), per: Number(Deno.env.get("AI_PER_DEVICE") ?? 20) }, usage: use ?? [] });
+  }
+
+  if (!cfg.on) return json({ error: "Ask is turned off by your leader.", off: true }, 403);
+  if (cfg.who === "leaders" && !isAdmin) return json({ error: "Ask is set to leaders only.", off: true }, 403);
+  if (cfg.who === "feed" && !isAdmin) {
+    const fid = typeof body.feed === "string" ? body.feed : "", mk = typeof body.mk === "string" ? body.mk : "";
+    let ok = false;
+    if ((cfg.feeds ?? []).includes(fid) && mk.length >= 24) {
+      const { data } = await db.from("feeds").select("member_key_hash").eq("id", fid).maybeSingle();
+      ok = !!data && data.member_key_hash === await hex(mk);
+    }
+    if (!ok) return json({ error: "Ask is only for people in your unit's FEED. Join it with the link your leader sent.", off: true }, 403);
   }
   if (!key) return json({ error: "Ask isn't set up yet (no API key on the server)." }, 503);
 
@@ -63,7 +113,7 @@ Deno.serve(async (req) => {
   const mode = typeof body.mode === "string" && DOMAINS[body.mode] ? body.mode : "military";
 
   // Daily caps: whole server and each device (by a one-way hash of its network address).
-  const cap = Number(Deno.env.get("AI_DAILY_CAP") ?? 150), per = Number(Deno.env.get("AI_PER_DEVICE") ?? 20);
+  const cap = cfg.cap ?? Number(Deno.env.get("AI_DAILY_CAP") ?? 150), per = cfg.per ?? Number(Deno.env.get("AI_PER_DEVICE") ?? 20);
   const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
   const dev = await sha(ip + "|" + (Deno.env.get("SUPABASE_URL") ?? ""));
   const all = await db.rpc("ai_bump", { p_k: "all" });
