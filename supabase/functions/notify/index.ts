@@ -1,5 +1,5 @@
 // Supabase Edge Function "notify": push alerts to the leader's phone.
-//  {recall}: after a live recall check-in.  {board}: after a section leader's live update.
+//  {recall}: after a live recall check-in.  {board}: after a section leader's live update.  {feed, lk, urg}: after a FEED post.
 // Payloads carry no names. Turn OFF "Enforce JWT verification" (the function validates input itself).
 // Secrets: VAPID_PUBLIC, VAPID_PRIVATE (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are built in).
 import webpush from "npm:web-push@3.6.7";
@@ -58,12 +58,38 @@ async function board(id: string) {
   return send("boards", id, b.push_sub, payload, false);
 }
 
+async function feed(id: string, lk: string, urg: boolean) {
+  const { data: f } = await db.from("feeds").select("leader_key_hash,last_push_id").eq("id", id).maybeSingle();
+  if (!f) return out("no feed");
+  const dig = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(lk)));
+  const hex = Array.from(dig).map((b) => b.toString(16).padStart(2, "0")).join("");
+  if (hex !== f.leader_key_hash) return out("not allowed", 403);
+  const { data: p } = await db.from("feed_posts").select("id").eq("feed_id", id).order("id", { ascending: false }).limit(1).maybeSingle();
+  if (!p || p.id <= (f.last_push_id ?? 0)) return out("nothing new");
+  const { data: claimed } = await db.from("feeds").update({ last_push_id: p.id })
+    .eq("id", id).eq("last_push_id", f.last_push_id ?? 0).select("id");
+  if (!claimed || !claimed.length) return out("already sent");
+  const { data: subs } = await db.from("feed_subs").select("id,sub").eq("feed_id", id).limit(500);
+  const payload = JSON.stringify(urg
+    ? { title: "⚠ URGENT: new word", body: "Open FEED to read it and tap Got it.", help: true, open: "feed" }
+    : { title: "New word in FEED", body: "Open FEED to read it and tap Got it.", help: false, open: "feed" });
+  const dead: number[] = [];
+  await Promise.allSettled((subs ?? []).map(async (s) => {
+    try { await webpush.sendNotification(s.sub, payload, { TTL: 86400, urgency: urg ? "high" : "normal" }); }
+    catch (e) { const c = (e as { statusCode?: number }).statusCode; if (c === 404 || c === 410) dead.push(s.id); }
+  }));
+  if (dead.length) await db.from("feed_subs").delete().in("id", dead);
+  return out("sent " + ((subs?.length ?? 0) - dead.length));
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return out("ok");
   if (req.method !== "POST") return out("method", 405);
-  let body: { recall?: unknown; board?: unknown } = {};
+  let body: { recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown } = {};
   try { body = await req.json(); } catch { return out("bad", 400); }
   if (typeof body.recall === "string" && /^[a-z0-9]{8,16}$/.test(body.recall)) return recall(body.recall);
   if (typeof body.board === "string" && /^[a-z0-9]{10,20}$/.test(body.board)) return board(body.board);
+  if (typeof body.feed === "string" && /^[a-z0-9]{10,20}$/.test(body.feed) && typeof body.lk === "string" && /^[a-z0-9]{24,40}$/.test(body.lk))
+    return feed(body.feed, body.lk, body.urg === true);
   return out("bad", 400);
 });
