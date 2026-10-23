@@ -331,12 +331,22 @@ details summary{cursor:pointer;font-weight:700;min-height:32px}
 .onb .btn{width:100%;min-height:48px;font-size:16px}.onb-back{background:none;border:0;color:var(--muted);font:inherit;font-weight:700;min-height:44px}
 body.onb-open .top,body.onb-open #main{visibility:hidden}
 button[data-w6],button[data-tup],button[data-tdn]{min-height:28px;min-width:32px}
+.acts button{position:relative}.fdb{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:99px;background:var(--warn);color:#fff;font-size:10.5px;line-height:17px;font-weight:800;text-align:center}
+@media (max-width:430px){.brand .acts{gap:3px}.brand .acts button{padding:6px 7px;font-size:12px;letter-spacing:0}.brand h1{font-size:17px}}
+.fdpost{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--sc,var(--line));border-radius:16px;padding:12px 14px;margin-top:10px;display:flex;flex-direction:column;gap:8px}
+.fdpost .tx{white-space:pre-wrap;font-size:16.5px;line-height:1.45;font-weight:600}
+.fdpost .mt{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.fdpost.new{box-shadow:0 0 0 2px var(--brass)}
+.fdacts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.fdacts button{border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:10px 6px;font-weight:800;font-size:14px;min-height:44px}
+.fdacts button.go{background:var(--s-onhand);color:#fff;border-color:transparent}
 </style>
 </head><body>
 <header class="top"><div class="top-in">
   <div class="brand">
     <div><h1><button id="bMode" class="titlebtn" aria-haspopup="dialog" title="Change app version">EOP Numbers<span class="caret">▾</span></button></h1><div class="dtg" id="dtg"></div></div>
     <div class="acts">
+      <button id="bFeed" aria-pressed="false">FEED<span id="fdBadge" class="fdb" hidden></span></button>
       <button id="b6W" aria-pressed="false">6W</button>
       <button id="bPT" aria-pressed="false">PT</button>
       <button id="bText" aria-pressed="false">TEXT</button>
@@ -492,7 +502,7 @@ const SVAR={"On Hand":"--s-onhand","Appointment on Base":"--s-aob","Appointment 
 const PRESENT=["On Hand","Appointment on Base","Company Duties"];
 const SECTIONS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
 const DEF_SECS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
-const RESERVED=["BOARD","ATT","PT","W6","TEXT","DATA","MUSTER","ALERTS","RECALL","EVENTS","ARMORY","ROLLUP","LIVE","SEND"];
+const RESERVED=["BOARD","ATT","PT","W6","TEXT","DATA","MUSTER","ALERTS","RECALL","EVENTS","ARMORY","ROLLUP","LIVE","SEND","FEED"];
 const MIL_SECS=DEF_SECS.map(s=>s.slice());
 let secDraft=null;
 /* ---------- versions: one app, five vocabularies ---------- */
@@ -542,7 +552,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="1.6.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="1.7.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -678,6 +688,7 @@ S.arm=Object.assign({open:false,start:0,st:{},only:false,last:""},S.arm||{});
 S.rcMiss=Array.isArray(S.rcMiss)?S.rcMiss:[];if(S.rcRev&&!Array.isArray(S.rcRev.rows))S.rcRev=null;
 S.rc=Object.assign({open:false,start:0,end:0,res:{},att:true,only:false,ci:{}},S.rc||{});if(!S.rc.ci||typeof S.rc.ci!=="object")S.rc.ci={};
 S.bc=Array.isArray(S.bc)?S.bc:[];
+S.feeds=Array.isArray(S.feeds)?S.feeds:[];
 S.roll=Object.assign({units:{},own:true,name:""},S.roll||{});if(!S.roll.units||typeof S.roll.units!=="object")S.roll.units={};
 S.mus=Object.assign({open:false,seen:{},inc:["On Hand"],att:true,only:false,last:null},S.mus||{});
 S.pt=Object.assign({event:"Unit PT",when:"",inc:["On Hand"],att:true},S.pt||{});
@@ -686,7 +697,7 @@ function save(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.
 
 let view="board", armed=null, query="";
 const h0=(location.hash||"").slice(1).toLowerCase();
-if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send"].includes(h0)) view=h0;
+if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed"].includes(h0)) view=h0;
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -718,7 +729,7 @@ function renderTabs(){
   const {c,T}=counts();
   const items=[["board","BOARD",T["On Hand"]+"/"+T.total]].concat(SECTIONS.map(([k])=>[k.toLowerCase(),k,c[k]["On Hand"]+"/"+c[k].total])).concat([["att","ATT","+"+c.ATT.total]]);
   $("#tabs").innerHTML=items.map(([id,lbl,sub])=>`<button role="tab" data-v="${id}" aria-selected="${view===id}">${lbl}<small>${sub}</small></button>`).join("");
-  $("#b6W").setAttribute("aria-pressed",view==="w6");$("#bPT").setAttribute("aria-pressed",view==="pt");$("#bText").setAttribute("aria-pressed",view==="text");$("#bData").setAttribute("aria-pressed",view==="data");
+  $("#b6W").setAttribute("aria-pressed",view==="w6");$("#bFeed").setAttribute("aria-pressed",view==="feed");{const n=fdUnread();const fb=$("#fdBadge");if(fb){fb.hidden=!n;fb.textContent=n>9?"9+":n}}$("#bPT").setAttribute("aria-pressed",view==="pt");$("#bText").setAttribute("aria-pressed",view==="text");$("#bData").setAttribute("aria-pressed",view==="data");
   $("#dtg").textContent="AS OF "+dtg();
   {const tp=document.querySelector(".top");if(tp)document.documentElement.style.setProperty("--hdr",tp.offsetHeight+"px")}
 }
@@ -1264,6 +1275,86 @@ function renderSend(){let h=banner();const a=bcActive();
     if(past.length)h+=`<h2>Past messages</h2><div class="panel hist">${past.map(b=>{const st=bcStats(b);return `<div><b>${dtg(new Date(b.t)).slice(0,7)}</b> · ${st.got}/${st.pool} got it · ${esc(b.msg.slice(0,60))}${b.msg.length>60?"…":""}</div>`}).join("")}</div>`}
   $("#main").innerHTML=h}
 
+/* ---------- FEED: the word, old and new, with Got it in the app ----------
+   Post text is encrypted on the leader's phone (AES-256-GCM). The key rides only in the join link (#e=...), so the server
+   stores text it can't read. Got it = scrambled name codes + 1 (got it) or 2 (problem) + optional note. */
+const b64e=u=>{let s="";for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode(...u.subarray(i,i+8192));return btoa(s)};
+const b64d=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const b64url=u=>b64e(u).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+const unurl=s=>b64d(s.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-s.length%4)%4));
+const fdKeys={};let fdBusy=false,fdSel=null,fdOpen=null,fdNew=false,fdDraft={txt:"",urg:false};
+async function fdKey(ek){return fdKeys[ek]=fdKeys[ek]||await crypto.subtle.importKey("raw",unurl(ek),"AES-GCM",false,["encrypt","decrypt"])}
+async function fdEnc(ek,o){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},await fdKey(ek),new TextEncoder().encode(JSON.stringify(o))));const a=new Uint8Array(12+ct.length);a.set(iv);a.set(ct,12);return b64e(a)}
+async function fdDec(ek,s){try{const a=b64d(s);return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:a.slice(0,12)},await fdKey(ek),a.slice(12))))}catch(e){return null}}
+const fdCur=()=>S.feeds.find(f=>f.id===fdSel)||S.feeds[0]||null;
+function fdUnread(){return S.feeds.reduce((a,f)=>a+(f.lk?0:(f.posts||[]).filter(p=>p.id>(f.seen||0)).length),0)}
+function fdLink(f){const q=new URLSearchParams();q.set("feed",f.id);q.set("k",f.mk);q.set("e",f.ek);q.set("u",f.unit);return location.origin+location.pathname+"#"+q.toString()}
+async function fdCreate(){const f={id:rndId(14),mk:rndId(32),lk:rndId(32),ek:b64url(crypto.getRandomValues(new Uint8Array(32))),unit:unitName(),posts:[],seen:0,acks:{},ackAfter:0,mine:{},un:{}};
+  await SB.rpc("create_feed",{p_id:f.id,p_member_key:f.mk,p_leader_key:f.lk});S.feeds.unshift(f);fdSel=f.id;save()}
+async function fdPoll(f,full){const after=full?0:Math.max(0,...(f.posts||[]).map(p=>p.id));
+  const rows=await SB.rpc("feed_get",{p_feed:f.id,p_member_key:f.mk,p_after:after});let fresh=0;const keep=full?[]:(f.posts||[]);const have=new Set(keep.map(p=>p.id));
+  for(const r of rows||[]){if(have.has(+r.id))continue;const o=await fdDec(f.ek,r.ct);if(!o)continue;keep.push({id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,1000),urg:!!o.u});if(+r.id>(f.seen||0))fresh++}
+  f.posts=keep.sort((a,b)=>b.id-a.id).slice(0,200);f.err="";
+  if(f.lk){const acks=await SB.rpc("feed_acks_get",{p_feed:f.id,p_leader_key:f.lk,p_after:f.ackAfter||0});
+    if(acks&&acks.length){const idx=await bcIndexFor(f.id);f.acks=f.acks||{};f.un=f.un||{};
+      for(const r of acks){f.ackAfter=Math.max(f.ackAfter||0,+r.id);const set=new Set(r.words||[]);
+        const sc=idx.map.filter(x=>x.last.length&&x.last.every(h=>set.has(h))).map(x=>({m:x.m,s:(set.has(x.rank)?2:0)+(x.first&&set.has(x.first)?1:0)}));
+        const best=sc.length?Math.max(...sc.map(x=>x.s)):-1;const top=sc.filter(x=>x.s===best);const pid=String(r.post_id);
+        if(top.length===1){(f.acks[pid]=f.acks[pid]||{})[top[0].m.id]={c:+r.code,note:String(r.note||"").slice(0,40),t:Date.parse(r.created_at)||Date.now()}}else f.un[pid]=(f.un[pid]||0)+1}}}
+  return fresh}
+async function fdPollAll(full){if(fdBusy||!S.feeds.length)return;fdBusy=true;let fresh=0;
+  try{for(const f of S.feeds){try{fresh+=await fdPoll(f,full)}catch(e){f.err=String(e.message||e).slice(0,80)}}save();renderTabs();
+    if(view==="feed"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;renderFeed();window.scrollTo(0,y)}}
+    if(fresh&&view!=="feed"){toast(fresh===1?"New in FEED":fresh+" new in FEED");try{navigator.vibrate&&navigator.vibrate([60,40,60])}catch(e){}}}
+  finally{fdBusy=false}}
+setInterval(()=>{if(S.feeds.length&&!document.hidden)fdPollAll(false)},30000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.feeds.length)fdPollAll(false)});
+function fdPool(){return S.roster}
+function fdStats(f,p){const A=(f.acks||{})[String(p.id)]||{};const pool=fdPool();return {pool:pool.length,got:pool.filter(m=>A[m.id]).length,prob:pool.filter(m=>A[m.id]&&A[m.id].c===2).length,A}}
+function fdJoinPrompt(q){const id=(q.get("feed")||"").replace(/[^a-z0-9]/g,"").slice(0,20),mk=(q.get("k")||"").replace(/[^a-z0-9]/g,"").slice(0,40),ek=(q.get("e")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60),unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24)||"Your unit";
+  try{history.replaceState(null,"",location.pathname)}catch(e){}
+  if(id.length<10||mk.length<24||ek.length<40)return toast("That feed link is incomplete.");
+  if(S.feeds.some(f=>f.id===id)){fdSel=id;view="feed";render();fdPollAll(true);return}
+  sheetCtx={kind:"fjoin",id,mk,ek,unit};
+  $("#sheetT").innerHTML=`Join ${esc(unit)}'s feed?<small>You'll see the word they pass, old and new, and tap Got it here in the app.</small>`;
+  $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><label for="fjMe">Your rank and last name</label><input type="text" id="fjMe" maxlength="30" placeholder="CPL SMITH" autocapitalize="characters" style="text-transform:uppercase" value="${esc(S.myName||"")}">
+    <p class="note">Your leader sees your Got it next to your name. Your name is scrambled before it leaves this phone; the server never stores it. Posts are encrypted.</p>
+    <button class="btn" id="fjYes">Join feed</button><button class="btn alt" data-sclose="1">Not now</button></div>`;
+  const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")))}
+async function fdAck(f,pid,c){if(!f.me){toast("Add your rank and last name first.");return}const note=c===2?(($("#fdNote"+pid)||{}).value||"").replace(/[|#]/g," ").trim().slice(0,40):"";
+  if(c===2&&!note){toast("Add a short note about the problem.");const i=$("#fdNote"+pid);if(i)i.focus();return}
+  const hs=await Promise.all(SB.words(f.me).map(w=>SB.h(f.id,w)));await SB.rpc("feed_ack",{p_feed:f.id,p_member_key:f.mk,p_post:pid,p_words:hs,p_code:c,p_note:note});
+  f.mine=f.mine||{};f.mine[pid]={c,note,t:Date.now()};save()}
+function renderFeed(){let h=S.source==="sample"?"":banner();const f=fdCur();
+  if(S.feeds.length>1)h+=`<div class="evts" style="margin-top:10px">${S.feeds.map(x=>`<button data-fdsel="${x.id}" aria-pressed="${x===f}">${esc(x.unit)}${x.lk?" (mine)":""}${!x.lk&&(x.posts||[]).some(p=>p.id>(x.seen||0))?" •":""}</button>`).join("")}</div>`;
+  if(!f||fdNew){h+=`<h2>Feed</h2><div class="panel"><p class="note">Pass the word in one place. Your people join once with a link, see every post old and new, and tap <b>Got it</b> in the app. You see who confirmed and who hasn't, per post. Posts are encrypted on your phone; the server can't read them or see names.</p>
+      <button class="btn" id="fdCreate">Start a feed for ${esc(unitName())}</button>${fdNew?`<button class="btn alt" id="fdCancelNew">Cancel</button>`:""}<div class="note" id="fdOut"></div>
+      <p class="note">Joining someone else's feed? Open the link they sent on this phone.</p></div>`;$("#main").innerHTML=h;return}
+  const maxId=Math.max(0,...(f.posts||[]).map(p=>p.id));const prevSeen=f.seen||0;
+  h+=`<div class="sechead" style="margin-top:12px"><h2>${esc(f.unit)} feed</h2><div class="ratio" style="font-size:13px">${f.err?`<span style="color:var(--warn)">offline</span>`:`<span style="color:var(--s-onhand)">● live</span>`}</div></div>`;
+  if(f.lk){h+=`<div class="panel"><label for="fdTxt">Pass the word</label><textarea id="fdTxt" maxlength="1000" style="min-height:90px" placeholder="Formation 0700 tomorrow, PT gear. Duty section report to the S-3 at 0800.">${esc(fdDraft.txt)}</textarea>
+      <label class="tog"><input type="checkbox" id="fdUrg"${fdDraft.urg?" checked":""}> Urgent (shows in red)</label><button class="btn" id="fdPost">Post</button></div>
+      <details class="panel"><summary><b>Invite people</b> · send the join link once</summary>${bcBatches(S.roster,f.unit+" FEED: tap to join and see the word in EOP Numbers: "+fdLink(f)).map((x,i,arr)=>`<a class="btn" href="${esc(x.href)}">Text join link${arr.length>1?" · group "+(i+1)+" of "+arr.length:""} (${x.n})</a>`).join("")||`<p class="note">No phone numbers loaded (RECALL → Load numbers). You can copy the link instead.</p>`}
+      <button class="btn alt" id="fdCopyLink">Copy join link</button><p class="note">Anyone with this link can read the feed, so send it only to your people.</p></details>`}
+  else h+=`<p class="note">You: <b>${esc(f.me||"(name not set)")}</b> · <button class="chip" id="fdName" style="cursor:pointer">Change</button></p>`;
+  const posts=f.posts||[];
+  if(!posts.length)h+=`<p class="note" style="margin-top:14px">${f.lk?"Nothing posted yet.":"Nothing posted yet. New posts show up here."}</p>`;
+  for(const p of posts){const isNew=!f.lk&&p.id>prevSeen;const mine=(f.mine||{})[p.id];
+    h+=`<div class="fdpost${isNew?" new":""}" style="--sc:var(${p.urg?"--warn":mine?"--s-onhand":"--line"})"><div class="mt"><span>${p.urg?`<b style="color:var(--warn)">URGENT</b> · `:""}${ago(p.t)} · ${dtg(new Date(p.t)).slice(0,7)} ${dtg(new Date(p.t)).slice(8)}</span>${isNew?`<b style="color:var(--brass)">NEW</b>`:""}</div><div class="tx">${esc(p.txt)}</div>`;
+    if(f.lk){const st=fdStats(f,p);const open=fdOpen===p.id;
+      h+=`<div class="mt"><span><b style="color:var(--s-onhand)">${st.got}/${st.pool} got it</b>${st.prob?` · <b style="color:var(--warn)">${st.prob} problem${st.prob>1?"s":""}</b>`:""}${(f.un||{})[p.id]?` · ${f.un[p.id]} unmatched`:""}</span><button class="chip" data-fdopen="${p.id}" style="cursor:pointer">${open?"Hide":"Who"} ▸</button></div>`;
+      if(open){const pool=fdPool();const pr=sorted(pool.filter(m=>st.A[m.id]&&st.A[m.id].c===2));const miss=sorted(pool.filter(m=>!st.A[m.id]));
+        if(pr.length)h+=`<div><b style="color:var(--warn)">Problems</b>${pr.map(m=>`<div class="rtop"><div class="who"><b>${esc(m.rank)}</b> ${esc(m.name)}<div class="ph">${esc(st.A[m.id].note)}</div></div>${m.phone?`<a class="call" href="${telHref(m.phone)}">Call</a>`:""}</div>`).join("")}</div>`;
+        if(miss.length){const rb=bcBatches(miss,f.unit+": new word in the FEED you haven't confirmed. Open EOP Numbers → FEED.");
+          h+=`<div><b>Not confirmed (${miss.length})</b><div class="note">${miss.map(m=>esc((m.sec==="ATT"?"ATT":m.sec)+" "+m.rank+" "+lastOf(m))).join(" · ")}</div></div>${rb.map((x,i,arr)=>`<a class="btn alt" href="${esc(x.href)}">Remind ${x.n} not confirmed${arr.length>1?" · group "+(i+1):""}</a>`).join("")}`}
+        else h+=`<div class="note" style="color:var(--s-onhand);font-weight:700">Everyone confirmed.</div>`;
+        h+=`<button class="btn warn" data-fddel="${p.id}">${armed==="fddel"+p.id?"Tap again to delete this post":"Delete post"}</button>`}}
+    else if(mine)h+=`<div class="note" style="font-weight:700;color:var(${mine.c===2?"--warn":"--s-onhand"})">${mine.c===2?"⚠ You reported a problem: "+esc(mine.note):"✓ You confirmed "+ago(mine.t)}</div>`;
+    else h+=`<div class="fdacts"><button class="go" data-fdack="${p.id}" data-c="1">✓ Got it</button><button data-fdack="${p.id}" data-c="2">Problem</button></div><input type="text" id="fdNote${p.id}" maxlength="40" placeholder="Problem? Short note, then tap Problem" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)">`;
+    h+=`</div>`}
+  h+=`<div class="row2" style="margin-top:16px">${f.lk?`<button class="btn alt" id="fdNewFeed">Start another feed</button><button class="btn warn" id="fdKill">${armed==="fdkill"?"Tap again: delete feed for everyone":"Delete feed"}</button>`:`<button class="btn warn" id="fdLeave">${armed==="fdleave"?"Tap again to leave":"Leave feed"}</button>`}</div>`;
+  $("#main").innerHTML=h;if(!f.lk&&maxId>prevSeen){f.seen=maxId;save();setTimeout(renderTabs,0)}}
+
 /* ---------- recall roster ---------- */
 function digits(p){return String(p||"").replace(/\D/g,"")}
 function normPh(p){let d=digits(p);if(d.length===11&&d[0]==="1")d=d.slice(1);return d.length===10?d:""}
@@ -1592,7 +1683,7 @@ function animateNums(){document.querySelectorAll("[data-n]").forEach(el=>{const 
 document.addEventListener("click",e=>{
   if(e.target.closest("#bMode,[data-mode-open]")){e.stopImmediatePropagation();openModeSheet();return}
   const mo=e.target.closest("[data-mopt]");if(mo){e.stopImmediatePropagation();const k=mo.dataset.mopt;const wasFirst=sheetCtx&&sheetCtx.first;closeSheet();if(!S.mode){S.mode=k==="military"?"military":S.mode;save()}
-    if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send"].includes(view))view="board";render();window.scrollTo(0,0);if(!wasFirst)toast(MODES[k].name+" version on. Same people, new labels.")}if(wasFirst&&!S.onb)setTimeout(()=>showOnb(0),300);return}
+    if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed"].includes(view))view="board";render();window.scrollTo(0,0);if(!wasFirst)toast(MODES[k].name+" version on. Same people, new labels.")}if(wasFirst&&!S.onb)setTimeout(()=>showOnb(0),300);return}
   const msh=e.target.closest("[data-mshare]");if(msh){e.stopImmediatePropagation();shareMode(msh.dataset.mshare);return}
   const pk=e.target.closest("[data-pick]");if(pk){e.stopImmediatePropagation();openSheet(pk.dataset.pick,pk.dataset.pid);return}
   if(e.target.closest("[data-sclose]")){e.stopImmediatePropagation();closeSheet();return}
@@ -1605,7 +1696,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetCtx)closeSheet
 document.addEventListener("dragleave",e=>{const d=$("#rcDrop");if(d&&!e.relatedTarget)d.classList.remove("over")});
 document.addEventListener("drop",e=>{if(view!=="recall"&&view!=="data")return;const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;e.preventDefault();const d=$("#rcDrop");if(d)d.classList.remove("over");rcLoadFile(f,view==="recall"?"#rcOutR":"#rcOut")});
 function render(){renderTabs();
-  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="rollup")renderRollup();else if(view==="live")renderLive();else if(view==="send")renderSend();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
+  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="rollup")renderRollup();else if(view==="live")renderLive();else if(view==="send")renderSend();else if(view==="feed")renderFeed();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
 
 /* ---------- CSV import ---------- */
 function parseCSV(text){const rows=[];let row=[],f="",q=false;
@@ -1673,6 +1764,26 @@ document.addEventListener("click",e=>{
   if(e.target.id==="rcCancel"){if(armed==="rccancel"){liveClose();S.rc.open=false;S.rc.res={};S.rc.ci={};S.rc.start=0;armed=null;save();toast("Recall discarded")}else armed="rccancel";renderRecall();return}
   if(e.target.id==="pushOn"){e.target.disabled=true;e.target.textContent="Asking…";pushSub(true).then(sub=>{if(sub){S.pushOn=true;save();pushAttach().then(()=>{const y=window.scrollY;renderRecall();window.scrollTo(0,y)});toast("Alerts on")}else{toast("Alerts not allowed");const y=window.scrollY;renderRecall();window.scrollTo(0,y)}}).catch(()=>{toast("Couldn't turn on alerts here.");const y=window.scrollY;renderRecall();window.scrollTo(0,y)});return}
   if(e.target.id==="bpushOn"){e.target.disabled=true;e.target.textContent="Asking…";pushSub(true).then(sub=>{if(!sub){toast("Alerts not allowed");renderLive();return}S.pushOn=true;save();boardPush().then(()=>{renderLive();toast(S.board&&S.board.push?"Alerts on":"Couldn't connect alerts. Try again.")})}).catch(()=>{toast("Couldn't turn on alerts here.");renderLive()});return}
+  if(e.target.id==="fdCreate"){e.target.disabled=true;e.target.textContent="Creating…";fdCreate().then(()=>{fdNew=false;renderFeed();toast("Feed created. Invite your people.")}).catch(err=>{e.target.disabled=false;e.target.textContent="Start a feed";const o=$("#fdOut");if(o)o.textContent="Couldn't create: "+(err.message||err)});return}
+  if(e.target.id==="fdNewFeed"){fdNew=true;renderFeed();return}
+  if(e.target.id==="fdCancelNew"){fdNew=false;renderFeed();return}
+  const fsel=e.target.closest("[data-fdsel]");if(fsel){fdSel=fsel.dataset.fdsel;fdOpen=null;renderFeed();window.scrollTo(0,0);return}
+  if(e.target.id==="fdPost"){const f=fdCur();const txt=($("#fdTxt").value||"").trim();if(!txt){toast("Type the word first.");return}const urg=$("#fdUrg").checked;e.target.disabled=true;e.target.textContent="Posting…";
+    fdEnc(f.ek,{t:txt,u:urg}).then(ct=>SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct})).then(id=>{f.posts=[{id:+id,t:Date.now(),txt,urg}].concat(f.posts||[]);fdDraft={txt:"",urg:false};save();renderFeed();window.scrollTo(0,0);toast("Posted")})
+      .catch(err=>{e.target.disabled=false;e.target.textContent="Post";toast("Couldn't post: "+(err.message||err))});return}
+  if(e.target.id==="fdCopyLink"){const u=fdLink(fdCur());try{navigator.clipboard.writeText(u).then(()=>toast("Join link copied"),()=>toast(u))}catch(err){toast(u)}return}
+  const fo=e.target.closest("[data-fdopen]");if(fo){const id=+fo.dataset.fdopen;fdOpen=fdOpen===id?null:id;const y=window.scrollY;renderFeed();window.scrollTo(0,y);return}
+  const fa=e.target.closest("[data-fdack]");if(fa){const f=fdCur();const pid=+fa.dataset.fdack;fa.disabled=true;fdAck(f,pid,+fa.dataset.c).then(()=>{const y=window.scrollY;renderFeed();window.scrollTo(0,y);toast(+fa.dataset.c===2?"Problem sent":"Got it sent")}).catch(err=>{fa.disabled=false;toast(/gone/.test(err.message)?"That post was deleted.":"Couldn't send. Check signal and try again.")});return}
+  const fdl=e.target.closest("[data-fddel]");if(fdl){const f=fdCur();const pid=+fdl.dataset.fddel;if(armed==="fddel"+pid){armed=null;SB.rpc("feed_delete_post",{p_feed:f.id,p_leader_key:f.lk,p_post:pid}).then(()=>{f.posts=f.posts.filter(p=>p.id!==pid);fdOpen=null;save();renderFeed();toast("Post deleted")}).catch(()=>toast("Couldn't delete. Try again."))}else{armed="fddel"+pid;const y=window.scrollY;renderFeed();window.scrollTo(0,y)}return}
+  if(e.target.id==="fdKill"){const f=fdCur();if(armed==="fdkill"){armed=null;SB.rpc("delete_feed",{p_feed:f.id,p_leader_key:f.lk}).catch(()=>{});S.feeds=S.feeds.filter(x=>x!==f);fdSel=null;save();renderFeed();toast("Feed deleted")}else{armed="fdkill";renderFeed()}return}
+  if(e.target.id==="fdLeave"){const f=fdCur();if(armed==="fdleave"){armed=null;S.feeds=S.feeds.filter(x=>x!==f);fdSel=null;save();renderFeed();renderTabs();toast("Left the feed")}else{armed="fdleave";renderFeed()}return}
+  if(e.target.id==="fdName"){const f=fdCur();sheetCtx={kind:"fname",id:f.id};$("#sheetT").innerHTML="Your name on this feed<small>Rank and last name, as on your unit's roster.</small>";
+    $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><input type="text" id="fjMe" maxlength="30" value="${esc(f.me||"")}" placeholder="CPL SMITH" autocapitalize="characters" style="text-transform:uppercase"><button class="btn" id="fnSave">Save</button></div>`;
+    const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));return}
+  if((e.target.id==="fjYes"||e.target.id==="fnSave")&&sheetCtx){const me=($("#fjMe").value||"").toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim();if(!me){toast("Enter your rank and last name.");return}S.myName=me;
+    if(sheetCtx.kind==="fjoin"){const c=sheetCtx;S.feeds.push({id:c.id,mk:c.mk,ek:c.ek,unit:c.unit,me,posts:[],seen:0,mine:{}});fdSel=c.id;if(!S.mode)S.mode="military";S.onb=true}
+    else{const f=S.feeds.find(x=>x.id===sheetCtx.id);if(f)f.me=me}
+    save();closeSheet();view="feed";render();window.scrollTo(0,0);fdPollAll(true);return}
   if(e.target.id==="bcGo"){const D=bcDraft;const msg=($("#bcMsg").value||"").trim();if(!msg){toast("Type the message first.");return}if(!D.secs.length&&!D.att){toast("Pick who gets it.");return}
     const b={rid:Date.now().toString(36)+rndId(4),key:rndId(32),msg:msg.slice(0,300),t:Date.now(),secs:D.secs.slice(),att:D.att,ack:{},after:0,ok:false,sent:{},un:0};
     S.bc=S.bc.filter(x=>x.closed||Date.now()-x.t>BC_TTL).concat(b).slice(-10);bcDraft={msg:"",secs:null,att:true};save();renderSend();window.scrollTo(0,0);bcPoll();return}
@@ -1732,6 +1843,7 @@ document.addEventListener("click",e=>{
   if(e.target.id==="rollShare"){navigator.share({text:rollText()}).catch(()=>{});return}
   if(e.target.id==="markSent"){markSent("report");renderText();toast("Marked as sent");return}
   if(e.target.closest("#sms")){setTimeout(()=>{markSent("report")},300)}
+  if(e.target.closest("#bFeed")){view=view==="feed"?"board":"feed";armed=null;render();window.scrollTo(0,0);if(view==="feed")fdPollAll(true);return}
   if(e.target.closest("#bPT")){view=view==="pt"?"board":"pt";armed=null;render();window.scrollTo(0,0);return}
   const ev=e.target.closest("[data-evt]");if(ev){S.pt.event=ev.dataset.evt;save();renderPT();return}
   if(e.target.id==="ptCopy"){const t=ptText();try{navigator.clipboard.writeText(t).then(()=>toast("Roster copied"),()=>toast("Copy blocked here. Use Text list."))}catch(err){toast("Copy blocked here. Use Text list.")}return}
@@ -1760,6 +1872,7 @@ document.addEventListener("change",e=>{
   if(e.target.matches&&e.target.matches("input[data-bcsec]")){const k=e.target.dataset.bcsec;bcDraft.msg=($("#bcMsg")||{}).value||bcDraft.msg;bcDraft.secs=e.target.checked?[...new Set(bcDraft.secs.concat(k))]:bcDraft.secs.filter(x=>x!==k);renderSend();return}
   if(e.target.id==="bcAtt"){bcDraft.msg=($("#bcMsg")||{}).value||bcDraft.msg;bcDraft.att=e.target.checked;renderSend();return}
   if(e.target.id==="bcMe"){const d=normPh(e.target.value);if(e.target.value.trim()&&!d){toast("Enter a 10-digit number.");return}S.myPh=d;save();return}
+  if(e.target.id==="fdUrg"){fdDraft.urg=e.target.checked;return}
   if(e.target.id==="liveTog"){S.live=e.target.checked;save();toast(S.live?"Live check-in on. Starts with your next recall.":"Live check-in off. Text replies only.");return}
   if(e.target.id==="rcAtt"){S.rc.att=e.target.checked;save();renderRecall();return}
   if(e.target.id==="ciMe"){const d=normPh(e.target.value);if(e.target.value.trim()&&!d){toast("Enter a 10-digit number.");return}S.myPh=d;save();const y=window.scrollY;renderRecall();window.scrollTo(0,y);toast(d?"Replies will come to "+fmtPh(d):"Number cleared");return}
@@ -1799,6 +1912,7 @@ document.addEventListener("input",e=>{
   if(e.target.id==="wRep"){S.reporter=e.target.value;save();refreshW();return}
   if(e.target.id==="wWhen"){W.when=e.target.value;refreshW();return}
   if(e.target.id==="ptEvt"||e.target.id==="ptWhen"){S.pt[e.target.id==="ptEvt"?"event":"when"]=e.target.value;save();const a=$("#ptSms");if(a)a.href=smsHref(ptText());document.querySelectorAll("[data-evt]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.evt===S.pt.event));return}
+  if(e.target.id==="fdTxt"){fdDraft.txt=e.target.value;return}
   if(e.target.id==="bcMsg"){bcDraft.msg=e.target.value;const l=$("#bcLen");if(l)l.textContent=e.target.value.length+"/300";return}
   if(e.target.id==="unitNm"){S.unit=cleanName(e.target.value);save();const t=reportText();const m=$("#msg");if(m)m.value=t;const a=$("#sms");if(a)a.href=smsHref(t);return}
   if(e.target.id==="rollNm"){S.roll.name=cleanName(e.target.value);save();const t=rollText();const m=$("#rollMsg");if(m)m.value=t;const a=$("#rollSms");if(a)a.href=smsHref(t);return}
@@ -1899,13 +2013,14 @@ reportText=window.reportText;ptText=window.ptText;wText=window.wText;alertsText=
 let firstPick=false;{const qm=new URLSearchParams(location.search).get("m");if(!qm&&!S.mode)firstPick=true;if(qm&&MODES[qm]){if(!S.mode&&qm==="military"){S.mode="military";save()}setMode(qm);try{history.replaceState(null,"",location.pathname+location.hash)}catch(e){}}}
 startXL();
 render();
-{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join"))setTimeout(()=>joinPrompt(q),firstPick?900:300)}
+{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join"))setTimeout(()=>joinPrompt(q),firstPick?900:300);if(q.get("feed")){firstPick=false;setTimeout(()=>fdJoinPrompt(q),300)}}
+if(S.feeds.length)setTimeout(()=>fdPollAll(true),900);
 if(bcActive())setTimeout(bcPoll,1000);
 if(S.board){setTimeout(livePollBoard,800);if(S.pushOn&&!S.board.push)setTimeout(boardPush,1500)}if(S.link)setTimeout(()=>linkPush(),1200);
 if(firstPick)setTimeout(()=>openModeSheet(true),350);
 if("serviceWorker" in navigator&&document.querySelector("link[rel=manifest]")&&(location.protocol==="https:"||location.hostname==="localhost")){navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(()=>{const o=document.getElementById("offStat");if(o&&navigator.serviceWorker.controller)o.textContent="Ready: this app opens and works with no signal. Text reports once you have service."}).catch(()=>{})}
 setInterval(()=>{if(view==="recall"&&S.rc.open){const c=document.querySelector(".mbar .ct small");if(c)c.textContent="contacted · "+Math.round((Date.now()-S.rc.start)/60000)+" min"}},20000);
-window.addEventListener("hashchange",()=>{{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){joinPrompt(q);return}}const h=(location.hash||"").slice(1).toLowerCase();if(["recall","rollup","board","muster","alerts","live","send"].includes(h)&&h!==view){view=h;armed=null;render();window.scrollTo(0,0)}});
+window.addEventListener("hashchange",()=>{{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){joinPrompt(q);return}if(q.get("feed")){fdJoinPrompt(q);return}}const h=(location.hash||"").slice(1).toLowerCase();if(["recall","rollup","board","muster","alerts","live","send","feed"].includes(h)&&h!==view){view=h;armed=null;render();window.scrollTo(0,0)}});
 setInterval(()=>{const d=$("#dtg");if(d)d.textContent="AS OF "+dtg()},30000);
 </script>
 </body></html>
