@@ -1,6 +1,6 @@
 // Offline cache. The app opens from the phone instantly; a newer version is fetched in the background.
 // Everything the app uses is served from this site: no outside fonts, scripts or trackers.
-const CACHE = "eop-numbers-v46";
+const CACHE = "eop-numbers-v47";
 const CORE = ["./", "./index.html", "./privacy.html", "./support.html", "./help.html", "./manifest.webmanifest",
   "./icon-180.png", "./icon-192.png", "./icon-512.png",
   "./fonts/pjs-400.woff2", "./fonts/pjs-500.woff2", "./fonts/pjs-600.woff2", "./fonts/pjs-700.woff2", "./fonts/pjs-800.woff2"];
@@ -23,19 +23,21 @@ self.addEventListener("fetch", e => {
     e.respondWith(caches.open(CACHE).then(async c => {
       const key = "./index.html";
       const cached = await c.match(key);
+      let servedCache = false;
       const net = fetch(key, { cache: "no-cache" }).then(async res => {
         if (!res.ok) return res;
         const fresh = res.clone();
         const was = cached ? await cached.clone().text() : "";
         const now = await res.clone().text();
         await c.put(key, fresh);
-        if (cached && was !== now) {
+        if (cached && was !== now && servedCache) {
           const cs = await self.clients.matchAll({ type: "window" });
           cs.forEach(w => w.postMessage({ type: "updated" }));
         }
         return res;
       }).catch(() => null);
-      if (cached) { e.waitUntil(net); return cached; }
+      // Network first (fresh links always open on the newest app), cached copy if no signal within 3 s.
+      if (cached) { const quick = await Promise.race([net, new Promise(r => setTimeout(() => r(null), 3000))]); if (quick && quick.ok) return quick; servedCache = true; e.waitUntil(net); return cached; }
       return (await net) || caches.match(key);
     }));
     return;

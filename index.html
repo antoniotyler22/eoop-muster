@@ -749,7 +749,7 @@ const DUTIES=["Full Duty","Light Duty","LIMDU"];
 const EVENTS=["Unit PT","Hike","Run","PFT","CFT","Field event"];
 const RANKS=["CWO5","CWO4","CWO3","CWO2","WO","MAJ","CAPT","1STLT","2NDLT","SGTMAJ","MGYSGT","1STSGT","MSGT","GYSGT","SSGT","SGT","CPL","LCPL","PFC","PVT"];
 const MIL_RANKS=RANKS.slice();
-const KEY="eoop-muster-v1";
+const KEY="eoop-muster-v1";const H0=location.hash||"",T0=Date.now();
 
 function sampleRoster(){
   const spec=[["HQ",["MSGT","SGT","CPL","LCPL"],["On Hand","On Hand","TAD","Leave"]],
@@ -1312,7 +1312,7 @@ function renderLive(){let h=banner();const B=S.board,L=S.link;
       <p class="note">Send each section leader their link. Their section roster loads from your board, so they don't load anything. Every change they make shows up here, and they land in your FEED where you see every post.</p>${hubHTML()}</div>
     <div class="alist" style="margin-top:10px">${SECTIONS.map(([k,n])=>{const r=B.last[k];const old=r&&Date.now()-r.t>4*3600000;
       return `<div class="rrow" style="--sc:var(${!r?"--line":old?"--warn":"--s-onhand"})"><div class="rtop"><div class="who"><b>${k}</b> ${esc(n)}
-        <div class="ph">${r?`Updated ${ago(r.t)} (${dtg(new Date(r.t)).slice(0,7)})${r.by?" by "+esc(r.by):""} · ${r.ch} change${r.ch===1?"":"s"}`:"No update yet"}</div>
+        <div class="ph">${B.rsig&&B.rsig[k]?`<b style="color:var(--s-onhand)">✓ Roster shared</b> · `:S.source==="sample"?"":`Roster sharing… · `}${r?`Updated ${ago(r.t)} (${dtg(new Date(r.t)).slice(0,7)})${r.by?" by "+esc(r.by):""} · ${r.ch} change${r.ch===1?"":"s"}`:"No update yet"}</div>
         ${r&&(r.miss||r.str!==r.mine)?`<div class="ph" style="color:var(--warn)">${r.miss?r.miss+" name"+(r.miss>1?"s":"")+" not on your roster. ":""}${r.str!==r.mine?"Their strength "+r.str+", yours "+r.mine+".":""}</div>`:""}</div></div>
         <div class="row2"><a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent(unitName()+": you're the "+k+" section leader. Open this link in EOP Numbers. Your section roster loads from my board, your updates come straight to me, and you can post to the unit FEED: "+boardLink(k)))}">Text ${k} link</a><button class="btn alt" data-lvcopy="${k}">Copy link</button></div></div>`}).join("")}</div>
     <button class="btn warn" id="lvOff" style="margin-top:16px;width:100%">${armed==="lvoff"?"Tap again: turn off and disconnect all sections":"Turn off live updates"}</button>`}
@@ -1320,7 +1320,7 @@ function renderLive(){let h=banner();const B=S.board,L=S.link;
     <div class="row2"><button class="btn" id="lkNow">Send now</button><button class="btn alt" id="lkOff">${armed==="lkoff"?"Tap again to unlink":"Unlink"}</button></div></div>`;
   $("#main").innerHTML=h}
 function joinPrompt(q){const bid=(q.get("join")||"").replace(/[^a-z0-9]/g,"").slice(0,20),wk=(q.get("k")||"").replace(/[^a-z0-9]/g,"").slice(0,40),sec=(q.get("s")||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6),unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24);
-  const ek=(q.get("e")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60);if(bid.length<10||wk.length<24||!sec)return;const rk2=(q.get("r")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60);if(rk2.length>=40){autoLink({bid,wk,sec,unit,ek,rk2});return}sheetCtx={kind:"join",bid,wk,sec,unit,ek,rk2:""};const def=SECTIONS.some(x=>x[0]===sec)?sec:SECTIONS[0][0];
+  const ek=(q.get("e")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60);if(bid.length<10||wk.length<24||!sec)return;const rk2=(q.get("r")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60);if(rk2.length>=40){if(S.board&&S.board.id===bid){try{history.replaceState(null,"",location.pathname)}catch(e){}view="live";render();toast("That's your own "+sec+" leader link. Open it on the leader's phone, not yours.");return}autoLink({bid,wk,sec,unit,ek,rk2});return}sheetCtx={kind:"join",bid,wk,sec,unit,ek,rk2:""};const def=SECTIONS.some(x=>x[0]===sec)?sec:SECTIONS[0][0];
   $("#sheetT").innerHTML=`Send live updates?<small>${esc(unit||"Your OIC")} wants this phone to send the <b>${esc(sec)}</b> section's statuses to their board automatically.</small>`;
   $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><label for="jSec">My section in this app</label><select id="jSec" class="wsel">${SECTIONS.map(([k,n])=>`<option value="${k}"${k===def?" selected":""}>${esc(k+" · "+n)}</option>`).join("")}</select>
     <label for="jMe">Your rank and last name (so they see who sent it)</label><input type="text" id="jMe" maxlength="30" placeholder="SGT SMITH" autocapitalize="characters" style="text-transform:uppercase" value="${esc(S.myName||"")}">
@@ -1365,7 +1365,7 @@ async function ensureHub(){if(hubBusy||S.role==="view"||!S.board)return;hubBusy=
     S.hubErr="";if(ch){save();rpPublish(true);mpSchedule()}}
   catch(e){const t=String(e.message||e);S.hubErr=/could not find|schema cache|404/i.test(t)?"Server needs setup part 11b.":t.slice(0,80);rawSave()}
   finally{hubBusy=false}}
-function hubHTML(){const f=mainFeed();const B=S.board;const err=S.hubErr||(B&&B.rerr)||"";
+function hubHTML(){const f=mainFeed();const B=S.board;const err=S.source==="sample"?"Leaders can't get your roster: this phone is on sample Marines. Load your roster in DATA first.":(S.hubErr||(B&&B.rerr)||"");
   const lp=f?(f.posts||[]).filter(p=>p.sl&&Date.now()-p.t<7*86400000).length:0;const mp=S.roster.filter(m=>m.pk).length;
   return `<div class="panel" style="margin:10px 0 0"><b>Your hub</b><div class="note">${err?`<span style="color:var(--warn)">${esc(err)} DATA → System check.</span>`:f&&f.pk?`● One FEED for the unit: <b>${esc(f.unit)}</b>. Section leaders post to it from their link; Marines with My page land in it. You see every post${lp?` · ${lp} from section leaders this week`:""}.${mp?` · ${mp} My page${mp>1?"s":""} on`:""}`:"Setting up your unit FEED…"}</div>${f?`<button class="btn alt" data-go="feed" style="width:100%">Open FEED</button>`:""}</div>`}
 async function rosterPull(force){const L=S.link;if(!L||!L.rk2||rpullBusy)return;rpullBusy=true;
@@ -3226,7 +3226,7 @@ if(S.feeds.length){S.feeds.filter(f=>!f.lk&&f.me&&!f.meH).forEach(fdMeHash);setT
 if(bcActive())setTimeout(bcPoll,1000);
 if(S.board){setTimeout(livePollBoard,800);if(S.pushOn&&!S.board.push)setTimeout(boardPush,1500)}if(S.link)setTimeout(()=>linkPush(),1200);
 if(firstPick)setTimeout(()=>openModeSheet(true),350);
-if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",ev=>{if(ev.data&&ev.data.type==="updated"){const el=$("#toast");el.innerHTML='New version ready. <button id="updNow" style="margin-left:8px;border:0;border-radius:99px;padding:6px 12px;font-weight:800;background:var(--brass);color:#111">Reload</button>';el.hidden=false;clearTimeout(toast.t)}});
+if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",ev=>{if(ev.data&&ev.data.type==="updated"){if(/(^|[#&])(join|me|feed|ci|sync)=/.test(H0)&&Date.now()-T0<30000){location.replace(location.pathname+H0);return}const el=$("#toast");el.innerHTML='New version ready. <button id="updNow" style="margin-left:8px;border:0;border-radius:99px;padding:6px 12px;font-weight:800;background:var(--brass);color:#111">Reload</button>';el.hidden=false;clearTimeout(toast.t)}});
 document.addEventListener("click",e=>{if(e.target.id==="updNow")location.reload()});
 if("serviceWorker" in navigator&&document.querySelector("link[rel=manifest]")&&(location.protocol==="https:"||location.hostname==="localhost")){navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(()=>{const o=document.getElementById("offStat");if(o&&navigator.serviceWorker.controller)o.textContent="Ready: this app opens and works with no signal. Text reports once you have service."}).catch(()=>{})}
 setInterval(()=>{if(view==="recall"&&S.rc.open){const c=document.querySelector(".mbar .ct small");if(c)c.textContent="contacted · "+Math.round((Date.now()-S.rc.start)/60000)+" min"}},20000);
