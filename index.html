@@ -398,7 +398,7 @@ document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.h
   const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
 function startApp(){const s=document.createElement("script");s.textContent=document.getElementById("app").textContent;document.body.appendChild(s)}
 /* live check-ins: Supabase relay. Stores no names: only salted hashes of the words a person types, a code and a short note. */
-const SB=window.SB={url:"https://cotqnqpczwpmipigrjxt.supabase.co",key:"sb_publishable_9SqPz3ueN5rOe43mEGwglA_Uk65vNnc",
+const SB=window.SB={url:"https://vdhxhvklwbimjpoomnui.supabase.co",key:"sb_publishable_e1VOssMquS5UkOnwEWTrfA_fPwZqorM",
   vapid:"BGWkOoK35r0UiMWL6bYX1uwz9L_8qXwQvp4Qc_4Bv_8Ddy3c-iKPpU_ynvIxt116eKBQvlFvtBobyHKB910S3q4",
   notify(rid){try{fetch(this.url+"/functions/v1/notify",{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify({recall:rid}),keepalive:true}).catch(()=>{})}catch(e){}},
   async rpc(fn,args){const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),12000);
