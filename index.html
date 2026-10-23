@@ -397,9 +397,16 @@ let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.hidden){hiddenAt=Date.now();return}
   const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
 function startApp(){const s=document.createElement("script");s.textContent=document.getElementById("app").textContent;document.body.appendChild(s)}
+/* live check-ins: Supabase relay. Stores no names: only salted hashes of the words a person types, a code and a short note. */
+const SB=window.SB={url:"https://cotqnqpczwpmipigrjxt.supabase.co",key:"sb_publishable_9SqPz3ueN5rOe43mEGwglA_Uk65vNnc",
+  async rpc(fn,args){const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),12000);
+    try{const r=await fetch(this.url+"/rest/v1/rpc/"+fn,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify(args),signal:ac.signal});
+      const t=await r.text();if(!r.ok)throw new Error((()=>{try{return JSON.parse(t).message}catch(e){return t}})()||("HTTP "+r.status));return t?JSON.parse(t):null}finally{clearTimeout(tm)}},
+  words(n){return [...new Set(String(n||"").toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean))].slice(0,6)},
+  async h(rid,w){const b=await crypto.subtle.digest("SHA-256",te.encode(rid+":"+w));return [...new Uint8Array(b)].slice(0,8).map(x=>x.toString(16).padStart(2,"0")).join("")}};
 /* check-in page for the person receiving a recall link (#ci=...). Shows nothing from this phone's roster. */
 function ciPage(q){const esc=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const rid=(q.get("ci")||"").replace(/[^a-z0-9]/gi,"").slice(0,12),unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24),to=(q.get("to")||"").replace(/\D/g,"").slice(-10);
+  const rid=(q.get("ci")||"").replace(/[^a-z0-9]/gi,"").slice(0,12),unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24),to=(q.get("to")||"").replace(/\D/g,"").slice(-10),live=q.get("l")==="1"&&/^[a-z0-9]{8,16}$/.test(rid);
   const KM=K+"-ci-me";let me="";try{me=localStorage.getItem(KM)||""}catch(e){}
   const t=parseInt(rid,36);const when=Number.isFinite(t)&&t>0?new Date(t).toLocaleString([],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}):"";
   document.title="Check in";const m=document.createElement("main");m.className="wrap ci-page";
@@ -410,15 +417,21 @@ function ciPage(q){const esc=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<"
     <label for="ciE">Delayed or need help? Add ETA or a short note</label><input type="text" id="ciE" maxlength="40" placeholder="ETA 1400">
     <button class="btn alt" data-c="2" style="min-height:52px">Good, but delayed</button>
     <button class="btn warn" data-c="3" style="min-height:52px">I need help</button>
-    <p class="note" id="ciMsg">${to?"Opens a text to your leader. Hit Send.":"Opens a text. Pick your leader as the recipient and hit Send."}</p>
-    <p class="note">Nothing is sent until you hit Send in Messages. Your name is remembered on this phone only.</p></div>`;
+    <p class="note" id="ciMsg">${live?"Tap once. Your leader sees it right away.":to?"Opens a text to your leader. Hit Send.":"Opens a text. Pick your leader as the recipient and hit Send."}</p>
+    <p class="note">${live?"Your name is scrambled before it leaves this phone; the server never stores it. No signal? It opens a text instead.":"Nothing is sent until you hit Send in Messages."} Your name is remembered on this phone only.</p></div>`;
   document.body.appendChild(m);document.querySelectorAll(".top").forEach(x=>x.hidden=true);
   m.addEventListener("click",e=>{const b=e.target.closest("[data-c]");if(!b)return;const n=document.getElementById("ciN").value.toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim();
     if(!n){document.getElementById("ciMsg").textContent="Enter your rank and last name first.";document.getElementById("ciN").focus();return}
     try{localStorage.setItem(KM,n)}catch(err){}const c=+b.dataset.c;const eta=document.getElementById("ciE").value.replace(/[|#]/g," ").replace(/\s+/g," ").trim();
     const word=c===1?"GOOD":c===2?"DELAYED":"NEED HELP";
     const body="CHECK-IN: "+word+" - "+n+(eta?" ("+eta+")":"")+"\n#EOOP-CI|"+rid+"|"+c+"|"+n+"|"+eta;
-    location.href="sms:"+(to?"+1"+to:"")+"?&body="+encodeURIComponent(body)});}
+    const sms=()=>{location.href="sms:"+(to?"+1"+to:"")+"?&body="+encodeURIComponent(body)};
+    const msg=document.getElementById("ciMsg");
+    if(live&&navigator.onLine!==false&&crypto.subtle){m.querySelectorAll("[data-c]").forEach(x=>x.disabled=true);msg.textContent="Sending…";
+      Promise.all(SB.words(n).map(w=>SB.h(rid,w))).then(hs=>SB.rpc("checkin",{p_recall:rid,p_words:hs,p_code:c,p_note:eta}))
+        .then(()=>{msg.innerHTML="<b style='color:var(--s-onhand)'>✓ Checked in: "+word+".</b> Your leader sees it now. You can close this page.";m.querySelectorAll("[data-c]").forEach(x=>x.disabled=false)})
+        .catch(()=>{msg.textContent="Couldn't reach the server. Opening a text instead…";m.querySelectorAll("[data-c]").forEach(x=>x.disabled=false);setTimeout(sms,700)});return}
+    sms()});}
 window.addEventListener("DOMContentLoaded",()=>{
   {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("ci")){ciPage(q);return}}
   if(!V.cfg||!localStorage.getItem(KE)){if(V.cfg&&!localStorage.getItem(KE)){try{localStorage.removeItem(KC)}catch(e){}V.cfg=null}startApp();return}
@@ -503,7 +516,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="1.1.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="1.2.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -808,6 +821,8 @@ function renderData(){
     <label for="syncIn">Paste one or more section leader texts</label>
     <textarea id="syncIn" style="min-height:110px" placeholder="EOOP HE SECTION UPDATE ...&#10;#EOOP1|HE|34|..."></textarea>
     <button class="btn" id="syncGo">Apply to board</button><div class="note" id="syncOut"></div></div>
+  <h2>Live check-in</h2><div class="panel"><label class="tog"><input type="checkbox" id="liveTog"${S.live!==false?" checked":""}> Recall check-ins appear on my board by themselves</label>
+    <p class="note">Uses a small relay server. It never gets names or phone numbers: only scrambled codes of what each person types, Good/Delayed/Help and their short note. Each recall deletes itself when you close it out, or after 72 hours. Turn off to use text replies only.</p></div>
   <h2>Offline</h2><div class="panel"><div id="offStat" class="note">Checking…</div></div>
   <h2>How this app keeps data</h2><div class="panel"><ul class="plain">
     <li>The roster lives only in this phone's browser. Nothing is uploaded or shared.</li>
@@ -1179,8 +1194,31 @@ function recallText(){const pool=recallPool();const res=S.rc.res||{};const got=p
    with a code line. Leader pastes replies here. No server: link details ride in the # part of the URL,
    which browsers never send to the website. */
 const CI_BATCH=20;
-function ciRid(){return (S.rc.start||0).toString(36)}
-function ciLink(){const q=new URLSearchParams();q.set("ci",ciRid());q.set("u",unitName());if(S.myPh)q.set("to",S.myPh);return location.origin+location.pathname+"#"+q.toString()}
+function ciRid(){return S.rc.rid||(S.rc.start||0).toString(36)}
+function rndId(n){const a=crypto.getRandomValues(new Uint8Array(n));return [...a].map(x=>"abcdefghijklmnopqrstuvwxyz0123456789"[x%36]).join("")}
+/* live relay */
+let liveBusy=false,liveIdx=null;
+async function liveCreate(){const L=S.rc.live;if(!L||L.ok||!S.rc.open)return;try{await SB.rpc("create_recall",{p_id:S.rc.rid,p_read_key:L.key});L.ok=true;L.err="";save()}catch(e){L.err=String(e.message||e).slice(0,80);save()}}
+async function liveIndex(){if(liveIdx&&liveIdx.rid===S.rc.rid&&liveIdx.n===S.roster.length)return liveIdx;const rid=S.rc.rid;const map=[];
+  for(const m of S.roster){const last=SB.words(lastOf(m)),first=SB.words((m.name.split(",")[1]||"").trim().split(/\s+/)[0]||"");
+    map.push({m,last:await Promise.all(last.map(w=>SB.h(rid,w))),rank:await SB.h(rid,String(m.rank).toUpperCase().replace(/[^A-Z0-9]/g,"")),first:first[0]?await SB.h(rid,first[0]):""})}
+  liveIdx={rid,n:S.roster.length,map};return liveIdx}
+async function livePoll(){const L=S.rc.live;if(!S.rc.open||!L||liveBusy)return;liveBusy=true;
+  try{if(!L.ok){await liveCreate();if(view==="recall"){const y=window.scrollY;const ae=document.activeElement&&document.activeElement.id;if(!(ae&&/^(ciIn|ciMe|rq|phIn)$/.test(ae))){renderRecall();window.scrollTo(0,y)}}}if(!L.ok)return;
+    const rows=await SB.rpc("get_checkins",{p_recall:S.rc.rid,p_read_key:L.key,p_after:L.after||0});L.err="";
+    if(rows&&rows.length){const idx=await liveIndex();const ci=S.rc.ci=S.rc.ci||{};let n=0,help=0,un=0;
+      for(const r of rows){L.after=Math.max(L.after||0,+r.id);const set=new Set(r.words||[]);
+        const sc=idx.map.filter(x=>x.last.length&&x.last.every(h=>set.has(h))).map(x=>({m:x.m,s:(set.has(x.rank)?2:0)+(x.first&&set.has(x.first)?1:0)}));
+        const best=sc.length?Math.max(...sc.map(x=>x.s)):-1;const top=sc.filter(x=>x.s===best);
+        if(top.length===1){const m=top[0].m;ci[m.id]={c:+r.code,eta:String(r.note||"").slice(0,40),t:Date.parse(r.created_at)||Date.now(),live:1};S.rc.res[m.id]="ok";n++;if(+r.code===3)help++}
+        else{un++;L.un=(L.un||[]).concat({c:+r.code,note:String(r.note||"").slice(0,40),amb:top.length>1}).slice(-20)}}
+      save();if(view==="recall"){const y=window.scrollY;const a=document.activeElement&&document.activeElement.id;if(!(a&&/^(ciIn|ciMe|rq|phIn)$/.test(a))){renderRecall();window.scrollTo(0,y)}}renderTabs();
+      if(help){toast("⚠ "+help+" NEED HELP");try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}}else if(n)toast(n+" checked in");if(un)toast(un+" check-in"+(un>1?"s":"")+" didn't match a name")}
+  }catch(e){L.err=String(e.message||e).slice(0,80)}finally{liveBusy=false}}
+setInterval(()=>{if(S.rc.open&&S.rc.live&&!document.hidden)livePoll()},6000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.rc.open&&S.rc.live)livePoll()});
+function liveClose(){const L=S.rc.live;if(L&&L.ok&&S.rc.rid)SB.rpc("close_recall",{p_recall:S.rc.rid,p_read_key:L.key}).catch(()=>{})}
+function ciLink(){const q=new URLSearchParams();q.set("ci",ciRid());q.set("u",unitName());if(S.myPh)q.set("to",S.myPh);if(S.rc.live)q.set("l","1");return location.origin+location.pathname+"#"+q.toString()}
 function ciBody(){return unitName()+" RECALL "+dtg(new Date(S.rc.start))+"\nCheck in with one tap: "+ciLink()+"\nNo data? Text back your last name and 1 = good, 2 = delayed + ETA, 3 = need help."}
 function ciHTML(){const pool=recallPool().filter(m=>m.phone);const ci=S.rc.ci||{};const sent=S.rc.sent||{};
   const hp=sorted(recallPool().filter(m=>ci[m.id]&&ci[m.id].c===3));
@@ -1188,7 +1226,10 @@ function ciHTML(){const pool=recallPool().filter(m=>m.phone);const ci=S.rc.ci||{
   const href=b=>"sms:"+b.map(m=>"+1"+m.phone).join(",")+"?&body="+encodeURIComponent(RT(ciBody()));
   let h="";
   if(hp.length)h+=`<div class="panel" style="border-color:var(--warn)"><b style="color:var(--warn)">⚠ NEED HELP (${hp.length})</b>${hp.map(m=>`<div class="rtop"><div class="who"><b>${esc(m.rank)}</b> ${esc(m.name)}${ci[m.id].eta?`<div class="ph">${esc(ci[m.id].eta)}</div>`:""}</div>${m.phone?`<a class="call" href="${telHref(m.phone)}">Call</a>`:""}</div>`).join("")}</div>`;
-  h+=`<details class="panel"${Object.keys(ci).length||!Object.keys(sent).length?" open":""}><summary><b>Check-in by text</b> · ${Object.keys(ci).length} replied</summary>
+  h+=`<details class="panel"${Object.keys(ci).length||!Object.keys(sent).length?" open":""}><summary><b>Check-in</b> · ${Object.keys(ci).length} replied</summary>
+    ${(()=>{const L=S.rc.live;if(!L)return `<p class="note">Live check-in is off (DATA → Live check-in). Replies come by text.</p>`;
+      if(L.ok)return `<p class="note" style="color:var(--s-onhand);font-weight:700">● Live: check-ins appear here by themselves${L.err?` <span style="color:var(--warn)">· reconnecting</span>`:""}</p>${(L.un||[]).length?`<p class="note" style="color:var(--warn)">${L.un.length} check-in${L.un.length>1?"s":""} didn't match one name on your roster${L.un.some(x=>x.c===3)?" (one says NEED HELP)":""}. Ask them to use rank and last name as on the roster.</p>`:""}`;
+      return `<p class="note" style="color:var(--warn)">Connecting to live check-in…${L.err?" ("+esc(L.err)+"). Text replies still work.":""}</p>`})()}
     <label for="ciMe">My cell (check-in replies come here)</label>
     <input type="tel" id="ciMe" inputmode="tel" value="${esc(fmtPh(S.myPh||""))}" placeholder="808 555 0100">
     ${pool.length?batches.map((b,i)=>`<a class="btn${sent[i]?" alt":""}" data-ciblast="${i}" href="${esc(href(b))}">${sent[i]?"✓ Sent · ":""}Text check-in${batches.length>1?" group "+(i+1)+" of "+batches.length:""} (${b.length})</a>`).join(""):`<p class="note">No phone numbers loaded yet. Load them below.</p>`}
@@ -1440,10 +1481,10 @@ document.addEventListener("click",e=>{
   const we=e.target.closest("[data-wedit]");if(we){wEdit=we.dataset.wedit;const y=window.scrollY;renderArmory();window.scrollTo(0,y);return}
   const wsv=e.target.closest("[data-wsave]");if(wsv){const m=S.roster.find(x=>x.id===wsv.dataset.wsave);if(m){m.wpn={t:$("#wT").value,rack:$("#wR").value.trim(),s4:digits($("#wS").value).slice(-4)};save()}wEdit=null;const y=window.scrollY;renderArmory();window.scrollTo(0,y);toast("Weapon saved");return}
   const wc=e.target.closest("[data-wclear]");if(wc){const m=S.roster.find(x=>x.id===wc.dataset.wclear);if(m&&hasW(m)&&wEdit===m.id&&armed==="wclr"+m.id){delete m.wpn;save();armed=null;wEdit=null;toast("Weapon removed")}else if(m&&hasW(m)){armed="wclr"+m.id;toast("Tap Remove weapon again to confirm");return}else{wEdit=null}const y=window.scrollY;renderArmory();window.scrollTo(0,y);return}
-  if(e.target.id==="rcStart"){S.rc.open=true;S.rc.start=Date.now();S.rc.end=0;S.rc.res={};S.rc.ci={};S.rc.sent={};S.rc.only=false;armed=null;save();renderRecall();window.scrollTo(0,0);return}
+  if(e.target.id==="rcStart"){S.rc.open=true;S.rc.start=Date.now();S.rc.rid=S.rc.start.toString(36)+rndId(4);S.rc.live=S.live===false?null:{key:rndId(32),ok:false,after:0,un:[]};liveIdx=null;setTimeout(livePoll,50);S.rc.end=0;S.rc.res={};S.rc.ci={};S.rc.sent={};S.rc.only=false;armed=null;save();renderRecall();window.scrollTo(0,0);return}
   const rr=e.target.closest("[data-rid]");if(rr){const id=rr.dataset.rid,c=rr.dataset.r;if(S.rc.res[id]===c)delete S.rc.res[id];else S.rc.res[id]=c;save();const y=window.scrollY;renderRecall();window.scrollTo(0,y);return}
-  if(e.target.id==="rcClose"){S.rc.open=false;S.rc.end=Date.now();S.hist=(S.hist||[]).concat({type:"recall",t:S.rc.start}).slice(-60);save();renderRecall();window.scrollTo(0,0);toast("Recall closed");return}
-  if(e.target.id==="rcCancel"){if(armed==="rccancel"){S.rc.open=false;S.rc.res={};S.rc.ci={};S.rc.start=0;armed=null;save();toast("Recall discarded")}else armed="rccancel";renderRecall();return}
+  if(e.target.id==="rcClose"){liveClose();S.rc.open=false;S.rc.end=Date.now();S.hist=(S.hist||[]).concat({type:"recall",t:S.rc.start}).slice(-60);save();renderRecall();window.scrollTo(0,0);toast("Recall closed");return}
+  if(e.target.id==="rcCancel"){if(armed==="rccancel"){liveClose();S.rc.open=false;S.rc.res={};S.rc.ci={};S.rc.start=0;armed=null;save();toast("Recall discarded")}else armed="rccancel";renderRecall();return}
   if(e.target.id==="ciGo"){const r=applyCheckins($("#ciIn").value);const y=window.scrollY;renderRecall();window.scrollTo(0,y);const o=$("#ciOut");if(o)o.textContent=r;return}
   if(e.target.id==="ciClip"){const fail=()=>{const o=$("#ciOut");if(o)o.textContent="This phone blocked clipboard reading. Long-press the box, tap Paste, then Mark replies.";};
     try{navigator.clipboard.readText().then(t=>{const r=applyCheckins(t);const y=window.scrollY;renderRecall();window.scrollTo(0,y);const o=$("#ciOut");if(o)o.textContent=r},fail)}catch(err){fail()}return}
@@ -1515,6 +1556,7 @@ document.addEventListener("change",e=>{
   if(e.target.id==="evOnly"){evOnly=e.target.checked;renderEvents();return}
   if(e.target.id==="arOnly"){S.arm.only=e.target.checked;save();renderArmory();return}
   if(e.target.id==="wFile"){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const r=importWeapons(String(rd.result));renderArmory();const o=$("#wOut");if(o)o.textContent=r.ok+" weapons assigned"+(r.miss.length?" · not matched: "+r.miss.slice(0,8).join("; "):"");toast(r.ok+" weapons assigned")}catch(err){const o=$("#wOut");if(o)o.textContent=err.message}};rd.readAsText(f);return}
+  if(e.target.id==="liveTog"){S.live=e.target.checked;save();toast(S.live?"Live check-in on. Starts with your next recall.":"Live check-in off. Text replies only.");return}
   if(e.target.id==="rcAtt"){S.rc.att=e.target.checked;save();renderRecall();return}
   if(e.target.id==="ciMe"){const d=normPh(e.target.value);if(e.target.value.trim()&&!d){toast("Enter a 10-digit number.");return}S.myPh=d;save();const y=window.scrollY;renderRecall();window.scrollTo(0,y);toast(d?"Replies will come to "+fmtPh(d):"Number cleared");return}
   if(e.target.id==="rcOnly"){S.rc.only=e.target.checked;save();renderRecall();return}

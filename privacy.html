@@ -19,7 +19,7 @@ p,li{margin:0 0 12px}.muted{color:var(--muted)}a{color:var(--acc);font-weight:70
 <p class="muted">MusterBoard (shown in the app as EOP Numbers, Shift Numbers, Crew Numbers, Staff Numbers or Team Numbers, depending on the version you pick).<br>Effective October 22, 2026.</p>
 
 <div class="card key"><h2>The short version</h2>
-<p>Everything you enter stays on your phone. We don't run servers that receive your data, we don't have accounts, and we don't use analytics, ads or trackers. We can't see your roster.</p></div>
+<p>Everything you enter stays on your phone. We don't run servers that receive your roster, we don't have accounts, and we don't use analytics, ads or trackers. We can't see your roster.</p></div>
 
 <div class="card"><h2>What the app stores</h2>
 <p>Only what you type in or load from your own files: names, ranks or job titles, sections or teams, status and duty status, dates, locations or notes you add, phone numbers for a recall or call tree, equipment or asset assignments, incident (6W/IR) drafts, event attendance and app settings.</p>
@@ -30,7 +30,8 @@ p,li{margin:0 0 12px}.muted{color:var(--muted)}a{color:var(--acc);font-weight:70
 
 <div class="card"><h2>When data leaves your phone</h2>
 <p>Only when you choose to send it: tapping Text it, Share, Copy, Call, or exporting a backup file. That data then goes through the app you pick (Messages, Signal, email and so on) under that app's privacy terms. Exported backup files are not encrypted, so handle them like any personnel document.</p>
-<p>Reports can carry a short code line so a higher-level leader's app can add up the numbers (Rollup). That line holds counts only, no names. A recall check-in link holds your unit name, the recall time and, if you enter it, your cell number so replies come to you. Those details sit after the # in the link, which browsers never send to the website host. The person tapping the link chooses whether to send their reply.</p></div>
+<p>Reports can carry a short code line so a higher-level leader's app can add up the numbers (Rollup). That line holds counts only, no names. A recall check-in link holds your unit name, the recall time and, if you enter it, your cell number so replies come to you. Those details sit after the # in the link, which browsers never send to the website host. The person tapping the link chooses whether to send their reply.</p>
+<p><b>Live check-in (optional, on by default; turn off in DATA).</b> During a recall, check-ins pass through a relay database hosted by Supabase. It never receives names or phone numbers: the app scrambles each word a person types (one-way hash, unique to that recall) and sends only those codes, Good/Delayed/Need help, and an optional note of up to 60 characters. Only the leader's phone holds the key to read a recall. Each recall and its check-ins are deleted when the leader closes it out, or automatically after 72 hours.</p></div>
 
 <div class="card"><h2>What we collect</h2>
 <p>Nothing. The app has no account sign-up, analytics, crash reporting, advertising or tracking, and doesn't sell or share data.</p>
