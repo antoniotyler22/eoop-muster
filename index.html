@@ -355,7 +355,7 @@ body.member-mode nav:not(#tabbar),body.member-mode #b6W,body.member-mode #bPT,bo
 body{background:var(--bg)!important;padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 :root{--bg:#f4f6f8}
 .top .acts,.top nav[aria-label="Sections"]{display:none!important}
-.hic{display:flex;gap:8px;flex-shrink:0}.hic button{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--surface-solid);color:var(--ink);display:grid;place-items:center}
+.hic{display:flex;gap:8px;flex-shrink:0}#hRef.spin svg{animation:refspin .8s linear infinite}@keyframes refspin{to{transform:rotate(360deg)}}.hic button{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--surface-solid);color:var(--ink);display:grid;place-items:center}
 #subnav{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:8px 0 10px}#subnav:empty{display:none}#subnav::-webkit-scrollbar{display:none}
 #subnav button{flex:0 0 auto;min-height:36px;border-radius:999px;border:1px solid var(--line);background:var(--surface-solid);color:var(--ink);font:inherit;font-weight:700;font-size:13.5px;padding:0 14px;white-space:nowrap}
 #subnav button[aria-current="page"]{background:var(--ink);color:var(--bg);border-color:transparent}
@@ -412,7 +412,7 @@ body.member-mode #hSearch{display:none}
 <header class="top"><div class="top-in">
   <div class="brand">
     <div><h1><button id="bMode" class="titlebtn" aria-haspopup="dialog" title="Change app version">EOP Numbers<span class="caret">▾</span></button></h1><div class="dtg" id="dtg"></div></div>
-    <div class="hic"><button id="hHelp" aria-label="Help for this screen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"></path></svg></button><button id="hSearch" aria-label="Find anyone"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></button><button id="hSet" aria-label="Settings and data"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></button></div>
+    <div class="hic"><button id="hRef" aria-label="Refresh: get the latest updates"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button><button id="hHelp" aria-label="Help for this screen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"></path></svg></button><button id="hSearch" aria-label="Find anyone"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></button><button id="hSet" aria-label="Settings and data"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></button></div>
     <div class="acts">
       <button id="bToday" aria-pressed="false" hidden>TODAY</button>
       <button id="bFeed" aria-pressed="false">FEED<span id="fdBadge" class="fdb" hidden></span></button>
@@ -1349,6 +1349,26 @@ function renderAct(){const A=S.act||[];const seen=S.actSeen||0;let h=banner()+`<
   $("#main").innerHTML=h;if(actNew()){S.actSeen=Date.now();rawSave();setTimeout(renderTabs,0)}}
 document.addEventListener("click",e=>{if(e.target.id==="actClear"){if(armed==="actclr"){S.act=[];armed=null;save();renderAct()}else{armed="actclr";renderAct()}return}
   if(e.target.id==="hubPush"){const f=mainFeed();if(!f)return;e.target.disabled=true;pushSub(true).then(sub=>{if(!sub)throw new Error("Alerts not allowed on this phone");return SB.rpc("feed_sub",{p_feed:f.id,p_member_key:f.mk,p_sub:sub.toJSON()})}).then(()=>{f.oicPush=true;S.pushOn=true;save();renderLive();toast("Alerts on for FEED posts")}).catch(err=>{e.target.disabled=false;toast(String(err.message||err).slice(0,80))});return}});
+/* ---------- REFRESH: pull every update now ---------- */
+let refBusy=false;
+async function refreshAll(){if(refBusy)return;refBusy=true;const b=$("#hRef");if(b)b.classList.add("spin");toast("Getting updates…");
+  const jobs=[];const add=f=>{try{const r=f();if(r&&r.then)jobs.push(r)}catch(e){}};
+  if(S.board){add(()=>livePollBoard());add(()=>ensureHub())}
+  if(S.feeds.length)add(()=>fdPollAll(true));
+  if(S.link){if(S.link.rk2)add(()=>rosterPull(true));add(()=>linkPush(true))}
+  if(S.me)add(()=>mpFetch());
+  if(S.sync&&S.sync.on)add(()=>syncPull(true));
+  if(S.rc&&S.rc.open&&S.rc.live)add(()=>livePoll());
+  if(typeof bcPoll==="function")add(()=>bcPoll());
+  if(S.mus&&S.mus.qr)add(()=>qrPoll());
+  await Promise.race([Promise.allSettled(jobs),new Promise(r=>setTimeout(r,15000))]);
+  if(S.board){add(()=>rpPublish());}if(S.roster.some(m=>m.pk))add(()=>mpPublish());
+  let newer=false;try{const t=await (await fetch("sw.js",{cache:"no-store"})).text();const v=(t.match(/eop-numbers-v\d+/)||[])[0];const ks=await caches.keys();newer=!!v&&ks.some(k=>/^eop-numbers-v/.test(k))&&!ks.includes(v);if(newer){const r=await navigator.serviceWorker.getRegistration();if(r)await r.update()}}catch(e){}
+  refBusy=false;if(b)b.classList.remove("spin");
+  if(newer){toast("New version of the app. Reloading…");setTimeout(()=>location.reload(),1200);return}
+  const y=window.scrollY;const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){render();window.scrollTo(0,y)}
+  const errs=[S.board&&S.board.err,S.link&&(S.link.perr||S.link.err),S.me&&S.me.err,S.sync&&S.sync.err,...S.feeds.map(f=>f.err)].filter(Boolean);
+  toast(errs.length?"Updated, with a problem: "+String(errs[0]).slice(0,70):"Up to date · "+String(new Date().getHours()).padStart(2,"0")+String(new Date().getMinutes()).padStart(2,"0"))}
 let rpT=null,rpBusy=false,hubBusy=false,rpullBusy=false;
 function autoLink(c){try{history.replaceState(null,"",location.pathname)}catch(e){}if(typeof closeSheet==="function")try{closeSheet()}catch(e){}
   const L0=S.link;const same=L0&&L0.board===c.bid&&L0.sec===c.sec&&L0.rk2===c.rk2;
@@ -1511,6 +1531,7 @@ function renderShell(){const tb=$("#tabbar .in");if(!tb)return;const cur=tabOf(v
 document.addEventListener("click",e=>{const t=e.target.closest("[data-tab]");if(t){const k=t.dataset.tab;const map={home:"board",feed:lastFeed,people:"people",plan:lastPlan,tools:"tools",today:"today",me:"me",log:"log",ask:"ask"};
     const nv=map[k]||"board";if(tabOf(view)===k&&view!==nv&&["home","people","tools","plan","feed"].includes(k)){view=k==="plan"?"cal":k==="feed"?"feed":nv}else view=nv;armed=null;query="";if(view==="feed")fdLimit=20;render();window.scrollTo(0,0);if(view==="feed")fdPollAll(true);return}
   if(e.target.closest("#hSearch")){view=memberMode()?"today":"people";armed=null;render();window.scrollTo(0,0);setTimeout(()=>{const q=$("#gq");if(q)q.focus()},60);return}
+  if(e.target.closest("#hRef")){refreshAll();return}
   if(e.target.closest("#hHelp")){const hb=$("#helpBtn");if(hb)hb.click();return}
   if(e.target.closest("#hSet")){secDraft=null;view="data";armed=null;render();window.scrollTo(0,0);return}},true);
 function needsYou(){const out=[];const al=alerts();
