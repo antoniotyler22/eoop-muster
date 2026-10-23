@@ -125,6 +125,9 @@ tr.key td{font-family:var(--display);font-size:17px;font-weight:800;background:v
 .m .who{min-width:0}
 .m .who b{font-family:var(--display);font-weight:700;letter-spacing:.04em;margin-right:6px}
 .m .who .nm{font-weight:600}
+.nmrow{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.ct{display:inline-flex;gap:6px;flex-shrink:0}.ct a{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2);color:var(--s-onhand);text-decoration:none}
+.rrow .ct{margin-left:8px}
 .m .who .det{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .m .pick{display:flex;flex-direction:column;gap:5px;align-items:stretch}
 .m select.duty{padding:5px 6px;font-size:12.5px;font-weight:600;background:var(--surface)}
@@ -637,7 +640,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="3.1.0";const APP_BUILD="2026-10-23";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="3.1.1";const APP_BUILD="2026-10-23";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -838,8 +841,8 @@ function renderSection(code){
   if(o.total>8) h+=`<input class="search" id="q" type="search" placeholder="Find a Marine" value="${esc(query)}">`;
   h+=`<div class="list">${list.map(m=>{
     const det=[m.parent?("From "+m.parent):"",m.detail,m.end?("thru "+m.end):""].filter(Boolean).join(" · ");
-    return `<div class="m" style="--sc:var(${SVAR[m.status]})"><div class="who"><div data-pcard="${m.id}" style="cursor:pointer"><b>${esc(m.rank)}</b><span class="nm" style="text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px">${esc(m.name)}</span>${dutyOf(m)==="Light Duty"?'<span class="tag ld">LD</span>':dutyOf(m)==="LIMDU"?'<span class="tag lim">LIMDU</span>':""}${m.upd&&Date.now()-m.upd.t<86400000?`<span class="tag" style="color:var(--s-onhand)" title="Updated live by section leader">↻ ${dtg(new Date(m.upd.t)).slice(2,6)}</span>`:""}</div>
-      ${det?`<div class="det">${esc(det)}</div>`:""}<button class="rm${armed===m.id?" arm":""}" data-rm="${m.id}">${armed===m.id?"Tap again to remove":"Remove"}</button><button class="w6" data-w6="${m.id}">6W</button>${m.phone?`<a class="tel" href="${telHref(m.phone)}">Call</a>`:""}</div><div class="pick">${statusSelect(m.id,m.status)}${dutySelect(m.id,dutyOf(m))}</div></div>`}).join("")}</div>`;
+    return `<div class="m" style="--sc:var(${SVAR[m.status]})"><div class="who"><div class="nmrow"><div data-pcard="${m.id}" style="cursor:pointer;min-width:0"><b>${esc(m.rank)}</b><span class="nm" style="text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px">${esc(m.name)}</span>${dutyOf(m)==="Light Duty"?'<span class="tag ld">LD</span>':dutyOf(m)==="LIMDU"?'<span class="tag lim">LIMDU</span>':""}${m.upd&&Date.now()-m.upd.t<86400000?`<span class="tag" style="color:var(--s-onhand)" title="Updated live by section leader">↻ ${dtg(new Date(m.upd.t)).slice(2,6)}</span>`:""}</div>${ctBtns(m)}</div>
+      ${det?`<div class="det">${esc(det)}</div>`:""}<button class="rm${armed===m.id?" arm":""}" data-rm="${m.id}">${armed===m.id?"Tap again to remove":"Remove"}</button><button class="w6" data-w6="${m.id}">6W</button></div><div class="pick">${statusSelect(m.id,m.status)}${dutySelect(m.id,dutyOf(m))}</div></div>`}).join("")}</div>`;
   h+=`<form class="addbox" id="addf"><h3>${isAtt?"Add an attached Marine":"Add a Marine to "+code}</h3>
     <select id="aRank" aria-label="Rank">${RANKS.map(r=>`<option${r===(MODE().rankDef||"LCPL")?" selected":""}>${r}</option>`).join("")}</select>
     <input id="aName" placeholder="LAST, FIRST M." autocomplete="off" aria-label="Name" required>
@@ -2024,7 +2027,8 @@ let pid=null,pBack="board",pEdit=null;
 function findPeople(q){q=q.trim().toUpperCase();if(!q)return[];const w=q.split(/\s+/);
   return sorted(S.roster.filter(m=>{const t=(m.rank+" "+m.name+" "+m.sec+" "+(m.parent||"")).toUpperCase();return w.every(x=>t.includes(x))})).slice(0,10)}
 function gqHTML(q){const r=findPeople(q);if(!q.trim())return"";if(!r.length)return `<p class="note">No one matches.</p>`;
-  return r.map(m=>`<button class="rrow" data-pcard="${m.id}" style="--sc:var(${SVAR[m.status]||"--line"});text-align:left;cursor:pointer"><div class="who"><b>${esc(m.rank)}</b> ${esc(m.name)}<div class="ph">${m.sec} · ${esc(SHORT[m.status]||m.status)}${dutyOf(m)!=="Full Duty"?" · "+esc(dutyOf(m)):""}</div></div></button>`).join("")}
+  return r.map(m=>`<div class="rrow" style="--sc:var(${SVAR[m.status]||"--line"});text-align:left;flex-direction:row;align-items:center"><div class="who" data-pcard="${m.id}" role="button" tabindex="0" style="cursor:pointer;flex:1;min-width:0"><b>${esc(m.rank)}</b> ${esc(m.name)}<div class="ph">${m.sec} · ${esc(SHORT[m.status]||m.status)}${dutyOf(m)!=="Full Duty"?" · "+esc(dutyOf(m)):""}</div></div>${ctBtns(m)}</div>`).join("")}
+function ctBtns(m){if(!m.phone)return "";const nm=esc(m.rank+" "+lastOf(m));return `<span class="ct"><a href="${telHref(m.phone)}" aria-label="Call ${nm}" title="Call ${esc(fmtPh(m.phone))}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC.recall}</svg></a><a href="${smsTo(m.phone)}" aria-label="Text ${nm}" title="Text"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC.text}</svg></a></span>`}
 function openCard(id){if(view!=="p")pBack=view;pid=id;pEdit=null;view="p";armed=null;render();window.scrollTo(0,0)}
 const isoOf=s=>{const d=parseD(s);return d?dkey(d):""};
 function pSec(t,body){return body?`<h2>${t}</h2><div class="panel">${body}</div>`:""}
