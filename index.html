@@ -1261,8 +1261,8 @@ async function linkPush(force){const L=S.link;if(!L||lkBusy)return;if(L.rk2&&!L.
     if(force||st!==L.sig){const me=await Promise.all(SB.words(L.me).map(w=>SB.h(L.board,w)));
       await SB.rpc("push_update",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_sender:me,p_strength:ms.length,p_items:items});
       L.sig=st;L.sent=Date.now();L.lsig=lsigOf(ms);L.err="";save();SB.notify(null,{board:L.board})}
-    if(L.ek){const cal=ms.flatMap(m=>(m.cal||[]).filter(e=>(e.end||e.d)>=dkey(new Date(Date.now()-30*86400000))).map(e=>({nk:fullK(m),d:e.d,tm:e.tm||"",end:e.end||"",ty:e.ty,ti:e.ti,no:e.no||""})));const cs=sigF(cal);
-      if(force||cs!==L.calSig){const ct=await fdEnc(L.ek,{e:cal});await SB.rpc("push_cal",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_ct:ct});L.calSig=cs;L.err="";rawSave()}}}
+    if(L.ek){const cal=ms.flatMap(m=>(m.cal||[]).filter(e=>(e.end||e.d)>=dkey(new Date(Date.now()-30*86400000))).map(e=>({nk:fullK(m),d:e.d,tm:e.tm||"",end:e.end||"",ty:e.ty,ti:e.ti,no:e.no||""})));const dt=ms.map(m=>({nk:fullK(m),st:m.status,s:m.start||"",e:m.end||"",l:m.loc||"",x:m.detail||""}));const cs=sigF([cal,dt]);
+      if(force||cs!==L.calSig){const ct=await fdEnc(L.ek,{e:cal,d:dt});await SB.rpc("push_cal",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_ct:ct});L.calSig=cs;L.err="";rawSave()}}}
   catch(e){L.err=String(e.message||e).slice(0,80);save();clearTimeout(lkTimer);lkTimer=setTimeout(linkPush,60000)}
   finally{lkBusy=false;if(view==="live"||view===(L.mysec||"").toLowerCase()){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;render();window.scrollTo(0,y)}}}}
 function linkStatus(){const L=S.link;if(!L)return"";if(L.err)return `<span style="color:var(--warn)">Not sent yet (${esc(L.err)}). Retrying.</span>`;
@@ -1277,7 +1277,11 @@ function boardPushHTML(){if(!pushOK())return isIOS()&&!standalone()?`<p class="n
   return `<button class="btn alt" id="bpushOn">🔔 Alert me when a section updates, even when locked</button>`}
 async function boardCreate(){const id=rndId(14),rk=rndId(32),wk=rndId(32);await SB.rpc("create_board",{p_id:id,p_read_key:rk,p_write_key:wk});S.board={id,rk,wk,ek:b64url(crypto.getRandomValues(new Uint8Array(32))),after:0,last:{}};save()}
 async function livePollCal(){const B=S.board;if(!B||!B.ek)return;try{const rows=await SB.rpc("get_cal",{p_board:B.id,p_read_key:B.rk});let ch=false;
-  for(const r of rows||[]){const t=Date.parse(r.updated_at)||0;if(S.secCal[r.sec]&&S.secCal[r.sec].t>=t)continue;const o=await fdDec(B.ek,r.ct);if(!o||!Array.isArray(o.e))continue;if(S.secCal[r.sec])actAdd("🗓",r.sec+" section calendar updated","cal");S.secCal[r.sec]={t,e:o.e.slice(0,2000)};ch=true}
+  for(const r of rows||[]){const t=Date.parse(r.updated_at)||0;if(S.secCal[r.sec]&&S.secCal[r.sec].t>=t)continue;const o=await fdDec(B.ek,r.ct);if(!o||!Array.isArray(o.e))continue;const calCh=!S.secCal[r.sec]||sigF(S.secCal[r.sec].e)!==sigF(o.e.slice(0,2000));if(S.secCal[r.sec]&&calCh)actAdd("🗓",r.sec+" section calendar updated","cal");S.secCal[r.sec]={t,e:o.e.slice(0,2000)};ch=true;
+    if(Array.isArray(o.d)){const ms=S.roster.filter(m=>m.sec===r.sec);const by={};ms.forEach(m=>(by[fullK(m)]=by[fullK(m)]||[]).push(m));const who=[];
+      for(const x of o.d.slice(0,600)){const hit=by[String(x.nk)];if(!hit||hit.length!==1)continue;const m=hit[0];let c=false;
+        for(const [k,v] of [["start",x.s],["end",x.e],["loc",x.l],["detail",x.x]]){const nv=String(v||"").slice(0,120);if((m[k]||"")!==nv){if(nv)m[k]=nv;else delete m[k];c=true}}if(c)who.push(m.rank+" "+lastOf(m)+(x.e?" thru "+String(x.e).slice(0,10):""))}
+      if(who.length)actAdd("📝",r.sec+" leader updated dates/details: "+who.slice(0,6).join(", ")+(who.length>6?" +"+(who.length-6)+" more":""),r.sec.toLowerCase())}}
   if(ch){save();if(view==="cal"||view==="board"||view==="p"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"&&a!=="SELECT"){const y=window.scrollY;render();window.scrollTo(0,y)}}}}catch(e){}}
 async function livePollBoard(){const B=S.board;if(!B||lvBusy)return;livePollCal();lvBusy=true;
   try{const rows=await SB.rpc("get_board_updates",{p_board:B.id,p_read_key:B.rk,p_after:B.after||0});B.err="";
@@ -1360,7 +1364,7 @@ document.addEventListener("click",e=>{if(e.target.id==="lkName"){lkNameSheet();r
 setInterval(()=>{if(!document.hidden&&S.link&&S.link.rk2&&!S.link.pulled)rosterPull()},8000);
 const mainFeed=()=>S.feeds.find(f=>f.lk&&f.main)||S.feeds.find(f=>f.lk)||null;
 function secKey(sec){const B=S.board;B.sk=B.sk||{};if(!B.sk[sec]){B.sk[sec]=b64url(crypto.getRandomValues(new Uint8Array(32)));B.rsig={};setTimeout(save,0)}return B.sk[sec]}
-const lsigOf=ms=>sigF(ms.map(m=>[m.id,m.status,dutyOf(m)]));
+const lsigOf=ms=>sigF(ms.map(m=>[m.id,m.status,dutyOf(m),m.start||"",m.end||"",m.loc||"",m.detail||""]));
 const RPF=["id","rank","name","sec","status","duty","phone","detail","loc","start","end","parent"];
 function rpSchedule(){if(!S.board||!S.board.sk||S.role==="view")return;clearTimeout(rpT);rpT=setTimeout(rpPublish,4000)}
 async function rpPublish(force){const B=S.board;if(!B||!B.sk||rpBusy||S.role==="view")return;rpBusy=true;
@@ -1400,7 +1404,7 @@ async function rosterPull(force){const L=S.link;if(!L||!L.rk2||rpullBusy)return;
     const cur=S.roster.filter(m=>m.sec===L.mysec);const dirty=L.pulled&&lsigOf(cur)!==(L.lsig||"");const takeSt=!dirty&&t>(L.sent||0);
     const byId={};cur.forEach(m=>byId[m.id]=m);
     const next=o.ms.slice(0,600).map(x=>{const m={};for(const k of RPF)if(x[k]!=null)m[k]=String(x[k]).slice(0,120);m.sec=L.mysec;if(!STATUSES.includes(m.status))m.status="On Hand";
-      const old=byId[m.id];if(old){for(const k of Object.keys(old))if(!(k in m)&&!RPF.includes(k))m[k]=old[k];if(!takeSt){m.status=old.status;m.duty=dutyOf(old)}}return m});
+      const old=byId[m.id];if(old){for(const k of Object.keys(old))if(!(k in m)&&!RPF.includes(k))m[k]=old[k];if(!takeSt){m.status=old.status;m.duty=dutyOf(old);for(const k of ["start","end","loc","detail"]){if(old[k])m[k]=old[k];else delete m[k]}}}return m});
     if(S.source==="sample"){S.roster=[];S.source="link";S.loadedAt=dtg(new Date())}
     if(S.source==="link"&&Array.isArray(o.sl)&&o.sl.length&&o.sl.every(x=>Array.isArray(x)&&x[0])){const nw=o.sl.slice(0,10).map(x=>[String(x[0]).replace(/[^A-Z0-9]/g,"").slice(0,6),String(x[1]||x[0]).slice(0,30)]);if(JSON.stringify(nw)!==JSON.stringify(SECTIONS)){SECTIONS.splice(0,SECTIONS.length,...nw);S.secs=nw}}
     S.roster=S.roster.filter(m=>m.sec!==L.mysec).concat(next);
@@ -1823,7 +1827,7 @@ function renderMe(){const M=S.me;let h="";
 function mePrompt(q){const pk=(q.get("me")||"").replace(/[^a-z0-9]/g,"").slice(0,40);const unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24);try{history.replaceState(null,"",location.pathname)}catch(e){}
   if(pk.length<20)return toast("That My page link is incomplete.");
   const own=S.roster.find(m=>m.pk===pk);
-  if(own||isLeaderPhone()){S.leaderMode=true;save();if(own){openCard(own.id);toast("That's "+own.rank+" "+lastOf(own)+"'s My page link. You're on your leader phone, so here's their card.")}else{view="board";render();window.scrollTo(0,0);toast("You're on your leader phone, so you stay on the main page.")}return}
+  if(own||(isLeaderPhone()&&!(S.link&&!S.board))){S.leaderMode=true;save();if(own){openCard(own.id);toast("That's "+own.rank+" "+lastOf(own)+"'s My page link. You're on your leader phone, so here's their card.")}else{view="board";render();window.scrollTo(0,0);toast("You're on your leader phone, so you stay on the main page.")}return}
   S.me={pk,unit,d:null,t:0};S.onb=true;if(!S.mode)S.mode="military";save();view="me";render();window.scrollTo(0,0);mpFetch()}
 
 /* ---------- CALENDAR: per person, whole board, sections ---------- */
