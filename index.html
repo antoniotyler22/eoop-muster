@@ -399,6 +399,8 @@ document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.h
 function startApp(){const s=document.createElement("script");s.textContent=document.getElementById("app").textContent;document.body.appendChild(s)}
 /* live check-ins: Supabase relay. Stores no names: only salted hashes of the words a person types, a code and a short note. */
 const SB=window.SB={url:"https://cotqnqpczwpmipigrjxt.supabase.co",key:"sb_publishable_9SqPz3ueN5rOe43mEGwglA_Uk65vNnc",
+  vapid:"BGWkOoK35r0UiMWL6bYX1uwz9L_8qXwQvp4Qc_4Bv_8Ddy3c-iKPpU_ynvIxt116eKBQvlFvtBobyHKB910S3q4",
+  notify(rid){try{fetch(this.url+"/functions/v1/notify",{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify({recall:rid}),keepalive:true}).catch(()=>{})}catch(e){}},
   async rpc(fn,args){const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),12000);
     try{const r=await fetch(this.url+"/rest/v1/rpc/"+fn,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify(args),signal:ac.signal});
       const t=await r.text();if(!r.ok)throw new Error((()=>{try{return JSON.parse(t).message}catch(e){return t}})()||("HTTP "+r.status));return t?JSON.parse(t):null}finally{clearTimeout(tm)}},
@@ -429,7 +431,7 @@ function ciPage(q){const esc=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<"
     const msg=document.getElementById("ciMsg");
     if(live&&navigator.onLine!==false&&crypto.subtle){m.querySelectorAll("[data-c]").forEach(x=>x.disabled=true);msg.textContent="Sending…";
       Promise.all(SB.words(n).map(w=>SB.h(rid,w))).then(hs=>SB.rpc("checkin",{p_recall:rid,p_words:hs,p_code:c,p_note:eta}))
-        .then(()=>{msg.innerHTML="<b style='color:var(--s-onhand)'>✓ Checked in: "+word+".</b> Your leader sees it now. You can close this page.";m.querySelectorAll("[data-c]").forEach(x=>x.disabled=false)})
+        .then(()=>{SB.notify(rid);msg.innerHTML="<b style='color:var(--s-onhand)'>✓ Checked in: "+word+".</b> Your leader sees it now. You can close this page.";m.querySelectorAll("[data-c]").forEach(x=>x.disabled=false)})
         .catch(()=>{msg.textContent="Couldn't reach the server. Opening a text instead…";m.querySelectorAll("[data-c]").forEach(x=>x.disabled=false);setTimeout(sms,700)});return}
     sms()});}
 window.addEventListener("DOMContentLoaded",()=>{
@@ -516,7 +518,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="1.2.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="1.3.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -1198,7 +1200,20 @@ function ciRid(){return S.rc.rid||(S.rc.start||0).toString(36)}
 function rndId(n){const a=crypto.getRandomValues(new Uint8Array(n));return [...a].map(x=>"abcdefghijklmnopqrstuvwxyz0123456789"[x%36]).join("")}
 /* live relay */
 let liveBusy=false,liveIdx=null;
-async function liveCreate(){const L=S.rc.live;if(!L||L.ok||!S.rc.open)return;try{await SB.rpc("create_recall",{p_id:S.rc.rid,p_read_key:L.key});L.ok=true;L.err="";save()}catch(e){L.err=String(e.message||e).slice(0,80);save()}}
+async function liveCreate(){const L=S.rc.live;if(!L||L.ok||!S.rc.open)return;try{await SB.rpc("create_recall",{p_id:S.rc.rid,p_read_key:L.key});L.ok=true;L.err="";save();pushAttach()}catch(e){L.err=String(e.message||e).slice(0,80);save()}}
+/* push alerts to this phone when someone checks in (works with the phone locked) */
+const pushOK=()=>"serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window;
+const isIOS=()=>/iPhone|iPad|iPod/.test(navigator.userAgent);
+const standalone=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+function b64u(s){const p="=".repeat((4-s.length%4)%4);const b=atob((s+p).replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from(b,c=>c.charCodeAt(0))}
+async function pushSub(ask){if(!pushOK())return null;const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();
+  if(!sub&&ask){if(await Notification.requestPermission()!=="granted")return null;sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(SB.vapid)})}return sub}
+async function pushAttach(){const L=S.rc.live;if(!L||!L.ok||!S.pushOn)return;try{const sub=await pushSub(false);if(!sub)return;await SB.rpc("set_push",{p_recall:S.rc.rid,p_read_key:L.key,p_sub:sub.toJSON()});L.push=true;save()}catch(e){}}
+function pushHTML(){if(!S.rc.live)return"";
+  if(!pushOK())return isIOS()&&!standalone()?`<p class="note">For alerts with your phone locked: Share → <b>Add to Home Screen</b>, then run recalls from the home-screen app.</p>`:"";
+  if(Notification.permission==="denied")return `<p class="note">Alerts are blocked for this app in your phone settings.</p>`;
+  if(S.pushOn&&Notification.permission==="granted")return `<p class="note" style="color:var(--s-onhand);font-weight:700">🔔 Alerts on: this phone buzzes for each check-in${S.rc.live.push?"":" (connecting…)"}</p>`;
+  return `<button class="btn alt" id="pushOn">🔔 Alert me on this phone, even when locked</button>`}
 async function liveIndex(){if(liveIdx&&liveIdx.rid===S.rc.rid&&liveIdx.n===S.roster.length)return liveIdx;const rid=S.rc.rid;const map=[];
   for(const m of S.roster){const last=SB.words(lastOf(m)),first=SB.words((m.name.split(",")[1]||"").trim().split(/\s+/)[0]||"");
     map.push({m,last:await Promise.all(last.map(w=>SB.h(rid,w))),rank:await SB.h(rid,String(m.rank).toUpperCase().replace(/[^A-Z0-9]/g,"")),first:first[0]?await SB.h(rid,first[0]):""})}
@@ -1230,6 +1245,7 @@ function ciHTML(){const pool=recallPool().filter(m=>m.phone);const ci=S.rc.ci||{
     ${(()=>{const L=S.rc.live;if(!L)return `<p class="note">Live check-in is off (DATA → Live check-in). Replies come by text.</p>`;
       if(L.ok)return `<p class="note" style="color:var(--s-onhand);font-weight:700">● Live: check-ins appear here by themselves${L.err?` <span style="color:var(--warn)">· reconnecting</span>`:""}</p>${(L.un||[]).length?`<p class="note" style="color:var(--warn)">${L.un.length} check-in${L.un.length>1?"s":""} didn't match one name on your roster${L.un.some(x=>x.c===3)?" (one says NEED HELP)":""}. Ask them to use rank and last name as on the roster.</p>`:""}`;
       return `<p class="note" style="color:var(--warn)">Connecting to live check-in…${L.err?" ("+esc(L.err)+"). Text replies still work.":""}</p>`})()}
+    ${pushHTML()}
     <label for="ciMe">My cell (check-in replies come here)</label>
     <input type="tel" id="ciMe" inputmode="tel" value="${esc(fmtPh(S.myPh||""))}" placeholder="808 555 0100">
     ${pool.length?batches.map((b,i)=>`<a class="btn${sent[i]?" alt":""}" data-ciblast="${i}" href="${esc(href(b))}">${sent[i]?"✓ Sent · ":""}Text check-in${batches.length>1?" group "+(i+1)+" of "+batches.length:""} (${b.length})</a>`).join(""):`<p class="note">No phone numbers loaded yet. Load them below.</p>`}
@@ -1485,6 +1501,7 @@ document.addEventListener("click",e=>{
   const rr=e.target.closest("[data-rid]");if(rr){const id=rr.dataset.rid,c=rr.dataset.r;if(S.rc.res[id]===c)delete S.rc.res[id];else S.rc.res[id]=c;save();const y=window.scrollY;renderRecall();window.scrollTo(0,y);return}
   if(e.target.id==="rcClose"){liveClose();S.rc.open=false;S.rc.end=Date.now();S.hist=(S.hist||[]).concat({type:"recall",t:S.rc.start}).slice(-60);save();renderRecall();window.scrollTo(0,0);toast("Recall closed");return}
   if(e.target.id==="rcCancel"){if(armed==="rccancel"){liveClose();S.rc.open=false;S.rc.res={};S.rc.ci={};S.rc.start=0;armed=null;save();toast("Recall discarded")}else armed="rccancel";renderRecall();return}
+  if(e.target.id==="pushOn"){e.target.disabled=true;e.target.textContent="Asking…";pushSub(true).then(sub=>{if(sub){S.pushOn=true;save();pushAttach().then(()=>{const y=window.scrollY;renderRecall();window.scrollTo(0,y)});toast("Alerts on")}else{toast("Alerts not allowed");const y=window.scrollY;renderRecall();window.scrollTo(0,y)}}).catch(()=>{toast("Couldn't turn on alerts here.");const y=window.scrollY;renderRecall();window.scrollTo(0,y)});return}
   if(e.target.id==="ciGo"){const r=applyCheckins($("#ciIn").value);const y=window.scrollY;renderRecall();window.scrollTo(0,y);const o=$("#ciOut");if(o)o.textContent=r;return}
   if(e.target.id==="ciClip"){const fail=()=>{const o=$("#ciOut");if(o)o.textContent="This phone blocked clipboard reading. Long-press the box, tap Paste, then Mark replies.";};
     try{navigator.clipboard.readText().then(t=>{const r=applyCheckins(t);const y=window.scrollY;renderRecall();window.scrollTo(0,y);const o=$("#ciOut");if(o)o.textContent=r},fail)}catch(err){fail()}return}
@@ -1697,6 +1714,7 @@ render();
 if(firstPick)setTimeout(()=>openModeSheet(true),350);
 if("serviceWorker" in navigator&&document.querySelector("link[rel=manifest]")&&(location.protocol==="https:"||location.hostname==="localhost")){navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(()=>{const o=document.getElementById("offStat");if(o&&navigator.serviceWorker.controller)o.textContent="Ready: this app opens and works with no signal. Text reports once you have service."}).catch(()=>{})}
 setInterval(()=>{if(view==="recall"&&S.rc.open){const c=document.querySelector(".mbar .ct small");if(c)c.textContent="contacted · "+Math.round((Date.now()-S.rc.start)/60000)+" min"}},20000);
+window.addEventListener("hashchange",()=>{const h=(location.hash||"").slice(1).toLowerCase();if(["recall","rollup","board","muster","alerts"].includes(h)&&h!==view){view=h;armed=null;render();window.scrollTo(0,0)}});
 setInterval(()=>{const d=$("#dtg");if(d)d.textContent="AS OF "+dtg()},30000);
 </script>
 </body></html>
