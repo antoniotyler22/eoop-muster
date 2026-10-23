@@ -519,7 +519,7 @@ const SVAR={"On Hand":"--s-onhand","Appointment on Base":"--s-aob","Appointment 
 const PRESENT=["On Hand","Appointment on Base","Company Duties"];
 const SECTIONS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
 const DEF_SECS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
-const RESERVED=["BOARD","ATT","PT","W6","TEXT","DATA","MUSTER","ALERTS","RECALL","EVENTS","ARMORY","ROLLUP","LIVE","SEND","FEED","TRENDS","READY","DUTY","P"];
+const RESERVED=["BOARD","ATT","PT","W6","TEXT","DATA","MUSTER","ALERTS","RECALL","EVENTS","ARMORY","ROLLUP","LIVE","SEND","FEED","TRENDS","READY","DUTY","P","CAL","LOG"];
 const MIL_SECS=DEF_SECS.map(s=>s.slice());
 let secDraft=null;
 /* ---------- versions: one app, five vocabularies ---------- */
@@ -569,7 +569,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="2.2.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="2.3.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -706,7 +706,7 @@ S.rcMiss=Array.isArray(S.rcMiss)?S.rcMiss:[];if(S.rcRev&&!Array.isArray(S.rcRev.
 S.rc=Object.assign({open:false,start:0,end:0,res:{},att:true,only:false,ci:{}},S.rc||{});if(!S.rc.ci||typeof S.rc.ci!=="object")S.rc.ci={};
 S.bc=Array.isArray(S.bc)?S.bc:[];
 S.feeds=Array.isArray(S.feeds)?S.feeds:[];
-S.days=S.days&&typeof S.days==="object"?S.days:{};if(S.sync&&typeof S.sync!=="object")S.sync=null;
+S.days=S.days&&typeof S.days==="object"?S.days:{};S.log=Array.isArray(S.log)?S.log:[];S.secCal=S.secCal&&typeof S.secCal==="object"?S.secCal:{};if(S.sync&&typeof S.sync!=="object")S.sync=null;
 S.ready=S.ready&&typeof S.ready==="object"?S.ready:{};S.duty=Object.assign({rosters:[]},S.duty||{});if(!Array.isArray(S.duty.rosters))S.duty.rosters=[];S.tl=S.tl&&typeof S.tl==="object"?S.tl:{};
 S.roll=Object.assign({units:{},own:true,name:""},S.roll||{});if(!S.roll.units||typeof S.roll.units!=="object")S.roll.units={};
 S.mus=Object.assign({open:false,seen:{},inc:["On Hand"],att:true,only:false,last:null},S.mus||{});
@@ -716,7 +716,7 @@ function save(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.
 
 let view="board", armed=null, query="";
 const h0=(location.hash||"").slice(1).toLowerCase();
-if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty"].includes(h0)) view=h0;
+if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty","cal","log"].includes(h0)) view=h0;
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -776,6 +776,9 @@ function renderBoard(){
       ${(()=>{const R=readySum();if(!R.items)return `<button class="bigbtn" data-go="ready"><b>READY</b><span>Due-outs tracker</span></button>`;
         return `<button class="bigbtn${R.over?" hot":""}" data-go="ready"><b>READY</b><span>${R.over?`<span class="w">${R.over} overdue</span> · `:""}${R.soon} due 30d</span></button>`})()}
       ${(()=>{const r=S.duty.rosters[0];const t=r&&r.assign[dkey()];const m=t&&S.roster.find(x=>x.id===t);return `<button class="bigbtn" data-go="duty"><b>DUTY</b><span>${r?(m?"Today: "+esc(m.rank+" "+lastOf(m)):"Not assigned today"):"Duty roster"}</span></button>`})()}
+      ${(()=>{const t=calOn(dkey()).length;return `<button class="bigbtn" data-go="cal"><b>CALENDAR</b><span>${t?t+" today":"Nothing today"}</span></button>`})()}
+      ${(()=>{const n=S.log.filter(x=>x.d===dkey()).length;const st=logStreak();return `<button class="bigbtn${n?" live":""}" data-go="log"><b>MY LOG</b><span>${n?n+" today":"Log today"}${st>1?" · 🔥"+st:""}</span></button>`})()}
+      <button class="bigbtn" data-go="trends"><b>TRENDS</b><span>Numbers over time</span></button>
       ${(()=>{const a=bcActive();if(!a)return `<button class="bigbtn" data-go="send"><b>SEND</b><span>Message with read receipts</span></button>`;const st=bcStats(a);
         return `<button class="bigbtn${st.prob?" hot":" live"}" data-go="send"><b>SEND</b><span>${st.prob?`<span class="w">${st.prob} problem${st.prob>1?"s":""}</span> · `:""}${st.got}/${st.pool} got it</span></button>`})()}
       ${(()=>{const n=Object.keys(S.roll.units).length;if(!n)return `<button class="bigbtn" data-go="rollup"><b>ROLLUP</b><span>Add up units under you</span></button>`;const R=rollSum(rollUnits());const st=rollStale();
@@ -1209,24 +1212,29 @@ async function itemsFor(bid,ms){const out=[];
 /* section leader side */
 function linkSchedule(){if(!S.link||lkBusy)return;clearTimeout(lkTimer);lkTimer=setTimeout(linkPush,3000)}
 async function linkPush(force){const L=S.link;if(!L||lkBusy)return;const ms=S.roster.filter(m=>m.sec===L.mysec);
-  lkBusy=true;try{const items=await itemsFor(L.board,ms);const sig=ms.length+"|"+items.join(",");if(!force&&sig===L.sig)return;
-    const me=await Promise.all(SB.words(L.me).map(w=>SB.h(L.board,w)));
-    await SB.rpc("push_update",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_sender:me,p_strength:ms.length,p_items:items});
-    L.sig=sig;L.sent=Date.now();L.err="";save();SB.notify(null,{board:L.board})}
+  lkBusy=true;try{const items=await itemsFor(L.board,ms);const st=ms.length+"|"+items.join(",");
+    if(force||st!==L.sig){const me=await Promise.all(SB.words(L.me).map(w=>SB.h(L.board,w)));
+      await SB.rpc("push_update",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_sender:me,p_strength:ms.length,p_items:items});
+      L.sig=st;L.sent=Date.now();L.err="";save();SB.notify(null,{board:L.board})}
+    if(L.ek){const cal=ms.flatMap(m=>(m.cal||[]).filter(e=>(e.end||e.d)>=dkey(new Date(Date.now()-30*86400000))).map(e=>({nk:fullK(m),d:e.d,tm:e.tm||"",end:e.end||"",ty:e.ty,ti:e.ti,no:e.no||""})));const cs=sigF(cal);
+      if(force||cs!==L.calSig){const ct=await fdEnc(L.ek,{e:cal});await SB.rpc("push_cal",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_ct:ct});L.calSig=cs;L.err="";rawSave()}}}
   catch(e){L.err=String(e.message||e).slice(0,80);save();clearTimeout(lkTimer);lkTimer=setTimeout(linkPush,60000)}
   finally{lkBusy=false;if(view==="live"||view===(L.mysec||"").toLowerCase()){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;render();window.scrollTo(0,y)}}}}
 function linkStatus(){const L=S.link;if(!L)return"";if(L.err)return `<span style="color:var(--warn)">Not sent yet (${esc(L.err)}). Retrying.</span>`;
   return L.sent?`Last sent ${dtg(new Date(L.sent)).slice(0,7)}.`:"Sending…"}
 window.addEventListener("online",()=>{if(S.link)linkPush();if(S.board)livePollBoard()});
 /* OIC side */
-function boardLink(sec){const q=new URLSearchParams();q.set("join",S.board.id);q.set("k",S.board.wk);q.set("s",sec);q.set("u",unitName());return location.origin+location.pathname+"#"+q.toString()}
+function boardLink(sec){if(!S.board.ek){S.board.ek=b64url(crypto.getRandomValues(new Uint8Array(32)));save()}const q=new URLSearchParams();q.set("join",S.board.id);q.set("k",S.board.wk);q.set("s",sec);q.set("u",unitName());q.set("e",S.board.ek);return location.origin+location.pathname+"#"+q.toString()}
 async function boardPush(){const B=S.board;if(!B||!S.pushOn)return;try{const sub=await pushSub(false);if(!sub)return;await SB.rpc("set_board_push",{p_board:B.id,p_read_key:B.rk,p_sub:sub.toJSON()});B.push=true;save()}catch(e){}}
 function boardPushHTML(){if(!pushOK())return isIOS()&&!standalone()?`<p class="note">For alerts with your phone locked: Share → <b>Add to Home Screen</b>, then open the app from there.</p>`:"";
   if(Notification.permission==="denied")return `<p class="note">Alerts are blocked for this app in your phone settings.</p>`;
   if(S.pushOn&&Notification.permission==="granted"&&S.board.push)return `<p class="note" style="color:var(--s-onhand);font-weight:700">🔔 Alerts on: this phone buzzes when a section updates</p>`;
   return `<button class="btn alt" id="bpushOn">🔔 Alert me when a section updates, even when locked</button>`}
-async function boardCreate(){const id=rndId(14),rk=rndId(32),wk=rndId(32);await SB.rpc("create_board",{p_id:id,p_read_key:rk,p_write_key:wk});S.board={id,rk,wk,after:0,last:{}};save()}
-async function livePollBoard(){const B=S.board;if(!B||lvBusy)return;lvBusy=true;
+async function boardCreate(){const id=rndId(14),rk=rndId(32),wk=rndId(32);await SB.rpc("create_board",{p_id:id,p_read_key:rk,p_write_key:wk});S.board={id,rk,wk,ek:b64url(crypto.getRandomValues(new Uint8Array(32))),after:0,last:{}};save()}
+async function livePollCal(){const B=S.board;if(!B||!B.ek)return;try{const rows=await SB.rpc("get_cal",{p_board:B.id,p_read_key:B.rk});let ch=false;
+  for(const r of rows||[]){const t=Date.parse(r.updated_at)||0;if(S.secCal[r.sec]&&S.secCal[r.sec].t>=t)continue;const o=await fdDec(B.ek,r.ct);if(!o||!Array.isArray(o.e))continue;S.secCal[r.sec]={t,e:o.e.slice(0,2000)};ch=true}
+  if(ch){save();if(view==="cal"||view==="board"||view==="p"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"&&a!=="SELECT"){const y=window.scrollY;render();window.scrollTo(0,y)}}}}catch(e){}}
+async function livePollBoard(){const B=S.board;if(!B||lvBusy)return;livePollCal();lvBusy=true;
   try{const rows=await SB.rpc("get_board_updates",{p_board:B.id,p_read_key:B.rk,p_after:B.after||0});B.err="";
     if(rows&&rows.length){const latest={};for(const r of rows){B.after=Math.max(B.after||0,+r.id);latest[r.sec]=r}
       const msgs=[];
@@ -1267,13 +1275,92 @@ function renderLive(){let h=banner();const B=S.board,L=S.link;
     <div class="row2"><button class="btn" id="lkNow">Send now</button><button class="btn alt" id="lkOff">${armed==="lkoff"?"Tap again to unlink":"Unlink"}</button></div></div>`;
   $("#main").innerHTML=h}
 function joinPrompt(q){const bid=(q.get("join")||"").replace(/[^a-z0-9]/g,"").slice(0,20),wk=(q.get("k")||"").replace(/[^a-z0-9]/g,"").slice(0,40),sec=(q.get("s")||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6),unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24);
-  if(bid.length<10||wk.length<24||!sec)return;sheetCtx={kind:"join",bid,wk,sec,unit};const def=SECTIONS.some(x=>x[0]===sec)?sec:SECTIONS[0][0];
+  const ek=(q.get("e")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60);if(bid.length<10||wk.length<24||!sec)return;sheetCtx={kind:"join",bid,wk,sec,unit,ek};const def=SECTIONS.some(x=>x[0]===sec)?sec:SECTIONS[0][0];
   $("#sheetT").innerHTML=`Send live updates?<small>${esc(unit||"Your OIC")} wants this phone to send the <b>${esc(sec)}</b> section's statuses to their board automatically.</small>`;
   $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><label for="jSec">My section in this app</label><select id="jSec" class="wsel">${SECTIONS.map(([k,n])=>`<option value="${k}"${k===def?" selected":""}>${esc(k+" · "+n)}</option>`).join("")}</select>
     <label for="jMe">Your rank and last name (so they see who sent it)</label><input type="text" id="jMe" maxlength="30" placeholder="SGT SMITH" autocapitalize="characters" style="text-transform:uppercase" value="${esc(S.myName||"")}">
     <p class="note">Only scrambled codes leave this phone; names don't. ${S.source==="sample"?"<b style='color:var(--warn)'>Load your roster first, or the names won't match theirs.</b>":""}</p>
     <button class="btn" id="jYes">Link and send now</button><button class="btn alt" data-sclose="1">Not now</button></div>`;
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));try{history.replaceState(null,"",location.pathname)}catch(e){}}
+
+/* ---------- CALENDAR: per person, whole board, sections ---------- */
+const CAL_TYPES=[["APPT","Appointment","--s-aob"],["LEAVE","Leave","--s-leave"],["TAD","TAD / travel","--s-tad"],["TRNG","Training","--s-op"],["DUTY","Duty","--s-duty"],["DUE","Due-out","--warn"],["EVENT","Event","--brass"],["OTHER","Other","--muted"]];
+const ctype=k=>CAL_TYPES.find(x=>x[0]===k)||CAL_TYPES[7];
+let calM=null,calDay=null,calSec=null,calAdd=false,calFor=null,calEdit=null;const sigF=v=>fnv(JSON.stringify(v||[]));
+function calSecDefault(){return S.link&&S.link.mysec&&!S.board?S.link.mysec:"ALL"}
+function calEntries(from,to,secF){const out=[];const inR=d=>d>=from&&d<=to;const pool=S.roster.filter(m=>!secF||secF==="ALL"||m.sec===secF);const byNk={};S.roster.forEach(m=>byNk[fullK(m)]=m);
+  for(const m of pool){for(const e of m.cal||[]){const end=e.end&&e.end>e.d?e.end:e.d;if(end<from||e.d>to)continue;out.push({d:e.d,end,tm:e.tm||"",ty:e.ty,ti:e.ti,no:e.no||"",m,id:e.id,own:1})}
+    const sd=isoOf(m.start),ed=isoOf(m.end);if(["Leave","TAD","Operation","Appointment off Base"].includes(m.status)&&(sd||ed)){const a=sd||dkey(),b=ed||a;if(!(b<from||a>to))out.push({d:a,end:b,ty:m.status==="Leave"?"LEAVE":m.status==="TAD"?"TAD":"APPT",ti:SHORT[m.status]+(m.detail?" · "+m.detail:""),m,auto:1})}
+    if(ed&&inR(ed)&&m.status!=="On Hand")out.push({d:ed,ty:"OTHER",ti:"Returns ("+(SHORT[m.status]||m.status)+" ends)",m,auto:1});
+    for(const [k,lab] of [["edd","EDD"],["eas","EAS"]]){const x=isoOf(m[k]);if(x&&inR(x))out.push({d:x,ty:"OTHER",ti:lab,m,auto:1})}
+    for(const it of readyItems()){const r=((m.due||{})[it.n])||{};if(r.due&&inR(r.due))out.push({d:r.due,ty:"DUE",ti:it.n+" due",m,auto:1})}}
+  const ids=new Set(pool.map(m=>m.id));
+  for(const r of S.duty.rosters)for(const [k,id] of Object.entries(r.assign||{}))if(inR(k)&&ids.has(id))out.push({d:k,ty:"DUTY",ti:r.name,m:S.roster.find(x=>x.id===id),auto:1});
+  for(const ev of S.events||[]){const x=isoOf(ev.date)||(/^\d{4}-\d{2}-\d{2}$/.test(ev.date||"")?ev.date:"");if(x&&inR(x)&&(!secF||secF==="ALL"||ev.secs.includes(secF)))out.push({d:x,ty:"EVENT",ti:ev.name+(ev.type?" ("+ev.type+")":""),grp:(ev.secs||[]).join(", "),auto:1})}
+  if(!S.link)for(const [sec,c] of Object.entries(S.secCal||{})){if(secF&&secF!=="ALL"&&secF!==sec)continue;for(const e of c.e||[]){const m=byNk[e.nk];if(!m)continue;if(m.cal&&m.cal.some(x=>x.d===e.d&&x.ti===e.ti))continue;const end=e.end&&e.end>e.d?e.end:e.d;if(end<from||e.d>to)continue;out.push({d:e.d,end,tm:e.tm,ty:e.ty,ti:e.ti,no:e.no,m,from:sec})}}
+  return out.sort((a,b)=>a.d.localeCompare(b.d)||(a.tm||"99").localeCompare(b.tm||"99"))}
+function calOn(day,secF){return calEntries(day,day,secF||calSecDefault()).concat(calEntries("0000-00-00",day,secF||calSecDefault()).filter(e=>e.end&&e.d<day&&e.end>=day))}
+function calRow(e,showDate){const t=ctype(e.ty);const who=e.m?`<span data-pcard="${e.m.id}" style="cursor:pointer;text-decoration:underline;text-decoration-color:var(--line)">${esc(e.m.rank+" "+lastOf(e.m))}</span> · ${esc(e.m.sec)}`:esc(e.grp||"Unit");
+  const dd=parseD(e.d);return `<div class="rrow" style="--sc:var(${t[2]})"><div class="rtop"><div class="who"><b>${showDate?DOW[dd.getDay()]+" "+short(dd)+" · ":""}${e.tm?esc(e.tm)+" · ":""}${esc(e.ti)}</b><div class="ph">${who} · ${t[1]}${e.end&&e.end!==e.d?" · thru "+short(parseD(e.end)):""}${e.from?" · from "+esc(e.from)+" leader":""}${e.auto?" · auto":""}</div>${e.no?`<div class="ph">${esc(e.no)}</div>`:""}</div>
+    ${e.own?`<button class="chip" data-cdel="${e.m.id}:${e.id}" style="cursor:pointer">${armed==="cd"+e.id?"Delete?":"✕"}</button>`:""}</div></div>`}
+function calForm(pre){const D=new Date();const iso=calDay||dkey(D);const sec=calSec&&calSec!=="ALL"?calSec:null;const people=sorted(S.roster.filter(m=>!sec||m.sec===sec));
+  return `<div class="panel"><b>Add to calendar</b>
+    ${pre?`<div>For <b>${esc(pre.rank+" "+pre.name)}</b></div>`:`<label for="caWho">Who</label><select id="caWho" class="wsel"><option value="">Pick a person…</option>${(sec?[sec]:SECTIONS.map(s=>s[0])).map(k=>`<option value="SEC:${k}">Everyone in ${k}</option>`).join("")}${SECTIONS.map(s=>s[0]).concat("ATT").filter(k=>!sec||k===sec).map(k=>{const ms=people.filter(m=>m.sec===k);return ms.length?`<optgroup label="${k}">${ms.map(m=>`<option value="${m.id}"${calFor===m.id?" selected":""}>${esc(m.rank+" "+m.name)}</option>`).join("")}</optgroup>`:""}).join("")}</select>`}
+    <div class="row2"><div><label for="caD">Date</label><input type="date" id="caD" value="${esc(iso)}" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)"></div><div><label for="caT">Time (optional)</label><input type="time" id="caT" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)"></div></div>
+    <div class="row2"><div><label for="caTy">Type</label><select id="caTy" class="wsel">${CAL_TYPES.filter(x=>!["DUTY","DUE"].includes(x[0])).map(x=>`<option value="${x[0]}">${x[1]}</option>`).join("")}</select></div><div><label for="caE">Ends (optional)</label><input type="date" id="caE" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)"></div></div>
+    <label for="caTi">What</label><input type="text" id="caTi" maxlength="60" placeholder="Dental, BAS appt, range, leave…">
+    <label for="caNo">Note (optional)</label><input type="text" id="caNo" maxlength="80" placeholder="Where, who to see">
+    <button class="btn" id="caSave"${pre?` data-cafor="${pre.id}"`:""}>Add</button>${pre?"":`<button class="btn alt" id="caCancel">Cancel</button>`}</div>`}
+function icsFor(list,name){const z=d=>d.replace(/-/g,"");const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//EOP Numbers//EN","CALSCALE:GREGORIAN"];const now=new Date().toISOString().replace(/[-:]/g,"").slice(0,15)+"Z";
+  const esc2=s=>String(s||"").replace(/[\;,]/g,m=>"\\"+m).replace(/\n/g,"\\n");
+  list.forEach((e,i)=>{L.push("BEGIN:VEVENT","UID:eop-"+z(e.d)+"-"+i+"-"+Math.random().toString(36).slice(2,8)+"@eopnumbers","DTSTAMP:"+now);
+    if(e.tm){const [h,mi]=e.tm.split(":");L.push("DTSTART:"+z(e.d)+"T"+h+mi+"00","DURATION:PT1H")}else{const end=parseD(e.end&&e.end>e.d?e.end:e.d);end.setDate(end.getDate()+1);L.push("DTSTART;VALUE=DATE:"+z(e.d),"DTEND;VALUE=DATE:"+z(dkey(end)))}
+    L.push("SUMMARY:"+esc2(e.ti+(e.m&&!name?" - "+e.m.rank+" "+lastOf(e.m):"")));if(e.no)L.push("DESCRIPTION:"+esc2(e.no));L.push("END:VEVENT")});
+  L.push("END:VCALENDAR");return L.join("\r\n")}
+function shareFile(text,name,type){const b=new Blob([text],{type});const f=new File([b],name,{type});if(navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f],title:name}).catch(()=>{});return}
+  const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();toast("Saved "+name)}
+function renderCal(){let h=banner();if(calSec==null)calSec=calSecDefault();const now=new Date();if(!calM)calM=[now.getFullYear(),now.getMonth()];const [Y,Mo]=calM;
+  const first=new Date(Y,Mo,1),last=new Date(Y,Mo+1,0);const from=dkey(first),to=dkey(last);const all=calEntries(from,to,calSec);const multi=calEntries(dkey(new Date(Y,Mo-2,1)),to,calSec).filter(e=>e.end&&e.end>e.d);
+  const onDay=k=>all.filter(e=>e.d===k).concat(multi.filter(e=>e.d<k&&e.end>=k));const today=dkey();if(!calDay)calDay=today;
+  h+=`<h2 style="display:flex;justify-content:space-between;align-items:center">Calendar ${xlBtn("cal")}</h2>
+    <div class="evts">${["ALL"].concat(SECTIONS.map(s=>s[0]),["ATT"]).map(k=>`<button data-csec="${k}" aria-pressed="${calSec===k}">${k==="ALL"?"Everyone":k}</button>`).join("")}</div>
+    ${S.link&&calSec===S.link.mysec?`<p class="note">Your section. What you add here goes to ${esc(S.link.unit)}'s board calendar${S.link.ek?"":" once they send you a new link"}.</p>`:""}
+    <div class="panel" style="padding:10px"><div style="display:flex;justify-content:space-between;align-items:center"><button class="chip" data-cmo="-1" style="cursor:pointer">◂</button><b>${["January","February","March","April","May","June","July","August","September","October","November","December"][Mo]} ${Y}</b><button class="chip" data-cmo="1" style="cursor:pointer">▸</button></div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:6px;text-align:center">${["S","M","T","W","T","F","S"].map(d=>`<div class="note" style="font-weight:700">${d}</div>`).join("")}${"<div></div>".repeat(first.getDay())}
+    ${Array.from({length:last.getDate()},(_,i)=>{const k=dkey(new Date(Y,Mo,i+1));const es=onDay(k);const types=[...new Set(es.map(e=>e.ty))].slice(0,4);
+      return `<button data-cday="${k}" style="border:1px solid ${k===calDay?"var(--brass)":"var(--line)"};background:${k===today?"var(--surface-2)":"transparent"};border-radius:8px;padding:5px 0 4px;min-height:46px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer"><span style="font-weight:${k===today?800:600}">${i+1}</span><span style="display:flex;gap:2px">${types.map(t=>`<i style="width:6px;height:6px;border-radius:50%;background:var(${ctype(t)[2]});display:block"></i>`).join("")}</span>${es.length>4?`<span style="font-size:9px;color:var(--muted)">${es.length}</span>`:""}</button>`}).join("")}</div>
+    <div class="note" style="margin-top:6px">${CAL_TYPES.map(t=>`<span style="white-space:nowrap"><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(${t[2]})"></i> ${t[1]}</span>`).join(" &nbsp;")}</div></div>`;
+  const dd=parseD(calDay);const es=onDay(calDay).length?onDay(calDay):calOn(calDay,calSec);
+  h+=`<h2 style="display:flex;justify-content:space-between;align-items:center">${calDay===today?"Today · ":""}${DOW[dd.getDay()]} ${short(dd)} <button class="chip" id="caAddBtn" style="cursor:pointer">+ Add</button></h2>`;
+  if(calAdd)h+=calForm(null);
+  h+=es.length?`<div class="alist">${es.map(e=>calRow(e,false)).join("")}</div>`:`<p class="note">Nothing on this day.</p>`;
+  const nx=calEntries(today,dkey(new Date(Date.now()+14*86400000)),calSec).filter(e=>e.d>today);
+  if(nx.length)h+=`<h2>Next 14 days</h2><div class="alist">${nx.slice(0,60).map(e=>calRow(e,true)).join("")}</div>`;
+  h+=`<div class="row2" style="margin-top:12px"><button class="btn alt" id="caIcs">Add these to my phone calendar</button><span></span></div><p class="note">Leave, TAD, duty, due-outs, events, EDD and EAS show up by themselves (marked auto). Add appointments here or on each person's card.</p>`;
+  $("#main").innerHTML=h}
+
+/* ---------- MY LOG: daily accomplishments ---------- */
+const LOG_TAGS=["Mission","Training","Maintenance","Admin","Leadership","Self-improvement","Other"];let logR="week",logQ="",logTag="Mission",logEdit=null;
+function logStreak(){const days=new Set(S.log.map(x=>x.d));let n=0;const d=new Date();if(!days.has(dkey(d)))d.setDate(d.getDate()-1);while(days.has(dkey(d))){n++;d.setDate(d.getDate()-1)}return n}
+function logRange(){const t=today0();const from=new Date(t);if(logR==="week")from.setDate(from.getDate()-6);else if(logR==="month")from.setDate(from.getDate()-29);else if(logR==="90")from.setDate(from.getDate()-89);else return "0000";return dkey(from)}
+function logList(){const f=logRange();const q=logQ.trim().toLowerCase();return S.log.filter(x=>x.d>=f&&(!q||(x.txt+" "+x.tag).toLowerCase().includes(q))).sort((a,b)=>b.d.localeCompare(a.d)||b.t-a.t)}
+function logText(list){const by={};list.forEach(x=>(by[x.d]=by[x.d]||[]).push(x));return Object.keys(by).sort().map(d=>{const dd=parseD(d);return DOW[dd.getDay()]+" "+short(dd)+" "+String(dd.getFullYear()).slice(2)+"\n"+by[d].map(x=>"• "+x.txt+(x.tag?" ["+x.tag+"]":"")).join("\n")}).join("\n\n")}
+function renderLog(){let h=S.source==="sample"?"":banner();const today=dkey();const tday=S.log.filter(x=>x.d===today);const st=logStreak();const mo=new Set(S.log.filter(x=>x.d>=dkey(new Date(Date.now()-29*86400000))).map(x=>x.d)).size;
+  h+=`<h2 style="display:flex;justify-content:space-between;align-items:center">My log ${xlBtn("log")}</h2>
+    <div class="tiles"><div class="tile on"><div class="lbl">Streak</div><div class="num" style="font-size:40px">${st}${st?"🔥":""}</div></div><div class="tile"><div class="lbl">Days logged · 30 days</div><div class="num" style="font-size:40px">${mo}</div></div></div>
+    <div class="panel"><label for="lgTxt">What did you get done today?</label><textarea id="lgTxt" maxlength="500" style="min-height:80px" placeholder="Led PMCS on 3 dozers, found and fixed a hydraulic leak. Taught 4 Marines the 7-ton pre-op checklist."></textarea>
+    <div class="evts">${LOG_TAGS.map(t=>`<button data-lgtag="${t}" aria-pressed="${logTag===t}">${t}</button>`).join("")}</div>
+    <button class="btn" id="lgAdd">Add to today</button>
+    <p class="note">Write the result and the numbers (how many, how fast, what it saved). Those make the best bullets for fitreps, evals and awards. Your log stays on this phone${S.sync&&S.sync.on?" and in your encrypted backup":""}.</p></div>`;
+  if(tday.length)h+=`<h2>Today</h2><div class="alist">${tday.map(x=>logRow(x)).join("")}</div>`;
+  h+=`<h2>Look back</h2><div class="evts">${[["week","7 days"],["month","30 days"],["90","90 days"],["all","All"]].map(([k,l])=>`<button data-lgr="${k}" aria-pressed="${logR===k}">${l}</button>`).join("")}</div>
+    <input class="search" id="lgQ" type="search" placeholder="Search your log" value="${esc(logQ)}" style="margin-top:8px">`;
+  const L=logList().filter(x=>x.d!==today||logQ);const by={};L.forEach(x=>(by[x.d]=by[x.d]||[]).push(x));
+  h+=Object.keys(by).length?Object.keys(by).sort().reverse().map(d=>{const dd=parseD(d);return `<div class="mgrp"><h3><span>${DOW[dd.getDay()]} ${short(dd)} ${String(dd.getFullYear()).slice(2)}</span></h3>${by[d].map(x=>logRow(x)).join("")}</div>`}).join(""):`<p class="note">${S.log.length?"Nothing in this range.":"Your entries show up here."}</p>`;
+  const all=logList();if(all.length)h+=`<div class="row2" style="margin-top:12px"><button class="btn alt" id="lgCopy">Copy as bullets</button><button class="btn alt" id="lgShare">Share / send</button></div>`;
+  $("#main").innerHTML=h}
+function logRow(x){return logEdit===x.id?`<div class="rrow"><textarea id="lgEd" maxlength="500" style="min-height:60px">${esc(x.txt)}</textarea><div class="row2"><button class="btn" data-lgsave="${x.id}">Save</button><button class="btn warn" data-lgdel="${x.id}">${armed==="lg"+x.id?"Tap again to delete":"Delete"}</button></div></div>`
+  :`<div class="rrow" style="--sc:var(--s-onhand)"><div class="rtop"><div class="who" style="white-space:pre-wrap">${esc(x.txt)}<div class="ph">${esc(x.tag||"")}</div></div><button class="chip" data-lged="${x.id}" style="cursor:pointer">Edit</button></div></div>`}
 
 /* ---------- Excel export ---------- */
 const xd=s=>{const d=parseD(s);return d?dkey(d):(s||"")};
@@ -1285,6 +1372,8 @@ function xlSheets(kind){const sh={};const isoNow=dkey();
   if(kind==="all"||kind==="trends"){const ks=Object.keys(S.days).sort();sh.Trends=[["Date","Strength","On hand","Present","% on hand","% present"].concat(SECTIONS.flatMap(([k])=>[k+" on hand",k+" strength"]))].concat(ks.map(k=>{const d=S.days[k];return [k,d.str,d.oh,d.pr,d.str?Math.round(100*d.oh/d.str):0,d.str?Math.round(100*d.pr/d.str):0].concat(SECTIONS.flatMap(([s])=>{const x=(d.sec||{})[s];return x?[x[0],x[1]]:["",""]}))}))}
   if(kind==="all"||kind==="duty"){const rows=[["Roster","Date","Day","Rank","Name","Section","Phone"]];for(const r of S.duty.rosters)for(const k of Object.keys(r.assign||{}).filter(k=>k>=isoNow).sort()){const m=S.roster.find(x=>x.id===r.assign[k]);const d=parseD(k);rows.push([r.name,k,DOW[d.getDay()],m?m.rank:"",m?m.name:"(removed)",m?m.sec:"",m&&m.phone?fmtPh(m.phone):""])}sh.Duty=rows}
   if(kind==="all"||kind==="events"){const rows=[["Event","Date","Type","Rank","Name","Section","Attended"]];for(const ev of S.events||[])for(const m of sorted(evReq(ev)))rows.push([ev.name,ev.date||"",ev.type||"",m.rank,m.name,m.sec,evDone(ev,m)?"Yes":"No"]);sh.Attendance=rows}
+  if(kind==="all"||kind==="cal"){const from=dkey(new Date(Date.now()-30*86400000)),to=dkey(new Date(Date.now()+180*86400000));sh.Calendar=[["Date","Ends","Time","Type","What","Rank","Name","Section","Note","Source"]].concat(calEntries(from,to,kind==="cal"?calSec:"ALL").map(e=>[e.d,e.end&&e.end!==e.d?e.end:"",e.tm||"",ctype(e.ty)[1],e.ti,e.m?e.m.rank:"",e.m?e.m.name:(e.grp||""),e.m?e.m.sec:"",e.no||"",e.auto?"auto":e.from?e.from+" leader":"entered"]))}
+  if(kind==="log")sh["My log"]=[["Date","Day","Tag","Accomplishment"]].concat(logList().slice().reverse().map(x=>{const d=parseD(x.d);return [x.d,DOW[d.getDay()],x.tag||"",x.txt]}));
   if(kind==="all"||kind==="feed")for(const f of S.feeds.filter(f=>f.lk)){const ps=(f.posts||[]).slice().reverse();if(!ps.length)continue;
     const rows=[["Rank","Name","Section"].concat(ps.map(p=>dkey(new Date(p.t))+" "+p.txt.slice(0,40)))];for(const m of sorted(S.roster)){const row=[m.rank,m.name,m.sec];for(const p of ps){if(!fdPool(p).some(x=>x.id===m.id)){row.push("n/a");continue}const a=((f.acks||{})[String(p.id)]||{})[m.id];row.push(a?(a.c===2?"Problem: "+a.note:"Got it"):"Not confirmed")}rows.push(row)}
     sh[("Feed "+f.unit).slice(0,31)]=rows}
@@ -1482,6 +1571,8 @@ function renderPerson(){const m=S.roster.find(x=>x.id===pid);if(!m){view=pBack||
   if(typeof dueRows==="function"){const rows=dueRows(m);h+=pSec(`Due-outs${rows.some(r=>r.st==="over")?` <span style="color:var(--warn)">· ${rows.filter(r=>r.st==="over").length} overdue</span>`:""}`,rows.length?rows.map(r=>`<div class="rtop" style="gap:8px"><div class="who"><b style="color:var(${r.col})">●</b> ${esc(r.item)}<div class="ph">${r.txt}</div></div><button class="chip" data-pdone="${esc(r.item)}" style="cursor:pointer">Done today</button><input type="date" data-pdue="${esc(r.item)}" value="${esc(r.iso)}" aria-label="${esc(r.item)} due date" style="width:132px;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)"></div>`).join(""):`<p class="note">No readiness items set up. See READY on the board.</p>`)}
   // duty
   if(typeof nextDuties==="function"){const nd=nextDuties(m);h+=pSec("Duty",nd.length?nd.map(x=>`<div>${esc(x.roster)}: <b>${esc(x.day)}</b></div>`).join(""):`<p class="note">No upcoming duty.</p>`)}
+  // calendar
+  {const up=calEntries(dkey(),dkey(new Date(Date.now()+90*86400000)),"ALL").filter(e=>e.m&&e.m.id===m.id);h+=`<h2 style="display:flex;justify-content:space-between;align-items:center">Calendar <button class="chip" id="pcIcs" style="cursor:pointer">Add to phone calendar</button></h2>`+(up.length?`<div class="alist">${up.slice(0,12).map(e=>calRow(e,true)).join("")}</div>`:`<p class="note">Nothing in the next 90 days.</p>`)+calForm(m)}
   // gear
   if(m.wpn&&m.wpn.t)h+=pSec("Gear",`<div><b>${esc(m.wpn.t)}</b>${m.wpn.rack?" · rack "+esc(m.wpn.rack):""}${m.wpn.s4?" · serial …"+esc(m.wpn.s4):""}</div>`);
   // accountability
@@ -1686,7 +1777,7 @@ function renderFeed(){let h=S.source==="sample"?"":banner();const f=fdCur();
           ${bcBatches(ns,f.unit+" FEED: tap to join and see the word in EOP Numbers: "+fdLink(f)).map((x,i,arr)=>`<a class="btn alt" href="${esc(x.href)}">Text join link to them${arr.length>1?" ("+(i+1)+")":""} (${x.n})</a>`).join("")}</details>`})()}
       <details class="panel"><summary><b>Invite people</b> · send the join link once</summary>${bcBatches(S.roster,f.unit+" FEED: tap to join and see the word in EOP Numbers: "+fdLink(f)).map((x,i,arr)=>`<a class="btn" href="${esc(x.href)}">Text join link${arr.length>1?" · group "+(i+1)+" of "+arr.length:""} (${x.n})</a>`).join("")||`<p class="note">No phone numbers loaded (RECALL → Load numbers). You can copy the link instead.</p>`}
       <button class="btn alt" id="fdCopyLink">Copy join link</button><p class="note">Anyone with this link can read the feed, so send it only to your people.</p></details>`}
-  else h+=`<p class="note">You: <b>${esc(f.me||"(name not set)")}</b>${f.sec?" · "+esc(f.sec):""} · <button class="chip" id="fdName" style="cursor:pointer">Change</button></p>${!f.sec&&(f.secsAll||f.secsLink||[]).length?`<p class="note" style="color:var(--warn)">Pick your section (Change) so you only see posts meant for you.</p>`:""}${fdPushHTML(f)}`;
+  else h+=`<button class="btn alt" data-go="log" style="width:100%;margin:4px 0">📝 My log${S.log.some(x=>x.d===dkey())?" · logged today":" · log today's accomplishments"}</button><p class="note">You: <b>${esc(f.me||"(name not set)")}</b>${f.sec?" · "+esc(f.sec):""} · <button class="chip" id="fdName" style="cursor:pointer">Change</button></p>${!f.sec&&(f.secsAll||f.secsLink||[]).length?`<p class="note" style="color:var(--warn)">Pick your section (Change) so you only see posts meant for you.</p>`:""}${fdPushHTML(f)}`;
   const all=fdVisible(f);const pins=(f.pins||[]).filter(id=>all.some(p=>p.id===id));
   if(all.length>3)h+=`<input class="search" id="fdQ" type="search" placeholder="Search the feed" value="${esc(fdQ)}" style="margin-top:10px">`;
   const qq=fdQ.trim().toLowerCase();const posts=(qq?all.filter(p=>p.txt.toLowerCase().includes(qq)):all).slice().sort((a,b)=>(pins.includes(b.id)?1:0)-(pins.includes(a.id)?1:0)||b.id-a.id);
@@ -2038,7 +2129,7 @@ function animateNums(){document.querySelectorAll("[data-n]").forEach(el=>{const 
 document.addEventListener("click",e=>{
   if(e.target.closest("#bMode,[data-mode-open]")){e.stopImmediatePropagation();openModeSheet();return}
   const mo=e.target.closest("[data-mopt]");if(mo){e.stopImmediatePropagation();const k=mo.dataset.mopt;const wasFirst=sheetCtx&&sheetCtx.first;closeSheet();if(!S.mode){S.mode=k==="military"?"military":S.mode;save()}
-    if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty","p"].includes(view))view="board";render();window.scrollTo(0,0);if(!wasFirst)toast(MODES[k].name+" version on. Same people, new labels.")}if(wasFirst&&!S.onb)setTimeout(()=>showOnb(0),300);return}
+    if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty","p","cal","log"].includes(view))view="board";render();window.scrollTo(0,0);if(!wasFirst)toast(MODES[k].name+" version on. Same people, new labels.")}if(wasFirst&&!S.onb)setTimeout(()=>showOnb(0),300);return}
   const msh=e.target.closest("[data-mshare]");if(msh){e.stopImmediatePropagation();shareMode(msh.dataset.mshare);return}
   const pk=e.target.closest("[data-pick]");if(pk){e.stopImmediatePropagation();openSheet(pk.dataset.pick,pk.dataset.pid);return}
   if(e.target.closest("[data-sclose]")){e.stopImmediatePropagation();closeSheet();return}
@@ -2051,7 +2142,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetCtx)closeSheet
 document.addEventListener("dragleave",e=>{const d=$("#rcDrop");if(d&&!e.relatedTarget)d.classList.remove("over")});
 document.addEventListener("drop",e=>{if(view!=="recall"&&view!=="data")return;const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;e.preventDefault();const d=$("#rcDrop");if(d)d.classList.remove("over");rcLoadFile(f,view==="recall"?"#rcOutR":"#rcOut")});
 function render(){renderTabs();
-  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="rollup")renderRollup();else if(view==="live")renderLive();else if(view==="send")renderSend();else if(view==="feed")renderFeed();else if(view==="trends")renderTrends();else if(view==="ready")renderReady();else if(view==="duty")renderDuty();else if(view==="p")renderPerson();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
+  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="rollup")renderRollup();else if(view==="live")renderLive();else if(view==="send")renderSend();else if(view==="feed")renderFeed();else if(view==="trends")renderTrends();else if(view==="ready")renderReady();else if(view==="duty")renderDuty();else if(view==="p")renderPerson();else if(view==="cal")renderCal();else if(view==="log")renderLog();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
 
 /* ---------- CSV import ---------- */
 function parseCSV(text){const rows=[];let row=[],f="",q=false;
@@ -2153,6 +2244,26 @@ document.addEventListener("click",e=>{
   if(e.target.id==="syApply"&&window.__syx){applyRestore(window.__syx.code,window.__syx.x);return}
   if(e.target.id==="syJoin"&&sheetCtx&&sheetCtx.kind==="sync"){const code=sheetCtx.code;const o=$("#syJOut");o.textContent="Unlocking…";syncRestore(code).then(x=>applyRestore(code,x)).catch(err=>{o.textContent=err.message});return}
   const xl=e.target.closest("[data-xl]");if(xl){exportXL(xl.dataset.xl);return}
+  const csec=e.target.closest("[data-csec]");if(csec){calSec=csec.dataset.csec;renderCal();return}
+  const cmo=e.target.closest("[data-cmo]");if(cmo){const [Y,M]=calM;const d=new Date(Y,M+(+cmo.dataset.cmo),1);calM=[d.getFullYear(),d.getMonth()];renderCal();return}
+  const cday=e.target.closest("[data-cday]");if(cday){calDay=cday.dataset.cday;calAdd=false;const y=window.scrollY;renderCal();window.scrollTo(0,y);return}
+  if(e.target.id==="caAddBtn"){calAdd=!calAdd;const y=window.scrollY;renderCal();window.scrollTo(0,y);return}
+  if(e.target.id==="caCancel"){calAdd=false;renderCal();return}
+  if(e.target.id==="caSave"){const who=e.target.dataset.cafor||($("#caWho")||{}).value||"";const d=$("#caD").value,ti=($("#caTi").value||"").trim().slice(0,60);if(!who){toast("Pick who.");return}if(!d){toast("Pick a date.");return}if(!ti){toast("Say what it is.");return}
+    const end=$("#caE").value;const e2={d,tm:$("#caT").value||"",end:end&&end>d?end:"",ty:$("#caTy").value,ti,no:($("#caNo").value||"").trim().slice(0,80)};
+    const ms=who.startsWith("SEC:")?S.roster.filter(m=>m.sec===who.slice(4)):S.roster.filter(m=>m.id===who);ms.forEach(m=>{m.cal=(m.cal||[]).concat(Object.assign({id:"c"+Date.now().toString(36)+rndId(3)},e2)).filter(x=>(x.end||x.d)>=dkey(new Date(Date.now()-120*86400000)))});
+    save();calAdd=false;calDay=d;toast("Added for "+(ms.length>1?ms.length+" people":ms[0].rank+" "+lastOf(ms[0])));const y=window.scrollY;render();window.scrollTo(0,y);return}
+  const cdl=e.target.closest("[data-cdel]");if(cdl){const [mid,cid]=cdl.dataset.cdel.split(":");if(armed==="cd"+cid){const m=S.roster.find(x=>x.id===mid);if(m)m.cal=(m.cal||[]).filter(x=>x.id!==cid);armed=null;save()}else armed="cd"+cid;const y=window.scrollY;render();window.scrollTo(0,y);return}
+  if(e.target.id==="caIcs"){const from=dkey(),to=dkey(new Date(Date.now()+180*86400000));const list=calEntries(from,to,calSec);if(!list.length){toast("Nothing coming up.");return}shareFile(icsFor(list,""),"EOP_Calendar_"+(calSec==="ALL"?"All":calSec)+".ics","text/calendar");return}
+  if(e.target.id==="pcIcs"){const m=S.roster.find(x=>x.id===pid);const list=calEntries(dkey(),dkey(new Date(Date.now()+365*86400000)),"ALL").filter(e=>e.m&&e.m.id===m.id);if(!list.length){toast("Nothing coming up.");return}shareFile(icsFor(list,m.name),"Calendar_"+lastOf(m)+".ics","text/calendar");return}
+  const lgt=e.target.closest("[data-lgtag]");if(lgt){logTag=lgt.dataset.lgtag;document.querySelectorAll("[data-lgtag]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.lgtag===logTag));return}
+  if(e.target.id==="lgAdd"){const t=($("#lgTxt").value||"").trim();if(!t){toast("Write what you got done.");return}S.log.push({id:"l"+Date.now().toString(36),d:dkey(),t:Date.now(),txt:t.slice(0,500),tag:logTag});save();renderLog();toast(logStreak()>1?"Logged · 🔥 "+logStreak()+"-day streak":"Logged");return}
+  const lgr=e.target.closest("[data-lgr]");if(lgr){logR=lgr.dataset.lgr;renderLog();return}
+  const lge=e.target.closest("[data-lged]");if(lge){logEdit=lge.dataset.lged;const y=window.scrollY;renderLog();window.scrollTo(0,y);return}
+  const lgs=e.target.closest("[data-lgsave]");if(lgs){const x=S.log.find(z=>z.id===lgs.dataset.lgsave);const t=($("#lgEd").value||"").trim();if(x&&t){x.txt=t.slice(0,500);save()}logEdit=null;const y=window.scrollY;renderLog();window.scrollTo(0,y);return}
+  const lgd=e.target.closest("[data-lgdel]");if(lgd){const id=lgd.dataset.lgdel;if(armed==="lg"+id){S.log=S.log.filter(z=>z.id!==id);armed=null;logEdit=null;save()}else armed="lg"+id;const y=window.scrollY;renderLog();window.scrollTo(0,y);return}
+  if(e.target.id==="lgCopy"){const t=logText(logList());try{navigator.clipboard.writeText(t).then(()=>toast("Copied as bullets"),()=>toast("Copy blocked here."))}catch(err){toast("Copy blocked here.")}return}
+  if(e.target.id==="lgShare"){const t=logText(logList());if(navigator.share)navigator.share({title:"My log",text:t}).catch(()=>{});else shareFile(t,"My_log.txt","text/plain");return}
   if(e.target.id==="fdCreate"){e.target.disabled=true;e.target.textContent="Creating…";fdCreate().then(()=>{fdNew=false;renderFeed();toast("Feed created. Invite your people.")}).catch(err=>{e.target.disabled=false;e.target.textContent="Start a feed";const o=$("#fdOut");if(o)o.textContent="Couldn't create: "+(err.message||err)});return}
   if(e.target.id==="fdPushOn"){const f=fdCur();e.target.disabled=true;e.target.textContent="Asking…";pushSub(true).then(sub=>{if(!sub){toast("Alerts not allowed");renderFeed();return}S.pushOn=true;save();fdPushAttach(f).then(()=>{renderFeed();toast(f.push?"Alerts on":"Couldn't connect alerts. Try again.")})}).catch(()=>{toast("Couldn't turn on alerts here.");renderFeed()});return}
   const fto=e.target.closest("[data-fdto]");if(fto){fdDraft.txt=($("#fdTxt")||{}).value||fdDraft.txt;fdDraft.to=fto.dataset.fdto;if(fdDraft.to==="secs"&&!fdDraft.secs.length)fdDraft.secs=SECTIONS.map(x=>x[0]);const y=window.scrollY;renderFeed();window.scrollTo(0,y);return}
@@ -2194,7 +2305,7 @@ document.addEventListener("click",e=>{
   if(e.target.id==="lvOff"){if(armed==="lvoff"){const B=S.board;SB.rpc("delete_board",{p_board:B.id,p_read_key:B.rk}).catch(()=>{});S.board=null;armed=null;save();toast("Live updates off");renderLive()}else{armed="lvoff";renderLive()}return}
   const lc=e.target.closest("[data-lvcopy]");if(lc){const u=boardLink(lc.dataset.lvcopy);try{navigator.clipboard.writeText(u).then(()=>toast(lc.dataset.lvcopy+" link copied"),()=>toast(u))}catch(err){toast(u)}return}
   if(e.target.id==="jYes"&&sheetCtx&&sheetCtx.kind==="join"){const c=sheetCtx;const me=($("#jMe").value||"").toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim();if(!me){toast("Enter your rank and last name.");return}
-    S.myName=me;S.link={board:c.bid,wk:c.wk,sec:c.sec,unit:c.unit||"OIC",mysec:$("#jSec").value,me,sig:"",sent:0,err:""};save();closeSheet();view="live";render();linkPush(true);toast("Linked. Sending "+S.link.mysec+" now.");return}
+    S.myName=me;S.link={board:c.bid,wk:c.wk,ek:c.ek||"",sec:c.sec,unit:c.unit||"OIC",mysec:$("#jSec").value,me,sig:"",sent:0,err:""};save();closeSheet();view="live";render();linkPush(true);toast("Linked. Sending "+S.link.mysec+" now.");return}
   if(e.target.id==="lkNow"){linkPush(true);toast("Sending…");return}
   if(e.target.id==="lkOff"){if(armed==="lkoff"){S.link=null;armed=null;save();toast("Unlinked");renderLive()}else{armed="lkoff";renderLive()}return}
   if(e.target.id==="ciGo"){const r=applyCheckins($("#ciIn").value);const y=window.scrollY;renderRecall();window.scrollTo(0,y);const o=$("#ciOut");if(o)o.textContent=r;return}
@@ -2329,6 +2440,7 @@ document.addEventListener("input",e=>{
   if(e.target.id==="wWhen"){W.when=e.target.value;refreshW();return}
   if(e.target.id==="ptEvt"||e.target.id==="ptWhen"){S.pt[e.target.id==="ptEvt"?"event":"when"]=e.target.value;save();const a=$("#ptSms");if(a)a.href=smsHref(ptText());document.querySelectorAll("[data-evt]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.evt===S.pt.event));return}
   if(e.target.id==="fdTxt"){fdDraft.txt=e.target.value;return}
+  if(e.target.id==="lgQ"){logQ=e.target.value;const pos=e.target.selectionStart;renderLog();const q=$("#lgQ");if(q){q.focus();q.setSelectionRange(pos,pos)}return}
   if(e.target.id==="fdQ"){fdQ=e.target.value;const pos=e.target.selectionStart;renderFeed();const q=$("#fdQ");if(q){q.focus();q.setSelectionRange(pos,pos)}return}
   if(e.target.id==="bcMsg"){bcDraft.msg=e.target.value;const l=$("#bcLen");if(l)l.textContent=e.target.value.length+"/300";return}
   if(e.target.id==="unitNm"){S.unit=cleanName(e.target.value);save();const t=reportText();const m=$("#msg");if(m)m.value=t;const a=$("#sms");if(a)a.href=smsHref(t);return}
