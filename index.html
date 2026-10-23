@@ -331,6 +331,7 @@ details summary{cursor:pointer;font-weight:700;min-height:32px}
 .onb .btn{width:100%;min-height:48px;font-size:16px}.onb-back{background:none;border:0;color:var(--muted);font:inherit;font-weight:700;min-height:44px}
 body.onb-open .top,body.onb-open #main,body.onb-open #helpBtn,body.locked #helpBtn{visibility:hidden}
 button[data-w6],button[data-tup],button[data-tdn]{min-height:28px;min-width:32px}
+body.member-mode nav,body.member-mode #b6W,body.member-mode #bPT,body.member-mode #bText{display:none!important}
 .acts button{position:relative}.fdb{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:99px;background:var(--warn);color:#fff;font-size:10.5px;line-height:17px;font-weight:800;text-align:center}
 @media (max-width:430px){.brand .acts{gap:3px}.brand .acts button{padding:6px 7px;font-size:12px;letter-spacing:0}.brand h1{font-size:17px}}
 .fdpost{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--sc,var(--line));border-radius:16px;padding:12px 14px;margin-top:10px;display:flex;flex-direction:column;gap:8px}
@@ -346,6 +347,7 @@ button[data-w6],button[data-tup],button[data-tdn]{min-height:28px;min-width:32px
   <div class="brand">
     <div><h1><button id="bMode" class="titlebtn" aria-haspopup="dialog" title="Change app version">EOP Numbers<span class="caret">▾</span></button></h1><div class="dtg" id="dtg"></div></div>
     <div class="acts">
+      <button id="bToday" aria-pressed="false" hidden>TODAY</button>
       <button id="bFeed" aria-pressed="false">FEED<span id="fdBadge" class="fdb" hidden></span></button>
       <button id="b6W" aria-pressed="false">6W</button>
       <button id="bPT" aria-pressed="false">PT</button>
@@ -520,7 +522,7 @@ const SVAR={"On Hand":"--s-onhand","Appointment on Base":"--s-aob","Appointment 
 const PRESENT=["On Hand","Appointment on Base","Company Duties"];
 const SECTIONS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
 const DEF_SECS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
-const RESERVED=["BOARD","ATT","PT","W6","TEXT","DATA","MUSTER","ALERTS","RECALL","EVENTS","ARMORY","ROLLUP","LIVE","SEND","FEED","TRENDS","READY","DUTY","P","CAL","LOG","ME","SYS"];
+const RESERVED=["BOARD","ATT","PT","W6","TEXT","DATA","MUSTER","ALERTS","RECALL","EVENTS","ARMORY","ROLLUP","LIVE","SEND","FEED","TRENDS","READY","DUTY","P","CAL","LOG","ME","SYS","TODAY"];
 const MIL_SECS=DEF_SECS.map(s=>s.slice());
 let secDraft=null;
 /* ---------- versions: one app, five vocabularies ---------- */
@@ -570,7 +572,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="2.5.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="2.6.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -717,7 +719,7 @@ function save(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.
 
 let view="board", armed=null, query="";
 const h0=(location.hash||"").slice(1).toLowerCase();
-if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty","cal","log","me","sys"].includes(h0)) view=h0;
+if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty","cal","log","me","sys","today"].includes(h0)) view=h0;
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -749,13 +751,13 @@ function renderTabs(){
   const {c,T}=counts();
   const items=[["board","BOARD",T["On Hand"]+"/"+T.total]].concat(SECTIONS.map(([k])=>[k.toLowerCase(),k,c[k]["On Hand"]+"/"+c[k].total])).concat([["att","ATT","+"+c.ATT.total]]);
   $("#tabs").innerHTML=items.map(([id,lbl,sub])=>`<button role="tab" data-v="${id}" aria-selected="${view===id}">${lbl}<small>${sub}</small></button>`).join("");
-  $("#b6W").setAttribute("aria-pressed",view==="w6");$("#bFeed").setAttribute("aria-pressed",view==="feed");{const n=fdUnread();const fb=$("#fdBadge");if(fb){fb.hidden=!n;fb.textContent=n>9?"9+":n}}$("#bPT").setAttribute("aria-pressed",view==="pt");$("#bText").setAttribute("aria-pressed",view==="text");$("#bData").setAttribute("aria-pressed",view==="data");
+  {const mm=memberMode();document.body.classList.toggle("member-mode",mm);const bt=$("#bToday");if(bt){bt.hidden=!(mm||S.me||S.feeds.some(f=>!f.lk));bt.setAttribute("aria-pressed",view==="today")}}$("#b6W").setAttribute("aria-pressed",view==="w6");$("#bFeed").setAttribute("aria-pressed",view==="feed");{const n=fdUnread();const fb=$("#fdBadge");if(fb){fb.hidden=!n;fb.textContent=n>9?"9+":n}}$("#bPT").setAttribute("aria-pressed",view==="pt");$("#bText").setAttribute("aria-pressed",view==="text");$("#bData").setAttribute("aria-pressed",view==="data");
   $("#dtg").textContent="AS OF "+dtg();
   {const tp=document.querySelector(".top");if(tp)document.documentElement.style.setProperty("--hdr",tp.offsetHeight+"px")}
 }
 function banner(){if(S.role==="view")return `<div class="banner"><span><b>View-only phone.</b> You see the shared board; changes here aren't saved.</span></div>`+banner0();return banner0()}
 function banner0(){
-  if(S.source==="sample") return `<div class="banner"><span>Showing <b>sample Marines</b>. Load your MOL detail list to start.</span><button data-go="data">Load roster</button></div>`;
+  if(S.source==="sample"&&!memberMode()) return `<div class="banner"><span>Showing <b>sample Marines</b>. Load your MOL detail list to start.</span><button data-go="data">Load roster</button></div>`;
   if(!storageOK) return `<div class="banner"><span>This browser isn't saving changes. Export a backup from DATA before closing.</span></div>`;
   return "";
 }
@@ -1289,6 +1291,52 @@ function joinPrompt(q){const bid=(q.get("join")||"").replace(/[^a-z0-9]/g,"").sl
     <button class="btn" id="jYes">Link and send now</button><button class="btn alt" data-sclose="1">Not now</button></div>`;
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));try{history.replaceState(null,"",location.pathname)}catch(e){}}
 
+/* ---------- TODAY: the member's daily home screen ---------- */
+let tdLast=0;
+function memberMode(){return !S.leaderMode&&S.source==="sample"&&!S.board&&!S.link&&!S.feeds.some(f=>f.lk)&&(!!S.me||S.feeds.some(f=>!f.lk))}
+function tdCover(e,k){return e.d<=k&&(e.end||e.d)>=k}
+function renderToday(){const D=S.me&&S.me.d;const mf=S.feeds.filter(f=>!f.lk);
+  if(!D&&!mf.length){$("#main").innerHTML=`<h2>Today</h2><div class="panel"><p class="note">Your daily screen fills in once your leader sends you a FEED link or your private My page link. Open the link on this phone.</p></div>`;return}
+  if(Date.now()-tdLast>120000){tdLast=Date.now();if(mf.length)setTimeout(()=>fdPollAll(false),50);if(S.me)setTimeout(()=>mpFetch(),80)}
+  const now=new Date(),hr=now.getHours(),k=dkey(),t2=dkey(new Date(Date.now()+86400000));const dd=parseD(k),dt=parseD(t2);
+  const who=D?D.rank+" "+(D.name.split(",")[0]||""):(mf[0].me||"");
+  let h=`<div style="margin-top:16px"><div class="note" style="font-weight:700;letter-spacing:.04em">${DOW[dd.getDay()]} ${short(dd)} ${dd.getFullYear()}</div><h2 style="margin:2px 0 0;font-size:26px">Good ${hr<12?"morning":hr<17?"afternoon":"evening"}${who?", "+esc(who):""}</h2></div>`;
+  if(D)h+=`<div class="panel" style="border-left:5px solid var(${SVAR[D.status]||"--line"});padding:10px 14px"><div><b style="font-size:17px">${esc(D.statusShort)}</b>${D.duty!=="Full Duty"?` · <span style="color:var(--warn);font-weight:700">${esc(D.duty)}</span>`:""}${D.status!=="On Hand"&&D.end?` · back ${short(parseD(D.end))}`:""}</div></div>`;
+  // the word
+  const word=mf.flatMap(f=>fdVisible(f).filter(p=>!(f.mine||{})[p.id]&&Date.now()-p.t<7*86400000).map(p=>({f,p}))).sort((a,b)=>b.p.t-a.p.t);
+  const pods=mf.flatMap(f=>fdVisible(f).filter(p=>p.pod).map(p=>({f,p})));const podT=pods.find(x=>x.p.pod.d===k)||(D&&D.pod&&D.pod.d===k?{p:{txt:D.pod.txt}}:null);const podN=pods.find(x=>x.p.pod.d===t2)||(D&&D.pod&&D.pod.d===t2?{p:{txt:D.pod.txt}}:null);
+  const over=D?D.due.filter(x=>x.st==="over"):[];const soon=D?D.due.filter(x=>x.st==="soon"):[];
+  const others=word.filter(x=>!x.p.pod);
+  const att=[];if(others.length)att.push(`<b>${others.length}</b> new word to confirm`);if(over.length)att.push(`<b style="color:var(--warn)">${over.length}</b> overdue`);
+  const duty=D?D.duties.filter(x=>x.d>=k):[];const dutyT=duty.find(x=>x.d===k);
+  const calT=D?D.cal.filter(e=>tdCover(e,k)&&e.ty!=="DUTY"&&e.ty!=="DUE"):[];const calN=D?D.cal.filter(e=>tdCover(e,t2)&&e.d===t2&&e.ty!=="DUTY"&&e.ty!=="DUE"):[];
+  if(!att.length&&!dutyT&&!calT.length)h+=`<div class="panel" style="text-align:center;border-color:var(--s-onhand)"><b style="color:var(--s-onhand);font-size:17px">✓ You're caught up</b><div class="note">Nothing new needs you right now.</div></div>`;
+  else if(att.length)h+=`<div class="panel" style="border-color:var(--brass)"><div><b>Needs you:</b> ${att.join(" · ")}</div></div>`;
+  const podBox=(x,lab)=>{const lines=x.p.txt.split("\n");const unconf=x.f&&!(x.f.mine||{})[x.p.id];return `<div class="panel" style="border-color:var(--brass)"><b style="color:var(--brass)">📋 ${lab}</b><div style="white-space:pre-wrap;font-weight:600;line-height:1.45">${esc(lines.slice(1).join("\n").trim())}</div>${unconf?`<div class="fdacts"><button class="go" data-tdack="${x.f.id}|${x.p.id}">✓ Got it</button><button data-go="feed">Open FEED</button></div>`:x.f?`<div class="note" style="color:var(--s-onhand);font-weight:700">✓ Confirmed</div>`:""}</div>`};
+  if(podT)h+=podBox(podT,"Plan of the Day");
+  // today's schedule
+  const sched=[];if(dutyT)sched.push(`<div class="rrow" style="--sc:var(--s-duty)"><div class="who"><b>⚑ You have duty today</b><div class="ph">${esc(dutyT.r)}</div></div></div>`);
+  calT.sort((a,b)=>(a.tm||"99").localeCompare(b.tm||"99")).forEach(e=>{const t=ctype(e.ty);sched.push(`<div class="rrow" style="--sc:var(${t[2]})"><div class="who"><b>${e.tm?esc(e.tm)+" · ":""}${esc(e.ti)}</b><div class="ph">${t[1]}${e.end&&e.end!==e.d?" · thru "+short(parseD(e.end)):""}${e.no?" · "+esc(e.no):""}</div></div></div>`)});
+  if(sched.length)h+=`<h2>Today</h2><div class="alist">${sched.join("")}</div>`;
+  // the word
+  if(others.length)h+=`<h2>New word</h2><div class="alist">${others.slice(0,4).map(x=>`<div class="fdpost" style="--sc:var(${x.p.urg?"--warn":"--line"})"><div class="mt"><span>${x.p.urg?`<b style="color:var(--warn)">URGENT</b> · `:""}${ago(x.p.t)}</span></div><div class="tx">${esc(x.p.txt.length>220?x.p.txt.slice(0,220)+"…":x.p.txt)}</div><div class="fdacts"><button class="go" data-tdack="${x.f.id}|${x.p.id}">✓ Got it</button><button data-go="feed">Open</button></div></div>`).join("")}${others.length>4?`<button class="btn alt" data-go="feed">${others.length-4} more in FEED</button>`:""}</div>`;
+  // due
+  if(over.length||soon.length)h+=`<h2>Due soon</h2><div class="alist">${over.concat(soon).slice(0,5).map(x=>`<div class="rrow" style="--sc:var(${x.st==="over"?"--warn":"--s-duty"})"><div class="who"><b>${esc(x.n)}</b><div class="ph">${esc(x.txt)}</div></div></div>`).join("")}</div>`;
+  // tomorrow
+  const tm=[];if(duty.find(x=>x.d===t2))tm.push("⚑ Duty: "+esc(duty.find(x=>x.d===t2).r));calN.forEach(e=>tm.push((e.tm?esc(e.tm)+" · ":"")+esc(e.ti)));
+  if(podN&&podN!==podT)h+=podBox(podN,"Tomorrow · "+DOW[dt.getDay()]+" "+short(dt));
+  else if(tm.length)h+=`<h2>Tomorrow · ${DOW[dt.getDay()]} ${short(dt)}</h2><div class="panel">${tm.map(x=>`<div>${x}</div>`).join("")}</div>`;
+  if(!dutyT&&duty[0]&&duty[0].d!==t2){const n=daysTo(duty[0].d);h+=`<p class="note" style="margin-top:10px">Next duty: <b>${esc(duty[0].r)}</b> ${DOW[parseD(duty[0].d).getDay()]} ${short(parseD(duty[0].d))} (${n} day${n===1?"":"s"})</p>`}
+  // requests
+  const rq=D?(D.reqs||[]).slice(0,3):[];if(rq.length)h+=`<h2>My requests</h2><div class="alist">${rq.map(r=>`<div class="rrow" style="--sc:var(${r.st==="approved"?"--s-onhand":r.st==="denied"?"--warn":"--brass"})"><div class="who"><b>${esc(r.ty)}</b> · ${esc(reqDates(r))}<div class="ph">${r.st==="approved"?"✅ Approved":r.st==="denied"?"❌ Denied":"⏳ Waiting"}${r.dnote?" · "+esc(r.dnote):""}</div></div></div>`).join("")}</div>`;
+  // log
+  const lt=S.log.filter(x=>x.d===k);const st=logStreak();
+  h+=`<h2>📝 My log ${st>1?`<span class="note" style="font-weight:700">🔥 ${st}-day streak</span>`:""}</h2><div class="panel">${lt.length?lt.map(x=>`<div>• ${esc(x.txt)}</div>`).join(""):`<div class="note">What did you get done today?</div>`}
+    <div class="addph"><input type="text" id="tdLog" maxlength="500" placeholder="${lt.length?"Add another…":"Led PMCS on 3 dozers…"}"><button id="tdLogAdd">Add</button></div></div>`;
+  h+=`<div class="row2" style="margin-top:12px">${mf.length?`<button class="btn alt" data-go="feed">FEED</button>`:"<span></span>"}${S.me?`<button class="btn alt" data-go="me">My page</button>`:`<button class="btn alt" data-go="log">My log</button>`}</div>
+    ${memberMode()?`<p class="note" style="text-align:center;margin-top:14px"><button class="chip" id="tdLeader" style="cursor:pointer">I'm a leader: show leader tools</button></p>`:""}`;
+  $("#main").innerHTML=h}
+
 /* ---------- REQUESTS + PLAN OF THE DAY ---------- */
 const REQ_TYPES=["Leave","Special liberty","Appointment","Schedule change","Other"];
 function reqPending(){return S.reqs.filter(r=>r.st==="pending"&&S.feeds.some(f=>f.lk&&f.id===r.feed))}
@@ -1410,7 +1458,7 @@ async function mpPublish(force){if(mpBusy)return;mpBusy=true;let n=0;
 async function mpTurnOn(m){if(!m.pk){m.pk=rndId(28);m.pkSig="";save()}await mpPublish();return mpLink(m)}
 async function mpFetch(){const M=S.me;if(!M)return;try{const K=await mpKeys(M.pk);const rows=await SB.rpc("get_page",{p_id:K.id});const r=rows&&rows[0];
   if(!r){M.err="Your leader hasn't published your page yet.";rawSave();return}const t=Date.parse(r.updated_at)||0;if(M.t===t&&M.d){M.err="";return}
-  M.d=await openBlob(K,r.ct);M.t=t;M.err="";rawSave();if(view==="me"){const y=window.scrollY;renderMe();window.scrollTo(0,y)}}catch(e){M.err=String(e.message||e).slice(0,80);rawSave()}}
+  M.d=await openBlob(K,r.ct);M.t=t;M.err="";rawSave();if(view==="me"||view==="today"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;view==="me"?renderMe():renderToday();window.scrollTo(0,y)}}}catch(e){M.err=String(e.message||e).slice(0,80);rawSave()}}
 setInterval(()=>{if(S.me&&!document.hidden)mpFetch()},300000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.me)mpFetch()});
 const daysTo=iso=>{const d=parseD(iso);return d?Math.round((d-today0())/86400000):null};
@@ -1918,8 +1966,8 @@ async function fdPoll(f,full){const after=full?0:Math.max(0,f.ctl||0,...(f.posts
   return fresh}
 async function fdPollAll(full){if(fdBusy||!S.feeds.length)return;fdBusy=true;let fresh=0;
   try{for(const f of S.feeds){try{fresh+=await fdPoll(f,full)}catch(e){f.err=String(e.message||e).slice(0,80)}}save();renderTabs();
-    if(view==="feed"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;renderFeed();window.scrollTo(0,y)}}
-    if(fresh&&view!=="feed"){toast(fresh===1?"New in FEED":fresh+" new in FEED");try{navigator.vibrate&&navigator.vibrate([60,40,60])}catch(e){}}}
+    if(view==="feed"||view==="today"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;view==="feed"?renderFeed():renderToday();window.scrollTo(0,y)}}
+    if(fresh&&view!=="feed"&&view!=="today"){toast(fresh===1?"New in FEED":fresh+" new in FEED");try{navigator.vibrate&&navigator.vibrate([60,40,60])}catch(e){}}}
   finally{fdBusy=false}}
 setInterval(()=>{if(S.feeds.length&&!document.hidden)fdPollAll(false)},30000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.feeds.length)fdPollAll(false)});
@@ -2319,7 +2367,7 @@ document.addEventListener("click",e=>{
   if(S.role==="view"&&e.target.closest("[data-pick],[data-rm],#addf button,[data-mtog],[data-mall],[data-r],[data-evtog],[data-evall],[data-ws],[data-rddone],[data-pdone],#caSave,[data-cdel],#fdPost,[data-fdpin],[data-fddel],#bcGo,#reset,#tabSave,#mStart,#rcStart,#dGen,#dRedo,[data-dpick],#pNoteAdd,[data-mpon],#lvOn,#fdCreate")){e.stopImmediatePropagation();e.preventDefault();denyMsg();return}
   if(e.target.closest("#bMode,[data-mode-open]")){e.stopImmediatePropagation();openModeSheet();return}
   const mo=e.target.closest("[data-mopt]");if(mo){e.stopImmediatePropagation();const k=mo.dataset.mopt;const wasFirst=sheetCtx&&sheetCtx.first;closeSheet();if(!S.mode){S.mode=k==="military"?"military":S.mode;save()}
-    if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty","p","cal","log","me","sys"].includes(view))view="board";render();window.scrollTo(0,0);if(!wasFirst)toast(MODES[k].name+" version on. Same people, new labels.")}if(wasFirst&&!S.onb)setTimeout(()=>showOnb(0),300);return}
+    if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty","p","cal","log","me","sys","today"].includes(view))view="board";render();window.scrollTo(0,0);if(!wasFirst)toast(MODES[k].name+" version on. Same people, new labels.")}if(wasFirst&&!S.onb)setTimeout(()=>showOnb(0),300);return}
   const msh=e.target.closest("[data-mshare]");if(msh){e.stopImmediatePropagation();shareMode(msh.dataset.mshare);return}
   const pk=e.target.closest("[data-pick]");if(pk){e.stopImmediatePropagation();openSheet(pk.dataset.pick,pk.dataset.pid);return}
   if(e.target.closest("[data-sclose]")){e.stopImmediatePropagation();closeSheet();return}
@@ -2332,7 +2380,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetCtx)closeSheet
 document.addEventListener("dragleave",e=>{const d=$("#rcDrop");if(d&&!e.relatedTarget)d.classList.remove("over")});
 document.addEventListener("drop",e=>{if(view!=="recall"&&view!=="data")return;const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;e.preventDefault();const d=$("#rcDrop");if(d)d.classList.remove("over");rcLoadFile(f,view==="recall"?"#rcOutR":"#rcOut")});
 function render(){renderTabs();
-  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="rollup")renderRollup();else if(view==="live")renderLive();else if(view==="send")renderSend();else if(view==="feed")renderFeed();else if(view==="trends")renderTrends();else if(view==="ready")renderReady();else if(view==="duty")renderDuty();else if(view==="p")renderPerson();else if(view==="cal")renderCal();else if(view==="log")renderLog();else if(view==="me")renderMe();else if(view==="sys")renderSys();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
+  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="rollup")renderRollup();else if(view==="live")renderLive();else if(view==="send")renderSend();else if(view==="feed")renderFeed();else if(view==="trends")renderTrends();else if(view==="ready")renderReady();else if(view==="duty")renderDuty();else if(view==="p")renderPerson();else if(view==="cal")renderCal();else if(view==="log")renderLog();else if(view==="me")renderMe();else if(view==="sys")renderSys();else if(view==="today")renderToday();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
 
 /* ---------- CSV import ---------- */
 function parseCSV(text){const rows=[];let row=[],f="",q=false;
@@ -2464,6 +2512,10 @@ document.addEventListener("click",e=>{
   if(e.target.id==="meIcs"){const D=S.me&&S.me.d;if(!D||!D.cal.length){toast("Nothing coming up.");return}shareFile(icsFor(D.cal,D.name),"My_calendar.ics","text/calendar");return}
   if(e.target.id==="meOff"){if(armed==="meoff"){S.me=null;armed=null;save();view="board";render();toast("Removed")}else{armed="meoff";renderMe()}return}
   if(e.target.id==="scGo"){scRun();return}
+  if(e.target.closest("#bToday")){view="today";armed=null;tdLast=0;render();window.scrollTo(0,0);return}
+  const tda=e.target.closest("[data-tdack]");if(tda){const [fid,pid2]=tda.dataset.tdack.split("|");const f=S.feeds.find(x=>x.id===fid);if(!f)return;tda.disabled=true;fdAck(f,+pid2,1).then(()=>{const y=window.scrollY;renderToday();window.scrollTo(0,y);toast("Got it sent")}).catch(err=>{tda.disabled=false;toast(/gone/.test(String(err&&err.message))?"That post was deleted.":"Couldn't send. Check signal and try again.")});return}
+  if(e.target.id==="tdLogAdd"){const t=($("#tdLog").value||"").trim();if(!t){toast("Write what you got done.");return}S.log.push({id:"l"+Date.now().toString(36),d:dkey(),t:Date.now(),txt:t.slice(0,500),tag:logTag||"Other"});save();const y=window.scrollY;renderToday();window.scrollTo(0,y);toast(logStreak()>1?"Logged · 🔥 "+logStreak()+"-day streak":"Logged");return}
+  if(e.target.id==="tdLeader"){S.leaderMode=true;save();view="board";render();window.scrollTo(0,0);toast("Leader tools on. Load your roster in DATA.");return}
   if(e.target.id==="rqNew"){fdReqForm=!fdReqForm;const y=window.scrollY;renderFeed();window.scrollTo(0,y);return}
   if(e.target.id==="rqSend"){const f=fdCur();if(!f.me){toast("Set your name first (Change).");return}const o={k:"req",rid:"r"+Date.now().toString(36)+rndId(4),ty:$("#rqTy").value,from:$("#rqF").value,to:$("#rqT").value||"",tm:$("#rqTm").value||"",note:($("#rqNo").value||"").trim().slice(0,200),me:f.me};
     if(!o.from){toast("Pick a date.");return}e.target.disabled=true;e.target.textContent="Sending…";
@@ -2762,7 +2814,8 @@ startXL();
 render();
 {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join"))setTimeout(()=>joinPrompt(q),firstPick?900:300);if(q.get("feed")){firstPick=false;setTimeout(()=>fdJoinPrompt(q),300)}}
 {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("me")){firstPick=false;setTimeout(()=>mePrompt(q),200)}}
-if(S.me){if(S.source==="sample"&&!location.hash){view="me";render()}setTimeout(()=>mpFetch(),600)}
+if(memberMode()&&!location.hash&&view==="board"){view="today";render()}
+if(S.me){setTimeout(()=>mpFetch(),600)}
 if(S.roster.some(m=>m.pk))setTimeout(()=>mpPublish(),2500);
 {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("sync")){firstPick=false;setTimeout(()=>syncJoinPrompt(q.get("sync"),q.get("r")),300)}}
 if(S.sync&&S.sync.on)setTimeout(()=>syncPull(),700);
@@ -2774,7 +2827,7 @@ if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("messag
 document.addEventListener("click",e=>{if(e.target.id==="updNow")location.reload()});
 if("serviceWorker" in navigator&&document.querySelector("link[rel=manifest]")&&(location.protocol==="https:"||location.hostname==="localhost")){navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(()=>{const o=document.getElementById("offStat");if(o&&navigator.serviceWorker.controller)o.textContent="Ready: this app opens and works with no signal. Text reports once you have service."}).catch(()=>{})}
 setInterval(()=>{if(view==="recall"&&S.rc.open){const c=document.querySelector(".mbar .ct small");if(c)c.textContent="contacted · "+Math.round((Date.now()-S.rc.start)/60000)+" min"}},20000);
-window.addEventListener("hashchange",()=>{{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){joinPrompt(q);return}if(q.get("feed")){fdJoinPrompt(q);return}if(q.get("sync")){syncJoinPrompt(q.get("sync"),q.get("r"));return}if(q.get("me")){mePrompt(q);return}}const h=(location.hash||"").slice(1).toLowerCase();if(["recall","rollup","board","muster","alerts","live","send","feed"].includes(h)&&h!==view){view=h;armed=null;render();window.scrollTo(0,0);if(h==="feed")fdPollAll(true)}});
+window.addEventListener("hashchange",()=>{{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){joinPrompt(q);return}if(q.get("feed")){fdJoinPrompt(q);return}if(q.get("sync")){syncJoinPrompt(q.get("sync"),q.get("r"));return}if(q.get("me")){mePrompt(q);return}}const h=(location.hash||"").slice(1).toLowerCase();if(["recall","rollup","board","muster","alerts","live","send","feed","today","me","log","cal"].includes(h)&&h!==view){view=h;armed=null;render();window.scrollTo(0,0);if(h==="feed")fdPollAll(true)}});
 setInterval(()=>{const d=$("#dtg");if(d)d.textContent="AS OF "+dtg()},30000);
 </script>
 </body></html>
