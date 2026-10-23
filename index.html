@@ -322,6 +322,14 @@ body.locked .top,body.locked #main{visibility:hidden}
 details summary{cursor:pointer;font-weight:700;min-height:32px}
 :focus-visible{outline:3px solid var(--brass);outline-offset:2px}
 .ts-big .brand{flex-wrap:wrap;row-gap:6px}.ts-big .brand>div:first-child{flex:1 1 100%}.ts-big .acts{width:100%}.ts-big .acts button{flex:1}
+.onb{position:fixed;inset:0;z-index:60;background:var(--bg);overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:max(12vh,24px) 16px calc(24px + env(safe-area-inset-bottom))}
+.onb-in{width:100%;max-width:420px;display:flex;flex-direction:column;gap:10px}
+.onb-step{color:var(--muted);font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase}
+.onb-ic{font-size:44px;line-height:1}.onb h2{margin:0;font-size:26px;font-weight:800;color:var(--ink)}
+.onb ul{margin:4px 0 6px;padding-left:20px;display:flex;flex-direction:column;gap:10px;color:var(--ink);font-size:16px;line-height:1.45}
+.onb-dots{display:flex;gap:8px;margin:6px 0}.onb-dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}.onb-dots i.on{background:var(--brass);width:22px;border-radius:99px}
+.onb .btn{width:100%;min-height:48px;font-size:16px}.onb-back{background:none;border:0;color:var(--muted);font:inherit;font-weight:700;min-height:44px}
+body.onb-open .top,body.onb-open #main{visibility:hidden}
 button[data-w6],button[data-tup],button[data-tdn]{min-height:28px;min-width:32px}
 </style>
 </head><body>
@@ -339,6 +347,7 @@ button[data-w6],button[data-tup],button[data-tdn]{min-height:28px;min-width:32px
 </div></header>
 
 <main class="wrap" id="main"></main>
+<div class="onb" id="onb" hidden></div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <div class="sheet" id="sheet" hidden><div class="sheet-bg" data-sclose="1"></div><div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheetT"><div class="grab"></div><h3 id="sheetT"></h3><div class="sheet-opts" id="sheetOpts"></div></div></div>
 
@@ -471,7 +480,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="1.0.0";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="1.0.1";const APP_BUILD="2026-10-22";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -540,7 +549,7 @@ function setMode(k){if(!MODES[k])return false;const was=MODES[S.mode]?S.mode:"mi
   if(!S.pt.event||oldEv.includes(S.pt.event))S.pt.event=EVENTS[0];
   secFix();secDraft=null;S.snap=null;save();startXL();return true}
 function modeLink(k){return location.origin+location.pathname+(k==="all"?"":"?m="+k)}
-function openModeSheet(first){sheetCtx={kind:"mode"};const cur=MODES[S.mode]?S.mode:"military";
+function openModeSheet(first){sheetCtx={kind:"mode",first:!!first};const cur=MODES[S.mode]?S.mode:"military";
   $("#sheetT").innerHTML=first?`Pick your version<small>Sets the tabs, statuses and report titles for your group. Change it any time by tapping the title.</small>`:`App version<small>Changes every tab, status and report title. Same people, same data.</small>`;
   $("#sheetOpts").innerHTML=MODE_ORDER.map(k=>`<button data-mopt="${k}" aria-pressed="${k===cur}" data-noxl><span><b>${MODES[k].name}</b><br><span class="mdesc">${MODES[k].desc}</span></span></button>`).join("")+(first?"":
    `<div class="mshare" data-noxl><button class="btn" data-mshare="all" style="width:100%;margin:6px 0 10px">Send app link (they pick their version)</button><div class="note">Or send one version, already set:</div><div class="evts">${MODE_ORDER.map(k=>`<button data-mshare="${k}">${MODES[k].name}</button>`).join("")}</div></div>`)+`<p class="note" data-noxl style="margin:10px 2px 0">${DISCLAIMER} <a href="privacy.html">Privacy</a></p>`;
@@ -1215,8 +1224,8 @@ function animateNums(){document.querySelectorAll("[data-n]").forEach(el=>{const 
     const tb=document.querySelector('.tabs [aria-selected="true"]');if(tb&&tb.scrollIntoView)tb.scrollIntoView({inline:"center",block:"nearest",behavior:RM()?"auto":"smooth"})},{passive:true})})();
 document.addEventListener("click",e=>{
   if(e.target.closest("#bMode,[data-mode-open]")){e.stopImmediatePropagation();openModeSheet();return}
-  const mo=e.target.closest("[data-mopt]");if(mo){e.stopImmediatePropagation();const k=mo.dataset.mopt;closeSheet();if(!S.mode){S.mode=k==="military"?"military":S.mode;save()}
-    if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory"].includes(view))view="board";render();window.scrollTo(0,0);toast(MODES[k].name+" version on. Same people, new labels.")}return}
+  const mo=e.target.closest("[data-mopt]");if(mo){e.stopImmediatePropagation();const k=mo.dataset.mopt;const wasFirst=sheetCtx&&sheetCtx.first;closeSheet();if(!S.mode){S.mode=k==="military"?"military":S.mode;save()}
+    if(setMode(k)){if(!["board","att","pt","w6","text","data","muster","alerts","recall","events","armory"].includes(view))view="board";render();window.scrollTo(0,0);if(!wasFirst)toast(MODES[k].name+" version on. Same people, new labels.")}if(wasFirst&&!S.onb)setTimeout(()=>showOnb(0),300);return}
   const msh=e.target.closest("[data-mshare]");if(msh){e.stopImmediatePropagation();shareMode(msh.dataset.mshare);return}
   const pk=e.target.closest("[data-pick]");if(pk){e.stopImmediatePropagation();openSheet(pk.dataset.pick,pk.dataset.pid);return}
   if(e.target.closest("[data-sclose]")){e.stopImmediatePropagation();closeSheet();return}
@@ -1409,6 +1418,32 @@ document.addEventListener("submit",e=>{
 const dl=Promise.resolve({save:({filename,data})=>new Promise((res,rej)=>{try{const b=new Blob([data],{type:"text/csv"});
   if(navigator.canShare&&navigator.canShare({files:[new File([b],filename,{type:"text/csv"})]})){navigator.share({files:[new File([b],filename,{type:"text/csv"})],title:filename}).then(()=>res({status:"saved"}),()=>rej({code:"declined"}));return}
   const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=filename;document.body.appendChild(a);a.click();a.remove();res({status:"saved"})}catch(e){rej({code:"unavailable"})}})});
+/* ---------- onboarding ---------- */
+const ONB=[
+ {ic:"📋",t:"Your board",b:["<b>On Hand</b> is who's here now. <b>Total Strength</b> is everyone you're responsible for.","Each tab across the top is a section. Tap a tab to see its Marines.","Tap anyone's status to change it. The numbers update right away."]},
+ {ic:"👥",t:"Get your people in",b:["Until you load your own, you're looking at <b>sample Marines</b>.","Go to <b>DATA</b> and load your MOL detail list (CSV or Excel), or add people one at a time in each tab.","Rename, add or reorder tabs in <b>DATA → Tabs</b>."]},
+ {ic:"📨",t:"Send the numbers",b:["<b>TEXT</b> builds the accountability report. Tap Text it, Copy or Share.","<b>Muster</b>, <b>Recall</b>, <b>Alerts</b> and <b>Events</b> are on the Board.","Lock the app with a PIN in <b>DATA → Security</b>. Your data never leaves this phone unless you send it."]}];
+let onbI=0,onbRet=null;
+function showOnb(i){onbI=i;const o=$("#onb");const st=ONB[i];const last=i===ONB.length-1;if(o.hidden)onbRet=document.activeElement;
+  o.innerHTML=`<div class="onb-in" role="dialog" aria-modal="true" aria-labelledby="onbT"><div class="onb-step">${i+1} of ${ONB.length}</div>
+    <div class="onb-ic" aria-hidden="true">${st.ic}</div><h2 id="onbT">${st.t}</h2><ul>${st.b.map(x=>`<li>${x}</li>`).join("")}</ul>
+    <div class="onb-dots" aria-hidden="true">${ONB.map((_,j)=>`<i class="${j===i?"on":""}"></i>`).join("")}</div>
+    ${last?`<button class="btn" data-onb="roster">Load my roster</button><button class="btn alt" data-onb="done">Look around with sample data</button>`
+      :`<button class="btn" data-onb="next">Next</button><button class="btn alt" data-onb="done">Skip</button>`}
+    ${i?`<button class="onb-back" data-onb="back">Back</button>`:""}</div>`;
+  o.hidden=false;document.body.classList.add("onb-open");setTimeout(()=>{const b=o.querySelector('[data-onb="next"],[data-onb="roster"]');if(b)b.focus({preventScroll:true})},40)}
+function closeOnb(){const o=$("#onb");o.hidden=true;o.innerHTML="";document.body.classList.remove("onb-open");S.onb=true;save();if(onbRet&&onbRet.isConnected&&onbRet.focus)onbRet.focus({preventScroll:true})}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-onb]");if(!b)return;const a=b.dataset.onb;
+  if(a==="next")showOnb(onbI+1);else if(a==="back")showOnb(onbI-1);else if(a==="done")closeOnb();
+  else if(a==="roster"){closeOnb();secDraft=null;view="data";armed=null;render();window.scrollTo(0,0);setTimeout(()=>{const f=$("#file");if(f)f.focus()},100)}
+  else if(a==="how"){showOnb(0)}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#onb").hidden)closeOnb()});
+/* ---------- feedback / rating ---------- */
+const STORE_URL={ios:"",android:""};
+function storeLink(){const ua=navigator.userAgent;return /iPhone|iPad|iPod/.test(ua)?STORE_URL.ios:/Android/.test(ua)?STORE_URL.android:(STORE_URL.ios||STORE_URL.android)}
+function feedbackHref(){const ua=navigator.userAgent;const dev=/iPhone/.test(ua)?"iPhone":/iPad/.test(ua)?"iPad":/Android/.test(ua)?"Android":"Computer";
+  const body="What happened or what would you like?\n\n\n---\nPlease don't include names or phone numbers from your roster.\nApp: MusterBoard v"+APP_VER+" ("+APP_BUILD+")\nVersion: "+MODE().name+"\nDevice: "+dev+"\nInstalled: "+(matchMedia("(display-mode: standalone)").matches||navigator.standalone?"home screen":"browser")+"\nPIN lock: "+(window.VAULT&&VAULT.on()?"on":"off");
+  return "mailto:"+SUPPORT_EMAIL+"?subject="+encodeURIComponent("MusterBoard feedback (v"+APP_VER+")")+"&body="+encodeURIComponent(body)}
 /* ---------- about ---------- */
 const TSIZES=[["1","Normal"],["1.15","Large"],["1.3","Extra large"]];
 function applyTS(){const z=+(S.ts||1);document.documentElement.style.zoom=z===1?"":String(z);document.documentElement.classList.toggle("ts-big",z>1)}
@@ -1418,7 +1453,8 @@ document.addEventListener("change",e=>{if(e.target.id==="tsSel"){S.ts=+e.target.
 function aboutHTML(){return `<h2>About</h2><div class="panel" data-noxl><div><b>MusterBoard</b> · ${esc(MODE().name)} version · v${APP_VER} (${APP_BUILD})</div>
   <p class="note">Your data stays on this phone. No accounts, no analytics, no ads. ${DISCLAIMER}</p>
   <div class="row2"><a class="btn alt" href="privacy.html">Privacy policy</a><a class="btn alt" href="support.html">Support</a></div>
-  <a class="btn alt" href="mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("MusterBoard v"+APP_VER+" support")}">Email support</a></div>`}
+  <div class="row2"><a class="btn" href="${esc(feedbackHref())}">Send feedback</a>${storeLink()?`<a class="btn alt" href="${esc(storeLink())}" target="_blank" rel="noopener">Rate this app ★</a>`:`<button class="btn alt" data-onb="how">How it works</button>`}</div>
+  ${storeLink()?`<button class="btn alt" data-onb="how">How it works</button>`:""}</div>`}
 /* ---------- security panel ---------- */
 const pinIn=(id,lbl,ac)=>`<div><label for="${id}">${lbl}</label><input id="${id}" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="${ac}" maxlength="8"></div>`;
 function secHTML(){const V=window.VAULT;
