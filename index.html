@@ -642,7 +642,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="3.1.2";const APP_BUILD="2026-10-23";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="3.1.3";const APP_BUILD="2026-10-23";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -1510,6 +1510,7 @@ function renderTools(){const al=alerts();const cf=upcomingConflicts(14).length;c
 
 /* ---------- TODAY: the member's daily home screen ---------- */
 let tdLast=0;
+function isLeaderPhone(){return !!(S.leaderMode||S.source!=="sample"||S.board||S.link||S.feeds.some(f=>f.lk)||S.roster.some(m=>m.pk)||(S.sync&&S.sync.on)||S.role)}
 function memberMode(){return !S.leaderMode&&S.source==="sample"&&!S.board&&!S.link&&!S.feeds.some(f=>f.lk)&&(!!S.me||S.feeds.some(f=>!f.lk))}
 function tdCover(e,k){return e.d<=k&&(e.end||e.d)>=k}
 function renderToday(){const D=S.me&&S.me.d;const mf=S.feeds.filter(f=>!f.lk);
@@ -1551,7 +1552,7 @@ function renderToday(){const D=S.me&&S.me.d;const mf=S.feeds.filter(f=>!f.lk);
   h+=`<h2>📝 My log ${st>1?`<span class="note" style="font-weight:700">🔥 ${st}-day streak</span>`:""}</h2><div class="panel">${lt.length?lt.map(x=>`<div>• ${esc(x.txt)}</div>`).join(""):`<div class="note">What did you get done today?</div>`}
     <div class="addph"><input type="text" id="tdLog" maxlength="500" placeholder="${lt.length?"Add another…":"Led PMCS on 3 dozers…"}"><button id="tdLogAdd">Add</button></div></div>`;
   h+=`${akHidden()?"":`<button class="btn alt" data-go="ask" style="width:100%;margin-top:12px">💬 Ask a question (orders, leave, pay, PFT…)</button>`}<div class="row2" style="margin-top:8px">${mf.length?`<button class="btn alt" data-go="feed">FEED</button>`:"<span></span>"}${S.me?`<button class="btn alt" data-go="me">My page</button>`:`<button class="btn alt" data-go="log">My log</button>`}</div>
-    ${memberMode()?`<p class="note" style="text-align:center;margin-top:14px"><button class="chip" id="tdLeader" style="cursor:pointer">I'm a leader: show leader tools</button></p>`:""}`;
+    ${memberMode()?`<p class="note" style="text-align:center;margin-top:14px"><button class="chip" id="tdLeader" style="cursor:pointer">I'm a leader: show the main page</button></p>`:""}`;
   $("#main").innerHTML=h}
 
 /* ---------- REQUESTS + PLAN OF THE DAY ---------- */
@@ -1719,10 +1720,13 @@ function renderMe(){const M=S.me;let h="";
   h+=`<div class="sech"><h2>My calendar</h2><button class="chip" id="meIcs" style="cursor:pointer">Add to phone calendar</button></div>`+(D.cal.length?`<div class="card ny">${D.cal.map(e=>{const d=parseD(e.d);const t=ctype(e.ty);return row(dt(e.d,e.ty==="LEAVE"?"g":"b"),(e.tm?esc(e.tm)+" · ":"")+esc(e.ti),DOW[d.getDay()]+" · "+t[1]+(e.end?" · thru "+short(parseD(e.end)):"")+(e.no?" · "+esc(e.no):""))}).join("")}</div>`:`<div class="card"><p class="note" style="margin:0">Nothing in the next 60 days.</p></div>`);
   h+=`<div class="tgrid" style="margin-top:16px">${S.feeds.length?`<button data-go="feed"><span class="ic">${svg("feed")}</span><span><b>Feed</b><small>The word</small></span></button>`:""}<button data-go="log"><span class="ic">${svg("log")}</span><span><b>My log</b><small>Today's work</small></span></button></div>
     <p class="note" style="text-align:center;margin-top:14px">Only you can read this page. It's locked with a key in your private link. Something wrong? Tell your section leader.</p>
-    <button class="btn warn" id="meOff" style="width:100%;margin-top:8px">${armed==="meoff"?"Tap again to remove My page from this phone":"Remove My page from this phone"}</button>`;
+    ${memberMode()?`<p class="note" style="text-align:center;margin-top:10px"><button class="chip" id="tdLeader" style="cursor:pointer">I'm a leader: show the main page</button></p>`:""}<button class="btn warn" id="meOff" style="width:100%;margin-top:8px">${armed==="meoff"?"Tap again to remove My page from this phone":"Remove My page from this phone"}</button>`;
   $("#main").innerHTML=h}
 function mePrompt(q){const pk=(q.get("me")||"").replace(/[^a-z0-9]/g,"").slice(0,40);const unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24);try{history.replaceState(null,"",location.pathname)}catch(e){}
-  if(pk.length<20)return toast("That My page link is incomplete.");S.me={pk,unit,d:null,t:0};S.onb=true;if(!S.mode)S.mode="military";save();view="me";render();window.scrollTo(0,0);mpFetch()}
+  if(pk.length<20)return toast("That My page link is incomplete.");
+  const own=S.roster.find(m=>m.pk===pk);
+  if(own||isLeaderPhone()){S.leaderMode=true;save();if(own){openCard(own.id);toast("That's "+own.rank+" "+lastOf(own)+"'s My page link. You're on your leader phone, so here's their card.")}else{view="board";render();window.scrollTo(0,0);toast("You're on your leader phone, so you stay on the main page.")}return}
+  S.me={pk,unit,d:null,t:0};S.onb=true;if(!S.mode)S.mode="military";save();view="me";render();window.scrollTo(0,0);mpFetch()}
 
 /* ---------- CALENDAR: per person, whole board, sections ---------- */
 const CAL_TYPES=[["APPT","Appointment","--s-aob"],["LEAVE","Leave","--s-leave"],["TAD","TAD / travel","--s-tad"],["TRNG","Training","--s-op"],["DUTY","Duty","--s-duty"],["DUE","Due-out","--warn"],["EVENT","Event","--brass"],["OTHER","Other","--muted"]];
@@ -3129,6 +3133,7 @@ startXL();
 render();
 {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join"))setTimeout(()=>joinPrompt(q),firstPick?900:300);if(q.get("feed")){firstPick=false;setTimeout(()=>fdJoinPrompt(q),300)}}
 {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("me")){firstPick=false;setTimeout(()=>mePrompt(q),200)}}
+if(S.me&&S.roster.some(m=>m.pk&&m.pk===S.me.pk)){S.me=null;S.leaderMode=true;save();if(view==="me"||view==="today"){view="board"}render()}
 if(memberMode()&&!location.hash&&view==="board"){view="today";render()}
 if(S.me){setTimeout(()=>mpFetch(),600)}
 if(S.roster.some(m=>m.pk))setTimeout(()=>mpPublish(),2500);
