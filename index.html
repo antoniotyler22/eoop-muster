@@ -827,6 +827,8 @@ function renderTabs(){renderShell();
 }
 function banner(){if(S.role==="view")return `<div class="banner"><span><b>View-only phone.</b> You see the shared board; changes here aren't saved.</span></div>`+banner0();return banner0()}
 function banner0(){
+  const LK=S.link;if(LK&&LK.rk2){if(!LK.pulled)return `<div class="banner"><span>${LK.perr?esc(LK.perr):`Loading <b>${esc(LK.sec)}</b> from ${esc(LK.unit)}'s board…`}</span>${LK.perr?`<button id="lkRetry">Retry</button>`:""}</div>`;
+    if(!LK.me)return `<div class="banner"><span><b>${esc(LK.sec)}</b> roster from ${esc(LK.unit)}. Add your name so they see who sent updates.</span><button id="lkName">Add name</button></div>`}
   if(S.source==="sample"&&!memberMode()) return `<div class="banner"><span>Showing <b>sample Marines</b>. Load your MOL detail list to start.</span><button data-go="data">Load roster</button></div>`;
   if(!storageOK) return `<div class="banner"><span>This browser isn't saving changes. Export a backup from DATA before closing.</span></div>`;
   return "";
@@ -1318,7 +1320,7 @@ function renderLive(){let h=banner();const B=S.board,L=S.link;
     <div class="row2"><button class="btn" id="lkNow">Send now</button><button class="btn alt" id="lkOff">${armed==="lkoff"?"Tap again to unlink":"Unlink"}</button></div></div>`;
   $("#main").innerHTML=h}
 function joinPrompt(q){const bid=(q.get("join")||"").replace(/[^a-z0-9]/g,"").slice(0,20),wk=(q.get("k")||"").replace(/[^a-z0-9]/g,"").slice(0,40),sec=(q.get("s")||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6),unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24);
-  const ek=(q.get("e")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60);if(bid.length<10||wk.length<24||!sec)return;const rk2=(q.get("r")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60);sheetCtx={kind:"join",bid,wk,sec,unit,ek,rk2:rk2.length>=40?rk2:""};const def=SECTIONS.some(x=>x[0]===sec)?sec:SECTIONS[0][0];
+  const ek=(q.get("e")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60);if(bid.length<10||wk.length<24||!sec)return;const rk2=(q.get("r")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60);if(rk2.length>=40){autoLink({bid,wk,sec,unit,ek,rk2});return}sheetCtx={kind:"join",bid,wk,sec,unit,ek,rk2:""};const def=SECTIONS.some(x=>x[0]===sec)?sec:SECTIONS[0][0];
   $("#sheetT").innerHTML=`Send live updates?<small>${esc(unit||"Your OIC")} wants this phone to send the <b>${esc(sec)}</b> section's statuses to their board automatically.</small>`;
   $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><label for="jSec">My section in this app</label><select id="jSec" class="wsel">${SECTIONS.map(([k,n])=>`<option value="${k}"${k===def?" selected":""}>${esc(k+" · "+n)}</option>`).join("")}</select>
     <label for="jMe">Your rank and last name (so they see who sent it)</label><input type="text" id="jMe" maxlength="30" placeholder="SGT SMITH" autocapitalize="characters" style="text-transform:uppercase" value="${esc(S.myName||"")}">
@@ -1330,6 +1332,18 @@ function joinPrompt(q){const bid=(q.get("join")||"").replace(/[^a-z0-9]/g,"").sl
    OIC phone publishes each section's roster, encrypted with that section's own key (only in that leader's link),
    plus the unit FEED keys. Section leaders pull it; Marines get the FEED through their My page. All posts land in one FEED the OIC sees. */
 let rpT=null,rpBusy=false,hubBusy=false,rpullBusy=false;
+function autoLink(c){try{history.replaceState(null,"",location.pathname)}catch(e){}if(typeof closeSheet==="function")try{closeSheet()}catch(e){}
+  const L0=S.link;const same=L0&&L0.board===c.bid&&L0.sec===c.sec&&L0.rk2===c.rk2;
+  if(!same){S.link={board:c.bid,wk:c.wk,ek:c.ek||"",sec:c.sec,unit:c.unit||"OIC",mysec:c.sec,me:S.myName||"",sig:"",sent:0,err:"",rk2:c.rk2,pulled:false,pt:0}}
+  if(S.source==="sample"){S.roster=[];S.source="link";S.loadedAt=dtg(new Date())}
+  S.leaderMode=true;if(!S.mode)S.mode="military";S.onb=true;save();view="board";render();window.scrollTo(0,0);rosterPull(true)}
+function lkNameSheet(){sheetCtx={kind:"lkname"};$("#sheetT").innerHTML=`Your rank and last name<small>So ${esc((S.link&&S.link.unit)||"your OIC")} sees who sent updates and posts.</small>`;
+  $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><input type="text" id="lkMe" maxlength="30" placeholder="SGT SMITH" autocapitalize="characters" style="text-transform:uppercase" value="${esc(S.myName||"")}"><button class="btn" id="lkMeSave">Save</button><button class="btn alt" data-sclose="1">Later</button></div>`;
+  const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")))}
+document.addEventListener("click",e=>{if(e.target.id==="lkName"){lkNameSheet();return}if(e.target.id==="lkRetry"){rosterPull(true);toast("Loading…");return}
+  if(e.target.id==="lkMeSave"){const me=($("#lkMe").value||"").toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim().slice(0,30);if(!me){toast("Enter your rank and last name.");return}
+    S.myName=me;if(S.link)S.link.me=me;const f=S.feeds.find(x=>x.hub&&!x.lk);if(f){f.me=me;fdMeHash(f)}save();closeSheet();render();linkPush(true);toast("Saved")}});
+setInterval(()=>{if(!document.hidden&&S.link&&S.link.rk2&&!S.link.pulled)rosterPull()},8000);
 const mainFeed=()=>S.feeds.find(f=>f.lk&&f.main)||S.feeds.find(f=>f.lk)||null;
 function secKey(sec){const B=S.board;B.sk=B.sk||{};if(!B.sk[sec]){B.sk[sec]=b64url(crypto.getRandomValues(new Uint8Array(32)));B.rsig={};setTimeout(save,0)}return B.sk[sec]}
 const lsigOf=ms=>sigF(ms.map(m=>[m.id,m.status,dutyOf(m)]));
@@ -1338,7 +1352,7 @@ function rpSchedule(){if(!S.board||!S.board.sk||S.role==="view")return;clearTime
 async function rpPublish(force){const B=S.board;if(!B||!B.sk||rpBusy||S.role==="view")return;rpBusy=true;
   try{const f=mainFeed();const feed=f&&f.pk?{id:f.id,mk:f.mk,ek:f.ek,pk:f.pk,unit:f.unit}:null;B.rsig=B.rsig||{};let n=0;
     for(const [sec,k] of Object.entries(B.sk)){const ms=S.roster.filter(m=>m.sec===sec).map(m=>{const o={};for(const x of RPF)if(m[x]!=null&&m[x]!=="")o[x]=x==="duty"?dutyOf(m):m[x];o.duty=dutyOf(m);return o});
-      const body={v:1,unit:unitName(),sec,secName:((SECTIONS.find(x=>x[0]===sec)||[])[1]||sec),secs:SECTIONS.map(x=>x[0]),ms,feed};const sg=sigF(body);
+      const body={v:1,unit:unitName(),sec,secName:((SECTIONS.find(x=>x[0]===sec)||[])[1]||sec),secs:SECTIONS.map(x=>x[0]),sl:SECTIONS.map(x=>x.slice()),mode:S.mode||"military",ms,feed};const sg=sigF(body);
       if(!force&&B.rsig[sec]===sg)continue;
       if(S.source==="sample")continue;
       await SB.rpc("put_roster",{p_board:B.id,p_read_key:B.rk,p_sec:sec,p_ct:await fdEnc(k,body)});B.rsig[sec]=sg;n++}
@@ -1364,6 +1378,7 @@ async function rosterPull(force){const L=S.link;if(!L||!L.rk2||rpullBusy)return;
     const next=o.ms.slice(0,600).map(x=>{const m={};for(const k of RPF)if(x[k]!=null)m[k]=String(x[k]).slice(0,120);m.sec=L.mysec;if(!STATUSES.includes(m.status))m.status="On Hand";
       const old=byId[m.id];if(old){for(const k of Object.keys(old))if(!(k in m)&&!RPF.includes(k))m[k]=old[k];if(!takeSt){m.status=old.status;m.duty=dutyOf(old)}}return m});
     if(S.source==="sample"){S.roster=[];S.source="link";S.loadedAt=dtg(new Date())}
+    if(S.source==="link"&&Array.isArray(o.sl)&&o.sl.length&&o.sl.every(x=>Array.isArray(x)&&x[0])){const nw=o.sl.slice(0,10).map(x=>[String(x[0]).replace(/[^A-Z0-9]/g,"").slice(0,6),String(x[1]||x[0]).slice(0,30)]);if(JSON.stringify(nw)!==JSON.stringify(SECTIONS)){SECTIONS.splice(0,SECTIONS.length,...nw);S.secs=nw}}
     S.roster=S.roster.filter(m=>m.sec!==L.mysec).concat(next);
     L.unit=String(o.unit||L.unit).slice(0,24);L.pt=t;L.pulled=true;L.perr="";L.lsig=lsigOf(next);
     if(takeSt){try{const items=await itemsFor(L.board,next);L.sig=next.length+"|"+items.join(",")}catch(e){}}
@@ -3198,7 +3213,7 @@ reportText=window.reportText;ptText=window.ptText;wText=window.wText;alertsText=
 let firstPick=false;{const qm=new URLSearchParams(location.search).get("m");if(!qm&&!S.mode)firstPick=true;if(qm&&MODES[qm]){if(!S.mode&&qm==="military"){S.mode="military";save()}setMode(qm);try{history.replaceState(null,"",location.pathname+location.hash)}catch(e){}}}
 startXL();
 render();
-{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join"))setTimeout(()=>joinPrompt(q),firstPick?900:300);if(q.get("feed")){firstPick=false;setTimeout(()=>fdJoinPrompt(q),300)}}
+{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){if(q.get("r"))firstPick=false;setTimeout(()=>joinPrompt(q),firstPick?900:300)}if(q.get("feed")){firstPick=false;setTimeout(()=>fdJoinPrompt(q),300)}}
 {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("me")){firstPick=false;setTimeout(()=>mePrompt(q),200)}}
 if(S.me&&S.roster.some(m=>m.pk&&m.pk===S.me.pk)){S.me=null;S.leaderMode=true;save();if(view==="me"||view==="today"){view="board"}render()}
 if(memberMode()&&!location.hash&&view==="board"){view="today";render()}
