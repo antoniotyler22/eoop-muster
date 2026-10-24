@@ -2,6 +2,7 @@ import UIKit
 import Capacitor
 import LocalAuthentication
 import Security
+import StoreKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -58,6 +59,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 class MainViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(BiometricPlugin())
+        bridge?.registerPluginInstance(ProStorePlugin())
     }
 }
 
@@ -134,5 +136,112 @@ public class BiometricPlugin: CAPPlugin, CAPBridgedPlugin {
     private func deleteItem() {
         let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account]
         SecItemDelete(q as CFDictionary)
+    }
+}
+
+// Accounted For Pro: auto-renewing subscription through Apple (StoreKit 2).
+// Apple verifies every transaction; the app only trusts verified ones.
+@objc(ProStorePlugin)
+public class ProStorePlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "ProStorePlugin"
+    public let jsName = "ProStore"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "products", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "buy", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "status", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "restore", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "manage", returnType: CAPPluginReturnPromise)
+    ]
+    private var updates: Task<Void, Never>?
+
+    override public func load() {
+        updates = Task.detached { [weak self] in
+            for await result in Transaction.updates {
+                if case .verified(let t) = result { await t.finish() }
+                if let st = await ProStorePlugin.currentStatus() { self?.notifyListeners("change", data: st) }
+            }
+        }
+    }
+    deinit { updates?.cancel() }
+
+    static func currentStatus() async -> [String: Any]? {
+        var best: Transaction?
+        for await result in Transaction.currentEntitlements {
+            guard case .verified(let t) = result, t.revocationDate == nil, t.productType == .autoRenewable else { continue }
+            if let e = t.expirationDate, e < Date() { continue }
+            if best == nil || (t.expirationDate ?? .distantFuture) > (best!.expirationDate ?? .distantFuture) { best = t }
+        }
+        guard let t = best else { return ["active": false] }
+        var r: [String: Any] = ["active": true, "productId": t.productID]
+        if let e = t.expirationDate { r["expires"] = Int(e.timeIntervalSince1970 * 1000) }
+        return r
+    }
+
+    @objc func products(_ call: CAPPluginCall) {
+        let ids = call.getArray("ids", String.self) ?? []
+        Task {
+            do {
+                let ps = try await Product.products(for: ids)
+                var out: [[String: Any]] = []
+                for p in ps {
+                    var o: [String: Any] = ["id": p.id, "title": p.displayName, "price": p.displayPrice, "amount": NSDecimalNumber(decimal: p.price).doubleValue]
+                    if let sub = p.subscription {
+                        let u = sub.subscriptionPeriod.unit
+                        o["period"] = u == .year ? "year" : (u == .month ? "month" : (u == .week ? "week" : "day"))
+                        o["periodCount"] = sub.subscriptionPeriod.value
+                        let eligible = await sub.isEligibleForIntroOffer
+                        if let intro = sub.introductoryOffer, eligible {
+                            let iu = intro.period.unit
+                            o["trial"] = intro.paymentMode == .freeTrial
+                            o["introDays"] = intro.period.value * (iu == .day ? 1 : iu == .week ? 7 : iu == .month ? 30 : 365)
+                        }
+                    }
+                    out.append(o)
+                }
+                call.resolve(["products": out])
+            } catch { call.reject("Couldn't reach the App Store. Check your connection.") }
+        }
+    }
+
+    @objc func buy(_ call: CAPPluginCall) {
+        guard let id = call.getString("id") else { call.reject("No product"); return }
+        Task {
+            do {
+                guard let p = try await Product.products(for: [id]).first else { call.reject("Not available yet"); return }
+                let result = try await p.purchase()
+                switch result {
+                case .success(let v):
+                    guard case .verified(let t) = v else { call.reject("Apple couldn't verify the purchase"); return }
+                    await t.finish()
+                    var st = await ProStorePlugin.currentStatus() ?? ["active": true]
+                    st["result"] = "ok"
+                    call.resolve(st)
+                case .pending: call.resolve(["active": false, "result": "pending"])
+                case .userCancelled: call.resolve(["active": false, "result": "cancelled"])
+                @unknown default: call.resolve(["active": false, "result": "unknown"])
+                }
+            } catch { call.reject("Purchase didn't go through: \(error.localizedDescription)") }
+        }
+    }
+
+    @objc func status(_ call: CAPPluginCall) {
+        Task { call.resolve(await ProStorePlugin.currentStatus() ?? ["active": false]) }
+    }
+
+    @objc func restore(_ call: CAPPluginCall) {
+        Task {
+            do { try await AppStore.sync() } catch { }
+            call.resolve(await ProStorePlugin.currentStatus() ?? ["active": false])
+        }
+    }
+
+    @objc func manage(_ call: CAPPluginCall) {
+        Task { @MainActor in
+            if let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+                do { try await AppStore.showManageSubscriptions(in: scene); call.resolve(); return } catch { }
+            }
+            if let u = URL(string: "https://apps.apple.com/account/subscriptions") { UIApplication.shared.open(u) }
+            call.resolve()
+        }
     }
 }
