@@ -3,6 +3,7 @@
 //  {alert, feed, mk}: a member's request or problem report, to the OIC.
 // Payloads carry no names. Turn OFF "Enforce JWT verification" (the function validates input itself).
 // Secrets: VAPID_PUBLIC, VAPID_PRIVATE (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are built in).
+// iPhone app (optional): APNS_KEY (the .p8 file contents), APNS_KEY_ID, APNS_TEAM_ID, APNS_TOPIC (bundle id; default com.antoniotyler.musterboard).
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -15,16 +16,45 @@ webpush.setVapidDetails("mailto:antoniotyler22@gmail.com", Deno.env.get("VAPID_P
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const out = (t: string, status = 200) => new Response(t, { status, headers: cors });
 
+// ---- Apple push (iPhone app). A subscription from the app looks like {apns: "<device token>"}. ----
+let apnsJwt = "", apnsAt = 0;
+const b64url = (b: ArrayBuffer | Uint8Array | string) => btoa(typeof b === "string" ? b : String.fromCharCode(...new Uint8Array(b as ArrayBuffer))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+async function apnsToken(): Promise<string> {
+  if (apnsJwt && Date.now() - apnsAt < 50 * 60000) return apnsJwt;
+  const pem = (Deno.env.get("APNS_KEY") ?? "").replace(/-----[^-]+-----/g, "").replace(/\s+/g, "");
+  if (!pem) throw new Error("no apns key");
+  const der = Uint8Array.from(atob(pem), (c) => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey("pkcs8", der, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  const head = b64url(JSON.stringify({ alg: "ES256", kid: Deno.env.get("APNS_KEY_ID") ?? "" }));
+  const body = b64url(JSON.stringify({ iss: Deno.env.get("APNS_TEAM_ID") ?? "", iat: Math.floor(Date.now() / 1000) }));
+  const sig = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, key, new TextEncoder().encode(head + "." + body));
+  apnsJwt = head + "." + body + "." + b64url(sig); apnsAt = Date.now(); return apnsJwt;
+}
+// Returns "ok", "gone" (token no longer valid: remove it) or "fail".
+async function apnsSend(token: string, p: Record<string, unknown>, urgent: boolean): Promise<string> {
+  try {
+    const host = Deno.env.get("APNS_SANDBOX") === "1" ? "api.sandbox.push.apple.com" : "api.push.apple.com";
+    const r = await fetch(`https://${host}/3/device/${token}`, {
+      method: "POST",
+      headers: { authorization: "bearer " + await apnsToken(), "apns-topic": Deno.env.get("APNS_TOPIC") || "com.antoniotyler.musterboard", "apns-push-type": "alert", "apns-priority": urgent ? "10" : "5", "content-type": "application/json" },
+      body: JSON.stringify({ aps: { alert: { title: p.title, body: p.body }, sound: "default", "interruption-level": urgent ? "time-sensitive" : "active" }, open: p.open }),
+    });
+    if (r.ok) return "ok";
+    return r.status === 410 || r.status === 400 ? "gone" : "fail";
+  } catch { return "fail"; }
+}
+// deno-lint-ignore no-explicit-any
+async function pushAny(sub: any, payload: Record<string, unknown>, urgent: boolean, ttl: number): Promise<string> {
+  if (sub && typeof sub.apns === "string") return apnsSend(sub.apns, payload, urgent);
+  try { await webpush.sendNotification(sub, JSON.stringify(payload), { TTL: ttl, urgency: urgent ? "high" : "normal" }); return "ok"; }
+  catch (e) { const c = (e as { statusCode?: number }).statusCode; return c === 404 || c === 410 ? "gone" : "fail"; }
+}
+
 // deno-lint-ignore no-explicit-any
 async function send(table: string, id: string, sub: any, payload: Record<string, unknown>, urgent: boolean) {
-  try {
-    await webpush.sendNotification(sub, JSON.stringify(payload), { TTL: 3600, urgency: urgent ? "high" : "normal" });
-    return out("sent");
-  } catch (e) {
-    const code = (e as { statusCode?: number }).statusCode;
-    if (code === 404 || code === 410) await db.from(table).update({ push_sub: null }).eq("id", id);
-    return out("push failed");
-  }
+  const r = await pushAny(sub, payload, urgent, 3600);
+  if (r === "gone") await db.from(table).update({ push_sub: null }).eq("id", id);
+  return out(r === "ok" ? "sent" : "push failed");
 }
 
 async function recall(id: string) {
@@ -71,13 +101,12 @@ async function feed(id: string, lk: string, urg: boolean) {
     .eq("id", id).eq("last_push_id", f.last_push_id ?? 0).select("id");
   if (!claimed || !claimed.length) return out("already sent");
   const { data: subs } = await db.from("feed_subs").select("id,sub").eq("feed_id", id).limit(500);
-  const payload = JSON.stringify(urg
+  const payload = urg
     ? { title: "⚠ URGENT: new word", body: "Open FEED to read it and tap Got it.", help: true, open: "feed" }
-    : { title: "New word in FEED", body: "Open FEED to read it and tap Got it.", help: false, open: "feed" });
+    : { title: "New word in FEED", body: "Open FEED to read it and tap Got it.", help: false, open: "feed" };
   const dead: number[] = [];
   await Promise.allSettled((subs ?? []).map(async (s) => {
-    try { await webpush.sendNotification(s.sub, payload, { TTL: 86400, urgency: urg ? "high" : "normal" }); }
-    catch (e) { const c = (e as { statusCode?: number }).statusCode; if (c === 404 || c === 410) dead.push(s.id); }
+    if (await pushAny(s.sub, payload, urg, 86400) === "gone") dead.push(s.id);
   }));
   if (dead.length) await db.from("feed_subs").delete().in("id", dead);
   return out("sent " + ((subs?.length ?? 0) - dead.length));
@@ -95,8 +124,9 @@ async function alertOic(id: string, mk: string, kind: string) {
   const payload = kind === "prob"
     ? { title: "⚠ Problem reported", body: "Someone flagged a problem with a FEED post. Open FEED to see who.", help: true, open: "feed" }
     : { title: "📨 New request", body: "Someone sent a leave, liberty or appointment request. Open FEED to approve.", help: false, open: "feed" };
-  try { await webpush.sendNotification(f.leader_sub, JSON.stringify(payload), { TTL: 86400, urgency: kind === "prob" ? "high" : "normal" }); return out("sent"); }
-  catch (e) { const c = (e as { statusCode?: number }).statusCode; if (c === 404 || c === 410) await db.from("feeds").update({ leader_sub: null }).eq("id", id); return out("push failed"); }
+  const r = await pushAny(f.leader_sub, payload, kind === "prob", 86400);
+  if (r === "gone") await db.from("feeds").update({ leader_sub: null }).eq("id", id);
+  return out(r === "ok" ? "sent" : "push failed");
 }
 
 Deno.serve(async (req) => {

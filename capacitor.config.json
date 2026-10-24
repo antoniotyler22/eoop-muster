@@ -1,0 +1,13 @@
+{
+  "appId": "com.antoniotyler.musterboard",
+  "appName": "MusterBoard",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never",
+    "scheme": "MusterBoard",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "plugins": {
+    "PushNotifications": { "presentationOptions": ["badge", "sound", "alert"] }
+  }
+}

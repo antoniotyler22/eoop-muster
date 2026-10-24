@@ -481,6 +481,23 @@ document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.h
   const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
 function startApp(){const s=document.createElement("script");s.textContent=document.getElementById("app").textContent;document.body.appendChild(s)}
 /* live check-ins: Supabase relay. Stores no names: only salted hashes of the words a person types, a code and a short note. */
+const NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+const PUB=()=>!NATIVE&&/^https?:$/.test(location.protocol)?location.origin+location.pathname:"https://antoniotyler22.github.io/eoop-muster/";
+const NP=n=>{try{return NATIVE&&window.Capacitor.registerPlugin?window.Capacitor.registerPlugin(n):null}catch(e){return null}};
+if(NATIVE){const shim={permission:(()=>{try{return localStorage.getItem("eop-nperm")||"default"}catch(e){return"default"}})(),requestPermission:async()=>nativePushPerm(true)};try{Object.defineProperty(window,"Notification",{value:shim,configurable:true,writable:true})}catch(e){window.Notification=shim}}
+async function nativePushPerm(ask){const P=NP("PushNotifications");if(!P)return"denied";let st=await P.checkPermissions();if(st.receive==="prompt"&&ask)st=await P.requestPermissions();const v=st.receive==="granted"?"granted":st.receive==="denied"?"denied":"default";window.Notification.permission=v;try{localStorage.setItem("eop-nperm",v)}catch(e){}return v}
+let apnsTok=null,apnsWait=[];
+async function nativeSub(ask){const P=NP("PushNotifications");if(!P)return null;const perm=await nativePushPerm(ask);if(perm!=="granted")return null;
+  if(!apnsTok){try{apnsTok=localStorage.getItem("eop-apns")}catch(e){}}
+  if(!apnsTok||ask){const t=new Promise(res=>{apnsWait.push(res);setTimeout(()=>res(null),15000)});await P.register();const tok=await t;if(tok)apnsTok=tok}
+  if(!apnsTok)return null;const j={endpoint:"apns:"+apnsTok,apns:apnsTok,keys:{}};return {toJSON:()=>j,endpoint:j.endpoint}}
+if(NATIVE)setTimeout(()=>{const P=NP("PushNotifications"),A=NP("App");
+  if(P){P.addListener("registration",t=>{apnsTok=t.value;try{localStorage.setItem("eop-apns",t.value)}catch(e){}apnsWait.splice(0).forEach(f=>f(t.value))});P.addListener("registrationError",()=>{apnsWait.splice(0).forEach(f=>f(null))});
+    P.addListener("pushNotificationReceived",n=>{try{toast("🔔 "+(n.title||"Update")+(n.body?": "+n.body:""))}catch(e){}});
+    P.addListener("pushNotificationActionPerformed",a=>{const o=a&&a.notification&&a.notification.data&&a.notification.data.open;if(o&&typeof render==="function"){view=o;render();window.scrollTo(0,0)}});
+    nativePushPerm(false).then(v=>{if(v==="granted")P.register().catch(()=>{})})}
+  if(A){const go=u=>{try{const h=new URL(u).hash;if(h&&h.length>2){location.hash=h;setTimeout(()=>location.reload(),50)}}catch(e){}};A.addListener("appUrlOpen",e=>go(e.url));A.getLaunchUrl().then(r=>{if(r&&r.url&&!sessionStorage.getItem("eop-launch")){sessionStorage.setItem("eop-launch","1");go(r.url)}}).catch(()=>{})}},300);
+Object.assign(window,{NATIVE,PUB,NP,nativeSub,nativePushPerm});
 const SB=window.SB={url:"https://vdhxhvklwbimjpoomnui.supabase.co",key:"sb_publishable_e1VOssMquS5UkOnwEWTrfA_fPwZqorM",
   vapid:"BGWkOoK35r0UiMWL6bYX1uwz9L_8qXwQvp4Qc_4Bv_8Ddy3c-iKPpU_ynvIxt116eKBQvlFvtBobyHKB910S3q4",
   nfn:"notify",afn:"ask",async findAsk(){for(const n of ["ask","Ask"]){try{const r=await fetch(this.url+"/functions/v1/"+n,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify({ping:1})});if(r.status!==404){this.afn=n;return n}}catch(e){}}return this.afn},async findNotify(){for(const n of ["notify","Notify"]){try{const r=await fetch(this.url+"/functions/v1/"+n,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:"{}"});if(r.status!==404){this.nfn=n;try{localStorage.setItem("eop-nfn",n)}catch(e){}return n}}catch(e){}}return this.nfn},
@@ -711,7 +728,7 @@ function setMode(k){if(!MODES[k])return false;const was=MODES[S.mode]?S.mode:"mi
   for(const ev of S.events||[]){if(Array.isArray(ev.secs))ev.secs=[...new Set(ev.secs.map(x=>map[x]).filter(Boolean))]}
   if(!S.pt.event||oldEv.includes(S.pt.event))S.pt.event=EVENTS[0];
   secFix();secDraft=null;S.snap=null;save();startXL();return true}
-function modeLink(k){return location.origin+location.pathname+(k==="all"?"":"?m="+k)}
+function modeLink(k){return PUB()+(k==="all"?"":"?m="+k)}
 function openModeSheet(first){sheetCtx={kind:"mode",first:!!first};const cur=MODES[S.mode]?S.mode:"military";
   $("#sheetT").innerHTML=first?`Pick your version<small>Sets the tabs, statuses and report titles for your group. Change it any time by tapping the title.</small>`:`App version<small>Changes every tab, status and report title. Same people, same data.</small>`;
   $("#sheetOpts").innerHTML=MODE_ORDER.map(k=>`<button data-mopt="${k}" aria-pressed="${k===cur}" data-noxl><span><b>${MODES[k].name}</b><br><span class="mdesc">${MODES[k].desc}</span></span></button>`).join("")+(first?"":
@@ -1167,7 +1184,7 @@ async function qrStart(){const M=S.mus;M.qr={rid:Date.now().toString(36)+rndId(4
 function qrStop(){const M=S.mus;clearInterval(qrTimer);qrTimer=null;if(M.qr&&M.qr.ok)SB.rpc("close_recall",{p_recall:M.qr.rid,p_read_key:M.qr.key}).catch(()=>{});M.qr=null}
 async function qrDraw(){const M=S.mus;const Q=M.qr;const box=$("#qrBox");if(!Q||!box)return;const step=Math.floor(Date.now()/QR_STEP);
   const mac=await hmacHex(Q.sec,Q.rid+":"+step);const q=new URLSearchParams();q.set("qr",Q.rid);q.set("s",step);q.set("m",mac);q.set("u",unitName());
-  const url=location.origin+location.pathname+"#"+q.toString();
+  const url=PUB()+"#"+q.toString();
   try{await loadLib("lib/qrcode.js","qrcode");const qr=qrcode(0,"M");qr.addData(url);qr.make();box.innerHTML=qr.createSvgTag({cellSize:6,margin:2,scalable:true});const sv=box.querySelector("svg");if(sv){sv.style.width="100%";sv.style.height="auto";sv.style.background="#fff";sv.style.borderRadius="12px"}}
   catch(e){box.innerHTML=`<p class="note">Couldn't draw the QR code here. Connect once so the app can load it.</p>`}
   const c=$("#qrCount");if(c){const left=Math.ceil((QR_STEP-(Date.now()%QR_STEP))/1000);c.textContent="New code in "+left+"s"}}
@@ -1323,7 +1340,7 @@ function linkStatus(){const L=S.link;if(!L)return"";if(L.err)return `<span style
   return L.sent?`Last sent ${dtg(new Date(L.sent)).slice(0,7)}.`:"Sending…"}
 window.addEventListener("online",()=>{if(S.link)linkPush();if(S.board)livePollBoard()});
 /* OIC side */
-function boardLink(sec){if(!S.board.ek){S.board.ek=b64url(crypto.getRandomValues(new Uint8Array(32)));save()}const q=new URLSearchParams();q.set("join",S.board.id);q.set("k",(S.board.wks&&S.board.wks[sec])||S.board.wk);q.set("s",sec);q.set("u",unitName());q.set("e",S.board.ek);q.set("r",secKey(sec));return location.origin+location.pathname+"#"+q.toString()}
+function boardLink(sec){if(!S.board.ek){S.board.ek=b64url(crypto.getRandomValues(new Uint8Array(32)));save()}const q=new URLSearchParams();q.set("join",S.board.id);q.set("k",(S.board.wks&&S.board.wks[sec])||S.board.wk);q.set("s",sec);q.set("u",unitName());q.set("e",S.board.ek);q.set("r",secKey(sec));return PUB()+"#"+q.toString()}
 async function boardPush(){const B=S.board;if(!B||!S.pushOn)return;try{const sub=await pushSub(false);if(!sub)return;await SB.rpc("set_board_push",{p_board:B.id,p_read_key:B.rk,p_sub:sub.toJSON()});B.push=true;save()}catch(e){}}
 function boardPushHTML(){if(!pushOK())return isIOS()&&!standalone()?`<p class="note">For alerts with your phone locked: Share → <b>Add to Home Screen</b>, then open the app from there.</p>`:"";
   if(Notification.permission==="denied")return `<p class="note">Alerts are blocked for this app in your phone settings.</p>`;
@@ -1517,7 +1534,7 @@ let coBusy=false,coPT=null,coPushBusy=false,coOpen=null,coNew=false;
 const coName=()=>(S.coBoard&&S.coBoard.name)||"Company";
 async function coCreate(name){const id=rndId(14),rk=rndId(32),wk=rndId(32),ek=b64url(crypto.getRandomValues(new Uint8Array(32)));
   await SB.rpc("create_company",{p_id:id,p_read_key:rk,p_write_key:wk});S.coBoard={id,rk,wk,ek,name:String(name||"Company").slice(0,30),own:true,units:{},err:""};save()}
-function coLink(kind){const C=S.coBoard;const q=new URLSearchParams();if(kind==="rep"){q.set("coj",C.id);q.set("k",C.wk)}else{q.set("cov",C.id);q.set("r",C.rk)}q.set("e",C.ek);q.set("u",C.name);return location.origin+location.pathname+"#"+q.toString()}
+function coLink(kind){const C=S.coBoard;const q=new URLSearchParams();if(kind==="rep"){q.set("coj",C.id);q.set("k",C.wk)}else{q.set("cov",C.id);q.set("r",C.rk)}q.set("e",C.ek);q.set("u",C.name);return PUB()+"#"+q.toString()}
 function coPayload(){const R=S.coRep;const ms=S.roster.map(m=>{const o={rank:m.rank,sec:m.sec,status:m.status,duty:dutyOf(m)};if(R.names!==false){o.name=m.name;if(m.start)o.start=m.start;if(m.end)o.end=m.end;if(m.loc)o.loc=m.loc;if(m.detail)o.detail=String(m.detail).slice(0,60)}return o});
   return {v:1,name:R.name||unitName(),secs:SECTIONS.map(x=>x.slice()),ms}}
 function coSchedule(){if(!S.coRep||S.role==="view")return;clearTimeout(coPT);coPT=setTimeout(coPush,6000)}
@@ -1675,7 +1692,7 @@ async function ensureHub(){if(hubBusy||S.role==="view"||!S.board)return;hubBusy=
     S.hubErr="";if(ch){save();rpPublish(true);mpSchedule()}}
   catch(e){const t=String(e.message||e);S.hubErr=/could not find|schema cache|404/i.test(t)?"Server needs setup part 11b.":t.slice(0,80);rawSave()}
   finally{hubBusy=false}}
-function accLink(r){return location.origin+location.pathname+"#sync="+normCode(S.sync.code)+"&r="+r+((S.wsCur||"plt")==="co"?"&w=co":"")}
+function accLink(r){return PUB()+"#sync="+normCode(S.sync.code)+"&r="+r+((S.wsCur||"plt")==="co"?"&w=co":"")}
 function accessHTML(){if(!isOwner())return"";const R=[["view","View only","Sees everything, changes nothing"],["sncoic","Can edit","Updates statuses, posts, runs musters"],["co","Same as me","Full OIC rights on their phone"]];
   if(!S.sync||!S.sync.on)return `<div class="panel" style="margin:10px 0 0"><b>Give someone access</b><p class="note">Send a link that puts your whole board on their phone: roster, FEED, Activity, live sections. Pick view only, can edit, or same rights as you.</p><button class="btn" id="accOn">Set up access links</button></div>`;
   return `<div class="panel" style="margin:10px 0 0"><b>Give someone access</b><p class="note">They open the link and get your board, kept in sync with your phone. Keep these links private.</p>${R.map(([r,l,d])=>`<div class="rrow" style="--sc:var(--line)"><div class="who"><b>${l}</b><div class="ph">${d}</div></div><div class="row2"><a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent(unitName()+" · EOP Numbers: open this to get my board on your phone ("+ROLE_N[r]+"). Keep it private: "+accLink(r)+" · iPhone: open in Safari, then Share → Add to Home Screen so alerts work."))}">Text link</a><button class="btn alt" data-acccopy="${r}">Copy</button></div></div>`).join("")}
@@ -2080,7 +2097,7 @@ function renderSys(){let h=`<h2>System check</h2><div class="panel"><p class="no
 /* ---------- MY PAGE: each member's own info, encrypted per person ---------- */
 let mpT=null,mpBusy=false;
 async function mpKeys(pk){return {id:hexOf(await sha("mpid:"+pk)).slice(0,24),wk:hexOf(await sha("mpwk:"+pk)),ek:await crypto.subtle.importKey("raw",await sha("mpek:"+pk),"AES-GCM",false,["encrypt","decrypt"])}}
-function mpLink(m){const q=new URLSearchParams();q.set("me",m.pk);q.set("u",unitName());return location.origin+location.pathname+"#"+q.toString()}
+function mpLink(m){const q=new URLSearchParams();q.set("me",m.pk);q.set("u",unitName());return PUB()+"#"+q.toString()}
 function mpDigest(m){const t=dkey();const to=dkey(new Date(Date.now()+60*86400000));const sn=sinceOf(m);
   const cal=calEntries(t,to,"ALL").filter(e=>e.m&&e.m.id===m.id).map(e=>({d:e.d,end:e.end&&e.end!==e.d?e.end:"",tm:e.tm||"",ty:e.ty,ti:e.ti,no:e.no||""}));
   const duties=[];for(const r of S.duty.rosters)for(const k of Object.keys(r.assign||{}).filter(k=>k>=t&&r.assign[k]===m.id).sort().slice(0,3))duties.push({r:r.name,d:k});
@@ -2311,7 +2328,7 @@ function syncHTML(){const Y=S.sync;
     ${syncShow?`<div style="font-family:ui-monospace,Menlo,monospace;font-size:18px;font-weight:800;letter-spacing:.06em;text-align:center;padding:10px;border:2px dashed var(--brass);border-radius:10px" data-noxl>${esc(Y.code)}</div>
       <p class="note"><b>Write this down or save it in your password manager.</b> Without it, a lost phone means lost data; there is no reset. Anyone with it can read and change your board.</p>
       <div class="row2"><button class="btn alt" id="syCopy">Copy code</button><span></span></div>
-      ${isOwner()?`<div class="note"><b>Add another phone:</b></div><div class="row2">${[["co","Same as me"],["sncoic","SNCOIC (can edit)"],["view","View only"]].map(([r,l])=>`<a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent("EOP Numbers: open this on your phone to link to my board as "+ROLE_N[r]+" (keep it private): "+location.origin+location.pathname+"#sync="+normCode(Y.code)+"&r="+r))}">${l}</a>`).join("")}</div>`:""}`:""}
+      ${isOwner()?`<div class="note"><b>Add another phone:</b></div><div class="row2">${[["co","Same as me"],["sncoic","SNCOIC (can edit)"],["view","View only"]].map(([r,l])=>`<a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent("EOP Numbers: open this on your phone to link to my board as "+ROLE_N[r]+" (keep it private): "+PUB()+"#sync="+normCode(Y.code)+"&r="+r))}">${l}</a>`).join("")}</div>`:""}`:""}
     <div class="note">This phone: <b>${esc(ROLE_N[role()]||role())}</b>. Roles are enforced by the app; anyone holding the recovery code can read the board, so share it only with people you trust.</div>
     <div class="row2"><button class="btn alt" id="syOff">${armed==="syoff"?"Tap again to stop":"Stop on this phone"}</button>${isOwner()?`<button class="btn warn" id="syDel">${armed==="sydel"?"Tap again: delete cloud copy":"Delete cloud copy"}</button>`:"<span></span>"}</div></div>${turnoverHTML()}`}
 function turnoverHTML(){const Y=S.sync;if(!Y||!Y.on)return"";
@@ -2321,7 +2338,7 @@ function turnoverHTML(){const Y=S.sync;if(!Y||!Y.on)return"";
     <button class="btn" id="toGo">${armed==="togo"?"Tap again to take over now":"Take over this board"}</button><div class="note" id="toOut"></div></div>`;
   if(role()!=="oic")return"";
   return `<h2>Turnover</h2><div class="panel"><p class="note">PCSing or handing off? Send the incoming OIC a link. On their phone they tap <b>Take over</b>; the board gets a new code and your phone stops syncing. Then you can erase this phone.</p>
-    <a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent("EOP Numbers turnover: open this on your phone to take over the "+unitName()+" board (keep it private): "+location.origin+location.pathname+"#sync="+normCode(Y.code)+"&r=newoic"))}">Text turnover link to incoming OIC</a></div>`}
+    <a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent("EOP Numbers turnover: open this on your phone to take over the "+unitName()+" board (keep it private): "+PUB()+"#sync="+normCode(Y.code)+"&r=newoic"))}">Text turnover link to incoming OIC</a></div>`}
 async function turnoverGo(){const o=$("#toOut");const say=t=>{if(o)o.textContent=t};const old=S.sync.code;
   try{say("Making a new code…");const code=newCode();const K=await codeKeys(code);const ct=await sealObj(K,syncObj());const v=await SB.rpc("backup_put",{p_id:K.id,p_key:K.wk,p_ct:ct,p_base:null});
     S.sync={on:true,code,ver:+v,at:Date.now(),err:"",last:""};setBase(syncObj());S.sync.last=sig(syncObj());S.role="oic";rawSave();
@@ -2544,7 +2561,7 @@ const BC_TTL=72*3600000;let bcBusy=false,bcDraft={msg:"",secs:null,att:true},bcO
 function bcActive(){return S.bc.find(b=>!b.closed&&Date.now()-b.t<BC_TTL)||null}
 function bcPoolOf(b){return S.roster.filter(m=>m.sec==="ATT"?b.att:b.secs.includes(m.sec))}
 function bcStats(b){const pool=bcPoolOf(b);const A=b.ack||{};return {pool:pool.length,got:pool.filter(m=>A[m.id]).length,prob:pool.filter(m=>A[m.id]&&A[m.id].c===2).length}}
-function bcLink(b){const q=new URLSearchParams();q.set("bc",b.rid);q.set("u",unitName());if(S.myPh)q.set("to",S.myPh);q.set("m",b.msg);return location.origin+location.pathname+"#"+q.toString()}
+function bcLink(b){const q=new URLSearchParams();q.set("bc",b.rid);q.set("u",unitName());if(S.myPh)q.set("to",S.myPh);q.set("m",b.msg);return PUB()+"#"+q.toString()}
 function bcBody(b){return unitName()+" MESSAGE:\n"+b.msg+"\n\nTap to confirm you got it: "+bcLink(b)}
 async function bcIndexFor(rid){const c=bcIdx[rid];if(c&&c.n===S.roster.length)return c;const map=[];
   for(const m of S.roster){const last=SB.words(lastOf(m)),first=SB.words((m.name.split(",")[1]||"").trim().split(/\s+/)[0]||"");
@@ -2625,7 +2642,7 @@ setInterval(()=>{const d=fdDue();for(const x of d){x.f.rn=x.f.rn||{};if(x.f.rn[x
   try{if("Notification" in window&&Notification.permission==="granted")navigator.serviceWorker.ready.then(r=>r.showNotification(x.miss+" haven't confirmed",{body:"“"+x.p.txt.slice(0,80)+"” Open FEED to remind them.",tag:"fdrem"+x.p.id,data:{open:"feed"},icon:"./icon-192.png"})).catch(()=>{})}catch(e){}
   if(view==="board"){const y=window.scrollY;render();window.scrollTo(0,y)}}},60000);
 function fdToLabel(to){if(!to||to.k==="all")return"Everyone";if(to.k==="secs")return to.s.concat(to.att?["ATT"]:[]).join(", ")||"No one";if(to.k==="one")return to.n||"One person";return"Everyone"}
-function fdLink(f){const q=new URLSearchParams();q.set("feed",f.id);q.set("k",f.mk);q.set("e",f.ek);q.set("u",f.unit);q.set("s",SECTIONS.map(x=>x[0]).join(","));return location.origin+location.pathname+"#"+q.toString()}
+function fdLink(f){const q=new URLSearchParams();q.set("feed",f.id);q.set("k",f.mk);q.set("e",f.ek);q.set("u",f.unit);q.set("s",SECTIONS.map(x=>x[0]).join(","));return PUB()+"#"+q.toString()}
 async function fdCreate(){const f={id:rndId(14),mk:rndId(32),lk:rndId(32),ek:b64url(crypto.getRandomValues(new Uint8Array(32))),unit:S.level==="co"?coFeedName():unitName(),posts:[],seen:0,acks:{},ackAfter:0,mine:{},un:{}};
   await SB.rpc("create_feed",{p_id:f.id,p_member_key:f.mk,p_leader_key:f.lk});S.feeds.unshift(f);fdSel=f.id;save()}
 async function fdPoll(f,full){const ackN={};const after=full?0:Math.max(0,f.ctl||0,...(f.posts||[]).map(p=>p.id));
@@ -2862,11 +2879,11 @@ function rndId(n){const a=crypto.getRandomValues(new Uint8Array(n));return [...a
 let liveBusy=false,liveIdx=null;
 async function liveCreate(){const L=S.rc.live;if(!L||L.ok||!S.rc.open)return;try{await SB.rpc("create_recall",{p_id:S.rc.rid,p_read_key:L.key});L.ok=true;L.err="";save();pushAttach()}catch(e){L.err=String(e.message||e).slice(0,80);save()}}
 /* push alerts to this phone when someone checks in (works with the phone locked) */
-const pushOK=()=>"serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window;
+const pushOK=()=>NATIVE||("serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window);
 const isIOS=()=>/iPhone|iPad|iPod/.test(navigator.userAgent);
 const standalone=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
 function b64u(s){const p="=".repeat((4-s.length%4)%4);const b=atob((s+p).replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from(b,c=>c.charCodeAt(0))}
-async function pushSub(ask){if(!pushOK())return null;const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();
+async function pushSub(ask){if(NATIVE)return nativeSub(ask);if(!pushOK())return null;const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();
   if(!sub&&ask){if(await Notification.requestPermission()!=="granted")return null;sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(SB.vapid)})}return sub}
 async function pushAttach(){const L=S.rc.live;if(!L||!L.ok||!S.pushOn)return;try{const sub=await pushSub(false);if(!sub)return;await SB.rpc("set_push",{p_recall:S.rc.rid,p_read_key:L.key,p_sub:sub.toJSON()});L.push=true;save()}catch(e){}}
 function pushHTML(){if(!S.rc.live)return"";
@@ -2893,7 +2910,7 @@ async function livePoll(){const L=S.rc.live;if(!S.rc.open||!L||liveBusy)return;l
 setInterval(()=>{if(S.rc.open&&S.rc.live&&!document.hidden)livePoll()},6000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.rc.open&&S.rc.live)livePoll()});
 function liveClose(){const L=S.rc.live;if(L&&L.ok&&S.rc.rid)SB.rpc("close_recall",{p_recall:S.rc.rid,p_read_key:L.key}).catch(()=>{})}
-function ciLink(){const q=new URLSearchParams();q.set("ci",ciRid());q.set("u",unitName());if(S.myPh)q.set("to",S.myPh);if(S.rc.live)q.set("l","1");return location.origin+location.pathname+"#"+q.toString()}
+function ciLink(){const q=new URLSearchParams();q.set("ci",ciRid());q.set("u",unitName());if(S.myPh)q.set("to",S.myPh);if(S.rc.live)q.set("l","1");return PUB()+"#"+q.toString()}
 function ciBody(){return unitName()+" RECALL "+dtg(new Date(S.rc.start))+"\nCheck in with one tap: "+ciLink()+"\nNo data? Text back your last name and 1 = good, 2 = delayed + ETA, 3 = need help."}
 function ciHTML(){const pool=recallPool().filter(m=>m.phone);const ci=S.rc.ci||{};const sent=S.rc.sent||{};
   const hp=sorted(recallPool().filter(m=>ci[m.id]&&ci[m.id].c===3));

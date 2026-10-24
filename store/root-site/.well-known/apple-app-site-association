@@ -1,0 +1,10 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["YOUR_TEAM_ID.com.antoniotyler.musterboard"],
+        "components": [ { "/": "/eoop-muster/*", "comment": "Open MusterBoard links in the app" } ]
+      }
+    ]
+  }
+}
