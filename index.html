@@ -735,7 +735,7 @@ function mapCo(u){const U=(u||"").toUpperCase();const n=(U.match(/(\d)\s*(?:ST|N
   if(!sec)sec=(SECTIONS.find(s=>U.split(/[-\s/]+/).includes(s[0])||U.includes(s[1].toUpperCase()))||SECTIONS[0])[0];
   const t=U.split(/[-\s/]+/).filter(Boolean).pop()||"";const sub={HQ:"HQ",EE:"HE",HE:"HE",CE:"CE",ORD:"ORD",UT:"UT"}[t]||(/^[A-Z]{2,6}$/.test(t)&&!/PLT|PLATOON|CO/.test(t)?t:"");return {sec,sub}}
 function levelHTML(){const co=S.level==="co";return `<h2>Unit level</h2><div class="panel"><p class="note">${co?"<b>Company:</b> tabs are platoons. Each platoon OIC gets a link, loads their platoon from your board with their own sections, and sends their numbers up to you.":"<b>Platoon:</b> tabs are sections and section leaders send you their numbers. Switch to Company to run the whole company with platoons as tabs."}</p>
-  <div class="evts"><button data-lvl="plt" aria-pressed="${!co}">Platoon</button><button data-lvl="co" aria-pressed="${co}">Company</button></div>${co?`<p class="note">Rename or add platoons in Tabs below. Load the company MOL: Marines go to their platoon, and their section inside it comes along for the platoon OIC.</p>`:""}</div>`}
+  <div class="evts"><button data-lvl="plt" aria-pressed="${!co}">Platoon</button><button data-lvl="co" aria-pressed="${co}">Company</button></div><button class="btn alt" data-go="co" style="width:100%;margin-top:8px">📂 Load a company roster (Excel or CSV)</button>${co?`<p class="note">Rename or add platoons in Tabs below. Load the company MOL: Marines go to their platoon, and their section inside it comes along for the platoon OIC.</p>`:""}</div>`}
 function secFix(){for(const m of S.roster){if(m.sec!=="ATT"&&!SECTIONS.some(s=>s[0]===m.sec))m.sec=SECTIONS[0][0]}}
 function tabsHTML(){if(!secDraft)secDraft=SECTIONS.map(([k,n])=>({o:k,k,n}));const D=secDraft;
   const cnt=k=>S.roster.filter(m=>m.sec===k).length;const gone=SECTIONS.filter(([k])=>!D.some(d=>d.o===k)&&cnt(k));
@@ -927,7 +927,7 @@ function renderData(){
   let h=`<h2>App version</h2><div class="panel vpanel" data-noxl><div><b>${MODE().name}</b> · <span class="mdesc">${MODE().desc}</span></div><button class="btn alt" data-mode-open>Change / send</button></div>
   <h2>Roster data</h2><div class="panel">
     <div><b>${T.total}</b> Marines loaded · ${S.source==="sample"?"sample data":S.source==="mol"?"from MOL detail list":S.source==="link"?"from your OIC's board":"from backup"}${S.loadedAt?" · "+esc(S.loadedAt):""}</div>
-    <label for="file">Load MOL detail list (.csv) or a backup from this app</label>
+    ${S.level==="co"?coRosterHTML():""}<label for="file">${S.level==="co"?"Or load a MOL detail list (.csv) or backup":"Load MOL detail list (.csv) or a backup from this app"}</label>
     <input type="file" id="file" accept=".csv,text/csv">
     <p class="note">Loading replaces the current roster. EDIPI and sex columns are skipped and never stored.</p>
     <button class="btn" data-xl="all">⬇ Export everything to Excel</button>
@@ -1390,6 +1390,44 @@ async function refreshAll(quiet){if(refBusy)return;refBusy=true;const b=$("#hRef
   const y=window.scrollY;const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){render();window.scrollTo(0,y)}
   const errs=[S.board&&S.board.err,S.link&&(S.link.perr||S.link.err),S.me&&S.me.err,S.sync&&S.sync.err,...S.feeds.map(f=>f.err)].filter(Boolean);
   if(!quiet)toast(errs.length?"Updated, with a problem: "+String(errs[0]).slice(0,70):"Up to date · "+String(new Date().getHours()).padStart(2,"0")+String(new Date().getMinutes()).padStart(2,"0"))}
+/* ---------- COMPANY ROSTER: drop one file, build the whole company board ---------- */
+function plCode(v){const U=String(v||"").toUpperCase().trim();if(!U)return"";if(/^(HQ|HQS|HEADQUARTERS|CO HQ|COMPANY HQ|HQ PLT|HQ PLATOON)$/.test(U))return"HQ";
+  const n=(U.match(/^(\d)\s*(?:ST|ND|RD|TH)?\s*(?:PLT|PLATOON)?$/)||U.match(/(\d)\s*(?:ST|ND|RD|TH)?\s*(?:PLT|PLATOON)/)||U.match(/(?:PLT|PLATOON)\s*(\d)/)||[])[1];if(n)return n+"PLT";
+  return U.replace(/[^A-Z0-9]/g,"").slice(0,6)||""}
+function plName(c,raw){if(c==="HQ")return"Company HQ";const n=(c.match(/^(\d)PLT$/)||[])[1];if(n)return n+(["","st","nd","rd"][+n]||"th")+" Platoon";return String(raw||c).slice(0,30)}
+function subCode(v){const U=String(v||"").toUpperCase().trim();const m={HEADQUARTERS:"HQ",HQ:"HQ","HEAVY EQUIPMENT":"HE",HE:"HE",EE:"HE","COMBAT ENGINEER":"CE",CE:"CE",ORDNANCE:"ORD",ORD:"ORD",UTILITIES:"UT",UT:"UT"};return m[U]||U.replace(/[^A-Z0-9]/g,"").slice(0,6)}
+async function fileToCSV(f){if(/\.xlsx?$/i.test(f.name)){const X=await loadXLSX();const wb=X.read(await f.arrayBuffer(),{type:"array"});return X.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]])}return await f.text()}
+function companyParse(text){const rows=parseCSV(text).filter(r=>r.some(x=>x));const hi=rows.findIndex(r=>r.some(x=>/^(name|last name|full name|rank)$/i.test(x.trim())));
+  if(hi<0)throw new Error("Couldn't find a header row with Name or Rank.");const H=rows[hi].map(x=>x.toLowerCase().trim());const col=(...ns)=>{for(const n of ns){const i=H.indexOf(n);if(i>=0)return i}return -1};
+  const cR=col("rank","grade","rank/grade"),cN=col("name","full name","marine","member"),cL=col("last name","last"),cF=col("first name","first"),cP=col("platoon","plt","plt."),cS=col("section","sec","shop","work section"),cU=col("unit","ruc/unit","organization","org"),
+    cSt=col("status","duty status"),cPh=col("phone","cell","cell phone","phone number"),cE=col("end date","end"),cB=col("start date","start"),cLo=col("location","loc");
+  if(cN<0&&cL<0)throw new Error("The file needs a Name column (or Last name / First name).");
+  const out=[];const plRaw={};let n=0;
+  for(const r of rows.slice(hi+1)){const name=cN>=0?r[cN]:((r[cL]||"")+(r[cF]?", "+r[cF]:""));if(!name||!name.trim())continue;
+    let pc="",sub="";if(cP>=0){pc=plCode(r[cP]);plRaw[pc]=plRaw[pc]||r[cP]}else if(cU>=0){const m=mapCo(r[cU]);const mm=String(r[cU]||"").toUpperCase().match(/(\d)\s*(?:ST|ND|RD|TH)?\s*(?:PLT|PLATOON)|(?:PLT|PLATOON)\s*(\d)/);pc=mm?(mm[1]||mm[2])+"PLT":/HQ/.test(String(r[cU]).toUpperCase())?"HQ":"";sub=m.sub}
+    if(cS>=0)sub=subCode(r[cS]);if(!pc)pc="HQ";
+    const st=cSt>=0?mapStatus(r[cSt]):"On Hand";
+    out.push({id:"m"+(++n),rank:(cR>=0?r[cR]:"").toUpperCase().slice(0,10)||"",name:name.toUpperCase().trim().slice(0,60),sec:pc,sub:sub||undefined,status:st,detail:cSt>=0?(r[cSt]||""):"",loc:cLo>=0?(r[cLo]||""):"",start:cB>=0?fmtD(r[cB]):"",end:cE>=0?fmtD(r[cE]):"",phone:cPh>=0?normPh(r[cPh]||""):""})}
+  if(!out.length)throw new Error("The file had a header but no people under it.");
+  const codes=[...new Set(out.map(m=>m.sec))].sort((a,b)=>(a==="HQ"?-1:b==="HQ"?1:a.localeCompare(b,undefined,{numeric:true}))).slice(0,10);
+  for(const m of out)if(!codes.includes(m.sec))m.sec=codes[codes.length-1];
+  return {roster:out,secs:codes.map(c=>[c,plName(c,plRaw[c])]),byPlt:codes.map(c=>[c,out.filter(m=>m.sec===c).length]),subs:[...new Set(out.map(m=>m.sub).filter(Boolean))]}}
+async function companyLoad(f){const P=companyParse(await fileToCSV(f));
+  if(S.level!=="co"){S.secsPlt=SECTIONS.map(x=>x.slice());S.level="co"}
+  SECTIONS.splice(0,SECTIONS.length,...P.secs);S.secs=P.secs;S.secsCo=P.secs.map(x=>x.slice());
+  const pm={};S.roster.forEach(m=>{if(m.phone)pm[m.name.toUpperCase()]=m.phone});P.roster.forEach(m=>{if(!m.phone&&pm[m.name])m.phone=pm[m.name]});
+  S.roster=P.roster;S.source="mol";S.loadedAt=new Date().toLocaleString([], {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});S.leaderMode=true;secDraft=null;S.snap=null;save();coLoaded=P;return P}
+let coLoaded=null;
+function coRosterHTML(){const co=S.level==="co"&&S.source!=="sample";
+  return `<div class="panel" style="border-color:var(--brass)"><b>${co?"Company roster loaded":"Build the company board from a roster"}</b>
+    ${co?`<div class="note">${S.roster.length} people · ${SECTIONS.map(([k])=>`<b>${esc(k)}</b> ${S.roster.filter(m=>m.sec===k).length}`).join(" · ")}</div>
+      <div class="row2"><button class="btn" data-go="live">Send platoon OIC links</button><button class="btn alt" data-go="board">See the company</button></div>
+      <p class="note">Load an updated file any time to refresh it.</p>`:`<p class="note">Drop in the company roster (Excel or CSV). Each platoon becomes a tab, each platoon OIC gets a link, and the whole company shows here live.</p>
+      <p class="note">Columns it reads: <b>Name</b> (or Last / First), <b>Rank</b>, <b>Platoon</b>, <b>Section</b>, Phone, Status. No Platoon column? It reads the Unit column (e.g. "1ST PLT-HE").</p>`}
+    <label for="coFile">${co?"Load an updated company roster":"Company roster file"}</label><input type="file" id="coFile" accept=".csv,.xlsx,.xls,text/csv"><div class="note" id="coFOut"></div></div>`}
+document.addEventListener("change",e=>{if(e.target.id!=="coFile")return;const f=e.target.files[0];if(!f)return;const o=$("#coFOut");if(o)o.textContent="Reading "+f.name+"…";
+  companyLoad(f).then(P=>{toast(P.roster.length+" people loaded into "+P.secs.length+" platoons");if(S.board){rpPublish(true)}renderCo();window.scrollTo(0,0)}).catch(err=>{if(o)o.textContent=String(err.message||err)});e.target.value=""});
+
 /* ---------- COMPANY: several platoon boards rolled up live into one company view ----------
    Platoon OIC phones encrypt their roster with the company key (only in the links) and report it; viewers decrypt. */
 let coBusy=false,coPT=null,coPushBusy=false,coOpen=null,coNew=false;
@@ -1419,7 +1457,8 @@ function coText(){const C=S.coBoard;const U=Object.values(C.units);const all=U.f
   for(const u of U.sort((a,b)=>a.name.localeCompare(b.name))){const x=coTally(u.ms);L.push(u.name+": "+x.oh+"/"+x.tot+(Date.now()-u.t>4*3600000?" (as of "+dtg(new Date(u.t)).slice(0,7)+")":""))}
   const off=STATUSES.slice(1).filter(st=>T.c[st]);if(off.length)L.push(off.map(st=>SHORT[st]+" "+T.c[st]).join(", "));return L.join("\n")}
 function renderCo(){const C=S.coBoard,R=S.coRep;let h=`<div class="sechead" style="margin-top:12px"><h2>Company</h2>${C?`<span class="ratio" style="font-size:13px">${C.err?`<span style="color:var(--warn)">${esc(C.err)}</span>`:`<span style="color:var(--s-onhand)">● live</span>`}</span>`:""}</div>`;
-  if(!C&&!R||coNew){h+=`<div class="panel"><p class="note">Put several platoons on one live company board. You get two links: one for each platoon OIC to report their numbers in, and a view-only link for anyone who needs the whole company (CO, XO, 1stSgt). Everything is encrypted on the phones; the server can't read it.</p>
+  if(isOwner())h+=coRosterHTML();
+  if(!C&&!R||coNew){h+=`<h2 style="margin-top:18px">Or: platoons keep their own rosters</h2><div class="panel"><p class="note">Put several platoons on one live company board. You get two links: one for each platoon OIC to report their numbers in, and a view-only link for anyone who needs the whole company (CO, XO, 1stSgt). Everything is encrypted on the phones; the server can't read it.</p>
     <label for="coNm">Company name</label><input type="text" id="coNm" maxlength="30" placeholder="CLC-33" value="${esc((S.unit&&cleanName(S.unit))||"")}"><button class="btn" id="coMake">Set up the company board</button>${coNew?`<button class="btn alt" id="coCancel">Cancel</button>`:""}<div class="note" id="coOut"></div>
     <p class="note">Got a company link? Open it on this phone.</p></div>`;$("#main").innerHTML=h;return}
   if(C){const U=Object.entries(C.units).map(([k,u])=>Object.assign({k},u)).sort((a,b)=>a.name.localeCompare(b.name));const all=U.flatMap(u=>u.ms);const T=coTally(all);const P=pct(T.oh,T.tot);
@@ -1749,7 +1788,7 @@ function renderTools(){const al=alerts();const cf=upcomingConflicts(14).length;c
     ${T("recall","recall","Recall",S.rc.open?"In progress":S.roster.filter(m=>m.phone).length+" numbers loaded",S.rc.open?"on":"")}
     ${T("alerts","alert","Alerts",(cf?cf+" conflicts · ":"")+(al.over.length?al.over.length+" overdue · ":"")+al.ret.length+" returning",cf||al.over.length?"hot":"")}
     ${T("text","text","Send the numbers","Accountability report")}
-    ${T("co","rollup","Company",S.coBoard?Object.keys(S.coBoard.units||{}).length+" units live":S.coRep?"Reporting to "+esc(S.coRep.co):"Whole company, live",S.coBoard||S.coRep?"on":"")}
+    ${T("co","rollup","Company",S.level==="co"&&S.source!=="sample"?SECTIONS.length+" platoons · "+S.roster.length+" people":S.coBoard?Object.keys(S.coBoard.units||{}).length+" units live":S.coRep?"Reporting to "+esc(S.coRep.co):"Load a company roster",S.coBoard||S.coRep||S.level==="co"?"on":"")}
     ${T("rollup","rollup","Rollup",Object.keys(S.roll.units).length?Object.keys(S.roll.units).length+" units":"Add up units under you",rollStale().length?"hot":"")}
     ${T("live","live","Live sections",S.board?"On":"Off",S.board?"on":"")}
     ${T("armory","armory","Armory",S.arm.open?"Muster in progress":S.roster.filter(hasW).length+" weapons",S.arm.open?"on":"")}
