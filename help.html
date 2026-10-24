@@ -22,18 +22,25 @@ h1{font-size:28px;font-weight:800;margin:0}h2{font-size:19px;font-weight:800;mar
 <li>Each section leader loads the same roster, opens their link and taps Link and send now.</li>
 <li>From then on their changes reach your board in about 15 seconds, and their appointments show on your calendar.</li></ol></div>
 <div class="card"><h2>3. Bring everyone in</h2><ol>
-<li><b>FEED → Start a feed → Invite people</b>: one text with a join link. Post the word; people tap Got it.</li>
+<li><b>Feed → Start a feed → Invite people</b>: one text with a join link. Post the word; people tap Got it.</li>
 <li><b>DATA → My pages → Turn on for everyone</b>, then text each person their private link. They see their own status, duty, due-outs and calendar.</li>
 <li>Everyone can use <b>MY LOG</b> to write daily accomplishments and export them for evals.</li></ol></div>
 <div class="card"><h2>4. Daily rhythm</h2><ul>
-<li>Morning: post the Plan of the Day in FEED; check the board and ALERTS.</li>
+<li>Morning: post the Plan of the Day in Feed; check the board and ALERTS.</li>
 <li>Formation: MUSTER → Show QR, people check themselves in.</li>
 <li>During the day: section leaders update; you send numbers from TEXT.</li>
 <li>Weekly: READY for due-outs, DUTY for the roster, TRENDS for the brief, ⬇ Excel for the admin shop.</li></ul></div>
+<div class="card"><h2>New in 1.1</h2><ul>
+<li><b>🚨 Emergency muster</b> (Home or Recall): one tap starts a live check-in, posts an URGENT Feed alert with the check-in link, and alerts you about anyone who misses the deadline.</li>
+<li><b>Missed check-in alerts</b>: during any recall, pick a deadline. When it passes, the app buzzes and lists who hasn't checked in, with one-tap text and call.</li>
+<li><b>Dashboard</b> (Tools → Dashboard): headcount, recall, requests, reported posts and Feed read receipts on one screen. Open it on a computer or iPad for the wide view.</li>
+<li><b>Works offline</b>: Got its, problems, requests and reports wait for signal and send by themselves.</li>
+<li><b>Report, hide or block</b>: tap ⋯ on any Feed post. Reports go to the person running the team, who reviews them within 24 hours (Feed → Reported posts).</li>
+<li><b>Delete my account</b>: DATA → Security → Delete my account removes your sign-in and everything you created on the server, then erases the phone.</li></ul></div>
 <div class="card"><h2>5. Server setup (leaders who run their own copy)</h2><ol>
 <li>Create a free Supabase project. Put its URL and publishable key in the app (ask your developer).</li>
 <li>In the app: <b>DATA → System check → Run</b>. For anything with ❌, tap <b>Copy part 1</b>, paste in Supabase → SQL Editor → Run, then the next part.</li>
 <li>For push alerts: Edge Functions → create <b>notify</b>, paste the code from System check, add the VAPID_PUBLIC and VAPID_PRIVATE secrets, and turn off Enforce JWT verification.</li>
-<li>Run the three Server protection parts once.</li></ol></div>
+<li>Run the three Server protection parts once.</li><li>Updating to 1.1: run <b>16_v11</b> from System check, and redeploy <b>notify</b> so reported posts buzz your phone.</li></ol></div>
 <div class="card"><h2>Privacy in one line</h2><p>Your roster stays on your phone. What goes to the server is encrypted or scrambled, so the server can't read names, posts or your data. <a href="privacy.html">Full privacy policy</a> · <a href="support.html">Support</a> · <a href="./">Open the app</a></p></div>
 </main></body></html>

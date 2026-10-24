@@ -411,3 +411,22 @@ details[open]>summary::before{transform:rotate(90deg)}
 .pro-plan[disabled],.pro-wall .btn[disabled]{opacity:.5}
 .pro-legal{font-size:11.5px;line-height:1.45}
 .pro-legal a{color:inherit}
+
+/* 1.1: dashboard */
+body.v11wide .wrap,body.v11wide .top-in{max-width:1180px}
+.v11grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;align-items:start}
+.v11grid .panel{margin-top:12px}
+.v11grid.k{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-top:10px}
+.v11t{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1px solid var(--line);background:var(--surface-solid);border-radius:18px;padding:12px 14px;color:var(--ink);font:inherit}
+.v11t .l{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.v11t .b{font-size:30px;font-weight:800;line-height:1.1;color:var(--tc)}
+.v11t .b small{font-size:15px;color:var(--muted)}
+.v11t .s{font-size:12.5px;color:var(--muted)}
+.v11tb{width:100%;border-collapse:collapse;font-size:14px}
+.v11tb th,.v11tb td{padding:6px 4px;text-align:right;border-bottom:1px solid var(--line)}
+.v11tb th:first-child,.v11tb td:first-child{text-align:left}
+.v11tb tfoot td{font-weight:800;border-bottom:0}
+.v11post{display:flex;flex-direction:column;gap:3px;padding:8px 0;border-bottom:1px solid var(--line)}
+.v11bar{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.v11bar i{display:block;height:100%;background:var(--s-onhand)}
+@media (min-width:900px){.v11tip{display:none}}

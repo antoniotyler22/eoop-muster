@@ -18,11 +18,11 @@
 </head><body>
 <header class="top"><div class="top-in">
   <div class="brand">
-    <div><h1><button id="bMode" class="titlebtn" aria-haspopup="dialog" title="Change app version">EOP Numbers<span class="caret">▾</span></button></h1><div class="dtg"><span id="dtg"></span><span id="wsBar"></span></div></div>
+    <div><h1><button id="bMode" class="titlebtn" aria-haspopup="dialog" title="Change app version or rename" data-noxl>Accounted For<span class="caret">▾</span></button></h1><div class="dtg"><span id="dtg"></span><span id="wsBar"></span></div></div>
     <div class="hic"><button id="hRef" aria-label="Refresh: get the latest updates"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button><button id="hHelp" aria-label="Help for this screen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"></path></svg></button><button id="hSearch" aria-label="Find anyone"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></button><button id="hSet" aria-label="Settings and data"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></button></div>
     <div class="acts">
       <button id="bToday" aria-pressed="false" hidden>TODAY</button>
-      <button id="bFeed" aria-pressed="false">FEED<span id="fdBadge" class="fdb" hidden></span></button>
+      <button id="bFeed" aria-pressed="false">Feed<span id="fdBadge" class="fdb" hidden></span></button>
       <button id="b6W" aria-pressed="false">6W</button>
       <button id="bPT" aria-pressed="false">PT</button>
       <button id="bText" aria-pressed="false">TEXT</button>
@@ -86,8 +86,8 @@ const V=window.VAULT={key:null,cfg:getCfg(),ok:!!(window.crypto&&crypto.subtle),
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.hidden){hiddenAt=Date.now();return}
   const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
-window.AV="3.6.0";
-function startApp(){const s=document.createElement("script");s.src="app.js?v="+window.AV;s.onerror=()=>{document.body.insertAdjacentHTML("beforeend",'<p style="padding:24px;font:16px system-ui">Couldn\'t load the app. Connect once, then reopen.</p>')};document.body.appendChild(s)}
+window.AV="3.7.0";
+function startApp(){const s=document.createElement("script");s.src="app.js?v="+window.AV;s.onload=()=>{const x=document.createElement("script");x.src="v11.js?v="+window.AV;document.body.appendChild(x)};s.onerror=()=>{document.body.insertAdjacentHTML("beforeend",'<p style="padding:24px;font:16px system-ui">Couldn\'t load the app. Connect once, then reopen.</p>')};document.body.appendChild(s)}
 /* live check-ins: Supabase relay. Stores no names: only salted hashes of the words a person types, a code and a short note. */
 const NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
 const PUB=()=>!NATIVE&&/^https?:$/.test(location.protocol)?location.origin+location.pathname:"https://antoniotyler22.github.io/eoop-muster/";

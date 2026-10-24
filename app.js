@@ -10,7 +10,7 @@ const MIL_SECS=DEF_SECS.map(s=>s.slice());
 let secDraft=null;
 /* ---------- versions: one app, five vocabularies ---------- */
 const MODES={
- military:{name:"Military",desc:"Marines, sections, muster, armory",title:"EOP Numbers"},
+ military:{name:"Military",desc:"Marines, sections, muster, armory",title:"Accounted For"},
  police:{name:"Police",desc:"Officers, shifts, roll call, armory",title:"Shift Numbers",
   secs:[["PAT","Patrol"],["INV","Investigations"],["TRF","Traffic"],["SOD","Special Ops"],["ADM","Admin"]],
   ranks:["CHIEF","DEP CHIEF","CAPT","LT","SGT","CPL","DET","OFC","RECRUIT"],rankDef:"OFC",
@@ -61,7 +61,7 @@ const JOBS=[];function every(ms,fn,name){JOBS.push({ms,fn,name,next:Date.now()+M
 function runDue(stagger){const t=Date.now();let k=0;for(const j of JOBS){if(t<j.next)continue;j.next=t+j.ms;const go=()=>{try{j.fn()}catch(e){}};if(stagger)setTimeout(go,(k++)*300);else go()}}
 setInterval(()=>{if(!document.hidden)runDue(false)},2000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)runDue(true)});
-const APP_VER=window.AV||"3.5.0";const APP_BUILD="2026-10-24";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER=window.AV||"3.5.0";const APP_BUILD="2026-10-25";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -113,7 +113,7 @@ function xlTree(root){if(!root)return;if(root.nodeType===3){xlText(root);return}
   if(root.nodeName==="INPUT")return;
   const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const L=[];while(w.nextNode())L.push(w.currentNode);L.forEach(xlText)}
 let XOBS=null;
-function startXL(){if(XOBS){XOBS.disconnect();XOBS=null}XL=modeDict(MODE());document.title=MODE().title+" · Accounted For";if(window.VAULT&&VAULT.cfg&&VAULT.cfg.title!==MODE().title)VAULT.set({title:MODE().title});
+function startXL(){if(XOBS){XOBS.disconnect();XOBS=null}XL=modeDict(MODE());document.title=(typeof appName==="function"?appName():"Accounted For");{const an=typeof appName==="function"?appName():"Accounted For";if(window.VAULT&&VAULT.cfg&&VAULT.cfg.title!==an)VAULT.set({title:an})}
   xlTree(document.body);if(!XL)return;
   XOBS=new MutationObserver(rs=>{for(const r of rs){if(r.type==="characterData")xlText(r.target);else r.addedNodes.forEach(xlTree)}});
   XOBS.observe(document.body,{subtree:true,childList:true,characterData:true})}
@@ -188,7 +188,7 @@ document.addEventListener("click",e=>{if(e.target.id!=="rmCo")return;if(!isOwner
   const nw=Array.isArray(S.secsPlt)&&S.secsPlt.length?S.secsPlt.map(x=>x.slice()):DEF_SECS.map(x=>x.slice());S.secs=JSON.stringify(nw)===JSON.stringify(DEF_SECS)?null:nw;SECTIONS.splice(0,SECTIONS.length,...nw);
   S.level="plt";delete S.newCo;if(S.link&&S.link.whole)S.link=null;S.roster=sampleRoster();S.source="sample";S.loadedAt="";if(S.board)S.board.rsig={};rawSave();toast("Company roster deleted from the platoon view");setTimeout(()=>{try{history.replaceState(null,"",location.pathname+"#data")}catch(e){}location.reload()},600)});
 document.addEventListener("click",e=>{const b=e.target.closest("[data-restore]");if(!b)return;if(!isOwner())return denyMsg();const k=b.dataset.restore;if(armed!=="rs"+k){armed="rs"+k;tabRedraw();return}armed=null;restoreFrom(k)});
-function levelHTML(){const cw=(S.wsCur||"plt")==="co";return restoreHTML()+`<h2>Views</h2><div class="panel"><p class="note">This phone keeps a <b>platoon view</b> and a <b>company view</b> separately. Switch with <b>PLT / CO</b> at the top. Each has its own roster, links, FEED and backup.</p><div class="evts"><button data-wsgo="plt" aria-pressed="${!cw}">Platoon view</button><button data-wsgo="co" aria-pressed="${cw}">Company view</button></div></div>`;const co=S.level==="co";return `<h2>Unit level</h2><div class="panel"><p class="note">${co?"<b>Company:</b> tabs are platoons. Each platoon OIC gets a link, loads their platoon from your board with their own sections, and sends their numbers up to you.":"<b>Platoon:</b> tabs are sections and section leaders send you their numbers. Switch to Company to run the whole company with platoons as tabs."}</p>
+function levelHTML(){const cw=(S.wsCur||"plt")==="co";return restoreHTML()+`<h2>Views</h2><div class="panel"><p class="note">This phone keeps a <b>platoon view</b> and a <b>company view</b> separately. Switch with <b>PLT / CO</b> at the top. Each has its own roster, links, Feed and backup.</p><div class="evts"><button data-wsgo="plt" aria-pressed="${!cw}">Platoon view</button><button data-wsgo="co" aria-pressed="${cw}">Company view</button></div></div>`;const co=S.level==="co";return `<h2>Unit level</h2><div class="panel"><p class="note">${co?"<b>Company:</b> tabs are platoons. Each platoon OIC gets a link, loads their platoon from your board with their own sections, and sends their numbers up to you.":"<b>Platoon:</b> tabs are sections and section leaders send you their numbers. Switch to Company to run the whole company with platoons as tabs."}</p>
   <div class="evts"><button data-lvl="plt" aria-pressed="${!co}">Platoon</button><button data-lvl="co" aria-pressed="${co}">Company</button></div><button class="btn alt" data-go="co" style="width:100%;margin-top:8px">📂 Load a company roster (Excel or CSV)</button>${co?`<p class="note">Rename or add platoons in Tabs below. Load the company MOL: Marines go to their platoon, and their section inside it comes along for the platoon OIC.</p>`:""}</div>`}
 function secFix(){for(const m of S.roster){if(m.sec!=="ATT"&&!SECTIONS.some(s=>s[0]===m.sec))m.sec=SECTIONS[0][0]}}
 function tabsHTML(){if(!secDraft)secDraft=SECTIONS.map(([k,n])=>({o:k,k,n}));const D=secDraft;
@@ -372,7 +372,7 @@ function renderSection(code){
 }
 function reportText(){
   const {c,T,A}=counts();const L=[];
-  L.push((S.unit?S.unit.toUpperCase():"EOOP")+" ACCOUNTABILITY "+dtg());
+  L.push(unitName().toUpperCase()+" ACCOUNTABILITY "+dtg());
   L.push("TOTAL STRENGTH: "+T.total);
   L.push("ON HAND: "+T["On Hand"]+" ("+pct(T["On Hand"],T.total)+"%)");
   L.push("PRESENT ON DECK: "+present(T));
@@ -443,12 +443,12 @@ function renderData(){
     <p class="note">Numbers attach to Marines already in the app, matched by name. They stay on this phone only and carry over when you load a new MOL list.</p></div>
   <h2>Apply section updates</h2><div class="panel">
     <label for="syncIn">Paste one or more section leader texts</label>
-    <textarea id="syncIn" style="min-height:110px" placeholder="EOOP HE SECTION UPDATE ...&#10;#EOOP1|HE|34|..."></textarea>
+    <textarea id="syncIn" style="min-height:110px" placeholder="HE SECTION UPDATE ...&#10;#EOOP1|HE|34|..."></textarea>
     <button class="btn" id="syncGo">Apply to board</button><div class="note" id="syncOut"></div></div>
   <h2>Live section updates</h2><div class="panel"><p class="note">${S.board?"<b style='color:var(--s-onhand)'>● On</b> for your board.":"Off."}${S.link?" This phone sends "+esc(S.link.mysec)+" to "+esc(S.link.unit)+".":""}</p><button class="btn alt" data-go="live">${S.board||S.link?"Manage":"Set up"} live section updates</button></div>
-  <h2>System check</h2><div class="panel"><p class="note">Something not working (live sections, FEED, backup, alerts)? This tests your server setup and shows exactly what to paste to fix it.</p><button class="btn alt" data-go="sys">Open system check</button></div>
+  <h2>System check</h2><div class="panel"><p class="note">Something not working (live sections, Feed, backup, alerts)? This tests your server setup and shows exactly what to paste to fix it.</p><button class="btn alt" data-go="sys">Open system check</button></div>
   <h2>My pages</h2><div class="panel"><p class="note">${S.roster.filter(m=>m.pk).length} of ${S.roster.length} people have a private My page.${S.mpErr?` <span style="color:var(--warn)">Last error: ${esc(S.mpErr)}</span>`:""} Turn it on from each person's card, or for everyone with a number below. Each link is private, so it's sent one text at a time.</p>
-    <button class="btn alt" id="mpAll">Turn on for everyone with a phone number</button><div class="alist">${sorted(S.roster.filter(m=>m.pk&&m.phone&&!m.pkSent)).slice(0,60).map(m=>`<div class="rtop"><div class="who">${esc(m.rank+" "+m.name)}</div><a class="btn alt" data-mpsent="${m.id}" href="${esc("sms:+1"+m.phone+"?&body="+encodeURIComponent(unitName()+": your private My page (status, duty, due-outs, calendar) and the unit FEED. Keep this link to yourself: "+mpLink(m)+" · iPhone: open in Safari, then Share → Add to Home Screen so alerts work."))}">Text link</a></div>`).join("")}</div></div>
+    <button class="btn alt" id="mpAll">Turn on for everyone with a phone number</button><div class="alist">${sorted(S.roster.filter(m=>m.pk&&m.phone&&!m.pkSent)).slice(0,60).map(m=>`<div class="rtop"><div class="who">${esc(m.rank+" "+m.name)}</div><a class="btn alt" data-mpsent="${m.id}" href="${esc("sms:+1"+m.phone+"?&body="+encodeURIComponent(unitName()+": your private My page (status, duty, due-outs, calendar) and the unit Feed. Keep this link to yourself: "+mpLink(m)+" · iPhone: open in Safari, then Share → Add to Home Screen so alerts work."))}">Text link</a></div>`).join("")}</div></div>
   <h2>Live check-in</h2><div class="panel"><label class="tog"><input type="checkbox" id="liveTog"${S.live!==false?" checked":""}> Recall check-ins appear on my board by themselves</label>
     <p class="note">Uses a small relay server. It never gets names or phone numbers: only scrambled codes of what each person types, Good/Delayed/Help and their short note. Each recall deletes itself when you close it out, or after 72 hours. Turn off to use text replies only.</p></div>
   <h2>Offline</h2><div class="panel"><div id="offStat" class="note">Checking…</div></div>
@@ -506,7 +506,7 @@ const W_FIELDS=[["what","WHAT","What happened. Facts only, in order."],["where",
 let W=null;
 function newW(id){const now=new Date();const p=n=>String(n).padStart(2,"0");
   return {id:"w"+Date.now(),mid:id||"",other:"",type:"",kind:"INITIAL",when:now.getFullYear()+"-"+p(now.getMonth()+1)+"-"+p(now.getDate())+"T"+p(now.getHours())+":"+p(now.getMinutes()),what:"",where:"",why:"",how:"",act:"",created:""}}
-function wWho(w){const m=S.roster.find(x=>x.id===w.mid);let s=m?(m.rank+" "+m.name+" / "+(m.sec==="ATT"?"ATTACHED"+(m.parent?" ("+m.parent+")":""):m.sec)+", EOOP"):"";
+function wWho(w){const m=S.roster.find(x=>x.id===w.mid);let s=m?(m.rank+" "+m.name+" / "+(m.sec==="ATT"?"ATTACHED"+(m.parent?" ("+m.parent+")":""):m.sec)+", "+unitName().toUpperCase()):"";
   if(w.other.trim()) s+=(s?"; ":"")+w.other.trim().toUpperCase();return s||"(select a Marine)"}
 function wText(w){const d=w.when?dtg(new Date(w.when)):"";const L=[];
   L.push("6W REPORT ("+w.kind+")"+(w.type?" - "+w.type.toUpperCase():""));
@@ -567,7 +567,7 @@ function alerts(){const over=[],ret=[],dep=[];
     const x=parseD(m.edd);if(x&&m.sec!=="ATT"){const dd=dayDiff(x);if(dd<=90)dep.push({m,dd,why:"EDD "+short(x)+" "+String(x.getFullYear()).slice(2)})}}
   over.sort((a,b)=>a.dd-b.dd);ret.sort((a,b)=>a.dd-b.dd);dep.sort((a,b)=>a.dd-b.dd);return {over,ret,dep}}
 function arow(a,label,col){const m=a.m;return `<div class="arow" style="--sc:var(${col})"><div style="min-width:0"><b>${esc(m.rank)}</b> ${esc(m.name)}<div class="note">${m.sec==="ATT"?"ATT":m.sec} · ${esc(a.why)}</div></div><div class="when">${label}</div></div>`}
-function alertsText(){const {over,ret,dep}=alerts();const L=["EOOP ALERTS "+dtg()];
+function alertsText(){const {over,ret,dep}=alerts();const L=[unitName().toUpperCase()+" ALERTS "+dtg()];
   const line=(a,t)=>"- "+(a.m.sec==="ATT"?"ATT":a.m.sec)+" "+a.m.rank+" "+a.m.name.split(",")[0]+": "+a.why+(t?" ("+t+")":"");
   {const cf=upcomingConflicts(14);if(cf.length){L.push("");L.push("CONFLICTS NEXT 14 DAYS ("+cf.length+")");cf.forEach(c=>{const d=parseD(c.d);L.push("- "+DOW[d.getDay()]+" "+short(d)+" "+c.what.toUpperCase()+": "+c.m.sec+" "+c.m.rank+" "+lastOf(c.m)+" ("+c.cf.map(x=>x.s.toUpperCase()).join(", ")+")")})}}
   L.push("");L.push("OVERDUE ("+over.length+")");over.forEach(a=>L.push(line(a,(-a.dd)+"D")));
@@ -591,7 +591,7 @@ function renderAlerts(){const {over,ret,dep}=alerts();let h=banner();
 
 /* ---------- formation muster ---------- */
 function musPool(){const M=S.mus;return S.roster.filter(m=>(m.sec!=="ATT"||M.att)&&M.inc.includes(m.status))}
-function musText(rec){const L=["EOOP MUSTER "+dtg(new Date(rec.t))];
+function musText(rec){const L=[unitName().toUpperCase()+" MUSTER "+dtg(new Date(rec.t))];
   L.push("PRESENT: "+rec.present+"/"+rec.expected+(rec.expected?" ("+pct(rec.present,rec.expected)+"%)":""));
   L.push("UNACCOUNTED: "+rec.un.length);rec.un.forEach(x=>L.push("- "+x));
   L.push("");L.push("TOTAL STRENGTH "+rec.strength+" · ON HAND "+rec.onhand);return L.join("\n")}
@@ -674,7 +674,7 @@ const SDEC=Object.fromEntries(Object.entries(SCODE).map(([a,b])=>[b,a]));
 function tok(m){const [last,rest]=m.name.split(",");const first=((rest||"").trim().split(/\s+/)[0]||"").replace(/[^A-Z]/gi,"").slice(0,3);
   return (m.rank+"."+(last||"").trim()+"."+first).toUpperCase().replace(/[;|=]/g,"")}
 function sectionUpdateText(code){const ms=sorted(S.roster.filter(m=>m.sec===code));const oh=ms.filter(m=>m.status==="On Hand").length;
-  const L=["EOOP "+code+" SECTION UPDATE "+dtg(),"STRENGTH "+ms.length+" · ON HAND "+oh];
+  const L=[unitName().toUpperCase()+" "+code+" SECTION UPDATE "+dtg(),"STRENGTH "+ms.length+" · ON HAND "+oh];
   const parts=[];
   for(const [st,cd] of Object.entries(SCODE)){const g=ms.filter(m=>m.status===st);if(!g.length)continue;L.push(SHORT[st].toUpperCase()+": "+g.map(m=>m.rank+" "+m.name.split(",")[0]).join(", "));parts.push(cd+"="+g.map(tok).join(";"))}
   const ld=ms.filter(m=>dutyOf(m)==="Light Duty"),lim=ms.filter(m=>dutyOf(m)==="LIMDU");
@@ -703,7 +703,7 @@ function applySectionUpdates(text){const lines=String(text).split(/\r?\n/).map(x
 const RSTAT=["On Hand","Appointment on Base","Appointment off Base","Company Duties","Operation","TAD","Leave"];
 const STALE_H=12;
 const cleanName=s=>String(s||"").toUpperCase().replace(/[|#\r\n]/g," ").replace(/\s+/g," ").trim().slice(0,24);
-function unitName(){return cleanName(S.unit)||(MODE().v?MODE().v.eo:"EOOP")}
+function unitName(){return cleanName(S.unit)||(MODE().v?MODE().v.eo:"UNIT")}
 function ownNums(){const {T,A}=counts();const d=dutyCounts(S.roster.filter(m=>m.sec!=="ATT"));const st={};RSTAT.forEach(s=>st[s]=T[s]||0);
   return {name:unitName(),t:Date.now(),str:T.total,st,ld:d["Light Duty"],lim:d["LIMDU"],att:A.total,attoh:A["On Hand"],own:true}}
 function rollCode(u){return "#EOOP2|"+cleanName(u.name)+"|"+Math.floor(u.t).toString(36)+"|"+[u.str].concat(RSTAT.map(s=>u.st[s]||0),[u.ld,u.lim,u.att,u.attoh]).map(n=>Math.max(0,+n||0)).join("|")}
@@ -828,12 +828,12 @@ function renderLive(){let h=banner();const B=S.board,L=S.link;
       <button class="btn" id="lvOn">Turn on live updates for my board</button><div class="note" id="lvOut"></div></div>`}
   else{h+=`<div class="panel"><div><b style="color:var(--s-onhand)">● Live</b> · checks every 15 seconds while the app is open${B.err?` · <span style="color:var(--warn)">${esc(B.err)}</span>`:""}</div>
       ${boardPushHTML()}
-      <p class="note">Send each ${LV().head} their link. Their ${LV().sec} roster loads from your board, so they don't load anything.${S.level==="co"?" Each platoon OIC gets their platoon with its own sections and can run their own section leaders.":""} Every change they make shows up here, and they land in your FEED where you see every post.</p>${hubHTML()}${accessHTML()}</div>
+      <p class="note">Send each ${LV().head} their link. Their ${LV().sec} roster loads from your board, so they don't load anything.${S.level==="co"?" Each platoon OIC gets their platoon with its own sections and can run their own section leaders.":""} Every change they make shows up here, and they land in your Feed where you see every post.</p>${hubHTML()}${accessHTML()}</div>
     <div class="alist" style="margin-top:10px">${SECTIONS.map(([k,n])=>{const r=B.last[k];const old=r&&Date.now()-r.t>4*3600000;
       return `<div class="rrow" style="--sc:var(${!r?"--line":old?"--warn":"--s-onhand"})"><div class="rtop"><div class="who"><b>${k}</b> ${esc(n)}
         <div class="ph">${B.rsig&&B.rsig[k]?`<b style="color:var(--s-onhand)">✓ Roster shared</b> · `:S.source==="sample"?"":`Roster sharing… · `}${r?`Updated ${ago(r.t)} (${dtg(new Date(r.t)).slice(0,7)})${r.by?" by "+esc(r.by):""} · ${r.ch} change${r.ch===1?"":"s"}`:"No update yet"}</div>
         ${r&&(r.miss||r.str!==r.mine)?`<div class="ph" style="color:var(--warn)">${r.miss?r.miss+" name"+(r.miss>1?"s":"")+" not on your roster. ":""}${r.str!==r.mine?"Their strength "+r.str+", yours "+r.mine+".":""}</div>`:""}</div></div>
-        <div class="row2">${(()=>{const hd=S.roster.find(m=>m.id===(B.heads||{})[k]);return `<select class="wsel" data-lvhead="${k}" aria-label="${k} section head"><option value="">${LV().Head}: pick from ${k}…</option>${sorted(S.roster.filter(m=>m.sec===k)).map(m=>`<option value="${m.id}"${hd&&hd.id===m.id?" selected":""}>${esc(m.rank+" "+m.name)}${m.phone?"":" (no number)"}</option>`).join("")}</select><a class="btn alt" href="${esc((hd&&hd.phone?"sms:+1"+String(hd.phone).replace(/\D/g,"").slice(-10):"sms:")+"?&body="+encodeURIComponent(unitName()+": you're the "+k+" "+LV().head+". Open this link in EOP Numbers. Your "+LV().sec+" roster loads from my board, your updates come straight to me, and you can post to the unit FEED: "+boardLink(k)+" · iPhone: open in Safari, then Share → Add to Home Screen so alerts work."))}">Text ${k} link${hd?" to "+esc(hd.rank+" "+lastOf(hd)):""}</a>`})()}<button class="btn alt" data-lvcopy="${k}">Copy link</button></div>${(S.wsCur||"plt")==="co"?`<button class="chip" data-lvmine="${k}" style="cursor:pointer;margin:6px 6px 0 0">${S.ws&&S.ws.plt&&S.ws.plt.link&&S.ws.plt.link.board===B.id&&S.ws.plt.link.sec===k?"✓ My platoon view runs "+k:"I run "+k+": link my platoon view"}</button>`:""}<button class="chip" data-lvreset="${k}" style="cursor:pointer;margin-top:6px">${armed==="lvreset"+k?"Tap again: old "+k+" link stops working":"↺ Replace "+k+" link (cut off the old one)"}</button></div>`}).join("")}</div>
+        <div class="row2">${(()=>{const hd=S.roster.find(m=>m.id===(B.heads||{})[k]);return `<select class="wsel" data-lvhead="${k}" aria-label="${k} section head"><option value="">${LV().Head}: pick from ${k}…</option>${sorted(S.roster.filter(m=>m.sec===k)).map(m=>`<option value="${m.id}"${hd&&hd.id===m.id?" selected":""}>${esc(m.rank+" "+m.name)}${m.phone?"":" (no number)"}</option>`).join("")}</select><a class="btn alt" href="${esc((hd&&hd.phone?"sms:+1"+String(hd.phone).replace(/\D/g,"").slice(-10):"sms:")+"?&body="+encodeURIComponent(unitName()+": you're the "+k+" "+LV().head+". Open this link in Accounted For. Your "+LV().sec+" roster loads from my board, your updates come straight to me, and you can post to the unit Feed: "+boardLink(k)+" · iPhone: open in Safari, then Share → Add to Home Screen so alerts work."))}">Text ${k} link${hd?" to "+esc(hd.rank+" "+lastOf(hd)):""}</a>`})()}<button class="btn alt" data-lvcopy="${k}">Copy link</button></div>${(S.wsCur||"plt")==="co"?`<button class="chip" data-lvmine="${k}" style="cursor:pointer;margin:6px 6px 0 0">${S.ws&&S.ws.plt&&S.ws.plt.link&&S.ws.plt.link.board===B.id&&S.ws.plt.link.sec===k?"✓ My platoon view runs "+k:"I run "+k+": link my platoon view"}</button>`:""}<button class="chip" data-lvreset="${k}" style="cursor:pointer;margin-top:6px">${armed==="lvreset"+k?"Tap again: old "+k+" link stops working":"↺ Replace "+k+" link (cut off the old one)"}</button></div>`}).join("")}</div>
     <button class="btn warn" id="lvOff" style="margin-top:16px;width:100%">${armed==="lvoff"?"Tap again: turn off and disconnect all sections":"Turn off live updates"}</button>`}
   if(L)h+=`<h2>My link</h2><div class="panel"><div>This phone sends <b>${esc(L.mysec)}</b> to <b>${esc(L.unit)}</b> as <b>${esc(L.sec)}</b>${L.me?" · sender "+esc(L.me):""}.</div><div class="note">${linkStatus()}</div>${L.rk2?`<div class="note">${L.perr?`<span style="color:var(--warn)">Roster: ${esc(L.perr)}</span>`:L.pulled?`Roster from ${esc(L.unit)} · ${(L.whole?S.roster:S.roster.filter(m=>m.sec===L.mysec)).length} people · updated ${ago(L.pt)}`:"Loading your section roster…"}</div>`:""}
     <div class="row2"><button class="btn" id="lkNow">Send now</button><button class="btn alt" id="lkOff">${armed==="lkoff"?"Tap again to unlink":"Unlink"}</button></div></div>`;
@@ -843,13 +843,13 @@ function joinPrompt(q){const bid=(q.get("join")||"").replace(/[^a-z0-9]/g,"").sl
   $("#sheetT").innerHTML=`Send live updates?<small>${esc(unit||"Your OIC")} wants this phone to send the <b>${esc(sec)}</b> section's statuses to their board automatically.</small>`;
   $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><label for="jSec">My section in this app</label><select id="jSec" class="wsel">${SECTIONS.map(([k,n])=>`<option value="${k}"${k===def?" selected":""}>${esc(k+" · "+n)}</option>`).join("")}</select>
     <label for="jMe">Your rank and last name (so they see who sent it)</label><input type="text" id="jMe" maxlength="30" placeholder="SGT SMITH" autocapitalize="characters" style="text-transform:uppercase" value="${esc(S.myName||"")}">
-    ${ek&&q.get("r")?`<p class="note"><b>Your section roster loads from ${esc(unit||"your OIC")}'s board.</b> Nothing to load. You also join the unit FEED and can post to your section.</p>`:`<p class="note">Only scrambled codes leave this phone; names don't. ${S.source==="sample"?"<b style='color:var(--warn)'>Load your roster first, or the names won't match theirs.</b>":""}</p>`}
+    ${ek&&q.get("r")?`<p class="note"><b>Your section roster loads from ${esc(unit||"your OIC")}'s board.</b> Nothing to load. You also join the unit Feed and can post to your section.</p>`:`<p class="note">Only scrambled codes leave this phone; names don't. ${S.source==="sample"?"<b style='color:var(--warn)'>Load your roster first, or the names won't match theirs.</b>":""}</p>`}
     <button class="btn" id="jYes">Link and send now</button><button class="btn alt" data-sclose="1">Not now</button></div>`;
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));try{history.replaceState(null,"",location.pathname)}catch(e){}}
 
 /* ---------- HUB: one main database behind every link ----------
    OIC phone publishes each section's roster, encrypted with that section's own key (only in that leader's link),
-   plus the unit FEED keys. Section leaders pull it; Marines get the FEED through their My page. All posts land in one FEED the OIC sees. */
+   plus the unit Feed keys. Section leaders pull it; Marines get the Feed through their My page. All posts land in one Feed the OIC sees. */
 /* ---------- ACTIVITY: every change that comes in from a link, in one list for the OIC ---------- */
 function actAdd(ic,txt,go){S.act=S.act||[];S.act.unshift({t:Date.now(),ic,txt:String(txt).slice(0,220),go:go||""});if(S.act.length>300)S.act.length=300}
 const actNew=()=>(S.act||[]).filter(a=>a.t>(S.actSeen||0)).length;
@@ -959,7 +959,7 @@ async function companyLoad(f){const P=companyParse(await fileToCSV(f));
 let coLoaded=null;
 function coRosterHTML(){const co=S.level==="co"&&S.source!=="sample";
   return `<div class="panel" style="border-color:var(--brass)"><b>${co?"Company roster loaded":"Build the company board from a roster"}</b>
-    ${co?`<label for="coNmSet">Company name (shows on the company FEED and reports)</label><input type="text" id="coNmSet" maxlength="30" value="${esc(S.coName||"")}" placeholder="CLC 33"><div class="note">${S.roster.length} people · ${SECTIONS.map(([k])=>`<b>${esc(k)}</b> ${S.roster.filter(m=>m.sec===k).length}`).join(" · ")}</div>
+    ${co?`<label for="coNmSet">Company name (shows on the company Feed and reports)</label><input type="text" id="coNmSet" maxlength="30" value="${esc(S.coName||"")}" placeholder="CLC 33"><div class="note">${S.roster.length} people · ${SECTIONS.map(([k])=>`<b>${esc(k)}</b> ${S.roster.filter(m=>m.sec===k).length}`).join(" · ")}</div>
       <div class="row2"><button class="btn" data-go="live">Send platoon OIC links</button><button class="btn alt" data-go="board">See the company</button></div>
       <button class="btn alt" data-addm="" style="width:100%">+ Add Marines</button>
       <label for="coFileAdd">Add more Marines from a file (keeps everyone already here)</label><input type="file" id="coFileAdd" accept=".csv,.xlsx,.xls,.numbers,text/csv">
@@ -1018,8 +1018,8 @@ function renderCo(){const C=S.coBoard,R=S.coRep;let h=`<div class="sechead" styl
         if(C.own)h+=`<button class="chip" data-codrop="${u.k}" style="cursor:pointer;margin-top:8px">${armed==="codrop"+u.k?"Tap again to remove "+esc(u.name):"Remove this unit"}</button>`}
       h+=`</div>`}
     h+=`<div class="row2" style="margin-top:10px"><a class="btn" href="${esc("sms:?&body="+encodeURIComponent(coText()))}">Text company numbers</a><button class="btn alt" id="coRef">↻ Refresh</button></div>`;
-    if(C.own||C.wk)h+=`<h2>Links</h2><div class="panel"><div class="rrow" style="--sc:var(--line)"><div class="who"><b>Platoon OIC link</b><div class="ph">Each platoon OIC opens it in their app. Their whole platoon reports here and stays live.</div></div><div class="row2"><a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent(C.name+": open this in EOP Numbers to report your platoon to the company board. Keep it private: "+coLink("rep")+" · iPhone: open in Safari, then Share → Add to Home Screen."))}">Text link</a><button class="btn alt" data-cocopy="rep">Copy</button></div></div>
-      <div class="rrow" style="--sc:var(--line)"><div class="who"><b>Company view link</b><div class="ph">View only: the whole company, every unit, who's off and why. For the CO, XO, 1stSgt.</div></div><div class="row2"><a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent(C.name+": open this to see the whole company's accountability live in EOP Numbers. Keep it private: "+coLink("view")+" · iPhone: open in Safari, then Share → Add to Home Screen."))}">Text link</a><button class="btn alt" data-cocopy="view">Copy</button></div></div>
+    if(C.own||C.wk)h+=`<h2>Links</h2><div class="panel"><div class="rrow" style="--sc:var(--line)"><div class="who"><b>Platoon OIC link</b><div class="ph">Each platoon OIC opens it in their app. Their whole platoon reports here and stays live.</div></div><div class="row2"><a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent(C.name+": open this in Accounted For to report your platoon to the company board. Keep it private: "+coLink("rep")+" · iPhone: open in Safari, then Share → Add to Home Screen."))}">Text link</a><button class="btn alt" data-cocopy="rep">Copy</button></div></div>
+      <div class="rrow" style="--sc:var(--line)"><div class="who"><b>Company view link</b><div class="ph">View only: the whole company, every unit, who's off and why. For the CO, XO, 1stSgt.</div></div><div class="row2"><a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent(C.name+": open this to see the whole company's accountability live in Accounted For. Keep it private: "+coLink("view")+" · iPhone: open in Safari, then Share → Add to Home Screen."))}">Text link</a><button class="btn alt" data-cocopy="view">Copy</button></div></div>
       ${!R&&S.source!=="sample"?`<button class="btn" id="coSelf" style="width:100%">Report my own unit (${esc(unitName())}) here too</button>`:""}</div>`}
   if(R)h+=`<h2>My unit's report</h2><div class="panel"><div>This phone reports <b>${esc(R.name||unitName())}</b> to <b>${esc(R.co)}</b>.</div><div class="note">${R.err?`<span style="color:var(--warn)">${esc(R.err)}</span>`:S.source==="sample"?`<span style="color:var(--warn)">Load your roster first; sample Marines aren't sent.</span>`:R.at?"Last sent "+ago(R.at)+". Sends by itself when anything changes.":"Sending…"}</div>
     <label class="tog"><input type="checkbox" id="coNames"${R.names!==false?" checked":""}> Include names, dates and locations (off = counts only)</label>
@@ -1056,13 +1056,13 @@ function healthIssues(){const out=[];const B=S.board;
   if(SB.failAt&&(!SB.okAt||SB.failAt>SB.okAt)&&Date.now()-SB.failAt<30*60000)out.push({t:/paused|inactive|restor/i.test(SB.failMsg||"")?"Your server looks paused. Open supabase.com → your project → Restore.":"Can't reach your server right now. Check signal; if it keeps happening, open DATA → System check.",go:"sys"});
   if(isOwner()&&S.source!=="sample"&&(!S.sync||!S.sync.on))out.push({t:"Backup is off. Losing this phone loses the board.",go:"data"});
   if(S.sync&&S.sync.err)out.push({t:"Backup: "+S.sync.err,go:"data"});
-  if(B){if(B.err)out.push({t:"Live sections: "+B.err,go:"live"});if(B.rerr)out.push({t:"Sharing rosters: "+B.rerr,go:"live"});if(S.hubErr)out.push({t:"FEED setup: "+S.hubErr,go:"live"});
+  if(B){if(B.err)out.push({t:"Live sections: "+B.err,go:"live"});if(B.rerr)out.push({t:"Sharing rosters: "+B.rerr,go:"live"});if(S.hubErr)out.push({t:"Feed setup: "+S.hubErr,go:"live"});
     const keyed=Object.keys(B.sk||{});const never=keyed.filter(k=>!B.last[k]);const quiet=keyed.filter(k=>B.last[k]&&Date.now()-B.last[k].t>24*3600000);
     if(never.length)out.push({t:LV().heads+" not connected yet: "+never.join(", ")+". Text them their links.",go:"live"});
     if(quiet.length)out.push({t:quiet.join(", ")+(quiet.length>1?" haven't":" hasn't")+" sent an update in over 24 hr.",go:"live"})}
   if(S.mpErr)out.push({t:"My pages: "+S.mpErr,go:"data"});
   if(S.coRep&&S.coRep.err)out.push({t:"Company report: "+S.coRep.err,go:"co"});
-  for(const f of S.feeds)if(f.err)out.push({t:"FEED "+f.unit+": "+f.err,go:"feed"});
+  for(const f of S.feeds)if(f.err)out.push({t:"Feed "+f.unit+": "+f.err,go:"feed"});
   return out}
 function healthCard(){const I=healthIssues();if(!I.length)return `<div class="note" style="margin:10px 4px 0;color:var(--s-onhand);font-weight:700">● All systems working${SB.okAt?" · server reached "+ago(SB.okAt):""}${hubOn?" · hub mode on":""}</div>`;
   return `<div class="sech"><h2>Needs attention</h2><span class="note" style="margin:0">${I.length}</span></div><div class="card ny">${I.map(x=>`<button class="lrow" data-go="${x.go}" style="width:100%;text-align:left;background:none;border:0;cursor:pointer;color:inherit"><span class="n tone-r">!</span><span class="t" style="flex:1">${esc(x.t)}</span></button>`).join("")}</div>`}
@@ -1094,7 +1094,7 @@ function slStats(f,p){const L=S.link;if(!L||!L.rk2||!f.pk||!f.hub)return"";const
   const g=new Set(e.g),pr=new Map(e.pr);const U=m=>m.uid||m.id;const miss=sorted(pool.filter(m=>!g.has(U(m))&&!pr.has(U(m))));const n=pool.length-miss.length;
   return `<div class="fci"><div style="display:flex;justify-content:space-between"><span class="ttl">${esc(L.sec)} confirmed</span>${pr.size?`<span class="fcchip" style="color:var(--warn)">⚠ ${pr.size}</span>`:""}</div><div class="big">${n}<span style="font-size:15px;color:var(--muted);font-weight:700"> / ${pool.length}</span></div>
     ${[...pr].map(([id,no])=>{const m=pool.find(x=>U(x)===id);return m?`<div class="note" style="margin:0;color:var(--warn)">⚠ ${esc(m.rank+" "+lastOf(m))}: ${esc(no)}</div>`:""}).join("")}
-    ${miss.length?`<div class="note" style="margin:0">Not yet: ${miss.map(m=>esc(m.rank+" "+lastOf(m))).join(" · ")}</div>${bcBatches(miss,L.unit+": new word in FEED you haven't confirmed. Open EOP Numbers → FEED.").map((x,i,a)=>`<a class="btn alt" href="${esc(x.href)}">Remind them${a.length>1?" ("+(i+1)+")":""}</a>`).join("")}`:`<div class="note" style="margin:0;color:var(--s-onhand);font-weight:700">Everyone in ${esc(L.sec)} confirmed.</div>`}</div>`}
+    ${miss.length?`<div class="note" style="margin:0">Not yet: ${miss.map(m=>esc(m.rank+" "+lastOf(m))).join(" · ")}</div>${bcBatches(miss,L.unit+": new word in Feed you haven't confirmed. Open Accounted For → Feed.").map((x,i,a)=>`<a class="btn alt" href="${esc(x.href)}">Remind them${a.length>1?" ("+(i+1)+")":""}</a>`).join("")}`:`<div class="note" style="margin:0;color:var(--s-onhand);font-weight:700">Everyone in ${esc(L.sec)} confirmed.</div>`}</div>`}
 let rpT=null,rpBusy=false,hubBusy=false,rpullBusy=false;
 function autoLink(c){try{history.replaceState(null,"",location.pathname)}catch(e){}if(typeof closeSheet==="function")try{closeSheet()}catch(e){}
   const L0=S.link;const same=L0&&L0.board===c.bid&&L0.sec===c.sec&&L0.rk2===c.rk2;
@@ -1128,15 +1128,15 @@ async function rpPublish(force){const B=S.board;if(!B||!B.sk||rpBusy||S.role==="
   catch(e){const t=String(e.message||e);B.rerr=/could not find|schema cache|404/i.test(t)?"Server needs setup part 11a.":t.slice(0,80);rawSave()}
   finally{rpBusy=false}}
 async function ensureHub(){if(hubBusy||S.role==="view"||!S.board)return;hubBusy=true;let ch=false;
-  try{let f=mainFeed();if(f&&S.level==="co"&&f.unit!==coFeedName()){f.unit=coFeedName();ch=true}if(!f){await fdCreate();f=mainFeed();f.main=true;ch=true;toast("Started your unit FEED. Leaders and Marines land in it from their links.")}
+  try{let f=mainFeed();if(f&&S.level==="co"&&f.unit!==coFeedName()){f.unit=coFeedName();ch=true}if(!f){await fdCreate();f=mainFeed();f.main=true;ch=true;toast("Started your unit Feed. Leaders and Marines land in it from their links.")}
     if(!f.pk){const pk=rndId(32);await SB.rpc("set_feed_poster",{p_feed:f.id,p_leader_key:f.lk,p_poster_key:pk});f.pk=pk;f.main=true;ch=true}
     S.hubErr="";if(ch){save();rpPublish(true);mpSchedule()}}
   catch(e){const t=String(e.message||e);S.hubErr=/could not find|schema cache|404/i.test(t)?"Server needs setup part 11b.":t.slice(0,80);rawSave()}
   finally{hubBusy=false}}
 function accLink(r){return PUB()+"#sync="+normCode(S.sync.code)+"&r="+r+((S.wsCur||"plt")==="co"?"&w=co":"")}
 function accessHTML(){if(!isOwner())return"";const R=[["view","View only","Sees everything, changes nothing"],["sncoic","Can edit","Updates statuses, posts, runs musters"],["co","Same as me","Full OIC rights on their phone"]];
-  if(!S.sync||!S.sync.on)return `<div class="panel" style="margin:10px 0 0"><b>Give someone access</b><p class="note">Send a link that puts your whole board on their phone: roster, FEED, Activity, live sections. Pick view only, can edit, or same rights as you.</p><button class="btn" id="accOn">Set up access links</button></div>`;
-  return `<div class="panel" style="margin:10px 0 0"><b>Give someone access</b><p class="note">They open the link and get your board, kept in sync with your phone. Keep these links private.</p>${R.map(([r,l,d])=>`<div class="rrow" style="--sc:var(--line)"><div class="who"><b>${l}</b><div class="ph">${d}</div></div><div class="row2"><a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent(unitName()+" · EOP Numbers: open this to get my board on your phone ("+ROLE_N[r]+"). Keep it private: "+accLink(r)+" · iPhone: open in Safari, then Share → Add to Home Screen so alerts work."))}">Text link</a><button class="btn alt" data-acccopy="${r}">Copy</button></div></div>`).join("")}
+  if(!S.sync||!S.sync.on)return `<div class="panel" style="margin:10px 0 0"><b>Give someone access</b><p class="note">Send a link that puts your whole board on their phone: roster, Feed, Activity, live sections. Pick view only, can edit, or same rights as you.</p><button class="btn" id="accOn">Set up access links</button></div>`;
+  return `<div class="panel" style="margin:10px 0 0"><b>Give someone access</b><p class="note">They open the link and get your board, kept in sync with your phone. Keep these links private.</p>${R.map(([r,l,d])=>`<div class="rrow" style="--sc:var(--line)"><div class="who"><b>${l}</b><div class="ph">${d}</div></div><div class="row2"><a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent(unitName()+" · Accounted For: open this to get my board on your phone ("+ROLE_N[r]+"). Keep it private: "+accLink(r)+" · iPhone: open in Safari, then Share → Add to Home Screen so alerts work."))}">Text link</a><button class="btn alt" data-acccopy="${r}">Copy</button></div></div>`).join("")}
     <button class="btn warn" id="accReset" style="width:100%">${armed==="accreset"?"Tap again: cut off every phone I shared with":"Cut off everyone I shared with"}</button><p class="note">Makes new links. Old links and linked phones stop syncing; resend new links to the people you keep.</p></div>`}
 document.addEventListener("click",e=>{if(e.target.id==="accOn"){if(!isOwner())return denyMsg();const code=newCode();S.sync={on:true,code,ver:0,at:0,err:"",last:""};save();e.target.disabled=true;e.target.textContent="Setting up…";syncPush(true).then(()=>{if(S.sync&&S.sync.err)toast("Couldn't set up: "+S.sync.err);else toast("Access links ready");render()});return}
   if(e.target.id==="accReset"){if(!isOwner())return denyMsg();if(armed!=="accreset"){armed="accreset";render();return}armed=null;e.target.disabled=true;e.target.textContent="Making new links…";
@@ -1145,7 +1145,7 @@ document.addEventListener("click",e=>{if(e.target.id==="accOn"){if(!isOwner())re
   const ac=e.target.closest("[data-acccopy]");if(ac){const u=accLink(ac.dataset.acccopy);try{navigator.clipboard.writeText(u).then(()=>toast(ROLE_N[ac.dataset.acccopy]+" link copied"),()=>toast(u))}catch(err){toast(u)}return}});
 function hubHTML(){const f=mainFeed();const B=S.board;const err=S.source==="sample"?"Leaders can't get your roster: this phone is on sample Marines. Load your roster in DATA first.":(S.hubErr||(B&&B.rerr)||"");
   const lp=f?(f.posts||[]).filter(p=>p.sl&&Date.now()-p.t<7*86400000).length:0;const mp=S.roster.filter(m=>m.pk).length;
-  return `<div class="panel" style="margin:10px 0 0"><b>Your hub</b><div class="note">${err?`<span style="color:var(--warn)">${esc(err)} DATA → System check.</span>`:f&&f.pk?`● One FEED for the unit: <b>${esc(f.unit)}</b>. Section leaders post to it from their link; Marines with My page land in it. You see every post${lp?` · ${lp} from section leaders this week`:""}.${mp?` · ${mp} My page${mp>1?"s":""} on`:""}`:"Setting up your unit FEED…"}</div><div class="row2">${f?`<button class="btn alt" data-go="feed">Open FEED</button>`:""}<button class="btn alt" data-go="act">Activity${actNew()?" · "+actNew()+" new":""}</button></div><button class="btn alt" id="hubMode" style="width:100%">${S.hubMode?"■ Turn off hub mode on this device":"⚡ Make this device the always-on hub"}</button>${S.hubMode?`<p class="note">Hub mode: screen stays on and everything refreshes every 2 min. Leave it plugged in with the app open.</p>`:""}${f&&f.pk&&pushOK()&&!f.oicPush?`<button class="btn alt" id="hubPush" style="width:100%">🔔 Buzz my phone for leader posts, requests and problems</button>`:f&&f.oicPush?`<p class="note" style="color:var(--s-onhand);font-weight:700">🔔 Alerts on: FEED posts${f.oicAlert?", requests and problems":""}</p>${f.oicAlert?"":`<button class="btn alt" id="hubPush" style="width:100%">Add alerts for requests and problems</button>`}`:""}</div>`}
+  return `<div class="panel" style="margin:10px 0 0"><b>Your hub</b><div class="note">${err?`<span style="color:var(--warn)">${esc(err)} DATA → System check.</span>`:f&&f.pk?`● One Feed for the unit: <b>${esc(f.unit)}</b>. Section leaders post to it from their link; Marines with My page land in it. You see every post${lp?` · ${lp} from section leaders this week`:""}.${mp?` · ${mp} My page${mp>1?"s":""} on`:""}`:"Setting up your unit Feed…"}</div><div class="row2">${f?`<button class="btn alt" data-go="feed">Open Feed</button>`:""}<button class="btn alt" data-go="act">Activity${actNew()?" · "+actNew()+" new":""}</button></div><button class="btn alt" id="hubMode" style="width:100%">${S.hubMode?"■ Turn off hub mode on this device":"⚡ Make this device the always-on hub"}</button>${S.hubMode?`<p class="note">Hub mode: screen stays on and everything refreshes every 2 min. Leave it plugged in with the app open.</p>`:""}${f&&f.pk&&pushOK()&&!f.oicPush?`<button class="btn alt" id="hubPush" style="width:100%">🔔 Buzz my phone for leader posts, requests and problems</button>`:f&&f.oicPush?`<p class="note" style="color:var(--s-onhand);font-weight:700">🔔 Alerts on: Feed posts${f.oicAlert?", requests and problems":""}</p>${f.oicAlert?"":`<button class="btn alt" id="hubPush" style="width:100%">Add alerts for requests and problems</button>`}`:""}</div>`}
 async function rosterPull(force){const L=S.link;if(!L||!L.rk2||rpullBusy)return;rpullBusy=true;
   try{const rows=await SB.rpc("get_roster",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec});const r=rows&&rows[0];
     if(!r){L.perr="Your OIC's board hasn't shared "+L.sec+" yet. It loads when they open the app.";rawSave();return}
@@ -1170,14 +1170,14 @@ async function rosterPull(force){const L=S.link;if(!L||!L.rk2||rpullBusy)return;
       if(JSON.stringify(nw)!==JSON.stringify(SECTIONS)){SECTIONS.splice(0,SECTIONS.length,...nw);S.secs=nw}}
     if(S.source==="link"&&Array.isArray(o.ri)&&o.ri.length){const k=MODES[S.mode]?S.mode:"military";S.ready[k]=o.ri.slice(0,40).map(x=>({n:String(x.n).slice(0,40),mo:+x.mo||0}))}
     L.acks=Array.isArray(o.acks)?o.acks.slice(0,30):[];
-    if(o.cofeed&&joinCoFeed(o.cofeed,L.me||S.myName,""))toast("You're in the "+o.cofeed.unit+" FEED too");
+    if(o.cofeed&&joinCoFeed(o.cofeed,L.me||S.myName,""))toast("You're in the "+o.cofeed.unit+" Feed too");
     if(!whole&&S.source==="link"&&Array.isArray(o.sl)&&o.sl.length&&o.sl.every(x=>Array.isArray(x)&&x[0])){const nw=o.sl.slice(0,10).map(x=>[String(x[0]).replace(/[^A-Z0-9]/g,"").slice(0,6),String(x[1]||x[0]).slice(0,30)]);if(JSON.stringify(nw)!==JSON.stringify(SECTIONS)){SECTIONS.splice(0,SECTIONS.length,...nw);S.secs=nw}}
     if(!own)S.roster=whole?next:S.roster.filter(m=>m.sec!==L.mysec).concat(next);
     L.unit=String(o.unit||L.unit).slice(0,24);L.pt=t;if(o.hb)L.hb=+o.hb||0;L.pulled=true;L.perr="";L.lsig=lsigOf(next);
     if(takeSt&&!own){try{const items=await itemsFor(L.board,next);L.sig=next.length+"|"+items.join(",")}catch(e){}}
     if(own)setTimeout(()=>linkPush(),1500);
     if(o.feed&&o.feed.id){const F=o.feed;const own=S.feeds.find(f=>f.id===F.id);
-      if(!own){S.feeds=S.feeds.filter(f=>!f.hub||f.lk);const nf={id:String(F.id).slice(0,20),mk:String(F.mk).slice(0,40),ek:String(F.ek).slice(0,60),pk:String(F.pk||"").slice(0,40),unit:String(F.unit||L.unit).slice(0,24),me:L.me,sec:L.sec,secsLink:(o.secs||[]).slice(0,12),posts:[],seen:0,mine:{},hub:1};S.feeds.push(nf);fdMeHash(nf).then(()=>fdPollAll(true));toast("You're in the "+nf.unit+" FEED")}
+      if(!own){S.feeds=S.feeds.filter(f=>!f.hub||f.lk);const nf={id:String(F.id).slice(0,20),mk:String(F.mk).slice(0,40),ek:String(F.ek).slice(0,60),pk:String(F.pk||"").slice(0,40),unit:String(F.unit||L.unit).slice(0,24),me:L.me,sec:L.sec,secsLink:(o.secs||[]).slice(0,12),posts:[],seen:0,mine:{},hub:1};S.feeds.push(nf);fdMeHash(nf).then(()=>fdPollAll(true));toast("You're in the "+nf.unit+" Feed")}
       else if(!own.lk){own.pk=String(F.pk||"").slice(0,40);own.hub=1;if(!own.sec)own.sec=L.sec}}
     save();if(["live","board","feed"].includes(view)||view===(L.mysec||"").toLowerCase()){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"&&a!=="SELECT"){const y=window.scrollY;render();window.scrollTo(0,y)}}
     if(dirty)linkSchedule()}
@@ -1205,8 +1205,8 @@ function akCtlHTML(){if(!canEdit()||memberMode())return"";
   const c=akCtl.cfg,d=akCtl.defaults;const U=akCtl.usage||[];const tdy=(U.find(x=>x.day===dkey())||{}).n||0;const wk=U.reduce((a,x)=>a+x.n,0);const mx=Math.max(1,...U.map(x=>x.n));
   return `<div class="panel" style="border-color:var(${c.on?"--s-onhand":"--warn"})"><div style="display:flex;justify-content:space-between;align-items:center"><b>⚙ OIC controls</b><b style="color:var(${c.on?"--s-onhand":"--warn"})">${c.on?"● ON":"○ OFF"}</b></div>
     <label class="tog"><input type="checkbox" id="akOn"${c.on?" checked":""}> Ask is on for my unit</label>
-    <div class="note">Who can use it:</div><div class="evts">${[["all","Anyone with the app"],["feed","Only people in my FEED"],["leaders","Leaders only (OIC/SNCOIC phones)"]].map(([k,l])=>`<button data-akwho="${k}" aria-pressed="${c.who===k}">${l}</button>`).join("")}</div>
-    ${c.who==="feed"&&!S.feeds.some(f=>f.lk)?`<p class="note" style="color:var(--warn)">You don't have a FEED yet, so no one but leaders could ask. Start one in FEED.</p>`:""}
+    <div class="note">Who can use it:</div><div class="evts">${[["all","Anyone with the app"],["feed","Only people in my Feed"],["leaders","Leaders only (OIC/SNCOIC phones)"]].map(([k,l])=>`<button data-akwho="${k}" aria-pressed="${c.who===k}">${l}</button>`).join("")}</div>
+    ${c.who==="feed"&&!S.feeds.some(f=>f.lk)?`<p class="note" style="color:var(--warn)">You don't have a Feed yet, so no one but leaders could ask. Start one in Feed.</p>`:""}
     <div class="row2"><div><label for="akCap">Unit limit / day</label><input type="number" id="akCap" min="1" max="5000" value="${c.cap??d.cap}" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)"></div><div><label for="akPer">Per phone / day</label><input type="number" id="akPer" min="1" max="500" value="${c.per??d.per}" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)"></div></div>
     <button class="btn" id="akSave"${akCtlBusy?" disabled":""}>${akCtlBusy?"Saving…":"Save settings"}</button>${akCtlErr?`<div class="note" style="color:var(--warn);font-weight:700">${esc(akCtlErr)}</div>`:""}
     <div class="note"><b>Usage:</b> today ${tdy} / ${c.cap??d.cap} · last 7 days ${wk} questions · about $${(wk*0.05).toFixed(2)} (rough estimate; exact spend is in the Anthropic Console)</div>
@@ -1249,7 +1249,7 @@ function renderAsk(){const ex=AK_EX[MODES[S.mode]?S.mode:"military"]||AK_EX.mili
     <div class="row2"><button class="btn alt" data-akcopy="${i}">Copy</button>${navigator.share?`<button class="btn alt" data-akshare="${i}">Share</button>`:`<button class="btn alt" data-akdel="${i}">Remove</button>`}</div></div>`).join("");
   if(S.ask.length)h+=`<button class="btn alt" id="akClear" style="width:100%;margin-top:8px">${armed==="akclr"?"Tap again to clear your questions":"Clear my questions"}</button><p class="note">Your questions stay on this phone only.</p>`;
   $("#main").innerHTML=h}
-function akText(x){return "Q: "+x.q+"\n\n"+x.a+(x.src.length?"\n\nSources:\n"+x.src.map(s2=>"- "+(s2.title||"")+" "+s2.url).join("\n"):"")+"\n\n(Answer from EOP Numbers Ask. Verify with the current order.)"}
+function akText(x){return "Q: "+x.q+"\n\n"+x.a+(x.src.length?"\n\nSources:\n"+x.src.map(s2=>"- "+(s2.title||"")+" "+s2.url).join("\n"):"")+"\n\n(Answer from Accounted For Ask. Verify with the current order.)"}
 
 /* ---------- Design A: shell (tab bar, sub-nav), Home, People, Tools ---------- */
 const IC={home:'<path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',feed:'<path d="M4 4h16v12H8l-4 4z"/><path d="M8 9h8M8 12h5"/>',people:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 20a6.5 6.5 0 0 0-3-5.5"/>',plan:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',tools:'<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
@@ -1379,7 +1379,7 @@ function isLeaderPhone(){return !!(S.leaderMode||S.source!=="sample"||S.board||S
 function memberMode(){return !S.leaderMode&&S.source==="sample"&&!S.board&&!S.link&&!S.feeds.some(f=>f.lk)&&(!!S.me||S.feeds.some(f=>!f.lk))}
 function tdCover(e,k){return e.d<=k&&(e.end||e.d)>=k}
 function renderToday(){const D=S.me&&S.me.d;const mf=S.feeds.filter(f=>!f.lk);
-  if(!D&&!mf.length){$("#main").innerHTML=`<h2>Today</h2><div class="panel"><p class="note">Your daily screen fills in once your leader sends you a FEED link or your private My page link. Open the link on this phone.</p></div>`;return}
+  if(!D&&!mf.length){$("#main").innerHTML=`<h2>Today</h2><div class="panel"><p class="note">Your daily screen fills in once your leader sends you a Feed link or your private My page link. Open the link on this phone.</p></div>`;return}
   if(Date.now()-tdLast>120000){tdLast=Date.now();if(mf.length)setTimeout(()=>fdPollAll(false),50);if(S.me)setTimeout(()=>mpFetch(),80)}
   const now=new Date(),hr=now.getHours(),k=dkey(),t2=dkey(new Date(Date.now()+86400000));const dd=parseD(k),dt=parseD(t2);
   const who=D?D.rank+" "+(D.name.split(",")[0]||""):(mf[0].me||"");
@@ -1395,14 +1395,14 @@ function renderToday(){const D=S.me&&S.me.d;const mf=S.feeds.filter(f=>!f.lk);
   const calT=D?D.cal.filter(e=>tdCover(e,k)&&e.ty!=="DUTY"&&e.ty!=="DUE"):[];const calN=D?D.cal.filter(e=>tdCover(e,t2)&&e.d===t2&&e.ty!=="DUTY"&&e.ty!=="DUE"):[];
   if(!att.length&&!dutyT&&!calT.length)h+=`<div class="panel" style="text-align:center;border-color:var(--s-onhand)"><b style="color:var(--s-onhand);font-size:17px">✓ You're caught up</b><div class="note">Nothing new needs you right now.</div></div>`;
   else if(att.length)h+=`<div class="panel" style="border-color:var(--brass)"><div><b>Needs you:</b> ${att.join(" · ")}</div></div>`;
-  const podBox=(x,lab)=>{const lines=x.p.txt.split("\n");const unconf=x.f&&!(x.f.mine||{})[x.p.id];return `<div class="panel" style="border-color:var(--brass)"><b style="color:var(--brass)">📋 ${lab}</b><div style="white-space:pre-wrap;font-weight:600;line-height:1.45">${esc(lines.slice(1).join("\n").trim())}</div>${unconf?`<div class="fdacts"><button class="go" data-tdack="${x.f.id}|${x.p.id}">✓ Got it</button><button data-go="feed">Open FEED</button></div>`:x.f?`<div class="note" style="color:var(--s-onhand);font-weight:700">✓ Confirmed</div>`:""}</div>`};
+  const podBox=(x,lab)=>{const lines=x.p.txt.split("\n");const unconf=x.f&&!(x.f.mine||{})[x.p.id];return `<div class="panel" style="border-color:var(--brass)"><b style="color:var(--brass)">📋 ${lab}</b><div style="white-space:pre-wrap;font-weight:600;line-height:1.45">${esc(lines.slice(1).join("\n").trim())}</div>${unconf?`<div class="fdacts"><button class="go" data-tdack="${x.f.id}|${x.p.id}">✓ Got it</button><button data-go="feed">Open Feed</button></div>`:x.f?`<div class="note" style="color:var(--s-onhand);font-weight:700">✓ Confirmed</div>`:""}</div>`};
   if(podT)h+=podBox(podT,"Plan of the Day");
   // today's schedule
   const sched=[];if(dutyT)sched.push(`<div class="rrow" style="--sc:var(--s-duty)"><div class="who"><b>⚑ You have duty today</b><div class="ph">${esc(dutyT.r)}</div></div></div>`);
   calT.sort((a,b)=>(a.tm||"99").localeCompare(b.tm||"99")).forEach(e=>{const t=ctype(e.ty);sched.push(`<div class="rrow" style="--sc:var(${t[2]})"><div class="who"><b>${e.tm?esc(e.tm)+" · ":""}${esc(e.ti)}</b><div class="ph">${t[1]}${e.end&&e.end!==e.d?" · thru "+short(parseD(e.end)):""}${e.no?" · "+esc(e.no):""}</div></div></div>`)});
   if(sched.length)h+=`<h2>Today</h2><div class="alist">${sched.join("")}</div>`;
   // the word
-  if(others.length)h+=`<h2>New word</h2><div class="alist">${others.slice(0,4).map(x=>`<div class="fdpost" style="--sc:var(${x.p.urg?"--warn":"--line"})"><div class="mt"><span>${x.p.urg?`<b style="color:var(--warn)">URGENT</b> · `:""}${ago(x.p.t)}</span></div><div class="tx">${esc(x.p.txt.length>220?x.p.txt.slice(0,220)+"…":x.p.txt)}</div><div class="fdacts"><button class="go" data-tdack="${x.f.id}|${x.p.id}">✓ Got it</button><button data-go="feed">Open</button></div></div>`).join("")}${others.length>4?`<button class="btn alt" data-go="feed">${others.length-4} more in FEED</button>`:""}</div>`;
+  if(others.length)h+=`<h2>New word</h2><div class="alist">${others.slice(0,4).map(x=>`<div class="fdpost" style="--sc:var(${x.p.urg?"--warn":"--line"})"><div class="mt"><span>${x.p.urg?`<b style="color:var(--warn)">URGENT</b> · `:""}${ago(x.p.t)}</span></div><div class="tx">${esc(x.p.txt.length>220?x.p.txt.slice(0,220)+"…":x.p.txt)}</div><div class="fdacts"><button class="go" data-tdack="${x.f.id}|${x.p.id}">✓ Got it</button><button data-go="feed">Open</button></div></div>`).join("")}${others.length>4?`<button class="btn alt" data-go="feed">${others.length-4} more in Feed</button>`:""}</div>`;
   // due
   if(over.length||soon.length)h+=`<h2>Due soon</h2><div class="alist">${over.concat(soon).slice(0,5).map(x=>`<div class="rrow" style="--sc:var(${x.st==="over"?"--warn":"--s-duty"})"><div class="who"><b>${esc(x.n)}</b><div class="ph">${esc(x.txt)}</div></div></div>`).join("")}</div>`;
   // tomorrow
@@ -1416,7 +1416,7 @@ function renderToday(){const D=S.me&&S.me.d;const mf=S.feeds.filter(f=>!f.lk);
   const lt=S.log.filter(x=>x.d===k);const st=logStreak();
   h+=`<h2>📝 My log ${st>1?`<span class="note" style="font-weight:700">🔥 ${st}-day streak</span>`:""}</h2><div class="panel">${lt.length?lt.map(x=>`<div>• ${esc(x.txt)}</div>`).join(""):`<div class="note">What did you get done today?</div>`}
     <div class="addph"><input type="text" id="tdLog" maxlength="500" placeholder="${lt.length?"Add another…":"Led PMCS on 3 dozers…"}"><button id="tdLogAdd">Add</button></div></div>`;
-  h+=`${akHidden()?"":`<button class="btn alt" data-go="ask" style="width:100%;margin-top:12px">💬 Ask a question (orders, leave, pay, PFT…)</button>`}<div class="row2" style="margin-top:8px">${mf.length?`<button class="btn alt" data-go="feed">FEED</button>`:"<span></span>"}${S.me?`<button class="btn alt" data-go="me">My page</button>`:`<button class="btn alt" data-go="log">My log</button>`}</div>
+  h+=`${akHidden()?"":`<button class="btn alt" data-go="ask" style="width:100%;margin-top:12px">💬 Ask a question (orders, leave, pay, PFT…)</button>`}<div class="row2" style="margin-top:8px">${mf.length?`<button class="btn alt" data-go="feed">Feed</button>`:"<span></span>"}${S.me?`<button class="btn alt" data-go="me">My page</button>`:`<button class="btn alt" data-go="log">My log</button>`}</div>
     ${memberMode()?`<p class="note" style="text-align:center;margin-top:14px"><button class="chip" id="tdLeader" style="cursor:pointer">I'm a leader: show the main page</button></p>`:""}`;
   $("#main").innerHTML=h}
 
@@ -1473,7 +1473,7 @@ const HELP={
  rollup:["Rollup","Add up the units under you.",["Each unit sends its TEXT report; paste them here.","Your rollup has its own code so the next level up can add it."]],
  live:["Live sections","Section leaders update your board from their phones.",["Turn it on, then Text each section leader their link.","They open it once; every change they make reaches you in about 15 seconds.","Alerts: tap the bell to be buzzed when a section updates."]],
  send:["SEND","A message with read receipts.",["Write it, pick sections, Text it (20 people per text).","Each person taps Got it; you see who has and hasn't, live.","Remind sends only to those who haven't."]],
- feed:["FEED","Pass the word inside the app, old and new.",["Leaders: post the word, pick Everyone / Sections / One person, pin what matters.","Remind me after: get a banner if people haven't confirmed.","Members: tap Got it, or add a note and tap Problem.","Requests and the Plan of the Day live here too."]],
+ feed:["Feed","Pass the word inside the app, old and new.",["Leaders: post the word, pick Everyone / Sections / One person, pin what matters.","Remind me after: get a banner if people haven't confirmed.","Members: tap Got it, or add a note and tap Problem.","Requests and the Plan of the Day live here too."]],
  trends:["Trends","Your numbers over time.",["Chart of % on hand and present, section averages and who's been away most.","Fills in day by day as you use the app."]],
  ready:["Readiness","Due-outs: counselings, PFT/CFT, quals, PHA, licenses…",["Load dates from Excel or set them on each card.","Red = overdue, yellow = due in 30 days.","Done today sets the next due date for you.","Add or remove items at the bottom."]],
  duty:["Duty roster","Fair rotations that skip people who are away.",["Pick sections; it fills 30 days and skips leave/TAD/ops until they return.","Change any day; text 14 days to your numbers."]],
@@ -1498,15 +1498,15 @@ const SC=[
  {k:"ck",n:"Recall check-in, SEND, QR muster",f:["01a_checkin_tables","01b_checkin_send","01c_checkin_read"],t:[["create_recall",{p_id:"zz",p_read_key:"x"}],["checkin",{p_recall:"zzzzzzzz",p_words:["0"],p_code:1,p_note:""}],["get_checkins",{p_recall:"zz",p_read_key:"x",p_after:0}],["close_recall",{p_recall:"zz",p_read_key:"x"}],["set_push",{p_recall:"zz",p_read_key:"x",p_sub:{}}]]},
  {k:"lv",n:"Live sections",f:["02a_live_tables","02b_live_send","02c_live_read"],t:[["create_board",{p_id:"zz",p_read_key:"x",p_write_key:"x"}],["push_update",{p_board:"zz",p_write_key:"x",p_sec:"HQ",p_sender:[],p_strength:0,p_items:[]}],["get_board_updates",{p_board:"zz",p_read_key:"x",p_after:0}],["delete_board",{p_board:"zz",p_read_key:"x"}],["set_board_push",{p_board:"zz",p_read_key:"x",p_sub:{}}]]},
  {k:"sc",n:"Section calendars",f:["03_section_calendar"],t:[["push_cal",{p_board:"zz",p_write_key:"x",p_sec:"HQ",p_ct:"QQ=="}],["get_cal",{p_board:"zz",p_read_key:"x"}]]},
- {k:"fd",n:"FEED",f:["04a_feed_tables","04b_feed_post","04c_feed_read","04d_feed_manage"],t:[["create_feed",{p_id:"zz",p_member_key:"x",p_leader_key:"x"}],["feed_post",{p_feed:"zz",p_leader_key:"x",p_ct:"QQ=="}],["feed_get",{p_feed:"zz",p_member_key:"x",p_after:0}],["feed_ack",{p_feed:"zz",p_member_key:"x",p_post:0,p_words:["0"],p_code:1,p_note:""}],["feed_acks_get",{p_feed:"zz",p_leader_key:"x",p_after:0}],["feed_delete_post",{p_feed:"zz",p_leader_key:"x",p_post:0}],["delete_feed",{p_feed:"zz",p_leader_key:"x"}]]},
- {k:"fa",n:"FEED alerts",f:["05_feed_alerts"],t:[["feed_sub",{p_feed:"zz",p_member_key:"x",p_sub:{}}],["feed_unsub",{p_feed:"zz",p_member_key:"x",p_endpoint:"x"}]]},
+ {k:"fd",n:"Feed",f:["04a_feed_tables","04b_feed_post","04c_feed_read","04d_feed_manage"],t:[["create_feed",{p_id:"zz",p_member_key:"x",p_leader_key:"x"}],["feed_post",{p_feed:"zz",p_leader_key:"x",p_ct:"QQ=="}],["feed_get",{p_feed:"zz",p_member_key:"x",p_after:0}],["feed_ack",{p_feed:"zz",p_member_key:"x",p_post:0,p_words:["0"],p_code:1,p_note:""}],["feed_acks_get",{p_feed:"zz",p_leader_key:"x",p_after:0}],["feed_delete_post",{p_feed:"zz",p_leader_key:"x",p_post:0}],["delete_feed",{p_feed:"zz",p_leader_key:"x"}]]},
+ {k:"fa",n:"Feed alerts",f:["05_feed_alerts"],t:[["feed_sub",{p_feed:"zz",p_member_key:"x",p_sub:{}}],["feed_unsub",{p_feed:"zz",p_member_key:"x",p_endpoint:"x"}]]},
  {k:"rq",n:"Requests",f:["08_requests"],t:[["feed_req",{p_feed:"zz",p_member_key:"x",p_ct:"QQ=="}],["feed_reqs_get",{p_feed:"zz",p_leader_key:"x",p_after:0}]]},
  {k:"bk",n:"Backup and sync",f:["06a_backup_put","06b_backup_read"],t:[["backup_put",{p_id:"zz",p_key:"x",p_ct:"QQ==",p_base:null}],["backup_get",{p_id:"zz",p_key:"x"}],["backup_ver",{p_id:"zz",p_key:"x"}],["backup_delete",{p_id:"zz",p_key:"x"}]]},
  {k:"mp",n:"My page",f:["07_my_page"],t:[["put_page",{p_id:"zz",p_wk:"x",p_ct:"QQ=="}],["get_page",{p_id:"zz"}],["delete_page",{p_id:"zz",p_wk:"x"}]]},
  {k:"cy",n:"Company board",f:["14a_company_tables","14b_company_report"],t:[["create_company",{p_id:"zz",p_read_key:"x",p_write_key:"x"}],["put_unit",{p_company:"zz",p_write_key:"x",p_unit:"zzzzzz",p_ct:"QQ=="}],["get_units",{p_company:"zz",p_read_key:"x"}]]},
  {k:"oa",n:"OIC alerts for requests and problems",f:["13_oic_alerts"],t:[["set_feed_leader_sub",{p_feed:"zz",p_leader_key:"x",p_sub:{}}]]},
  {k:"sk",n:"Replace one section link",f:["12a_section_keys","12b_section_checks"],t:[["set_sec_key",{p_board:"zz",p_read_key:"x",p_sec:"HQ",p_key:"x"}]]},
- {k:"hub",n:"Unit hub (leader links pull your roster, one FEED)",f:["11a_hub_roster","11b_hub_feed"],t:[["put_roster",{p_board:"zz",p_read_key:"x",p_sec:"HQ",p_ct:"QQ=="}],["get_roster",{p_board:"zz",p_write_key:"x",p_sec:"HQ"}],["set_feed_poster",{p_feed:"zz",p_leader_key:"x",p_poster_key:"x"}],["feed_post_sl",{p_feed:"zz",p_poster_key:"x",p_ct:"QQ=="}]]}];
+ {k:"hub",n:"Unit hub (leader links pull your roster, one Feed)",f:["11a_hub_roster","11b_hub_feed"],t:[["put_roster",{p_board:"zz",p_read_key:"x",p_sec:"HQ",p_ct:"QQ=="}],["get_roster",{p_board:"zz",p_write_key:"x",p_sec:"HQ"}],["set_feed_poster",{p_feed:"zz",p_leader_key:"x",p_poster_key:"x"}],["feed_post_sl",{p_feed:"zz",p_poster_key:"x",p_ct:"QQ=="}]]}];
 let scRes=null,scBusy=false;
 async function scRun(){scBusy=true;scRes={at:Date.now(),g:{},nt:null};renderSys();
   const one=async([fn,args])=>{try{await SB.rpc(fn,args);return {ok:1}}catch(e){const m=String(e.message||e);if(/could not find the function|schema cache|PGRST202/i.test(m))return {miss:1,fn};if(/permission denied/i.test(m))return {perm:1,fn};if(/abort|Failed to fetch|NetworkError|Load failed/i.test(m))return {net:1,fn};return {ok:1}}};
@@ -1517,11 +1517,11 @@ async function scRun(){scBusy=true;scRes={at:Date.now(),g:{},nt:null};renderSys(
   scBusy=false;renderSys()}
 function akState(a){if(!a)return null;if(a.err)return {ok:0,msg:"Couldn't reach it. Check signal."};if(a.s===404)return {ok:0,msg:"Optional. Not set up: create the Edge Function named ask, add ANTHROPIC_API_KEY, run part 10."};
   if(a.s===401||a.s===403)return {ok:0,msg:"JWT checking is on. Open ask → Details and turn off Enforce JWT verification."};if(a.s>=500)return {ok:0,msg:"It crashed. Usually the code was cut off when pasted."};
-  if(a.ok&&!a.key)return {ok:0,msg:"Deployed, but the ANTHROPIC_API_KEY secret is missing."};if(a.ok&&!a.db)return {ok:0,msg:"Deployed, but the usage table is missing. Run part 10."};if(a.ok&&!a.ctl)return {ok:0,msg:"Ready, but OIC controls aren't set up. Run part 10b."};if(a.ok)return {ok:1,msg:"Ready"+(a.admin?" · OIC controls on":" · add AI_ADMIN_KEY to use OIC controls")+" · "+(a.on===false?"turned OFF":a.who==="feed"?"FEED members only":a.who==="leaders"?"leaders only":"open to everyone")+"."};return {ok:0,msg:"Unexpected answer ("+a.s+")."}}
+  if(a.ok&&!a.key)return {ok:0,msg:"Deployed, but the ANTHROPIC_API_KEY secret is missing."};if(a.ok&&!a.db)return {ok:0,msg:"Deployed, but the usage table is missing. Run part 10."};if(a.ok&&!a.ctl)return {ok:0,msg:"Ready, but OIC controls aren't set up. Run part 10b."};if(a.ok)return {ok:1,msg:"Ready"+(a.admin?" · OIC controls on":" · add AI_ADMIN_KEY to use OIC controls")+" · "+(a.on===false?"turned OFF":a.who==="feed"?"Feed members only":a.who==="leaders"?"leaders only":"open to everyone")+"."};return {ok:0,msg:"Unexpected answer ("+a.s+")."}}
 function ntState(nt){if(!nt)return null;if(nt.err)return {ok:0,msg:"Couldn't reach it. Check signal."};if(nt.s===404)return {ok:0,msg:"Not deployed. Create the Edge Function named notify."};
   if(nt.s===401||nt.s===403)return {ok:0,msg:"JWT checking is on. Open notify → Details and turn off Enforce JWT verification."};
   if(nt.s>=500)return {ok:0,msg:"It crashed. Usually the VAPID_PUBLIC / VAPID_PRIVATE secrets are missing, or the code was cut off when pasted."};
-  if(nt.s===400&&/bad/.test(nt.t)){if(nt.s2===200)return {ok:1,msg:"Deployed and current."};return {ok:0,msg:"Deployed but an older version (no FEED alerts). Paste the latest code."}}
+  if(nt.s===400&&/bad/.test(nt.t)){if(nt.s2===200)return {ok:1,msg:"Deployed and current."};return {ok:0,msg:"Deployed but an older version (no Feed alerts). Paste the latest code."}}
   return {ok:0,msg:"Unexpected answer ("+nt.s+")."}}
 async function scCopy(file){try{const r=await fetch("supabase/setup/"+file+".sql",{cache:"no-cache"});if(!r.ok)throw 0;const t=await r.text();await navigator.clipboard.writeText(t);toast("Copied "+file+". Paste it in SQL Editor and Run.")}catch(e){toast("Copy blocked. Open the file in GitHub: supabase/setup/"+file+".sql")}}
 async function scCopyNotify(){try{const r=await fetch("supabase/functions/notify/index.ts",{cache:"no-cache"});const t=await r.text();await navigator.clipboard.writeText(t);toast("notify code copied. Paste it in Edge Functions → notify → Code, then Deploy.")}catch(e){toast("Copy blocked here.")}}
@@ -1559,7 +1559,7 @@ async function mpFetch(){const M=S.me;if(!M)return;try{const K=await mpKeys(M.pk
   M.d=await openBlob(K,r.ct);M.t=t;M.err="";rawSave();mpJoinFeed(M.d);if(view==="me"||view==="today"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;view==="me"?renderMe():renderToday();window.scrollTo(0,y)}}}catch(e){const t=String(e.message||e);M.err=/could not find|schema cache|404/i.test(t)?"Your unit's server isn't set up for My page yet. Tell your leader: setup part 07.":/fetch|network/i.test(t)?"No signal. Pull down or tap Refresh to try again.":t.slice(0,80);rawSave();if(view==="me")renderMe()}}
 function mpJoinFeed(D){if(D&&D.cofeed){const last0=(String(D.name).split(",")[0]||D.name).trim(),first0=(String(D.name).split(",")[1]||"").trim().split(/\s+/)[0]||"";joinCoFeed(D.cofeed,(D.rank+" "+last0+(first0?" "+first0:"")).toUpperCase(),D.cofeed.mid)}const F=D&&D.feed;if(!F||!F.id)return;{const ex=S.feeds.find(f=>f.id===F.id);if(ex){if(D.mid&&!ex.lk&&ex.mid!==D.mid){ex.mid=String(D.mid).slice(0,40);rawSave()}return}}
   const last=(String(D.name).split(",")[0]||D.name).trim();const first=(String(D.name).split(",")[1]||"").trim().split(/\s+/)[0]||"";const nf={id:String(F.id).slice(0,20),mk:String(F.mk).slice(0,40),ek:String(F.ek).slice(0,60),unit:String(F.unit||D.unit).slice(0,24),me:(D.rank+" "+last+(first?" "+first:"")).toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim().slice(0,30),sec:D.sec==="ATT"?"ATT":D.sec,secsLink:(F.secs||[]).slice(0,12),posts:[],seen:0,mine:{},hub:1,mid:String(D.mid||"").slice(0,40)};
-  S.feeds=S.feeds.filter(f=>!f.hub||f.lk);S.feeds.push(nf);if(!S.myName)S.myName=nf.me;save();fdMeHash(nf).then(()=>{fdPollAll(true);fdPushAttach(nf)});toast("You're in the "+nf.unit+" FEED")}
+  S.feeds=S.feeds.filter(f=>!f.hub||f.lk);S.feeds.push(nf);if(!S.myName)S.myName=nf.me;save();fdMeHash(nf).then(()=>{fdPollAll(true);fdPushAttach(nf)});toast("You're in the "+nf.unit+" Feed")}
 every(60000,()=>{if(S.me)mpFetch()},"mypage");
 every(30*60000,()=>{if(S.roster.some(m=>m.pk)&&isLeaderPhone()&&canEdit())mpPublish()},"mypage-pub");
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.me)mpFetch()});
@@ -1630,7 +1630,7 @@ function calForm(pre){const D=new Date();const iso=calDay||dkey(D);const sec=cal
     <label for="caTi">What</label><input type="text" id="caTi" maxlength="60" placeholder="Dental, BAS appt, range, leave…">
     <label for="caNo">Note (optional)</label><input type="text" id="caNo" maxlength="80" placeholder="Where, who to see">
     <div id="caWarn"></div><button class="btn" id="caSave"${pre?` data-cafor="${pre.id}"`:""}>Add</button>${pre?"":`<button class="btn alt" id="caCancel">Cancel</button>`}</div>`}
-function icsFor(list,name){const z=d=>d.replace(/-/g,"");const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//EOP Numbers//EN","CALSCALE:GREGORIAN"];const now=new Date().toISOString().replace(/[-:]/g,"").slice(0,15)+"Z";
+function icsFor(list,name){const z=d=>d.replace(/-/g,"");const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Accounted For//EN","CALSCALE:GREGORIAN"];const now=new Date().toISOString().replace(/[-:]/g,"").slice(0,15)+"Z";
   const esc2=s=>String(s||"").replace(/[\;,]/g,m=>"\\"+m).replace(/\n/g,"\\n");
   list.forEach((e,i)=>{L.push("BEGIN:VEVENT","UID:eop-"+z(e.d)+"-"+i+"-"+Math.random().toString(36).slice(2,8)+"@eopnumbers","DTSTAMP:"+now);
     if(e.tm){const [h,mi]=e.tm.split(":");L.push("DTSTART:"+z(e.d)+"T"+h+mi+"00","DURATION:PT1H")}else{const end=parseD(e.end&&e.end>e.d?e.end:e.d);end.setDate(end.getDate()+1);L.push("DTSTART;VALUE=DATE:"+z(e.d),"DTEND;VALUE=DATE:"+z(dkey(end)))}
@@ -1769,17 +1769,17 @@ function syncHTML(){const Y=S.sync;
     ${syncShow?`<div style="font-family:ui-monospace,Menlo,monospace;font-size:18px;font-weight:800;letter-spacing:.06em;text-align:center;padding:10px;border:2px dashed var(--brass);border-radius:10px" data-noxl>${esc(Y.code)}</div>
       <p class="note"><b>Write this down or save it in your password manager.</b> Without it, a lost phone means lost data; there is no reset. Anyone with it can read and change your board.</p>
       <div class="row2"><button class="btn alt" id="syCopy">Copy code</button><span></span></div>
-      ${isOwner()?`<div class="note"><b>Add another phone:</b></div><div class="row2">${[["co","Same as me"],["sncoic","SNCOIC (can edit)"],["view","View only"]].map(([r,l])=>`<a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent("EOP Numbers: open this on your phone to link to my board as "+ROLE_N[r]+" (keep it private): "+PUB()+"#sync="+normCode(Y.code)+"&r="+r))}">${l}</a>`).join("")}</div>`:""}`:""}
+      ${isOwner()?`<div class="note"><b>Add another phone:</b></div><div class="row2">${[["co","Same as me"],["sncoic","SNCOIC (can edit)"],["view","View only"]].map(([r,l])=>`<a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent("Accounted For: open this on your phone to link to my board as "+ROLE_N[r]+" (keep it private): "+PUB()+"#sync="+normCode(Y.code)+"&r="+r))}">${l}</a>`).join("")}</div>`:""}`:""}
     <div class="note">This phone: <b>${esc(ROLE_N[role()]||role())}</b>. Roles are enforced by the app; anyone holding the recovery code can read the board, so share it only with people you trust.</div>
     <div class="row2"><button class="btn alt" id="syOff">${armed==="syoff"?"Tap again to stop":"Stop on this phone"}</button>${isOwner()?`<button class="btn warn" id="syDel">${armed==="sydel"?"Tap again: delete cloud copy":"Delete cloud copy"}</button>`:"<span></span>"}</div></div>${turnoverHTML()}`}
 function turnoverHTML(){const Y=S.sync;if(!Y||!Y.on)return"";
   if(role()==="newoic")return `<h2>Complete turnover</h2><div class="panel" style="border-color:var(--brass)"><p class="note">You were handed this board. Taking over gives it a <b>new recovery code</b> and deletes the old cloud copy, so the outgoing leader's phone stops syncing.</p>
     <label class="tog"><input type="checkbox" id="toLinks"> Also issue new section-leader links (old ones stop working; resend from Live sections)</label>
-    <label class="tog"><input type="checkbox" id="toFeed"> Also start a fresh FEED (members rejoin with a new link)</label>
+    <label class="tog"><input type="checkbox" id="toFeed"> Also start a fresh Feed (members rejoin with a new link)</label>
     <button class="btn" id="toGo">${armed==="togo"?"Tap again to take over now":"Take over this board"}</button><div class="note" id="toOut"></div></div>`;
   if(role()!=="oic")return"";
   return `<h2>Turnover</h2><div class="panel"><p class="note">PCSing or handing off? Send the incoming OIC a link. On their phone they tap <b>Take over</b>; the board gets a new code and your phone stops syncing. Then you can erase this phone.</p>
-    <a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent("EOP Numbers turnover: open this on your phone to take over the "+unitName()+" board (keep it private): "+PUB()+"#sync="+normCode(Y.code)+"&r=newoic"))}">Text turnover link to incoming OIC</a></div>`}
+    <a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent("Accounted For turnover: open this on your phone to take over the "+unitName()+" board (keep it private): "+PUB()+"#sync="+normCode(Y.code)+"&r=newoic"))}">Text turnover link to incoming OIC</a></div>`}
 async function turnoverGo(){const o=$("#toOut");const say=t=>{if(o)o.textContent=t};const old=S.sync.code;
   try{say("Making a new code…");const code=newCode();const K=await codeKeys(code);const ct=await sealObj(K,syncObj());const v=await SB.rpc("backup_put",{p_id:K.id,p_key:K.wk,p_ct:ct,p_base:null});
     S.sync={on:true,code,ver:+v,at:Date.now(),err:"",last:""};setBase(syncObj());S.sync.last=sig(syncObj());S.role="oic";rawSave();
@@ -1940,7 +1940,7 @@ function renderPerson(){const m=S.roster.find(x=>x.id===pid);if(!m){view=pBack||
   {const up=calEntries(dkey(),dkey(new Date(Date.now()+90*86400000)),"ALL").filter(e=>e.m&&e.m.id===m.id);h+=`<h2 style="display:flex;justify-content:space-between;align-items:center">Calendar <button class="chip" id="pcIcs" style="cursor:pointer">Add to phone calendar</button></h2>`+(up.length?`<div class="alist">${up.slice(0,12).map(e=>calRow(e,true)).join("")}</div>`:`<p class="note">Nothing in the next 90 days.</p>`)+calForm(m)}
   // my page
   h+=pSec("My page",m.pk?`<div class="note">${m.pkAt&&!S.mpErr?"<b style='color:var(--s-onhand)'>● Sent to their page "+ago(m.pkAt)+"</b>":S.mpErr?"<b style='color:var(--warn)'>✕ Not reaching their page: "+esc(S.mpErr)+"</b> Open Tools → System check and run part 07 (My page).":"Publishing…"} · ${esc(m.rank+" "+lastOf(m))} sees their status, duty, due-outs and calendar.</div>
-    <div class="row2">${m.phone?`<a class="btn" href="${esc("sms:+1"+m.phone+"?&body="+encodeURIComponent(unitName()+": your private My page (status, duty, due-outs, calendar) and the unit FEED. Keep this link to yourself: "+mpLink(m)+" · iPhone: open in Safari, then Share → Add to Home Screen so alerts work."))}">Text their link</a>`:`<button class="btn alt" data-pedit="ph">Add phone first</button>`}<button class="btn alt" data-mpcopy="${m.id}">Copy link</button></div>
+    <div class="row2">${m.phone?`<a class="btn" href="${esc("sms:+1"+m.phone+"?&body="+encodeURIComponent(unitName()+": your private My page (status, duty, due-outs, calendar) and the unit Feed. Keep this link to yourself: "+mpLink(m)+" · iPhone: open in Safari, then Share → Add to Home Screen so alerts work."))}">Text their link</a>`:`<button class="btn alt" data-pedit="ph">Add phone first</button>`}<button class="btn alt" data-mpcopy="${m.id}">Copy link</button></div>
     <button class="btn warn" data-mpoff="${m.id}">${armed==="mpoff"+m.id?"Tap again: turn off and delete their page":"Turn off My page"}</button>`
     :`<p class="note">Give ${esc(m.rank+" "+lastOf(m))} a private page on their phone with their status, next duty, due-outs and calendar. It updates by itself as you change things here.</p><button class="btn" data-mpon="${m.id}">Turn on My page</button>`);
   // gear
@@ -2054,7 +2054,7 @@ function renderSend(){let h=banner();const a=bcActive();
     if(past.length)h+=`<h2>Past messages</h2><div class="panel hist">${past.map(b=>{const st=bcStats(b);return `<div><b>${dtg(new Date(b.t)).slice(0,7)}</b> · ${st.got}/${st.pool} got it · ${esc(b.msg.slice(0,60))}${b.msg.length>60?"…":""}</div>`}).join("")}</div>`}
   $("#main").innerHTML=h}
 
-/* ---------- FEED: the word, old and new, with Got it in the app ----------
+/* ---------- Feed: the word, old and new, with Got it in the app ----------
    Post text is encrypted on the leader's phone (AES-256-GCM). The key rides only in the join link (#e=...), so the server
    stores text it can't read. Got it = scrambled name codes + 1 (got it) or 2 (problem) + optional note. */
 const b64e=u=>{let s="";for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode(...u.subarray(i,i+8192));return btoa(s)};
@@ -2075,12 +2075,12 @@ async function fdMeHash(f){f.meH=f.me?await Promise.all(SB.words(f.me).map(w=>SB
 function fdSeenIds(f){const s=new Set();for(const A of Object.values(f.acks||{}))for(const id of Object.keys(A))s.add(id);return s}
 function fdDue(){const out=[];const now=Date.now();for(const f of S.feeds.filter(f=>f.lk)){for(const p of f.posts||[]){const ra=(f.ra||{})[p.id];if(!ra||(f.rdis||{})[p.id])continue;if(now-p.t<ra*60000)continue;
   const st=fdStats(f,p);const miss=st.pool-st.got;if(miss>0&&now-p.t<7*86400000)out.push({f,p,miss,ra})}}return out}
-function fdWordBody(f,p){return f.unit+(p.urg?" URGENT":"")+": "+p.txt+"\n\nConfirm in EOP Numbers → FEED (Got it)."}
+function fdWordBody(f,p){return f.unit+(p.urg?" URGENT":"")+": "+p.txt+"\n\nConfirm in Accounted For → Feed (Got it)."}
 function fdDueHTML(){const d=fdDue();if(!d.length)return"";return d.slice(0,3).map(x=>{const miss=sorted(fdPool(x.p).filter(m=>!((x.f.acks||{})[String(x.p.id)]||{})[m.id]));
   return `<div class="banner" style="border-color:var(--warn);flex-direction:column;align-items:stretch;gap:6px"><span>⏰ <b>${x.miss}</b> haven't confirmed “${esc(x.p.txt.slice(0,50))}${x.p.txt.length>50?"…":""}” after ${x.ra>=60?x.ra/60+" hr":x.ra+" min"}.</span>
-    <div class="row2">${bcBatches(miss,fdWordBody(x.f,x.p)).map((b,i,arr)=>`<a class="btn" href="${esc(b.href)}">Text them the word${arr.length>1?" ("+(i+1)+")":""}</a>`).join("")||`<button class="btn" data-go="feed">Open FEED</button>`}<button class="btn alt" data-fddis="${x.f.id}:${x.p.id}">Dismiss</button></div></div>`}).join("")}
+    <div class="row2">${bcBatches(miss,fdWordBody(x.f,x.p)).map((b,i,arr)=>`<a class="btn" href="${esc(b.href)}">Text them the word${arr.length>1?" ("+(i+1)+")":""}</a>`).join("")||`<button class="btn" data-go="feed">Open Feed</button>`}<button class="btn alt" data-fddis="${x.f.id}:${x.p.id}">Dismiss</button></div></div>`}).join("")}
 setInterval(()=>{const d=fdDue();for(const x of d){x.f.rn=x.f.rn||{};if(x.f.rn[x.p.id])continue;x.f.rn[x.p.id]=1;save();toast("⏰ "+x.miss+" haven't confirmed the word");try{navigator.vibrate&&navigator.vibrate([150,80,150])}catch(e){}
-  try{if("Notification" in window&&Notification.permission==="granted")navigator.serviceWorker.ready.then(r=>r.showNotification(x.miss+" haven't confirmed",{body:"“"+x.p.txt.slice(0,80)+"” Open FEED to remind them.",tag:"fdrem"+x.p.id,data:{open:"feed"},icon:"./icon-192.png"})).catch(()=>{})}catch(e){}
+  try{if("Notification" in window&&Notification.permission==="granted")navigator.serviceWorker.ready.then(r=>r.showNotification(x.miss+" haven't confirmed",{body:"“"+x.p.txt.slice(0,80)+"” Open Feed to remind them.",tag:"fdrem"+x.p.id,data:{open:"feed"},icon:"./icon-192.png"})).catch(()=>{})}catch(e){}
   if(view==="board"){const y=window.scrollY;render();window.scrollTo(0,y)}}},60000);
 function fdToLabel(to){if(!to||to.k==="all")return"Everyone";if(to.k==="secs")return to.s.concat(to.att?["ATT"]:[]).join(", ")||"No one";if(to.k==="one")return to.n||"One person";return"Everyone"}
 function fdLink(f){const q=new URLSearchParams();q.set("feed",f.id);q.set("k",f.mk);q.set("e",f.ek);q.set("u",f.unit);q.set("s",SECTIONS.map(x=>x[0]).join(","));return PUB()+"#"+q.toString()}
@@ -2091,7 +2091,7 @@ async function fdPoll(f,full){const ackN={};const after=full?0:Math.max(0,f.ctl|
   let ctlTop=full?0:(f.ctl||0);for(const r of [...(rows||[])].sort((a,b)=>a.id-b.id)){if(have.has(+r.id))continue;const o=await fdDec(f.ek,r.ct);if(!o)continue;if(o.c==="pin"){if(+r.id>=ctlTop){ctlTop=+r.id;f.pins=Array.isArray(o.ids)?o.ids.map(Number).slice(0,5):[]}continue}const to=o.to&&["all","secs","one"].includes(o.to.k)?o.to:{k:"all"};if(to.k==="secs"&&!Array.isArray(to.s))to.s=[];if(o.sa&&!f.lk)f.secsAll=o.sa;const post={id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,1500),urg:!!o.u,to};if(o.pod&&o.pod.d)post.pod={d:String(o.pod.d).slice(0,10)};if(o.by)post.by=String(o.by).slice(0,30);if(o.sl)post.sl=String(o.sl).replace(/[^A-Z0-9]/g,"").slice(0,6);keep.push(post);if(f.lk&&post.sl&&+r.id>(f.actTop||0)){f.actTop=+r.id;if(!full||f.actInit)actAdd("✎",post.sl+" leader "+(post.by||"")+" posted"+(post.to&&post.to.k==="secs"?" to "+fdToLabel(post.to):" to everyone")+": “"+post.txt.slice(0,80)+(post.txt.length>80?"…":"")+"”","feed")}if(+r.id>(f.seen||0)&&(f.lk||post.to.k!=="one"||fdForMe(f,post)))fresh++}
   f.actInit=1;f.posts=keep.sort((a,b)=>b.id-a.id).slice(0,200);f.ctl=ctlTop;if(full&&!ctlTop)f.pins=[];f.err="";
   if(f.lk){try{const rq=await SB.rpc("feed_reqs_get",{p_feed:f.id,p_leader_key:f.lk,p_after:f.reqAfter||0});let nr=0;
-      for(const r of rq||[]){f.reqAfter=Math.max(f.reqAfter||0,+r.id);const o=await fdDec(f.ek,r.ct);if(!o||o.k!=="req"||S.reqs.some(x=>x.rid===o.rid))continue;const m=matchMarine(String(o.me||""));
+      for(const r of rq||[]){f.reqAfter=Math.max(f.reqAfter||0,+r.id);const o=await fdDec(f.ek,r.ct);if(o&&o.k==="rep"&&typeof repIn==="function"){repIn(f,o,r);continue}if(!o||o.k!=="req"||S.reqs.some(x=>x.rid===o.rid))continue;const m=matchMarine(String(o.me||""));
         actAdd("📨",String(o.me||"Someone").slice(0,30)+" requested "+String(o.ty||"Other").slice(0,24)+(o.from?" "+String(o.from).slice(0,10)+(o.to&&o.to!==o.from?" to "+String(o.to).slice(0,10):""):""),"feed");S.reqs.unshift({rid:String(o.rid).slice(0,20),feed:f.id,mid:m?m.id:"",who:String(o.me||"").slice(0,30),ty:String(o.ty||"Other").slice(0,24),from:String(o.from||"").slice(0,10),to:String(o.to||"").slice(0,10),tm:String(o.tm||"").slice(0,5),note:String(o.note||"").slice(0,200),t:Date.parse(r.created_at)||Date.now(),st:"pending"});nr++}
       if(nr){S.reqs=S.reqs.slice(0,400);toast("📨 "+nr+" new request"+(nr>1?"s":""));try{navigator.vibrate&&navigator.vibrate([80,60,80])}catch(e){}}}catch(e){}
     const acks=await SB.rpc("feed_acks_get",{p_feed:f.id,p_leader_key:f.lk,p_after:f.ackAfter||0});
@@ -2106,7 +2106,7 @@ async function fdPollAll(full){if(fdBusy||!S.feeds.length)return;fdBusy=true;let
   try{for(const f of S.feeds){try{fresh+=await fdPoll(f,full)}catch(e){f.err=String(e.message||e).slice(0,80)}}save();renderTabs();
     if(view==="feed"&&fresh&&window.scrollY>250){fdPend+=fresh;fdPillShow()}
     else if(view==="feed"||view==="today"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;view==="feed"?renderFeed():renderToday();window.scrollTo(0,y)}}
-    if(fresh&&view!=="feed"&&view!=="today"){toast(fresh===1?"New in FEED":fresh+" new in FEED");try{navigator.vibrate&&navigator.vibrate([60,40,60])}catch(e){}}}
+    if(fresh&&view!=="feed"&&view!=="today"){toast(fresh===1?"New in Feed":fresh+" new in Feed");try{navigator.vibrate&&navigator.vibrate([60,40,60])}catch(e){}}}
   finally{fdBusy=false}}
 every(30000,()=>{if(S.feeds.length&&view!=="feed")fdPollAll(false)},"feed");
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.feeds.length)fdPollAll(false)});
@@ -2139,7 +2139,7 @@ function renderFeed(){let h=S.source==="sample"?"":banner();const f=fdCur();
       <button class="btn" id="fdCreate">Start a feed for ${esc(unitName())}</button>${fdNew?`<button class="btn alt" id="fdCancelNew">Cancel</button>`:""}<div class="note" id="fdOut"></div>
       <p class="note">Joining someone else's feed? Open the link they sent on this phone.</p></div>`;$("#main").innerHTML=h;return}
   const maxId=Math.max(0,...fdVisible(f).map(p=>p.id));const prevSeen=f.seen||0;
-  h+=`<div class="sechead" style="margin-top:12px"><h2>${esc(f.unit)} ${/company$/i.test(f.unit)?"FEED":"feed"}</h2><div class="ratio" style="font-size:13px">${f.lk?xlBtn("feed")+" ":""}${f.err?`<span style="color:var(--warn)">offline</span>`:`<span style="color:var(--s-onhand)">● live</span>`}</div></div>`;
+  h+=`<div class="sechead" style="margin-top:12px"><h2>Feed</h2><div class="ratio" style="font-size:13px">${f.lk?xlBtn("feed")+" ":""}${f.err?`<span style="color:var(--warn)">offline</span>`:`<span style="color:var(--s-onhand)">● live</span>`}</div></div>`;
   if(f.lk){h+=reqHTML(f)+(fdPod?podForm():`<button class="btn alt" id="pdOpen" style="width:100%;margin-top:8px">📋 Post the Plan of the Day</button>`);h+=`<div class="panel"><div class="fch">${fdAv(fdBy(f))}<div class="hd"><div class="nm">${esc(fdBy(f))}</div><button class="chip" id="fdByEd" style="cursor:pointer;margin-top:2px">Posting as · change</button></div></div><label for="fdTxt">Pass the word</label><textarea id="fdTxt" maxlength="1000" style="min-height:90px" placeholder="Formation 0700 tomorrow, PT gear. Duty section report to the S-3 at 0800.">${esc(fdDraft.txt)}</textarea>
       <div class="note">Send to:</div><div class="evts">${[["all","Everyone"],["secs",LV().Sec+"s"],["one","One person"]].map(([k,l])=>`<button data-fdto="${k}" aria-pressed="${fdDraft.to===k}">${l}</button>`).join("")}</div>
       ${fdDraft.to==="secs"?`<div class="evts">${SECTIONS.map(([k])=>`<label class="tog"><input type="checkbox" data-fdsec="${k}"${fdDraft.secs.includes(k)?" checked":""}> ${k}</label>`).join("")}<label class="tog"><input type="checkbox" id="fdAtt"${fdDraft.att?" checked":""}> ATT</label></div>`:""}
@@ -2150,8 +2150,8 @@ function renderFeed(){let h=S.source==="sample"?"":banner();const f=fdCur();
       <button class="btn" id="fdPost">Post</button></div>
       ${(()=>{const seen=fdSeenIds(f);const ns=sorted(S.roster.filter(m=>!seen.has(m.id)));if(!(f.posts||[]).length||!ns.length)return"";
         return `<details class="panel"><summary><b>Not seen in the feed yet</b> · ${ns.length} have never confirmed a post</summary><p class="note">They may not have joined. Text them the join link, or text the word itself so it reaches them without the app.</p><div class="note">${ns.map(m=>esc(m.sec+" "+m.rank+" "+lastOf(m))).join(" · ")}</div>
-          ${bcBatches(ns,f.unit+" FEED: tap to join and see the word in EOP Numbers: "+fdLink(f)).map((x,i,arr)=>`<a class="btn alt" href="${esc(x.href)}">Text join link to them${arr.length>1?" ("+(i+1)+")":""} (${x.n})</a>`).join("")}</details>`})()}
-      <details class="panel"><summary><b>Invite people</b> · send the join link once</summary>${bcBatches(S.roster,f.unit+" FEED: tap to join and see the word in EOP Numbers: "+fdLink(f)).map((x,i,arr)=>`<a class="btn" href="${esc(x.href)}">Text join link${arr.length>1?" · group "+(i+1)+" of "+arr.length:""} (${x.n})</a>`).join("")||`<p class="note">No phone numbers loaded (RECALL → Load numbers). You can copy the link instead.</p>`}
+          ${bcBatches(ns,f.unit+" Feed: tap to join and see the word in Accounted For: "+fdLink(f)).map((x,i,arr)=>`<a class="btn alt" href="${esc(x.href)}">Text join link to them${arr.length>1?" ("+(i+1)+")":""} (${x.n})</a>`).join("")}</details>`})()}
+      <details class="panel"><summary><b>Invite people</b> · send the join link once</summary>${bcBatches(S.roster,f.unit+" Feed: tap to join and see the word in Accounted For: "+fdLink(f)).map((x,i,arr)=>`<a class="btn" href="${esc(x.href)}">Text join link${arr.length>1?" · group "+(i+1)+" of "+arr.length:""} (${x.n})</a>`).join("")||`<p class="note">No phone numbers loaded (RECALL → Load numbers). You can copy the link instead.</p>`}
       <button class="btn alt" id="fdCopyLink">Copy join link</button><p class="note">Anyone with this link can read the feed, so send it only to your people.</p></details>`}
   else{if(f.pk)h+=`<div class="panel"><div class="fch">${fdAv(f.me||"?")}<div class="hd"><div class="nm">${esc(f.me||"Set your name")}</div><span class="note" style="margin:0">Section leader · ${esc(f.sec||"")}</span></div></div><label for="fdSlTxt">Pass the word</label><textarea id="fdSlTxt" maxlength="1000" style="min-height:80px" placeholder="${esc((f.sec||"Section")+" formation 0645 at the motor pool.")}">${esc(fdSlDraft.txt)}</textarea>
     <div class="note">Send to:</div><div class="evts">${[["all","Everyone"],["sec","Only my section"+(f.sec?" ("+f.sec+")":"")]].map(([k,l])=>`<button data-fdslto="${k}" aria-pressed="${fdSlDraft.to===k}">${esc(l)}</button>`).join("")}</div>
@@ -2170,7 +2170,7 @@ function renderFeed(){let h=S.source==="sample"?"":banner();const f=fdCur();
   if(fdIO)fdIO.disconnect();const mo=$("#fdMore");if(mo&&"IntersectionObserver" in window){fdIO=new IntersectionObserver(es=>{if(es.some(x=>x.isIntersecting)){fdIO.disconnect();fdLimit+=20;const y=window.scrollY;renderFeed();window.scrollTo(0,y)}},{rootMargin:"400px"});fdIO.observe(mo)}
   if(!f.lk&&maxId>prevSeen){f.seen=maxId;save();setTimeout(renderTabs,0)}}
 
-/* ---------- FEED cards (social style) ---------- */
+/* ---------- Feed cards (social style) ---------- */
 const AV_COL=["#2f6fde","#17795f","#b4532a","#7a4bd1","#c23a5b","#0f8b9c","#6b7a1f"];
 function fdBy(f){return (S.postAs||S.myName||(f&&f.unit)||unitName()).toUpperCase().slice(0,30)}
 function fdAv(name){const w=String(name||"?").toUpperCase().split(/\s+/).filter(Boolean);const ini=(w.length>1?w[0][0]+w[w.length-1][0]:(w[0]||"?").slice(0,2));let hsh=0;for(const c of String(name))hsh=(hsh*31+c.charCodeAt(0))>>>0;
@@ -2197,8 +2197,8 @@ function fdCard(f,p,pinned,isNew){const mine=(f.mine||{})[p.id];const by=p.by||f
     h+=`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><button class="chip" data-fdopen="${p.id}" style="cursor:pointer">${open?"Hide":"Who"} ▸</button><button class="chip" data-fdpin="${p.id}" style="cursor:pointer">${pinned?"Unpin":"📌 Pin"}</button>${(f.ra||{})[p.id]?`<span class="note">⏰ remind after ${f.ra[p.id]>=60?f.ra[p.id]/60+" hr":f.ra[p.id]+" min"}</span>`:""}${(f.un||{})[p.id]?`<span class="note">${f.un[p.id]} unmatched</span>`:""}</div>`;
     if(open){const st=fdStats(f,p);const pool=fdPool(p);const pr=sorted(pool.filter(m=>st.A[m.id]&&st.A[m.id].c===2));const miss=sorted(pool.filter(m=>!st.A[m.id]));
       if(pr.length)h+=`<div><b style="color:var(--warn)">Problems</b>${pr.map(m=>`<div class="rtop"><div class="who"><b>${esc(m.rank)}</b> ${esc(m.name)}<div class="ph">${esc(st.A[m.id].note)}</div></div>${m.phone?`<a class="call" href="${telHref(m.phone)}">Call</a>`:""}</div>`).join("")}</div>`;
-      if(miss.length){const rb=bcBatches(miss,f.unit+": new word in the FEED you haven't confirmed. Open EOP Numbers → FEED.");const wb=bcBatches(miss,fdWordBody(f,p));
-        h+=`<div><b>Not confirmed (${miss.length})</b><div class="note">${miss.map(m=>esc((m.sec==="ATT"?"ATT":m.sec)+" "+m.rank+" "+lastOf(m))).join(" · ")}</div></div>${wb.map((x,i,arr)=>`<a class="btn" href="${esc(x.href)}">Text them the word${arr.length>1?" · group "+(i+1):""} (${x.n})</a>`).join("")}${rb.map((x,i,arr)=>`<a class="btn alt" href="${esc(x.href)}">Just remind them to check FEED${arr.length>1?" · group "+(i+1):""}</a>`).join("")}`}
+      if(miss.length){const rb=bcBatches(miss,f.unit+": new word in the Feed you haven't confirmed. Open Accounted For → Feed.");const wb=bcBatches(miss,fdWordBody(f,p));
+        h+=`<div><b>Not confirmed (${miss.length})</b><div class="note">${miss.map(m=>esc((m.sec==="ATT"?"ATT":m.sec)+" "+m.rank+" "+lastOf(m))).join(" · ")}</div></div>${wb.map((x,i,arr)=>`<a class="btn" href="${esc(x.href)}">Text them the word${arr.length>1?" · group "+(i+1):""} (${x.n})</a>`).join("")}${rb.map((x,i,arr)=>`<a class="btn alt" href="${esc(x.href)}">Just remind them to check Feed${arr.length>1?" · group "+(i+1):""}</a>`).join("")}`}
       else h+=`<div class="note" style="color:var(--s-onhand);font-weight:700">Everyone confirmed.</div>`;
       h+=`<button class="btn warn" data-fddel="${p.id}">${armed==="fddel"+p.id?"Tap again to delete this post":"Delete post"}</button>`}}
   if(!f.lk)h+=slStats(f,p);
@@ -2298,7 +2298,7 @@ const TERM1=()=>"Marine";
 function recallPool(){return S.roster.filter(m=>m.sec!=="ATT"||S.rc.att)}
 function recallText(){const pool=recallPool();const res=S.rc.res||{};const got=pool.filter(m=>res[m.id]==="ok");
   const el=S.rc.start?Math.round(((S.rc.end||Date.now())-S.rc.start)/60000):0;
-  const L=["EOOP RECALL "+dtg(new Date(S.rc.start||Date.now())),"CONTACTED: "+got.length+"/"+pool.length+" ("+pct(got.length,pool.length)+"%) IN "+el+" MIN"];
+  const L=[unitName().toUpperCase()+" RECALL "+dtg(new Date(S.rc.start||Date.now())),"CONTACTED: "+got.length+"/"+pool.length+" ("+pct(got.length,pool.length)+"%) IN "+el+" MIN"];
   const vm=pool.filter(m=>res[m.id]==="vm"),na=pool.filter(m=>res[m.id]==="na"),nt=pool.filter(m=>!res[m.id]);
   const nm=m=>"- "+(m.sec==="ATT"?"ATT":m.sec)+" "+m.rank+" "+m.name.split(",")[0];
   const ci=S.rc.ci||{};const note=m=>ci[m.id]&&ci[m.id].eta?" ("+ci[m.id].eta.toUpperCase()+")":"";
@@ -3015,12 +3015,12 @@ document.addEventListener("click",async e=>{const id=e.target.id;const V=window.
   if(id==="secErase"){if(armed==="erase"){V?V.eraseAll():(localStorage.clear(),location.reload())}else{armed="erase";tabRedraw()}return}
   if(!V)return;
   if(id==="secSet"){const p=pinsOK();if(!p)return;e.target.disabled=true;e.target.textContent="Encrypting…";
-    try{await V.setPin(p,JSON.stringify(S),{title:MODE().title});toast("PIN lock on. Data encrypted.")}catch(err){toast("Couldn't turn on the lock here.")}tabRedraw();return}
+    try{await V.setPin(p,JSON.stringify(S),{title:(typeof appName==="function"?appName():"Accounted For")});toast("PIN lock on. Data encrypted.")}catch(err){toast("Couldn't turn on the lock here.")}tabRedraw();return}
   if(id==="secLock"){V.lockNow();return}
   if(id==="secChange"||id==="secOff"){const cur=($("#pinC")||{}).value||"";if(!cur){toast("Enter your current PIN.");return}
     e.target.disabled=true;const ok=await V.check(cur);e.target.disabled=false;if(!ok){toast("Current PIN is wrong.");return}
     if(id==="secOff"){V.off(JSON.stringify(S));toast("Lock off. Data is no longer encrypted.");tabRedraw();return}
-    const p=pinsOK();if(!p)return;await V.setPin(p,JSON.stringify(S),{auto:V.cfg.auto,wipe:V.cfg.wipe,title:MODE().title});toast("PIN changed.");tabRedraw();return}
+    const p=pinsOK();if(!p)return;await V.setPin(p,JSON.stringify(S),{auto:V.cfg.auto,wipe:V.cfg.wipe,title:(typeof appName==="function"?appName():"Accounted For")});toast("PIN changed.");tabRedraw();return}
 });
 document.addEventListener("change",e=>{const V=window.VAULT;if(!V||!V.on())return;
   if(e.target.id==="secAuto"){V.set({auto:+e.target.value});toast("Saved")}
@@ -3093,10 +3093,10 @@ async function lgOpen(K,ct){const b=b64d(ct);return JSON.parse(LG_TD.decode(awai
 
 /* what a login can open: every link this phone can already send */
 function lgDests(){const D=[];if(!isOwner())return D;
-  if(S.source!=="sample")for(const m of S.roster)D.push({id:"me:"+m.id,g:"My page (their status, duty, calendar, unit FEED)",l:m.rank+" "+m.name,base:String(m.name||"").split(",")[0],ph:m.phone||""});
+  if(S.source!=="sample")for(const m of S.roster)D.push({id:"me:"+m.id,g:"My page (their status, duty, calendar, unit Feed)",l:m.rank+" "+m.name,base:String(m.name||"").split(",")[0],ph:m.phone||""});
   if(S.board)for(const x of SECTIONS)D.push({id:"sec:"+x[0],g:"Section leader (updates their section)",l:x[0]+" section leader",base:x[0]+"lead"});
   if(S.coBoard){if(S.coBoard.wk)D.push({id:"co:rep",g:"Company",l:"Platoon reporting to "+(S.coBoard.name||"the company"),base:"plt"});if(S.coBoard.rk)D.push({id:"co:view",g:"Company",l:"Company view (CO, 1stSgt, XO)",base:"co"})}
-  for(const f of S.feeds||[])if(f.lk)D.push({id:"feed:"+f.id,g:"FEED only",l:"FEED · "+(f.unit||unitName()),base:"feed"});
+  for(const f of S.feeds||[])if(f.lk)D.push({id:"feed:"+f.id,g:"Feed only",l:"Feed · "+(f.unit||unitName()),base:"feed"});
   if(S.sync&&S.sync.on)for(const r of ["view","sncoic","co"])D.push({id:"acc:"+r,g:"Your full board on their phone",l:ROLE_N[r],base:r==="view"?"viewer":r==="co"?"oic":"editor"});
   return D}
 async function lgHash(id,create){const i=id.indexOf(":"),k=id.slice(0,i),v=id.slice(i+1);let u="";
@@ -3161,7 +3161,7 @@ async function lgSignIn(){const U=$("#lgSU"),P=$("#lgSP"),o=$("#lgSOut"),b=$("#l
   try{const K=await lgKeys(U.value,P.value);const r=await SB.rpc("login_get",{p_uid:K.uid,p_vf:K.vf});const row=Array.isArray(r)?r[0]:r;
     if(!row||!row.ct){o.textContent=row&&row.wait>0?"Too many tries. Wait "+Math.ceil(row.wait/60)+" min, then try again.":"Username or password is wrong. Check with whoever gave it to you.";return}
     const X=await lgOpen(K,row.ct);if(!X||typeof X.h!=="string"||!/^[a-z]+=/.test(X.h))throw new Error("This login is damaged. Ask for a new one.");
-    if(!S.mode&&X.m&&MODES[X.m]){setMode(X.m);if(!S.mode){S.mode=X.m;save()}}
+    S.lgSelf={uid:K.uid,vf:K.vf,l:String(X.l||"").slice(0,60)};save();if(!S.mode&&X.m&&MODES[X.m]){setMode(X.m);if(!S.mode){S.mode=X.m;save()}}
     o.textContent="Opening "+(X.l||"your page")+"…";closeSheet();
     setTimeout(()=>{try{history.replaceState(null,"",location.pathname)}catch(e){}location.hash=X.h},320)}
   catch(e){o.textContent=/OperationError/.test(String(e&&e.name))?"This login is damaged. Ask for a new one.":lgErr(e)}
