@@ -355,7 +355,7 @@ body.member-mode nav:not(#tabbar),body.member-mode #b6W,body.member-mode #bPT,bo
 body{background:var(--bg)!important;padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 :root{--bg:#f4f6f8}
 .top .acts,.top nav[aria-label="Sections"]{display:none!important}
-.hic{display:flex;gap:8px;flex-shrink:0}input[type=file]{max-width:100%}.row2>*{min-width:0}.row2 input{min-width:0;width:100%}#hRef.spin svg{animation:refspin .8s linear infinite}@keyframes refspin{to{transform:rotate(360deg)}}.hic button{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--surface-solid);color:var(--ink);display:grid;place-items:center}
+.hic{display:flex;gap:8px;flex-shrink:0}#wsBar button{border:1px solid var(--line);background:var(--surface-solid);color:var(--ink);border-radius:99px;font:inherit;font-size:11px;font-weight:800;padding:2px 9px;margin-left:6px;cursor:pointer}#wsBar button[aria-pressed=true]{background:var(--ink);color:var(--bg)}input[type=file]{max-width:100%}.row2>*{min-width:0}.row2 input{min-width:0;width:100%}#hRef.spin svg{animation:refspin .8s linear infinite}@keyframes refspin{to{transform:rotate(360deg)}}.hic button{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--surface-solid);color:var(--ink);display:grid;place-items:center}
 #subnav{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:8px 0 10px}#subnav:empty{display:none}#subnav::-webkit-scrollbar{display:none}
 #subnav button{flex:0 0 auto;min-height:36px;border-radius:999px;border:1px solid var(--line);background:var(--surface-solid);color:var(--ink);font:inherit;font-weight:700;font-size:13.5px;padding:0 14px;white-space:nowrap}
 #subnav button[aria-current="page"]{background:var(--ink);color:var(--bg);border-color:transparent}
@@ -411,7 +411,7 @@ body.member-mode #hSearch{display:none}
 </head><body>
 <header class="top"><div class="top-in">
   <div class="brand">
-    <div><h1><button id="bMode" class="titlebtn" aria-haspopup="dialog" title="Change app version">EOP Numbers<span class="caret">▾</span></button></h1><div class="dtg" id="dtg"></div></div>
+    <div><h1><button id="bMode" class="titlebtn" aria-haspopup="dialog" title="Change app version">EOP Numbers<span class="caret">▾</span></button></h1><div class="dtg"><span id="dtg"></span><span id="wsBar"></span></div></div>
     <div class="hic"><button id="hRef" aria-label="Refresh: get the latest updates"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button><button id="hHelp" aria-label="Help for this screen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"></path></svg></button><button id="hSearch" aria-label="Find anyone"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></button><button id="hSet" aria-label="Settings and data"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></button></div>
     <div class="acts">
       <button id="bToday" aria-pressed="false" hidden>TODAY</button>
@@ -721,6 +721,12 @@ function shareMode(k){const url=modeLink(k);const t=k==="all"?"Accountability ap
   if(navigator.share){navigator.share({title:t,text:t,url}).catch(()=>{});return}
   try{navigator.clipboard.writeText(url).then(()=>toast((k==="all"?"App":MODES[k].name)+" link copied"),()=>toast(url))}catch(e){toast(url)}}
 
+/* ---------- WORKSPACES: platoon and company kept separate on one phone, switch with PLT / CO ---------- */
+const WS_GLOBAL=["ws","wsCur","pushOn","dev","hubMode","onb","me","askSt","ask","askAdmin","ts","mode","myName"];
+function wsStash(){const cur=S.wsCur||"plt";S.ws=S.ws||{};const bag={};for(const k of Object.keys(S)){if(WS_GLOBAL.includes(k))continue;bag[k]=S[k];delete S[k]}S.ws[cur]=bag}
+function wsSwitch(k,extra){const cur=S.wsCur||"plt";if(k===cur&&!extra)return;if(k!==cur){wsStash();const nx=(S.ws&&S.ws[k])||null;if(nx){Object.assign(S,nx);delete S.ws[k]}else{S.roster=[];S.source="sample";if(k==="co"){S.level="co";S.secs=CO_SECS.map(x=>x.slice());S.newCo=true;S.leaderMode=true}}S.wsCur=k}
+  if(!S.mode)S.mode="military";S.onb=true;if(extra)Object.assign(S,extra);rawSave();try{history.replaceState(null,"",location.pathname+"#"+(k==="co"?"co":"board"))}catch(e){}location.reload()}
+document.addEventListener("click",e=>{const w=e.target.closest("[data-wsgo]");if(!w)return;const k=w.dataset.wsgo;if(k===(S.wsCur||"plt"))return;toast(k==="co"?"Opening company view…":"Opening platoon view…");setTimeout(()=>wsSwitch(k),150)});
 const LV=()=>S.level==="co"?{sec:"platoon",Sec:"Platoon",secs:"platoons",head:"platoon OIC",Head:"Platoon OIC",heads:"Platoon OICs"}:{sec:"section",Sec:"Section",secs:"sections",head:"section leader",Head:"Section leader",heads:"Section leaders"};
 const CO_SECS=[["HQ","Company HQ"],["1PLT","1st Platoon"],["2PLT","2nd Platoon"],["3PLT","3rd Platoon"]];
 function setLevel(k){if(k===(S.level||"plt"))return;const subs=MIL_SECS.map(x=>x[0]);
@@ -734,7 +740,7 @@ function mapCo(u){const U=(u||"").toUpperCase();const n=(U.match(/(\d)\s*(?:ST|N
   if(n)sec=(SECTIONS.find(s=>s[0]===n+"PLT"||(s[0].startsWith(n)&&/PLT/.test(s[0]))||new RegExp("^"+n+"(ST|ND|RD|TH)?\\s*P").test(s[1].toUpperCase()))||[])[0]||null;
   if(!sec)sec=(SECTIONS.find(s=>U.split(/[-\s/]+/).includes(s[0])||U.includes(s[1].toUpperCase()))||SECTIONS[0])[0];
   const t=U.split(/[-\s/]+/).filter(Boolean).pop()||"";const sub={HQ:"HQ",EE:"HE",HE:"HE",CE:"CE",ORD:"ORD",UT:"UT"}[t]||(/^[A-Z]{2,6}$/.test(t)&&!/PLT|PLATOON|CO/.test(t)?t:"");return {sec,sub}}
-function levelHTML(){const co=S.level==="co";return `<h2>Unit level</h2><div class="panel"><p class="note">${co?"<b>Company:</b> tabs are platoons. Each platoon OIC gets a link, loads their platoon from your board with their own sections, and sends their numbers up to you.":"<b>Platoon:</b> tabs are sections and section leaders send you their numbers. Switch to Company to run the whole company with platoons as tabs."}</p>
+function levelHTML(){const cw=(S.wsCur||"plt")==="co";return `<h2>Views</h2><div class="panel"><p class="note">This phone keeps a <b>platoon view</b> and a <b>company view</b> separately. Switch with <b>PLT / CO</b> at the top. Each has its own roster, links, FEED and backup.</p><div class="evts"><button data-wsgo="plt" aria-pressed="${!cw}">Platoon view</button><button data-wsgo="co" aria-pressed="${cw}">Company view</button></div></div>`;const co=S.level==="co";return `<h2>Unit level</h2><div class="panel"><p class="note">${co?"<b>Company:</b> tabs are platoons. Each platoon OIC gets a link, loads their platoon from your board with their own sections, and sends their numbers up to you.":"<b>Platoon:</b> tabs are sections and section leaders send you their numbers. Switch to Company to run the whole company with platoons as tabs."}</p>
   <div class="evts"><button data-lvl="plt" aria-pressed="${!co}">Platoon</button><button data-lvl="co" aria-pressed="${co}">Company</button></div><button class="btn alt" data-go="co" style="width:100%;margin-top:8px">📂 Load a company roster (Excel or CSV)</button>${co?`<p class="note">Rename or add platoons in Tabs below. Load the company MOL: Marines go to their platoon, and their section inside it comes along for the platoon OIC.</p>`:""}</div>`}
 function secFix(){for(const m of S.roster){if(m.sec!=="ATT"&&!SECTIONS.some(s=>s[0]===m.sec))m.sec=SECTIONS[0][0]}}
 function tabsHTML(){if(!secDraft)secDraft=SECTIONS.map(([k,n])=>({o:k,k,n}));const D=secDraft;
@@ -797,7 +803,8 @@ S.bc=Array.isArray(S.bc)?S.bc:[];
 S.feeds=Array.isArray(S.feeds)?S.feeds:[];
 S.days=S.days&&typeof S.days==="object"?S.days:{};S.log=Array.isArray(S.log)?S.log:[];S.reqs=Array.isArray(S.reqs)?S.reqs:[];S.ask=Array.isArray(S.ask)?S.ask:[];if(S.me&&typeof S.me!=="object")S.me=null;S.secCal=S.secCal&&typeof S.secCal==="object"?S.secCal:{};if(S.sync&&typeof S.sync!=="object")S.sync=null;
 S.ready=S.ready&&typeof S.ready==="object"?S.ready:{};S.duty=Object.assign({rosters:[]},S.duty||{});if(!Array.isArray(S.duty.rosters))S.duty.rosters=[];S.tl=S.tl&&typeof S.tl==="object"?S.tl:{};
-S.roll=Object.assign({units:{},own:true,name:""},S.roll||{});if(!S.roll.units||typeof S.roll.units!=="object")S.roll.units={};
+S.roll=Object.assign({units:{},own:true,name:""},S.roll||{});
+if(S.newCo&&S.source==="sample"){S.roster=sampleRoster();let si=0;const sb=MIL_SECS.map(x=>x[0]);for(const m of S.roster)if(m.sec!=="ATT")m.sub=sb[si++%sb.length];delete S.newCo}else if(!S.roster.length&&S.source==="sample")S.roster=sampleRoster();if(!S.roll.units||typeof S.roll.units!=="object")S.roll.units={};
 S.mus=Object.assign({open:false,seen:{},inc:["On Hand"],att:true,only:false,last:null},S.mus||{});
 S.pt=Object.assign({event:"Unit PT",when:"",inc:["On Hand"],att:true},S.pt||{});
 const dutyOf=m=>DUTIES.includes(m.duty)?m.duty:"Full Duty";
@@ -805,7 +812,7 @@ function save(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.
 
 let view="board", armed=null, query="";
 const h0=(location.hash||"").slice(1).toLowerCase();
-if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty","cal","log","me","sys","today","ask","people","tools"].includes(h0)) view=h0;
+if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty","cal","log","me","sys","today","ask","people","tools","co","act"].includes(h0)||(Array.isArray(S.secs)&&S.secs.some(x=>String(x[0]).toLowerCase()===h0))) view=h0;
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -838,7 +845,7 @@ function renderTabs(){renderShell();
   const items=[["board","BOARD",T["On Hand"]+"/"+T.total]].concat(SECTIONS.map(([k])=>[k.toLowerCase(),k,c[k]["On Hand"]+"/"+c[k].total])).concat([["att","ATT","+"+c.ATT.total]]);
   $("#tabs").innerHTML=items.map(([id,lbl,sub])=>`<button role="tab" data-v="${id}" aria-selected="${view===id}">${lbl}<small>${sub}</small></button>`).join("");
   {const mm=memberMode();document.body.classList.toggle("member-mode",mm);const bt=$("#bToday");if(bt){bt.hidden=!(mm||S.me||S.feeds.some(f=>!f.lk));bt.setAttribute("aria-pressed",view==="today")}}$("#b6W").setAttribute("aria-pressed",view==="w6");$("#bFeed").setAttribute("aria-pressed",view==="feed");{const n=fdUnread();const fb=$("#fdBadge");if(fb){fb.hidden=!n;fb.textContent=n>9?"9+":n}}$("#bPT").setAttribute("aria-pressed",view==="pt");$("#bText").setAttribute("aria-pressed",view==="text");$("#bData").setAttribute("aria-pressed",view==="data");
-  $("#dtg").textContent="AS OF "+dtg();
+  $("#dtg").textContent="AS OF "+dtg();{const wb=$("#wsBar");if(wb){const cur=S.wsCur||"plt";wb.innerHTML=(S.ws&&Object.keys(S.ws).length)||cur==="co"?[["plt","PLT"],["co","CO"]].map(([k,l])=>`<button data-wsgo="${k}" aria-pressed="${k===cur}" aria-label="${k==="co"?"Company":"Platoon"} view">${l}</button>`).join(""):""}}
   {const tp=document.querySelector(".top");if(tp)document.documentElement.style.setProperty("--hdr",tp.offsetHeight+"px")}
 }
 function banner(){if(S.role==="view")return `<div class="banner"><span><b>View-only phone.</b> You see the shared board; changes here aren't saved.</span></div>`+banner0();return banner0()}
@@ -1341,13 +1348,13 @@ function renderLive(){let h=banner();const B=S.board,L=S.link;
       return `<div class="rrow" style="--sc:var(${!r?"--line":old?"--warn":"--s-onhand"})"><div class="rtop"><div class="who"><b>${k}</b> ${esc(n)}
         <div class="ph">${B.rsig&&B.rsig[k]?`<b style="color:var(--s-onhand)">✓ Roster shared</b> · `:S.source==="sample"?"":`Roster sharing… · `}${r?`Updated ${ago(r.t)} (${dtg(new Date(r.t)).slice(0,7)})${r.by?" by "+esc(r.by):""} · ${r.ch} change${r.ch===1?"":"s"}`:"No update yet"}</div>
         ${r&&(r.miss||r.str!==r.mine)?`<div class="ph" style="color:var(--warn)">${r.miss?r.miss+" name"+(r.miss>1?"s":"")+" not on your roster. ":""}${r.str!==r.mine?"Their strength "+r.str+", yours "+r.mine+".":""}</div>`:""}</div></div>
-        <div class="row2">${(()=>{const hd=S.roster.find(m=>m.id===(B.heads||{})[k]);return `<select class="wsel" data-lvhead="${k}" aria-label="${k} section head"><option value="">${LV().Head}: pick from ${k}…</option>${sorted(S.roster.filter(m=>m.sec===k)).map(m=>`<option value="${m.id}"${hd&&hd.id===m.id?" selected":""}>${esc(m.rank+" "+m.name)}${m.phone?"":" (no number)"}</option>`).join("")}</select><a class="btn alt" href="${esc((hd&&hd.phone?"sms:+1"+String(hd.phone).replace(/\D/g,"").slice(-10):"sms:")+"?&body="+encodeURIComponent(unitName()+": you're the "+k+" "+LV().head+". Open this link in EOP Numbers. Your "+LV().sec+" roster loads from my board, your updates come straight to me, and you can post to the unit FEED: "+boardLink(k)+" · iPhone: open in Safari, then Share → Add to Home Screen so alerts work."))}">Text ${k} link${hd?" to "+esc(hd.rank+" "+lastOf(hd)):""}</a>`})()}<button class="btn alt" data-lvcopy="${k}">Copy link</button></div><button class="chip" data-lvreset="${k}" style="cursor:pointer;margin-top:6px">${armed==="lvreset"+k?"Tap again: old "+k+" link stops working":"↺ Replace "+k+" link (cut off the old one)"}</button></div>`}).join("")}</div>
+        <div class="row2">${(()=>{const hd=S.roster.find(m=>m.id===(B.heads||{})[k]);return `<select class="wsel" data-lvhead="${k}" aria-label="${k} section head"><option value="">${LV().Head}: pick from ${k}…</option>${sorted(S.roster.filter(m=>m.sec===k)).map(m=>`<option value="${m.id}"${hd&&hd.id===m.id?" selected":""}>${esc(m.rank+" "+m.name)}${m.phone?"":" (no number)"}</option>`).join("")}</select><a class="btn alt" href="${esc((hd&&hd.phone?"sms:+1"+String(hd.phone).replace(/\D/g,"").slice(-10):"sms:")+"?&body="+encodeURIComponent(unitName()+": you're the "+k+" "+LV().head+". Open this link in EOP Numbers. Your "+LV().sec+" roster loads from my board, your updates come straight to me, and you can post to the unit FEED: "+boardLink(k)+" · iPhone: open in Safari, then Share → Add to Home Screen so alerts work."))}">Text ${k} link${hd?" to "+esc(hd.rank+" "+lastOf(hd)):""}</a>`})()}<button class="btn alt" data-lvcopy="${k}">Copy link</button></div>${(S.wsCur||"plt")==="co"?`<button class="chip" data-lvmine="${k}" style="cursor:pointer;margin:6px 6px 0 0">${S.ws&&S.ws.plt&&S.ws.plt.link&&S.ws.plt.link.board===B.id&&S.ws.plt.link.sec===k?"✓ My platoon view runs "+k:"I run "+k+": link my platoon view"}</button>`:""}<button class="chip" data-lvreset="${k}" style="cursor:pointer;margin-top:6px">${armed==="lvreset"+k?"Tap again: old "+k+" link stops working":"↺ Replace "+k+" link (cut off the old one)"}</button></div>`}).join("")}</div>
     <button class="btn warn" id="lvOff" style="margin-top:16px;width:100%">${armed==="lvoff"?"Tap again: turn off and disconnect all sections":"Turn off live updates"}</button>`}
   if(L)h+=`<h2>My link</h2><div class="panel"><div>This phone sends <b>${esc(L.mysec)}</b> to <b>${esc(L.unit)}</b> as <b>${esc(L.sec)}</b>${L.me?" · sender "+esc(L.me):""}.</div><div class="note">${linkStatus()}</div>${L.rk2?`<div class="note">${L.perr?`<span style="color:var(--warn)">Roster: ${esc(L.perr)}</span>`:L.pulled?`Roster from ${esc(L.unit)} · ${(L.whole?S.roster:S.roster.filter(m=>m.sec===L.mysec)).length} people · updated ${ago(L.pt)}`:"Loading your section roster…"}</div>`:""}
     <div class="row2"><button class="btn" id="lkNow">Send now</button><button class="btn alt" id="lkOff">${armed==="lkoff"?"Tap again to unlink":"Unlink"}</button></div></div>`;
   $("#main").innerHTML=h}
 function joinPrompt(q){const bid=(q.get("join")||"").replace(/[^a-z0-9]/g,"").slice(0,20),wk=(q.get("k")||"").replace(/[^a-z0-9]/g,"").slice(0,40),sec=(q.get("s")||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6),unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24);
-  const ek=(q.get("e")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60);if(bid.length<10||wk.length<24||!sec)return;const rk2=(q.get("r")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60);if(rk2.length>=40){if(S.board&&S.board.id===bid){try{history.replaceState(null,"",location.pathname)}catch(e){}view="live";render();toast("That's your own "+sec+" leader link. Open it on the leader's phone, not yours.");return}autoLink({bid,wk,sec,unit,ek,rk2});return}sheetCtx={kind:"join",bid,wk,sec,unit,ek,rk2:""};const def=SECTIONS.some(x=>x[0]===sec)?sec:SECTIONS[0][0];
+  const ek=(q.get("e")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60);if(bid.length<10||wk.length<24||!sec)return;const rk2=(q.get("r")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60);if(rk2.length>=40){if((S.wsCur||"plt")==="co"&&!(S.board&&S.board.id===bid)){wsSwitch("plt",{pendLink:{bid,wk,sec,unit,ek,rk2}});return}if(S.board&&S.board.id===bid){try{history.replaceState(null,"",location.pathname)}catch(e){}view="live";render();toast("That's your own "+sec+" leader link. Open it on the leader's phone, not yours.");return}autoLink({bid,wk,sec,unit,ek,rk2});return}sheetCtx={kind:"join",bid,wk,sec,unit,ek,rk2:""};const def=SECTIONS.some(x=>x[0]===sec)?sec:SECTIONS[0][0];
   $("#sheetT").innerHTML=`Send live updates?<small>${esc(unit||"Your OIC")} wants this phone to send the <b>${esc(sec)}</b> section's statuses to their board automatically.</small>`;
   $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><label for="jSec">My section in this app</label><select id="jSec" class="wsel">${SECTIONS.map(([k,n])=>`<option value="${k}"${k===def?" selected":""}>${esc(k+" · "+n)}</option>`).join("")}</select>
     <label for="jMe">Your rank and last name (so they see who sent it)</label><input type="text" id="jMe" maxlength="30" placeholder="SGT SMITH" autocapitalize="characters" style="text-transform:uppercase" value="${esc(S.myName||"")}">
@@ -1502,10 +1509,11 @@ function coText(){const C=S.coBoard;const U=Object.values(C.units);const all=U.f
   for(const u of U.sort((a,b)=>a.name.localeCompare(b.name))){const x=coTally(u.ms);L.push(u.name+": "+x.oh+"/"+x.tot+(Date.now()-u.t>4*3600000?" (as of "+dtg(new Date(u.t)).slice(0,7)+")":""))}
   const off=STATUSES.slice(1).filter(st=>T.c[st]);if(off.length)L.push(off.map(st=>SHORT[st]+" "+T.c[st]).join(", "));return L.join("\n")}
 function renderCo(){const C=S.coBoard,R=S.coRep;let h=`<div class="sechead" style="margin-top:12px"><h2>Company</h2>${C?`<span class="ratio" style="font-size:13px">${C.err?`<span style="color:var(--warn)">${esc(C.err)}</span>`:`<span style="color:var(--s-onhand)">● live</span>`}</span>`:""}</div>`;
-  if(isOwner())h+=coRosterHTML();
-  if(!C&&!R||coNew){h+=`<h2 style="margin-top:18px">Or: platoons keep their own rosters</h2><div class="panel"><p class="note">Put several platoons on one live company board. You get two links: one for each platoon OIC to report their numbers in, and a view-only link for anyone who needs the whole company (CO, XO, 1stSgt). Everything is encrypted on the phones; the server can't read it.</p>
+  if((S.wsCur||"plt")==="co"){if(isOwner())h+=coRosterHTML()}else h+=`<div class="panel" style="border-color:var(--brass)"><b>Company view</b><p class="note">Run the whole company separately from your platoon. Your platoon stays exactly as it is; switch any time with <b>PLT / CO</b> at the top.</p><button class="btn" data-wsgo="co">${S.ws&&S.ws.co?"Open company view":"Set up company view"}</button></div>`;
+  if((!C&&!R||coNew)&&(S.wsCur||"plt")!=="co"){h+=`<h2 style="margin-top:18px">Or: platoons keep their own rosters</h2><div class="panel"><p class="note">Put several platoons on one live company board. You get two links: one for each platoon OIC to report their numbers in, and a view-only link for anyone who needs the whole company (CO, XO, 1stSgt). Everything is encrypted on the phones; the server can't read it.</p>
     <label for="coNm">Company name</label><input type="text" id="coNm" maxlength="30" placeholder="CLC-33" value="${esc((S.unit&&cleanName(S.unit))||"")}"><button class="btn" id="coMake">Set up the company board</button>${coNew?`<button class="btn alt" id="coCancel">Cancel</button>`:""}<div class="note" id="coOut"></div>
     <p class="note">Got a company link? Open it on this phone.</p></div>`;$("#main").innerHTML=h;return}
+  if(!C&&!R){$("#main").innerHTML=h;return}
   if(C){const U=Object.entries(C.units).map(([k,u])=>Object.assign({k},u)).sort((a,b)=>a.name.localeCompare(b.name));const all=U.flatMap(u=>u.ms);const T=coTally(all);const P=pct(T.oh,T.tot);
     h+=`<div class="card hero"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">${esc(C.name.toUpperCase())} · ON HAND</span><span style="font-size:12px;font-weight:700;color:var(--muted)">${U.length} unit${U.length===1?"":"s"}</span></div>
       <div style="display:flex;align-items:baseline;gap:8px"><span class="big">${T.oh}</span><span style="font-size:20px;font-weight:700;color:var(--muted)">/ ${T.tot}</span><span style="margin-left:auto;font-size:15px;font-weight:800;color:var(--s-onhand)">${P}%</span></div><div class="hbar"><i style="width:${P}%"></i></div>
@@ -1584,6 +1592,8 @@ function hubStop(){hubOn=false;clearInterval(hubT);try{hubWL&&hubWL.release()}ca
 document.addEventListener("visibilitychange",()=>{if(hubOn&&!document.hidden&&!hubWL)hubWake()});
 if(S.hubMode)setTimeout(hubStart,3000);
 document.addEventListener("change",e=>{const hs=e.target.closest&&e.target.closest("[data-lvhead]");if(hs&&S.board){S.board.heads=S.board.heads||{};if(hs.value)S.board.heads[hs.dataset.lvhead]=hs.value;else delete S.board.heads[hs.dataset.lvhead];save();const y=window.scrollY;renderLive();window.scrollTo(0,y)}});
+document.addEventListener("click",e=>{const mn=e.target.closest("[data-lvmine]");if(mn){const k=mn.dataset.lvmine;const u=new URL(boardLink(k));const q=new URLSearchParams(u.hash.slice(1));
+    S.ws=S.ws||{};S.ws.plt=S.ws.plt||{roster:[],source:"sample"};S.ws.plt.pendLink={bid:q.get("join"),wk:q.get("k"),sec:k,unit:q.get("u")||unitName(),ek:q.get("e"),rk2:q.get("r")};S.ws.plt.link=null;rawSave();toast("Switching to your platoon view to link "+k+"…");setTimeout(()=>wsSwitch("plt"),400);return}});
 document.addEventListener("click",e=>{const rs=e.target.closest("[data-lvreset]");if(rs){if(!isOwner())return denyMsg();const k=rs.dataset.lvreset;if(armed!=="lvreset"+k){armed="lvreset"+k;renderLive();return}armed=null;rs.disabled=true;rs.textContent="Replacing…";
     resetSecLink(k).then(()=>{renderLive();toast("New "+k+" link ready. Text it to the right leader.")}).catch(err=>{const t=String(err.message||err);toast(/could not find|schema/i.test(t)?"Server needs setup part 12a and 12b first (DATA → System check).":"Couldn't replace: "+t.slice(0,60));renderLive()});return}
   if(e.target.id==="hubMode"){S.hubMode=!S.hubMode;rawSave();S.hubMode?hubStart():hubStop();renderLive();toast(S.hubMode?"Hub mode on. Keep this screen open and plugged in.":"Hub mode off");return}});
@@ -1631,7 +1641,7 @@ async function ensureHub(){if(hubBusy||S.role==="view"||!S.board)return;hubBusy=
     S.hubErr="";if(ch){save();rpPublish(true);mpSchedule()}}
   catch(e){const t=String(e.message||e);S.hubErr=/could not find|schema cache|404/i.test(t)?"Server needs setup part 11b.":t.slice(0,80);rawSave()}
   finally{hubBusy=false}}
-function accLink(r){return location.origin+location.pathname+"#sync="+normCode(S.sync.code)+"&r="+r}
+function accLink(r){return location.origin+location.pathname+"#sync="+normCode(S.sync.code)+"&r="+r+((S.wsCur||"plt")==="co"?"&w=co":"")}
 function accessHTML(){if(!isOwner())return"";const R=[["view","View only","Sees everything, changes nothing"],["sncoic","Can edit","Updates statuses, posts, runs musters"],["co","Same as me","Full OIC rights on their phone"]];
   if(!S.sync||!S.sync.on)return `<div class="panel" style="margin:10px 0 0"><b>Give someone access</b><p class="note">Send a link that puts your whole board on their phone: roster, FEED, Activity, live sections. Pick view only, can edit, or same rights as you.</p><button class="btn" id="accOn">Set up access links</button></div>`;
   return `<div class="panel" style="margin:10px 0 0"><b>Give someone access</b><p class="note">They open the link and get your board, kept in sync with your phone. Keep these links private.</p>${R.map(([r,l,d])=>`<div class="rrow" style="--sc:var(--line)"><div class="who"><b>${l}</b><div class="ph">${d}</div></div><div class="row2"><a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent(unitName()+" · EOP Numbers: open this to get my board on your phone ("+ROLE_N[r]+"). Keep it private: "+accLink(r)+" · iPhone: open in Safari, then Share → Add to Home Screen so alerts work."))}">Text link</a><button class="btn alt" data-acccopy="${r}">Copy</button></div></div>`).join("")}
@@ -2195,7 +2205,7 @@ async function exportXL(kind){try{const X=await loadXLSX();const wb=X.utils.book
 const xlBtn=k=>`<button class="chip" data-xl="${k}" style="cursor:pointer;font-size:13px">⬇ Excel</button>`;
 
 /* ---------- backup + sync: encrypted with a recovery code; server stores an unreadable blob ---------- */
-const SYNC_SKIP=["sync","pushOn","link","ts","onb","role","me","ask","askSt","dev","hubMode"];const CODE_AB="23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+const SYNC_SKIP=["sync","pushOn","link","ts","onb","role","me","ask","askSt","dev","hubMode","ws","wsCur","pendLink"];const CODE_AB="23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 let syncT=null,syncBusy=false,syncShow=false;
 const fnv=str=>{let h=0x811c9dc5;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)}return (h>>>0).toString(36)+str.length.toString(36)};
 const sig=v=>fnv(JSON.stringify(v===undefined?null:v));
@@ -2243,10 +2253,10 @@ setInterval(()=>{if(S.sync&&S.sync.on&&!document.hidden)syncPull()},60000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.sync&&S.sync.on)syncPull()});
 async function syncRestore(code){const K=await codeKeys(code);const rows=await SB.rpc("backup_get",{p_id:K.id,p_key:K.wk});const r=rows&&rows[0];if(!r)throw new Error("No backup found for that code.");
   const R=await openBlob(K,r.ct);return {R,ver:+r.ver,at:Date.parse(r.updated_at)||Date.now()}}
-function applyRestore(code,x,r){const keep={};for(const k of SYNC_SKIP)if(k in S)keep[k]=S[k];
+function applyRestore(code,x,r,w){const tgt=w==="co"?"co":"plt";if((S.wsCur||"plt")!==tgt){if(S.source!=="sample"||S.board||S.feeds.length)wsStash();S.wsCur=tgt;if(S.ws)delete S.ws[tgt]}const keep={};for(const k of SYNC_SKIP)if(k in S)keep[k]=S[k];
   for(const k of Object.keys(S))if(!SYNC_SKIP.includes(k))delete S[k];Object.assign(S,x.R);
   S.sync={on:true,code:normCode(code).match(/.{4}/g).join("-"),ver:x.ver,at:x.at,err:"",last:""};S.role=["sncoic","view","newoic","co"].includes(r)?r:"sncoic";S.onb=true;for(const k of ["pushOn","ts","link"])if(k in keep)S[k]=keep[k];
-  setBase(x.R);S.sync.last=sig(syncObj());rawSave();location.replace(location.pathname)}
+  setBase(x.R);S.sync.last=sig(syncObj());rawSave();try{history.replaceState(null,"",location.pathname+(tgt==="co"?"#co":""))}catch(e){}location.reload()}
 function syncHTML(){const Y=S.sync;
   if(!Y||!Y.on)return `<h2>Backup and sync</h2><div class="panel"><p class="note">Back up everything (roster, numbers, feeds, readiness, duty, history) to your server, <b>encrypted on this phone</b> with a recovery code. Restore on a new phone, or keep a second phone (your SNCOIC's) in sync. The server can't read it.</p>
     <button class="btn" id="syOn">Turn on backup</button>
@@ -2276,7 +2286,7 @@ async function turnoverGo(){const o=$("#toOut");const say=t=>{if(o)o.textContent
     if(($("#toFeed")||{}).checked){say("Fresh feed…");for(const f of S.feeds.filter(f=>f.lk)){try{await SB.rpc("delete_feed",{p_feed:f.id,p_leader_key:f.lk})}catch(e){}}S.feeds=S.feeds.filter(f=>!f.lk);await fdCreate()}
     save();syncShow=true;tabRedraw();toast("You're the OIC. Save your new recovery code.")}
   catch(e){say("Couldn't finish: "+(e.message||e)+". Nothing was lost; try again with signal.")}}
-function syncJoinPrompt(code,r){try{history.replaceState(null,"",location.pathname)}catch(e){}sheetCtx={kind:"sync",code,r};
+function syncJoinPrompt(code,r,w){try{history.replaceState(null,"",location.pathname)}catch(e){}sheetCtx={kind:"sync",code,r,w:w==="co"?"co":"plt"};
   $("#sheetT").innerHTML=`Link this phone?<small>Loads the backed-up board from the other phone and keeps both in sync. This phone will be: <b>${esc(ROLE_N[["sncoic","view","newoic","co"].includes(r)?r:"sncoic"])}</b>.</small>`;
   $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><p class="note"><b>This replaces what's on this phone</b> with the backup. Your PIN lock and text size stay.</p><button class="btn" id="syJoin">Load and link</button><button class="btn alt" data-sclose="1">Not now</button><div class="note" id="syJOut"></div></div>`;
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")))}
@@ -3145,7 +3155,7 @@ document.addEventListener("click",e=>{
   if(e.target.id==="syRestore"){const code=$("#syCode").value;const o=$("#syOut");o.textContent="Unlocking…";syncRestore(code).then(x=>{const n=(x.R.roster||[]).length;
       o.innerHTML=`Found a backup from ${ago(x.at)} with <b>${n}</b> people. <button class="btn warn" id="syApply" style="width:100%;margin-top:6px">Replace this phone's data with it</button>`;window.__syx={code,x}}).catch(err=>{o.textContent=err.message});return}
   if(e.target.id==="syApply"&&window.__syx){applyRestore(window.__syx.code,window.__syx.x,"oic");return}
-  if(e.target.id==="syJoin"&&sheetCtx&&sheetCtx.kind==="sync"){const code=sheetCtx.code,rr=sheetCtx.r;const o=$("#syJOut");o.textContent="Unlocking…";syncRestore(code).then(x=>applyRestore(code,x,rr)).catch(err=>{o.textContent=err.message});return}
+  if(e.target.id==="syJoin"&&sheetCtx&&sheetCtx.kind==="sync"){const code=sheetCtx.code,rr=sheetCtx.r,ww=sheetCtx.w;const o=$("#syJOut");o.textContent="Unlocking…";syncRestore(code).then(x=>applyRestore(code,x,rr,ww)).catch(err=>{o.textContent=err.message});return}
   const xl=e.target.closest("[data-xl]");if(xl){exportXL(xl.dataset.xl);return}
   const csec=e.target.closest("[data-csec]");if(csec){calSec=csec.dataset.csec;renderCal();return}
   const cmo=e.target.closest("[data-cmo]");if(cmo){const [Y,M]=calM;const d=new Date(Y,M+(+cmo.dataset.cmo),1);calM=[d.getFullYear(),d.getMonth()];renderCal();return}
@@ -3510,10 +3520,11 @@ render();
 if(S.me&&S.roster.some(m=>m.pk&&m.pk===S.me.pk)){S.me=null;S.leaderMode=true;save();if(view==="me"||view==="today"){view="board"}render()}
 if(memberMode()&&!location.hash&&view==="board"){view="today";render()}
 if(S.coOnly&&S.coBoard&&!location.hash&&view==="board"){view="co";render();setTimeout(coPoll,800)}
+if(S.pendLink){const pl=S.pendLink;delete S.pendLink;rawSave();setTimeout(()=>{autoLink(pl);toast("Platoon view linked to "+(pl.unit||"the company")+" · "+pl.sec)},600)}
 if(S.me){setTimeout(()=>mpFetch(),600)}
 if(S.roster.some(m=>m.pk))setTimeout(()=>mpPublish(),2500);
 setTimeout(()=>akStatus(),3000);
-{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("sync")){firstPick=false;setTimeout(()=>syncJoinPrompt(q.get("sync"),q.get("r")),300)}}
+{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("sync")){firstPick=false;setTimeout(()=>syncJoinPrompt(q.get("sync"),q.get("r"),q.get("w")),300)}}
 if(S.sync&&S.sync.on)setTimeout(()=>syncPull(),700);
 if(S.feeds.length){S.feeds.filter(f=>!f.lk&&f.me&&!f.meH).forEach(fdMeHash);setTimeout(()=>fdPollAll(true),900);if(S.pushOn)setTimeout(()=>S.feeds.filter(f=>!f.lk&&!f.push).forEach(fdPushAttach),1600)}
 if(bcActive())setTimeout(bcPoll,1000);
@@ -3523,7 +3534,7 @@ if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("messag
 document.addEventListener("click",e=>{if(e.target.id==="updNow")location.reload()});
 if("serviceWorker" in navigator&&document.querySelector("link[rel=manifest]")&&(location.protocol==="https:"||location.hostname==="localhost")){navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(()=>{const o=document.getElementById("offStat");if(o&&navigator.serviceWorker.controller)o.textContent="Ready: this app opens and works with no signal. Text reports once you have service."}).catch(()=>{})}
 setInterval(()=>{if(view==="recall"&&S.rc.open){const c=document.querySelector(".mbar .ct small");if(c)c.textContent="contacted · "+Math.round((Date.now()-S.rc.start)/60000)+" min"}},20000);
-window.addEventListener("hashchange",()=>{{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){joinPrompt(q);return}if(q.get("feed")){fdJoinPrompt(q);return}if(q.get("sync")){syncJoinPrompt(q.get("sync"),q.get("r"));return}if(q.get("me")){mePrompt(q);return}if(q.get("coj")||q.get("cov")){coJoinPrompt(q,q.get("coj")?"coj":"cov");return}}const h=(location.hash||"").slice(1).toLowerCase();if((["recall","rollup","board","muster","alerts","live","send","feed","today","me","log","cal","ask","people","tools","duty","ready","events","act","co","data","sys","text","trends","armory","pt","w6","att"].includes(h)||SECTIONS.some(x=>x[0].toLowerCase()===h))&&h!==view){view=h;armed=null;render();window.scrollTo(0,0);if(h==="feed")fdPollAll(true)}});
+window.addEventListener("hashchange",()=>{{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){joinPrompt(q);return}if(q.get("feed")){fdJoinPrompt(q);return}if(q.get("sync")){syncJoinPrompt(q.get("sync"),q.get("r"),q.get("w"));return}if(q.get("me")){mePrompt(q);return}if(q.get("coj")||q.get("cov")){coJoinPrompt(q,q.get("coj")?"coj":"cov");return}}const h=(location.hash||"").slice(1).toLowerCase();if((["recall","rollup","board","muster","alerts","live","send","feed","today","me","log","cal","ask","people","tools","duty","ready","events","act","co","data","sys","text","trends","armory","pt","w6","att"].includes(h)||SECTIONS.some(x=>x[0].toLowerCase()===h))&&h!==view){view=h;armed=null;render();window.scrollTo(0,0);if(h==="feed")fdPollAll(true)}});
 setInterval(()=>{const d=$("#dtg");if(d)d.textContent="AS OF "+dtg()},30000);
 </script>
 </body></html>
