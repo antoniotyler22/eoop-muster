@@ -740,7 +740,29 @@ function mapCo(u){const U=(u||"").toUpperCase();const n=(U.match(/(\d)\s*(?:ST|N
   if(n)sec=(SECTIONS.find(s=>s[0]===n+"PLT"||(s[0].startsWith(n)&&/PLT/.test(s[0]))||new RegExp("^"+n+"(ST|ND|RD|TH)?\\s*P").test(s[1].toUpperCase()))||[])[0]||null;
   if(!sec)sec=(SECTIONS.find(s=>U.split(/[-\s/]+/).includes(s[0])||U.includes(s[1].toUpperCase()))||SECTIONS[0])[0];
   const t=U.split(/[-\s/]+/).filter(Boolean).pop()||"";const sub={HQ:"HQ",EE:"HE",HE:"HE",CE:"CE",ORD:"ORD",UT:"UT"}[t]||(/^[A-Z]{2,6}$/.test(t)&&!/PLT|PLATOON|CO/.test(t)?t:"");return {sec,sub}}
-function levelHTML(){const cw=(S.wsCur||"plt")==="co";return `<h2>Views</h2><div class="panel"><p class="note">This phone keeps a <b>platoon view</b> and a <b>company view</b> separately. Switch with <b>PLT / CO</b> at the top. Each has its own roster, links, FEED and backup.</p><div class="evts"><button data-wsgo="plt" aria-pressed="${!cw}">Platoon view</button><button data-wsgo="co" aria-pressed="${cw}">Company view</button></div></div>`;const co=S.level==="co";return `<h2>Unit level</h2><div class="panel"><p class="note">${co?"<b>Company:</b> tabs are platoons. Each platoon OIC gets a link, loads their platoon from your board with their own sections, and sends their numbers up to you.":"<b>Platoon:</b> tabs are sections and section leaders send you their numbers. Switch to Company to run the whole company with platoons as tabs."}</p>
+function restoreSources(){const out=[];
+  if(S.preLink&&Array.isArray(S.preLink.roster)&&S.preLink.roster.length)out.push({k:"pre",t:"Your platoon before you linked it",s:S.preLink.roster.length+" Marines · saved "+dtg(new Date(S.preLink.t)).slice(0,7)});
+  if(S.snap&&S.snap.st&&Object.keys(S.snap.st).length)out.push({k:"snap",t:"Your last sent report",s:Object.keys(S.snap.st).length+" Marines · "+dtg(new Date(S.snap.t)).slice(0,7)});
+  const co=S.ws&&S.ws.co&&Array.isArray(S.ws.co.roster)&&S.ws.co.source!=="sample"?S.ws.co:null;if(co){const pl=[...new Set(co.roster.map(m=>m.sec).filter(x=>x!=="ATT"))];if(pl.length)out.push({k:"co",t:"From the company roster",s:"Pick your platoon",pl})}
+  return out}
+function restoreHTML(){if((S.wsCur||"plt")==="co"||!isOwner())return"";const R=restoreSources();const off=S.level==="co"||(S.link&&S.link.whole&&!S.link.own);
+  if(!R.length&&!off)return"";
+  return `<h2>Restore my platoon</h2><div class="panel"${off?' style="border-color:var(--warn)"':""}><p class="note">${off?"<b>This platoon view is showing company data.</b> Put your platoon back:":"If your platoon numbers or people look wrong, put them back from:"}</p>
+    ${R.map(x=>`<div class="rrow" style="--sc:var(--line)"><div class="who"><b>${esc(x.t)}</b><div class="ph">${esc(x.s)}</div></div>${x.pl?`<select class="wsel" id="rsPl">${x.pl.map(c=>`<option${c===(unitName()||"").toUpperCase()?" selected":""}>${esc(c)}</option>`).join("")}</select>`:""}<button class="btn alt" data-restore="${x.k}">${armed==="rs"+x.k?"Tap again to restore":"Restore from this"}</button></div>`).join("")}
+    <p class="note">Or load your platoon's MOL file under Roster data. Restoring keeps phone numbers, My pages and notes for anyone whose name matches, and stays connected to the company: your platoon is the master and its changes still go up.</p></div>`}
+function restoreFrom(k){const keepBy={};S.roster.forEach(m=>keepBy[fullK(m)]=m);let list=[];
+  if(k==="pre"){list=JSON.parse(JSON.stringify(S.preLink.roster));if(S.preLink.secs)S.secs=S.preLink.secs}
+  else if(k==="snap"){let i=0;list=Object.entries(S.snap.st).map(([name,v])=>({id:"r"+(++i),rank:v.r||"",name,sec:v.sec||"HQ",status:STATUSES.includes(v.s)?v.s:"On Hand",duty:v.d||"Full Duty",detail:"",loc:"",start:"",end:""}))}
+  else if(k==="co"){const pl=($("#rsPl")||{}).value;let i=0;list=S.ws.co.roster.filter(m=>m.sec===pl).map(m=>Object.assign({},m,{id:"r"+(++i),sec:/^[A-Z0-9]{1,6}$/.test(m.sub||"")?m.sub:"HQ",sub:undefined}))}
+  if(!list.length)return toast("Nothing to restore from that.");
+  for(const m of list){const o=keepBy[fullK(m)];if(!o)continue;for(const f of ["phone","phone2","pk","pkSig","pkAt","notes","cal","due","wpn","edd","eas","uid"])if(o[f]!=null&&m[f]==null)m[f]=o[f];if(k!=="pre"&&o.id)m.id=o.id}
+  S.roster=list;S.source="mol";S.level="plt";delete S.newCo;
+  const nw=Array.isArray(S.secs)&&S.secs.length&&k==="pre"?S.secs:(Array.isArray(S.secsPlt)&&S.secsPlt.length?S.secsPlt:null);
+  if(nw){S.secs=nw}else{const codes=[...new Set(list.map(m=>m.sec).filter(c=>c!=="ATT"))];const nm={};MIL_SECS.forEach(x=>nm[x[0]]=x[1]);S.secs=codes.slice(0,10).map(c=>[c,nm[c]||c])}
+  if(S.link&&S.link.whole){S.link.own=true;S.link.prev={};S.link.pulled=false;S.link.lsig=""}
+  if(S.board){S.board.rsig={}}rawSave();toast("Platoon restored");setTimeout(()=>location.reload(),600)}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-restore]");if(!b)return;if(!isOwner())return denyMsg();const k=b.dataset.restore;if(armed!=="rs"+k){armed="rs"+k;tabRedraw();return}armed=null;restoreFrom(k)});
+function levelHTML(){const cw=(S.wsCur||"plt")==="co";return restoreHTML()+`<h2>Views</h2><div class="panel"><p class="note">This phone keeps a <b>platoon view</b> and a <b>company view</b> separately. Switch with <b>PLT / CO</b> at the top. Each has its own roster, links, FEED and backup.</p><div class="evts"><button data-wsgo="plt" aria-pressed="${!cw}">Platoon view</button><button data-wsgo="co" aria-pressed="${cw}">Company view</button></div></div>`;const co=S.level==="co";return `<h2>Unit level</h2><div class="panel"><p class="note">${co?"<b>Company:</b> tabs are platoons. Each platoon OIC gets a link, loads their platoon from your board with their own sections, and sends their numbers up to you.":"<b>Platoon:</b> tabs are sections and section leaders send you their numbers. Switch to Company to run the whole company with platoons as tabs."}</p>
   <div class="evts"><button data-lvl="plt" aria-pressed="${!co}">Platoon</button><button data-lvl="co" aria-pressed="${co}">Company</button></div><button class="btn alt" data-go="co" style="width:100%;margin-top:8px">📂 Load a company roster (Excel or CSV)</button>${co?`<p class="note">Rename or add platoons in Tabs below. Load the company MOL: Marines go to their platoon, and their section inside it comes along for the platoon OIC.</p>`:""}</div>`}
 function secFix(){for(const m of S.roster){if(m.sec!=="ATT"&&!SECTIONS.some(s=>s[0]===m.sec))m.sec=SECTIONS[0][0]}}
 function tabsHTML(){if(!secDraft)secDraft=SECTIONS.map(([k,n])=>({o:k,k,n}));const D=secDraft;
@@ -850,6 +872,7 @@ function renderTabs(){renderShell();
 }
 function banner(){if(S.role==="view")return `<div class="banner"><span><b>View-only phone.</b> You see the shared board; changes here aren't saved.</span></div>`+banner0();return banner0()}
 function banner0(){
+  if((S.wsCur||"plt")!=="co"&&S.level==="co"&&isOwner()&&typeof restoreHTML==="function")return `<div class="banner" style="border-color:var(--warn)"><span><b>Your platoon view is showing company data.</b> Put your platoon back.</span><button data-go="data">Restore</button></div>`;
   {const sb=staleBanner();if(sb)return sb}
   const LK=S.link;if(LK&&LK.rk2){if(!LK.pulled)return `<div class="banner"><span>${LK.perr?esc(LK.perr):`Loading <b>${esc(LK.sec)}</b> from ${esc(LK.unit)}'s board…`}</span>${LK.perr?`<button id="lkRetry">Retry</button>`:""}</div>`;
     if(!LK.me)return `<div class="banner"><span><b>${esc(LK.sec)}</b> roster from ${esc(LK.unit)}. Add your name so they see who sent updates.</span><button id="lkName">Add name</button></div>`}
@@ -1279,7 +1302,7 @@ const lf=m=>tok(m).split(".").slice(1).join(".");
 const fullK=m=>String(m.name).toUpperCase().replace(/[^A-Z0-9]+/g," ").trim();
 async function itemsFor(bid,ms){const out=[];const useId=!!(S.link&&S.link.rk2&&S.link.board===bid);
   for(const m of ms){const codes=[];if(m.status!=="On Hand"&&SCODE[m.status])codes.push(SCODE[m.status]);const d=dutyOf(m);if(d==="Light Duty")codes.push("LD");if(d==="LIMDU")codes.push("LIM");
-    if(!codes.length)continue;const a=useId?await SB.h(bid,"I:"+(m.uid||m.id)):await SB.h(bid,"N:"+fullK(m)),b=await SB.h(bid,"L:"+lf(m));codes.forEach(c=>out.push(a+":"+b+":"+c))}
+    if(!codes.length)continue;const a=useId&&(m.uid||!(S.link&&S.link.own))?await SB.h(bid,"I:"+(m.uid||m.id)):await SB.h(bid,"N:"+fullK(m)),b=await SB.h(bid,"L:"+lf(m));codes.forEach(c=>out.push(a+":"+b+":"+c))}
   return out.sort()}
 /* section leader side */
 function linkSchedule(){if(!S.link||lkBusy)return;clearTimeout(lkTimer);lkTimer=setTimeout(linkPush,3000)}
@@ -1662,18 +1685,27 @@ async function rosterPull(force){const L=S.link;if(!L||!L.rk2||rpullBusy)return;
     const whole=o.lvl==="co";L.whole=whole;
     const cur=whole?S.roster.slice():S.roster.filter(m=>m.sec===L.mysec);const dirty=L.pulled&&lsigOf(cur)!==(L.lsig||"");const takeSt=!dirty&&t>(L.sent||0);
     const byId={},byN={};cur.forEach(m=>{byId[m.uid||m.id]=m;const k=fullK(m);byN[k]=byN[k]?"dup":m});
-    const next=o.ms.slice(0,600).map(x=>{const m={};for(const k of RPF)if(k!=="due"&&x[k]!=null)m[k]=String(x[k]).slice(0,120);if(x.due)m.due=sanDue(x.due);const ouid=m.id;m.uid=ouid;m.sec=whole?(/^[A-Z0-9]{1,6}$/.test(m.sub||"")?m.sub:"HQ"):L.mysec;if(whole)delete m.sub;if(!STATUSES.includes(m.status))m.status="On Hand";
+    const own=whole&&(L.own||(L.own===undefined&&S.source!=="sample"&&S.source!=="link"&&S.roster.length>0));
+    let next;if(own){L.own=true;if(!S.preLink)S.preLink={t:Date.now(),roster:JSON.parse(JSON.stringify(S.roster)),secs:S.secs?JSON.parse(JSON.stringify(S.secs)):null,source:S.source};
+      L.prev=L.prev||{};const first=!L.pulled;const chg=[];
+      for(const x of o.ms.slice(0,600)){const k=fullK({name:String(x.name||"")});const m=byId[x.id]||(byN[k]&&byN[k]!=="dup"?byN[k]:null);if(!m)continue;m.uid=String(x.id);
+        const now=(x.status||"On Hand")+"|"+(x.duty||"Full Duty");const pv=L.prev[x.id];
+        if(!first&&pv&&pv!==now&&!dirty&&STATUSES.includes(x.status)&&(m.status!==x.status||dutyOf(m)!==(x.duty||"Full Duty"))){m.status=x.status;if(x.duty)m.duty=x.duty;chg.push(m.rank+" "+lastOf(m))}
+        L.prev[x.id]=now}
+      if(chg.length)actAdd("↓",(L.unit||"Company")+" changed: "+chg.slice(0,6).join(", "),"board");next=S.roster}
+    else next=o.ms.slice(0,600).map(x=>{const m={};for(const k of RPF)if(k!=="due"&&x[k]!=null)m[k]=String(x[k]).slice(0,120);if(x.due)m.due=sanDue(x.due);const ouid=m.id;m.uid=ouid;m.sec=whole?(/^[A-Z0-9]{1,6}$/.test(m.sub||"")?m.sub:"HQ"):L.mysec;if(whole)delete m.sub;if(!STATUSES.includes(m.status))m.status="On Hand";
       const old=byId[ouid]||(whole&&byN[fullK(m)]&&byN[fullK(m)]!=="dup"?byN[fullK(m)]:null);if(old){m.id=old.id;if(whole&&!takeSt&&old.sec)m.sec=old.sec;for(const k of Object.keys(old))if(!(k in m)&&!RPF.includes(k))m[k]=old[k];if(!takeSt){m.status=old.status;m.duty=dutyOf(old);for(const k of ["start","end","loc","detail","due"]){if(old[k])m[k]=old[k];else delete m[k]}}}return m});
-    if(S.source==="sample"||(whole&&S.source!=="link")){S.roster=[];S.source="link";S.loadedAt=dtg(new Date())}
-    if(whole){const codes=[...new Set(next.map(m=>m.sec).filter(c=>c!=="ATT"))];const nm={};MIL_SECS.concat(SECTIONS).forEach(x=>{nm[x[0]]=nm[x[0]]||x[1]});
+    if(!own&&(S.source==="sample"||(whole&&S.source!=="link"))){S.roster=[];S.source="link";S.loadedAt=dtg(new Date())}
+    if(whole&&!own){const codes=[...new Set(next.map(m=>m.sec).filter(c=>c!=="ATT"))];const nm={};MIL_SECS.concat(SECTIONS).forEach(x=>{nm[x[0]]=nm[x[0]]||x[1]});
       const ord=MIL_SECS.map(x=>x[0]);codes.sort((a,b)=>(ord.indexOf(a)<0?99:ord.indexOf(a))-(ord.indexOf(b)<0?99:ord.indexOf(b)));const nw=(codes.length?codes:["HQ"]).slice(0,10).map(c=>[c,nm[c]||c]);
       if(JSON.stringify(nw)!==JSON.stringify(SECTIONS)){SECTIONS.splice(0,SECTIONS.length,...nw);S.secs=nw}}
     if(S.source==="link"&&Array.isArray(o.ri)&&o.ri.length){const k=MODES[S.mode]?S.mode:"military";S.ready[k]=o.ri.slice(0,40).map(x=>({n:String(x.n).slice(0,40),mo:+x.mo||0}))}
     L.acks=Array.isArray(o.acks)?o.acks.slice(0,30):[];
     if(!whole&&S.source==="link"&&Array.isArray(o.sl)&&o.sl.length&&o.sl.every(x=>Array.isArray(x)&&x[0])){const nw=o.sl.slice(0,10).map(x=>[String(x[0]).replace(/[^A-Z0-9]/g,"").slice(0,6),String(x[1]||x[0]).slice(0,30)]);if(JSON.stringify(nw)!==JSON.stringify(SECTIONS)){SECTIONS.splice(0,SECTIONS.length,...nw);S.secs=nw}}
-    S.roster=whole?next:S.roster.filter(m=>m.sec!==L.mysec).concat(next);
+    if(!own)S.roster=whole?next:S.roster.filter(m=>m.sec!==L.mysec).concat(next);
     L.unit=String(o.unit||L.unit).slice(0,24);L.pt=t;if(o.hb)L.hb=+o.hb||0;L.pulled=true;L.perr="";L.lsig=lsigOf(next);
-    if(takeSt){try{const items=await itemsFor(L.board,next);L.sig=next.length+"|"+items.join(",")}catch(e){}}
+    if(takeSt&&!own){try{const items=await itemsFor(L.board,next);L.sig=next.length+"|"+items.join(",")}catch(e){}}
+    if(own)setTimeout(()=>linkPush(),1500);
     if(o.feed&&o.feed.id){const F=o.feed;const own=S.feeds.find(f=>f.id===F.id);
       if(!own){S.feeds=S.feeds.filter(f=>!f.hub||f.lk);const nf={id:String(F.id).slice(0,20),mk:String(F.mk).slice(0,40),ek:String(F.ek).slice(0,60),pk:String(F.pk||"").slice(0,40),unit:String(F.unit||L.unit).slice(0,24),me:L.me,sec:L.sec,secsLink:(o.secs||[]).slice(0,12),posts:[],seen:0,mine:{},hub:1};S.feeds.push(nf);fdMeHash(nf).then(()=>fdPollAll(true));toast("You're in the "+nf.unit+" FEED")}
       else if(!own.lk){own.pk=String(F.pk||"").slice(0,40);own.hub=1;if(!own.sec)own.sec=L.sec}}
