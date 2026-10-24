@@ -12,7 +12,7 @@ on:
       version:
         description: "App version shown in the App Store (e.g. 1.0.0)"
         required: true
-        default: "1.0.0"
+        default: "1.1.0"
 jobs:
   ios:
     runs-on: macos-26
