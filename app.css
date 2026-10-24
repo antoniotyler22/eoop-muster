@@ -430,3 +430,7 @@ body.v11wide .wrap,body.v11wide .top-in{max-width:1180px}
 .v11bar{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden}
 .v11bar i{display:block;height:100%;background:var(--s-onhand)}
 @media (min-width:900px){.v11tip{display:none}}
+/* 1.1: header date wraps; PLT/CO switch gets its own line so nothing is cut off */
+.brand .dtg{white-space:normal}
+#wsBar{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}#wsBar:empty{display:none}
+#wsBar button{margin-left:0}

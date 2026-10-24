@@ -93,14 +93,14 @@ const NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capa
 const PUB=()=>!NATIVE&&/^https?:$/.test(location.protocol)?location.origin+location.pathname:"https://antoniotyler22.github.io/eoop-muster/";
 const NP=n=>{try{return NATIVE&&window.Capacitor.registerPlugin?window.Capacitor.registerPlugin(n):null}catch(e){return null}};
 if(NATIVE){const shim={permission:(()=>{try{return localStorage.getItem("eop-nperm")||"default"}catch(e){return"default"}})(),requestPermission:async()=>nativePushPerm(true)};try{Object.defineProperty(window,"Notification",{value:shim,configurable:true,writable:true})}catch(e){window.Notification=shim}}
-async function nativePushPerm(ask){const P=NP("PushNotifications");if(!P)return"denied";let st=await P.checkPermissions();if(st.receive==="prompt"&&ask)st=await P.requestPermissions();const v=st.receive==="granted"?"granted":st.receive==="denied"?"denied":"default";window.Notification.permission=v;try{localStorage.setItem("eop-nperm",v)}catch(e){}return v}
+async function nativePushPerm(ask){const P=NP("PushNotifications");if(!P){window.__pushWhy="noplugin";return"denied"}let st=await P.checkPermissions();if(st.receive==="prompt"&&ask)st=await P.requestPermissions();const v=st.receive==="granted"?"granted":st.receive==="denied"?"denied":"default";window.__pushWhy=v==="granted"?"":v;window.Notification.permission=v;try{localStorage.setItem("eop-nperm",v)}catch(e){}return v}
 let apnsTok=null,apnsWait=[];
 async function nativeSub(ask){const P=NP("PushNotifications");if(!P)return null;const perm=await nativePushPerm(ask);if(perm!=="granted")return null;
   if(!apnsTok){try{apnsTok=localStorage.getItem("eop-apns")}catch(e){}}
   if(!apnsTok||ask){const t=new Promise(res=>{apnsWait.push(res);setTimeout(()=>res(null),15000)});await P.register();const tok=await t;if(tok)apnsTok=tok}
-  if(!apnsTok)return null;const j={endpoint:"apns:"+apnsTok,apns:apnsTok,keys:{}};return {toJSON:()=>j,endpoint:j.endpoint}}
+  if(!apnsTok){window.__pushWhy="notoken";return null}window.__pushWhy="";const j={endpoint:"apns:"+apnsTok,apns:apnsTok,keys:{}};return {toJSON:()=>j,endpoint:j.endpoint}}
 if(NATIVE)setTimeout(()=>{const P=NP("PushNotifications"),A=NP("App");
-  if(P){P.addListener("registration",t=>{apnsTok=t.value;try{localStorage.setItem("eop-apns",t.value)}catch(e){}apnsWait.splice(0).forEach(f=>f(t.value))});P.addListener("registrationError",()=>{apnsWait.splice(0).forEach(f=>f(null))});
+  if(P){P.addListener("registration",t=>{apnsTok=t.value;try{localStorage.setItem("eop-apns",t.value)}catch(e){}apnsWait.splice(0).forEach(f=>f(t.value))});P.addListener("registrationError",e=>{window.__pushErr=String((e&&(e.error||e.message))||"registration failed").slice(0,160);apnsWait.splice(0).forEach(f=>f(null))});
     P.addListener("pushNotificationReceived",n=>{try{toast("🔔 "+(n.title||"Update")+(n.body?": "+n.body:""))}catch(e){}});
     P.addListener("pushNotificationActionPerformed",a=>{const o=a&&a.notification&&a.notification.data&&a.notification.data.open;if(o&&typeof render==="function"){view=o;render();window.scrollTo(0,0)}});
     nativePushPerm(false).then(v=>{if(v==="granted")P.register().catch(()=>{})})}

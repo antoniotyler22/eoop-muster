@@ -31,7 +31,9 @@ const blkKey=p=>String(p.by||"").toUpperCase().trim();
 {const _fv=fdVisible;fdVisible=function(f){const L=_fv.apply(this,arguments);if(f.lk)return L;const hid=new Set(f.hid||[]),blk=new Set(f.blk||[]);return L.filter(p=>!hid.has(p.id)&&!(p.by&&blk.has(blkKey(p))))}}
 
 let repOpen=null,menuOpen=null;
-{const _card=fdCard;fdCard=function(f,p){let h=_card.apply(this,arguments);if(f.lk)return h;
+{const _card=fdCard;fdCard=function(f,p){let h=_card.apply(this,arguments);
+  if(p.ci){const btn=f.lk?`<div class="note" style="margin:0">✅ Check-in button included</div>`:`<button class="btn" data-v11ci="${f.id}:${p.id}" style="width:100%;min-height:52px;font-size:17px;margin-top:4px">✅ Check in now</button>`;h=h.replace(/<\/article>$/,btn+"</article>")}
+  if(f.lk)return h;
   const sent=(f.repd||{})[p.id];const nm=p.by||f.unit;
   let bar=`<div class="fcmod" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:2px">`;
   if(menuOpen===f.id+":"+p.id)bar+=`<button class="chip" data-v11rep="${p.id}" style="cursor:pointer;color:var(--warn)">⚑ Report</button><button class="chip" data-v11hide="${p.id}" style="cursor:pointer">Hide post</button>${p.by?`<button class="chip" data-v11blk="${p.id}" style="cursor:pointer">Block ${esc(nm)}</button>`:""}<button class="chip" data-v11menu="" style="cursor:pointer">Close</button>`;
@@ -110,8 +112,8 @@ function emStart(){if(S.rc.open&&!S.rc.em){armed=null;}
   liveIdx=null;S.rc.end=0;S.rc.res={};S.rc.ci={};S.rc.sent={};S.rc.only=false;S.rc.att=true;S.rc.em=true;S.rc.dl=Date.now()+S.emMin*60000;S.rc.dlFired=0;armed=null;save();
   actAdd("🚨","Started an EMERGENCY MUSTER. Check-in deadline "+S.emMin+" min.","recall");
   setTimeout(livePoll,50);
-  const f=mainFeed();if(f&&f.lk)setTimeout(()=>{const txt="🚨 EMERGENCY MUSTER. Check in NOW: Good, Delayed or Need help.\n"+ciLink();
-    fdEnc(f.ek,{t:txt,u:true,to:{k:"all"},sa:SECTIONS.map(x=>x[0]),by:fdBy(f)}).then(ct=>SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct})).then(id=>{SB.notify(null,{feed:f.id,lk:f.lk,urg:true});f.posts=[{id:+id,t:Date.now(),txt,urg:true,to:{k:"all"},by:fdBy(f)}].concat(f.posts||[]);f.ra=f.ra||{};f.ra[+id]=Math.min(S.emMin,15);save()}).catch(()=>toast("Couldn't post to Feed. Text the check-in link below."))},400);
+  const f=mainFeed();if(f&&f.lk)setTimeout(()=>{const txt="🚨 EMERGENCY MUSTER. Check in now: tap the button below and pick Good, Delayed or Need help.";const ci=ciLink();
+    fdEnc(f.ek,{t:txt,u:true,ci,to:{k:"all"},sa:SECTIONS.map(x=>x[0]),by:fdBy(f)}).then(ct=>SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct})).then(id=>{SB.notify(null,{feed:f.id,lk:f.lk,urg:true});f.posts=[{id:+id,t:Date.now(),txt,urg:true,ci,to:{k:"all"},by:fdBy(f)}].concat(f.posts||[]);f.ra=f.ra||{};f.ra[+id]=Math.min(S.emMin,15);save()}).catch(()=>toast("Couldn't post to Feed. Text the check-in link below."))},400);
   view="recall";render();window.scrollTo(0,0);toast("🚨 Emergency muster started")}
 const emBtn=()=>leaderPhone()?(S.rc.open?`<button class="btn warn" data-go="recall" style="width:100%;margin-top:12px">${S.rc.em?"🚨 Emergency muster in progress":"Recall in progress"} · ${recallPool().filter(m=>(S.rc.res||{})[m.id]==="ok").length}/${recallPool().length}</button>`
   :`<button class="btn warn" id="v11Em" style="width:100%;margin-top:12px;font-size:17px">${armed==="v11em"?"Tap again to start · texts + Feed alert to everyone":"🚨 Emergency muster"}</button>`):"";
@@ -156,7 +158,7 @@ every(30000,obFlush,"v11-outbox");setTimeout(()=>{obPaint();obFlush()},1500);
 function tile(lbl,big,sub,col,go){return `<button class="v11t" ${go?`data-go="${go}"`:"disabled"} style="--tc:var(${col||"--ink"})"><span class="l">${lbl}</span><span class="b">${big}</span><span class="s">${sub||""}</span></button>`}
 function renderDash(){const {c,T}=counts();const pres=present(T);const al=alerts();const f=mainFeed();const posts=f?(f.posts||[]).slice(0,6):[];
   const pend=reqPending().length,rep=repOpenList().length;const rcP=recallPool();const rcGot=rcP.filter(m=>(S.rc.res||{})[m.id]==="ok").length;
-  let h=banner()+repBanner()+`<div class="sechead" style="margin-top:12px"><h2>Dashboard</h2><span class="note" style="margin:0">${esc(unitName())} · as of ${dtg()}</span></div>`;
+  let h=banner()+repBanner()+`<div class="sechead" style="margin-top:12px"><h2>Dashboard</h2><span class="note" style="margin:0">${esc(unitName())} · as of ${new Date().toLocaleString([],{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}</span></div>`;
   h+=`<div class="v11grid k">${tile("Present",pres+"<small>/"+T.total+"</small>",pct(pres,T.total)+"% · "+T["On Hand"]+" on hand","--s-onhand","board")}
     ${tile(S.rc.em?"🚨 Emergency":"Recall",S.rc.open?rcGot+"<small>/"+rcP.length+"</small>":"—",S.rc.open?(missing().length+" not checked in"):"No recall running",S.rc.open?"--warn":"--muted","recall")}
     ${tile("Requests",pend,pend?"waiting for you":"none waiting",pend?"--brass":"--muted","feed")}
@@ -275,6 +277,35 @@ document.addEventListener("click",e=>{const t=e.target;
   if(t.id==="v11ClrPh"){if(armed!=="v11clrph"){armed="v11clrph";redraw(tabRedraw);return}armed=null;logLoad("Phone numbers","deleted all numbers");S.roster.forEach(m=>{delete m.phone;delete m.phone2});afterRosterChange("All phone numbers deleted")}});
 document.addEventListener("change",e=>{const c=e.target.closest&&e.target.closest("[data-v11rm1]");if(!c)return;const id=c.dataset.v11rm1;c.checked?rmSel.add(id):rmSel.delete(id);armed=null;const b=$("#v11RmGo");if(b){b.disabled=!rmSel.size;b.textContent="Remove "+rmSel.size+" selected"}});
 document.addEventListener("input",e=>{if(e.target.id!=="v11RmQ")return;rmQ=e.target.value;const pos=e.target.selectionStart;redraw(tabRedraw);const q=$("#v11RmQ");if(q){q.focus();q.setSelectionRange(pos,pos)}});
+
+/* ================= 8. CHECK IN FROM THE FEED + CLEAR PUSH-ALERT HELP ================= */
+function ciSheet(f,p){let q;try{q=new URLSearchParams(new URL(p.ci).hash.slice(1))}catch(e){return toast("That check-in link is damaged.")}
+  const rid=(q.get("ci")||"").replace(/[^a-z0-9]/gi,"").slice(0,16),live=q.get("l")==="1";if(!rid)return toast("That check-in link is damaged.");
+  sheetCtx={kind:"v11ci",rid,live,to:(q.get("to")||"").replace(/\D/g,"").slice(-10),unit:q.get("u")||f.unit};
+  $("#sheetT").innerHTML=`Check in<small>${esc(sheetCtx.unit)} · tap one</small>`;
+  $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><label for="v11CiN">Your rank and last name</label><input type="text" id="v11CiN" maxlength="30" autocapitalize="characters" style="text-transform:uppercase" value="${esc(f.me||S.myName||"")}">
+    <label for="v11CiE">Delayed or need help? Add ETA or a short note</label><input type="text" id="v11CiE" maxlength="40" placeholder="ETA 1400">
+    <button class="btn" data-v11cic="1" style="min-height:52px">✅ Good</button><button class="btn alt" data-v11cic="2" style="min-height:52px">Good, but delayed</button><button class="btn warn" data-v11cic="3" style="min-height:52px">I need help</button>
+    <p class="note" id="v11CiOut">${live?"Your leader sees it right away.":"Opens a text to your leader. Hit Send."}</p><button class="btn alt" data-sclose="1">Cancel</button></div>`;sheetOpen()}
+async function ciSend(c){const X=sheetCtx;if(!X||X.kind!=="v11ci")return;const n=($("#v11CiN").value||"").toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim();const eta=($("#v11CiE").value||"").replace(/[|#]/g," ").replace(/\s+/g," ").trim().slice(0,40);const o=$("#v11CiOut");
+  if(!n){o.textContent="Enter your rank and last name first.";return}S.myName=S.myName||n;save();const word=c===1?"GOOD":c===2?"DELAYED":"NEED HELP";
+  const sms=()=>{location.href="sms:"+(X.to?"+1"+X.to:"")+"?&body="+encodeURIComponent("CHECK-IN: "+word+" - "+n+(eta?" ("+eta+")":"")+"\n#EOOP-CI|"+X.rid+"|"+c+"|"+n+"|"+eta)};
+  if(!X.live){sms();closeSheet();return}
+  o.textContent="Sending…";try{const hs=await Promise.all(SB.words(n).map(w=>SB.h(X.rid,w)));await SB.rpc("checkin",{p_recall:X.rid,p_words:hs,p_code:c,p_note:eta});SB.notify(X.rid);closeSheet();toast("✓ Checked in: "+word)}
+  catch(e){o.textContent="No signal for the live check-in. Opening a text instead…";setTimeout(()=>{sms();closeSheet()},800)}}
+function pushHelp(){const why=window.__pushWhy||"",err=window.__pushErr||"";const N=window.MBN&&MBN.on||window.NATIVE;
+  let msg,btn="";
+  if(!N&&!("Notification" in window&&"serviceWorker" in navigator))msg="This browser can't show alerts. Use the Accounted For iPhone app, or on iPhone open the web app from your Home Screen (Share → Add to Home Screen).";
+  else if(!N&&typeof isIOS==="function"&&isIOS()&&!(typeof standalone==="function"&&standalone()))msg="On iPhone, web alerts only work from the Home Screen app: Share → Add to Home Screen, then open it from there. Or use the Accounted For iPhone app.";
+  else if(why==="denied"||(!N&&"Notification" in window&&Notification.permission==="denied")){msg="Notifications are turned off for Accounted For. Turn them on: Settings → Notifications → Accounted For → Allow Notifications. Then come back and tap the alert button again.";if(N)btn=`<a class="btn" href="app-settings:">Open Settings</a>`}
+  else if(why==="notoken")msg="Your phone allowed alerts, but Apple didn't register it yet"+(err?" ("+esc(err)+")":"")+". Check that you have signal and try again in a minute. If it keeps happening, send this message to support.";
+  else if(why==="default")msg="The permission question was closed without an answer. Tap the alert button again and choose Allow.";
+  else msg="Alerts couldn't be turned on"+(err?" ("+esc(err)+")":"")+". Try again with signal.";
+  sheetCtx={kind:"v11push"};$("#sheetT").innerHTML=`Alerts aren't on yet<small>Here's how to fix it</small>`;
+  $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><p style="margin:0">${msg}</p>${btn}<button class="btn alt" data-sclose="1">OK</button></div>`;sheetOpen()}
+{const _ps=pushSub;pushSub=async function(ask){window.__pushWhy="";let r=null;try{r=await _ps.apply(this,arguments)}catch(e){window.__pushErr=String(e&&e.message||e).slice(0,160);if(ask)setTimeout(pushHelp,400);throw e}if(!r&&ask)setTimeout(pushHelp,400);return r}}
+document.addEventListener("click",e=>{const t=e.target;const b=t.closest("[data-v11ci]");if(b){const [fid,pid]=b.dataset.v11ci.split(":");const f=S.feeds.find(x=>x.id===fid);const p=f&&(f.posts||[]).find(x=>String(x.id)===pid);if(p)ciSheet(f,p);return}
+  const c=t.closest("[data-v11cic]");if(c){ciSend(+c.dataset.v11cic);return}});
 
 render();
 })();
