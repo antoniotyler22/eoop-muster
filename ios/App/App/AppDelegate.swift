@@ -240,7 +240,7 @@ public class ProStorePlugin: CAPPlugin, CAPBridgedPlugin {
             if let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
                 do { try await AppStore.showManageSubscriptions(in: scene); call.resolve(); return } catch { }
             }
-            if let u = URL(string: "https://apps.apple.com/account/subscriptions") { UIApplication.shared.open(u) }
+            if let u = URL(string: "https://apps.apple.com/account/subscriptions") { UIApplication.shared.open(u, options: [:], completionHandler: nil) }
             call.resolve()
         }
     }
