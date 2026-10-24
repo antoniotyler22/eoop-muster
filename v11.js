@@ -307,5 +307,43 @@ function pushHelp(){const why=window.__pushWhy||"",err=window.__pushErr||"";cons
 document.addEventListener("click",e=>{const t=e.target;const b=t.closest("[data-v11ci]");if(b){const [fid,pid]=b.dataset.v11ci.split(":");const f=S.feeds.find(x=>x.id===fid);const p=f&&(f.posts||[]).find(x=>String(x.id)===pid);if(p)ciSheet(f,p);return}
   const c=t.closest("[data-v11cic]");if(c){ciSend(+c.dataset.v11cic);return}});
 
+/* ================= 9. WELCOME / SIGN-IN SCREEN (first open, Tools, #login) ================= */
+const APP_LINKS=()=>({ios:(typeof STORE_URL==="object"&&STORE_URL.ios)||"https://apps.apple.com/app/id6826541947",web:PUB()});
+const shareAppText=()=>"Accounted For: team headcount, muster and check-in.\niPhone app: "+APP_LINKS().ios+"\nOr use it on the web: "+APP_LINKS().web;
+function welcomeHTML(){const L=APP_LINKS();
+  return `<div class="v11w-in" data-noxl><img src="icon-192.png" alt="" width="72" height="72" style="border-radius:18px">
+  <h1>Welcome to Accounted For</h1><p class="note" style="margin:0 0 6px">Know who's here, who's not, and who got the word.</p>
+  <div class="panel" style="margin:0"><b>Sign in</b><p class="note" style="margin:0">Got a username and password from your leader?</p>
+    <label for="lgSU">Username</label><input type="text" id="lgSU" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+    <label for="lgSP">Password</label><input type="password" id="lgSP" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false">
+    ${termsOK()?"":tosLine()}<button class="btn" id="lgGo">Sign in</button><div class="note" id="lgSOut" role="status"></div></div>
+  <div class="panel" style="margin:0"><b>Got an invite link?</b><p class="note" style="margin:0">Tap the link in your text, or paste it here.</p>
+    <input type="url" id="v11WLink" placeholder="https://antoniotyler22.github.io/eoop-muster/#…" autocapitalize="none" autocorrect="off" spellcheck="false"><button class="btn alt" id="v11WOpen">Open link</button></div>
+  <div class="panel" style="margin:0"><b>Run your own team</b><p class="note" style="margin:0">Leaders, supervisors, coaches: set up your board. You can look around with sample people first.</p><button class="btn" id="v11WLead">Start my team</button></div>
+  <div class="panel" style="margin:0"><b>Get the app</b><div class="row2"><a class="btn alt" href="${esc(L.ios)}" target="_blank" rel="noopener">iPhone app</a><a class="btn alt" href="${esc(L.web)}" target="_blank" rel="noopener">Web app</a></div><button class="btn alt" id="v11WShare">Send the app to someone</button></div>
+  <p class="note" style="text-align:center">${esc(DISCLAIMER)} <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></p>
+  ${S.mode?`<button class="btn alt" id="v11WClose">Close</button>`:""}</div>`}
+function showWelcome(){let w=$("#v11Welcome");if(!w){w=document.createElement("div");w.id="v11Welcome";w.setAttribute("role","dialog");w.setAttribute("aria-label","Welcome");document.body.appendChild(w)}
+  w.innerHTML=welcomeHTML();w.hidden=false;document.body.classList.add("v11w-open");try{closeSheet()}catch(e){}}
+function hideWelcome(){const w=$("#v11Welcome");if(w)w.hidden=true;document.body.classList.remove("v11w-open")}
+window.showWelcome=showWelcome;
+{const _ms2=openModeSheet;openModeSheet=function(first){if(first&&!S.welcomed&&!$("#v11Welcome:not([hidden])")){showWelcome();return}return _ms2.apply(this,arguments)}}
+{const _ls=lgSignSheet;lgSignSheet=function(){if(!S.mode||!S.welcomed){showWelcome();setTimeout(()=>{const i=$("#lgSU");if(i)i.focus({preventScroll:true})},200);return}return _ls.apply(this,arguments)}}
+{const _si2=lgSignIn;lgSignIn=async function(){const r=await _si2.apply(this,arguments);if(!$("#lgSOut")||/Opening/.test(($("#lgSOut")||{}).textContent||"")){S.welcomed=1;save();hideWelcome()}return r}}
+document.addEventListener("click",e=>{const t=e.target;
+  if(t.id==="v11WLead"){S.welcomed=1;save();hideWelcome();openModeSheet(true);return}
+  if(t.id==="v11WClose"){S.welcomed=1;save();hideWelcome();return}
+  if(t.id==="v11WOpen"){const v=($("#v11WLink").value||"").trim();const i=v.indexOf("#");if(i<0||v.length-i<6){toast("That doesn't look like an invite link. Copy the whole link from the text.");return}S.welcomed=1;if(!S.mode)S.mode="military";save();hideWelcome();location.hash=v.slice(i);setTimeout(()=>location.reload(),60);return}
+  if(t.id==="v11WShare"||t.id==="v11ShareApp"){const txt=shareAppText();if(navigator.share)navigator.share({title:"Accounted For",text:txt}).catch(()=>{});else{try{navigator.clipboard.writeText(txt).then(()=>toast("App links copied"),()=>toast(txt))}catch(err){toast(txt)}}return}
+  if(t.closest("#v11SignInTool")){showWelcome();return}});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="v11WLink"){e.preventDefault();$("#v11WOpen").click()}});
+{const _rt3=renderTools;renderTools=function(){_rt3.apply(this,arguments);const g=[...document.querySelectorAll("#main .tgrid")].pop();if(!g)return;
+  g.insertAdjacentHTML("beforeend",`<button id="v11SignInTool"><span class="ic">${svg("key")}</span><span><b>Sign in / welcome</b><small>Username, invite link, get the app</small></span></button><button id="v11ShareApp"><span class="ic">${svg("send")}</span><span><b>Share the app</b><small>iPhone + web links</small></span></button>`)}}
+if(typeof WS_GLOBAL==="object"&&Array.isArray(WS_GLOBAL))WS_GLOBAL.push("welcomed");
+/* first open: show it (also if the version sheet already opened before this file loaded) */
+if(!S.mode&&!S.welcomed&&!/(^|[#&])(join|me|feed|ci|sync|coj|cov|bc|qr)=/.test(location.hash||"")){setTimeout(()=>{const sh=$("#sheet");if(sheetCtx&&sheetCtx.kind==="mode")closeSheet();showWelcome()},sh0())}
+function sh0(){return 380}
+if(S.mode&&!S.welcomed){S.welcomed=1;save()}
+
 render();
 })();

@@ -2150,8 +2150,8 @@ function renderFeed(){let h=S.source==="sample"?"":banner();const f=fdCur();
       <button class="btn" id="fdPost">Post</button></div>
       ${(()=>{const seen=fdSeenIds(f);const ns=sorted(S.roster.filter(m=>!seen.has(m.id)));if(!(f.posts||[]).length||!ns.length)return"";
         return `<details class="panel"><summary><b>Not seen in the feed yet</b> · ${ns.length} have never confirmed a post</summary><p class="note">They may not have joined. Text them the join link, or text the word itself so it reaches them without the app.</p><div class="note">${ns.map(m=>esc(m.sec+" "+m.rank+" "+lastOf(m))).join(" · ")}</div>
-          ${bcBatches(ns,f.unit+" Feed: tap to join and see the word in Accounted For: "+fdLink(f)).map((x,i,arr)=>`<a class="btn alt" href="${esc(x.href)}">Text join link to them${arr.length>1?" ("+(i+1)+")":""} (${x.n})</a>`).join("")}</details>`})()}
-      <details class="panel"><summary><b>Invite people</b> · send the join link once</summary>${bcBatches(S.roster,f.unit+" Feed: tap to join and see the word in Accounted For: "+fdLink(f)).map((x,i,arr)=>`<a class="btn" href="${esc(x.href)}">Text join link${arr.length>1?" · group "+(i+1)+" of "+arr.length:""} (${x.n})</a>`).join("")||`<p class="note">No phone numbers loaded (RECALL → Load numbers). You can copy the link instead.</p>`}
+          ${bcBatches(ns,f.unit+" Feed: tap to join and see the word in Accounted For: "+fdLink(f)+"\nNo app yet? iPhone: "+STORE_URL.ios).map((x,i,arr)=>`<a class="btn alt" href="${esc(x.href)}">Text join link to them${arr.length>1?" ("+(i+1)+")":""} (${x.n})</a>`).join("")}</details>`})()}
+      <details class="panel"><summary><b>Invite people</b> · send the join link once</summary>${bcBatches(S.roster,f.unit+" Feed: tap to join and see the word in Accounted For: "+fdLink(f)+"\nNo app yet? iPhone: "+STORE_URL.ios).map((x,i,arr)=>`<a class="btn" href="${esc(x.href)}">Text join link${arr.length>1?" · group "+(i+1)+" of "+arr.length:""} (${x.n})</a>`).join("")||`<p class="note">No phone numbers loaded (RECALL → Load numbers). You can copy the link instead.</p>`}
       <button class="btn alt" id="fdCopyLink">Copy join link</button><p class="note">Anyone with this link can read the feed, so send it only to your people.</p></details>`}
   else{if(f.pk)h+=`<div class="panel"><div class="fch">${fdAv(f.me||"?")}<div class="hd"><div class="nm">${esc(f.me||"Set your name")}</div><span class="note" style="margin:0">Section leader · ${esc(f.sec||"")}</span></div></div><label for="fdSlTxt">Pass the word</label><textarea id="fdSlTxt" maxlength="1000" style="min-height:80px" placeholder="${esc((f.sec||"Section")+" formation 0645 at the motor pool.")}">${esc(fdSlDraft.txt)}</textarea>
     <div class="note">Send to:</div><div class="evts">${[["all","Everyone"],["sec","Only my section"+(f.sec?" ("+f.sec+")":"")]].map(([k,l])=>`<button data-fdslto="${k}" aria-pressed="${fdSlDraft.to===k}">${esc(l)}</button>`).join("")}</div>
@@ -2973,7 +2973,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-onb]");if(
   else if(a==="how"){showOnb(0)}});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#onb").hidden)closeOnb()});
 /* ---------- feedback / rating ---------- */
-const STORE_URL={ios:"",android:""};
+const STORE_URL={ios:"https://apps.apple.com/app/id6826541947",android:""};
 function storeLink(){const ua=navigator.userAgent;return /iPhone|iPad|iPod/.test(ua)?STORE_URL.ios:/Android/.test(ua)?STORE_URL.android:(STORE_URL.ios||STORE_URL.android)}
 function feedbackHref(){const ua=navigator.userAgent;const dev=/iPhone/.test(ua)?"iPhone":/iPad/.test(ua)?"iPad":/Android/.test(ua)?"Android":"Computer";
   const body="What happened or what would you like?\n\n\n---\nPlease don't include names or phone numbers from your roster.\nApp: Accounted For v"+APP_VER+" ("+APP_BUILD+")\nVersion: "+MODE().name+"\nDevice: "+dev+"\nInstalled: "+(matchMedia("(display-mode: standalone)").matches||navigator.standalone?"home screen":"browser")+"\nPIN lock: "+(window.VAULT&&VAULT.on()?"on":"off");
@@ -3119,7 +3119,7 @@ async function lgRefresh(){if(lgBusy||!isOwner()||!S.lgOwner||!(S.logins||[]).le
   try{for(const L of S.logins){const h=await lgHash(L.dest,false);if(!h){if(!L.gone){L.gone=1;ch=true}continue}if(L.gone){delete L.gone;ch=true}
     if(h!==L.h){try{await lgPut(L,h);L.h=h;delete L.err;ch=true}catch(e){L.err=lgErr(e);ch=true}}}}
   finally{lgBusy=false;if(ch){save();if(view==="logins")renderLogins()}}}
-function lgText(L){return unitName()+" · Accounted For login\nUsername: "+L.user+"\nPassword: "+L.pw+"\nOpen "+PUB()+"#login (or the Accounted For app → Sign in). It takes you to: "+L.label+". Keep these private."}
+function lgText(L){return unitName()+" · Accounted For login\nUsername: "+L.user+"\nPassword: "+L.pw+"\n\niPhone app: "+STORE_URL.ios+" (open it and tap Sign in)\nOr on the web: "+PUB()+"#login\n\nIt takes you to: "+L.label+". Keep these private."}
 
 /* OIC screen: make, send and remove logins */
 let lgForm=null,lgArm=null,lgLast=null,lgMsg="";

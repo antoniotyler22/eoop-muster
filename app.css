@@ -434,3 +434,11 @@ body.v11wide .wrap,body.v11wide .top-in{max-width:1180px}
 .brand .dtg{white-space:normal}
 #wsBar{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}#wsBar:empty{display:none}
 #wsBar button{margin-left:0}
+/* 1.1: welcome / sign-in screen */
+#v11Welcome{position:fixed;inset:0;z-index:60;background:var(--bg);overflow:auto;-webkit-overflow-scrolling:touch;padding:calc(20px + env(safe-area-inset-top,0px)) 16px calc(28px + env(safe-area-inset-bottom,0px))}
+#v11Welcome[hidden]{display:none}
+.v11w-in{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.v11w-in h1{font-size:26px;font-weight:800;margin:6px 0 0;line-height:1.15}
+.v11w-in input:not([type=checkbox]){width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);font:inherit;color:var(--ink);box-sizing:border-box}
+body.v11w-open{overflow:hidden}
+.v11w-in .tog{display:flex;gap:8px;align-items:flex-start}.v11w-in .tog input{width:20px;height:20px;flex:0 0 20px;margin-top:2px}
