@@ -786,7 +786,7 @@ S.roll=Object.assign({units:{},own:true,name:""},S.roll||{});if(!S.roll.units||t
 S.mus=Object.assign({open:false,seen:{},inc:["On Hand"],att:true,only:false,last:null},S.mus||{});
 S.pt=Object.assign({event:"Unit PT",when:"",inc:["On Hand"],att:true},S.pt||{});
 const dutyOf=m=>DUTIES.includes(m.duty)?m.duty:"Full Duty";
-function save(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.write(t);else localStorage.setItem(KEY,t);storageOK=true}catch(e){storageOK=false}if(S.link&&typeof linkSchedule==="function")linkSchedule();if(typeof histTick==="function")histTick();if(typeof syncSchedule==="function")syncSchedule();if(typeof mpSchedule==="function")mpSchedule();if(S.board&&typeof rpSchedule==="function")rpSchedule()}
+function save(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.write(t);else localStorage.setItem(KEY,t);storageOK=true}catch(e){storageOK=false}if(S.link&&typeof linkSchedule==="function")linkSchedule();if(typeof histTick==="function")histTick();if(typeof syncSchedule==="function")syncSchedule();if(typeof mpSchedule==="function")mpSchedule();if(S.board&&typeof rpSchedule==="function")rpSchedule();if(S.coRep&&typeof coSchedule==="function")coSchedule()}
 
 let view="board", armed=null, query="";
 const h0=(location.hash||"").slice(1).toLowerCase();
@@ -1361,6 +1361,7 @@ async function refreshAll(quiet){if(refBusy)return;refBusy=true;const b=$("#hRef
   if(S.feeds.length)add(()=>fdPollAll(true));
   if(S.link){if(S.link.rk2)add(()=>rosterPull(true));add(()=>linkPush(true))}
   if(S.me)add(()=>mpFetch());
+  if(S.coBoard)add(()=>coPoll());if(S.coRep)add(()=>coPush(true));
   if(S.sync&&S.sync.on)add(()=>syncPull(true));
   if(S.rc&&S.rc.open&&S.rc.live)add(()=>livePoll());
   if(typeof bcPoll==="function")add(()=>bcPoll());
@@ -1373,6 +1374,84 @@ async function refreshAll(quiet){if(refBusy)return;refBusy=true;const b=$("#hRef
   const y=window.scrollY;const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){render();window.scrollTo(0,y)}
   const errs=[S.board&&S.board.err,S.link&&(S.link.perr||S.link.err),S.me&&S.me.err,S.sync&&S.sync.err,...S.feeds.map(f=>f.err)].filter(Boolean);
   if(!quiet)toast(errs.length?"Updated, with a problem: "+String(errs[0]).slice(0,70):"Up to date · "+String(new Date().getHours()).padStart(2,"0")+String(new Date().getMinutes()).padStart(2,"0"))}
+/* ---------- COMPANY: several platoon boards rolled up live into one company view ----------
+   Platoon OIC phones encrypt their roster with the company key (only in the links) and report it; viewers decrypt. */
+let coBusy=false,coPT=null,coPushBusy=false,coOpen=null,coNew=false;
+const coName=()=>(S.coBoard&&S.coBoard.name)||"Company";
+async function coCreate(name){const id=rndId(14),rk=rndId(32),wk=rndId(32),ek=b64url(crypto.getRandomValues(new Uint8Array(32)));
+  await SB.rpc("create_company",{p_id:id,p_read_key:rk,p_write_key:wk});S.coBoard={id,rk,wk,ek,name:String(name||"Company").slice(0,30),own:true,units:{},err:""};save()}
+function coLink(kind){const C=S.coBoard;const q=new URLSearchParams();if(kind==="rep"){q.set("coj",C.id);q.set("k",C.wk)}else{q.set("cov",C.id);q.set("r",C.rk)}q.set("e",C.ek);q.set("u",C.name);return location.origin+location.pathname+"#"+q.toString()}
+function coPayload(){const R=S.coRep;const ms=S.roster.map(m=>{const o={rank:m.rank,sec:m.sec,status:m.status,duty:dutyOf(m)};if(R.names!==false){o.name=m.name;if(m.start)o.start=m.start;if(m.end)o.end=m.end;if(m.loc)o.loc=m.loc;if(m.detail)o.detail=String(m.detail).slice(0,60)}return o});
+  return {v:1,name:R.name||unitName(),secs:SECTIONS.map(x=>x.slice()),ms}}
+function coSchedule(){if(!S.coRep||S.role==="view")return;clearTimeout(coPT);coPT=setTimeout(coPush,6000)}
+async function coPush(force){const R=S.coRep;if(!R||coPushBusy||S.role==="view"||S.source==="sample")return;coPushBusy=true;
+  try{const body=coPayload();const sg=sigF(body);if(!force&&sg===R.sig&&Date.now()-(R.at||0)<20*60000)return;
+    await SB.rpc("put_unit",{p_company:R.id,p_write_key:R.wk,p_unit:R.uid,p_ct:await fdEnc(R.ek,Object.assign({t:Date.now()},body))});R.sig=sg;R.at=Date.now();R.err="";rawSave()}
+  catch(e){const t=String(e.message||e);R.err=/link not valid/.test(t)?"The company link was replaced or removed. Ask for a new one.":/could not find|schema/i.test(t)?"Server needs setup part 14a and 14b.":t.slice(0,80);rawSave()}
+  finally{coPushBusy=false}}
+async function coPoll(){const C=S.coBoard;if(!C||coBusy)return;coBusy=true;
+  try{const rows=await SB.rpc("get_units",{p_company:C.id,p_read_key:C.rk});const seen=new Set();
+    for(const r of rows||[]){seen.add(r.unit);const t=Date.parse(r.updated_at)||0;const cur=C.units[r.unit];if(cur&&cur.t===t)continue;const o=await fdDec(C.ek,r.ct);if(!o||!Array.isArray(o.ms))continue;
+      C.units[r.unit]={t,name:String(o.name||"Unit").slice(0,30),ms:o.ms.slice(0,600),secs:Array.isArray(o.secs)?o.secs.slice(0,10):[]}}
+    for(const k of Object.keys(C.units))if(!seen.has(k))delete C.units[k];C.err="";C.at=Date.now();rawSave();
+    if(view==="co"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"&&a!=="SELECT"){const y=window.scrollY;renderCo();window.scrollTo(0,y)}}}
+  catch(e){const t=String(e.message||e);C.err=/link not valid/.test(t)?"This company link no longer works. Ask for a new one.":/could not find|schema/i.test(t)?"Server needs setup part 14a and 14b.":/fetch|network/i.test(t)?"No signal.":t.slice(0,80);rawSave();if(view==="co")renderCo()}
+  finally{coBusy=false}}
+setInterval(()=>{if(document.hidden)return;if(S.coBoard&&(view==="co"||hubOn))coPoll();if(S.coRep)coPush()},30000);
+function coTally(ms){const c={};STATUSES.forEach(x=>c[x]=0);let tot=0;for(const m of ms){if(m.sec==="ATT")continue;tot++;c[STATUSES.includes(m.status)?m.status:"On Hand"]++}return {c,tot,oh:c["On Hand"]}}
+function coText(){const C=S.coBoard;const U=Object.values(C.units);const all=U.flatMap(u=>u.ms);const T=coTally(all);const L=[C.name.toUpperCase()+" ACCOUNTABILITY "+dtg(new Date()),"TOTAL: "+T.oh+"/"+T.tot+" ON HAND ("+pct(T.oh,T.tot)+"%)"];
+  for(const u of U.sort((a,b)=>a.name.localeCompare(b.name))){const x=coTally(u.ms);L.push(u.name+": "+x.oh+"/"+x.tot+(Date.now()-u.t>4*3600000?" (as of "+dtg(new Date(u.t)).slice(0,7)+")":""))}
+  const off=STATUSES.slice(1).filter(st=>T.c[st]);if(off.length)L.push(off.map(st=>SHORT[st]+" "+T.c[st]).join(", "));return L.join("\n")}
+function renderCo(){const C=S.coBoard,R=S.coRep;let h=`<div class="sechead" style="margin-top:12px"><h2>Company</h2>${C?`<span class="ratio" style="font-size:13px">${C.err?`<span style="color:var(--warn)">${esc(C.err)}</span>`:`<span style="color:var(--s-onhand)">● live</span>`}</span>`:""}</div>`;
+  if(!C&&!R||coNew){h+=`<div class="panel"><p class="note">Put several platoons on one live company board. You get two links: one for each platoon OIC to report their numbers in, and a view-only link for anyone who needs the whole company (CO, XO, 1stSgt). Everything is encrypted on the phones; the server can't read it.</p>
+    <label for="coNm">Company name</label><input type="text" id="coNm" maxlength="30" placeholder="CLC-33" value="${esc((S.unit&&cleanName(S.unit))||"")}"><button class="btn" id="coMake">Set up the company board</button>${coNew?`<button class="btn alt" id="coCancel">Cancel</button>`:""}<div class="note" id="coOut"></div>
+    <p class="note">Got a company link? Open it on this phone.</p></div>`;$("#main").innerHTML=h;return}
+  if(C){const U=Object.entries(C.units).map(([k,u])=>Object.assign({k},u)).sort((a,b)=>a.name.localeCompare(b.name));const all=U.flatMap(u=>u.ms);const T=coTally(all);const P=pct(T.oh,T.tot);
+    h+=`<div class="card hero"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">${esc(C.name.toUpperCase())} · ON HAND</span><span style="font-size:12px;font-weight:700;color:var(--muted)">${U.length} unit${U.length===1?"":"s"}</span></div>
+      <div style="display:flex;align-items:baseline;gap:8px"><span class="big">${T.oh}</span><span style="font-size:20px;font-weight:700;color:var(--muted)">/ ${T.tot}</span><span style="margin-left:auto;font-size:15px;font-weight:800;color:var(--s-onhand)">${P}%</span></div><div class="hbar"><i style="width:${P}%"></i></div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${STATUSES.slice(1).filter(st=>T.c[st]).map(st=>`<span class="chip" style="color:var(${SVAR[st]})">${esc(SHORT[st])} ${T.c[st]}</span>`).join("")||`<span class="note" style="margin:0">Everyone on hand.</span>`}</div></div>`;
+    if(!U.length)h+=`<div class="panel"><p class="note">No units have reported yet. Text the platoon link to each platoon OIC (below). Their numbers show up here as soon as they open it.</p></div>`;
+    for(const u of U){const x=coTally(u.ms);const old=Date.now()-u.t>4*3600000;const open=coOpen===u.k;
+      h+=`<div class="rrow" style="--sc:var(${old?"--warn":"--s-onhand"})"><button data-coopen="${u.k}" style="all:unset;display:block;width:100%;cursor:pointer"><div class="rtop"><div class="who"><b>${esc(u.name)}</b> · ${x.oh}/${x.tot} on hand (${pct(x.oh,x.tot)}%)<div class="ph" style="${old?"color:var(--warn)":""}">Updated ${ago(u.t)}${old?" · numbers may be old":""}</div></div><span class="note" style="margin:0">${open?"▾":"▸"}</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${STATUSES.slice(1).filter(st=>x.c[st]).map(st=>`<span class="chip" style="color:var(${SVAR[st]})">${esc(SHORT[st])} ${x.c[st]}</span>`).join("")}</div></button>`;
+      if(open){const off=u.ms.filter(m=>m.status!=="On Hand");const secs=[...new Set(u.ms.map(m=>m.sec))].filter(x=>x!=="ATT");
+        h+=`<div class="note" style="margin:8px 0 0">${secs.map(sc=>{const y=coTally(u.ms.filter(m=>m.sec===sc));return `<b>${esc(sc)}</b> ${y.oh}/${y.tot}`}).join(" · ")}</div>`;
+        if(off.length&&off[0].name)h+=STATUSES.slice(1).map(st=>{const g=off.filter(m=>m.status===st);return g.length?`<div style="margin-top:8px"><b style="color:var(${SVAR[st]})">${esc(SHORT[st])} (${g.length})</b>${g.map(m=>`<div class="ph">${esc(m.sec+" "+m.rank+" "+m.name)}${m.end?" · thru "+esc(m.end):""}${m.loc?" · "+esc(m.loc):""}</div>`).join("")}</div>`:""}).join("");
+        else if(off.length)h+=`<p class="note">This unit reports counts only, no names.</p>`;
+        if(C.own)h+=`<button class="chip" data-codrop="${u.k}" style="cursor:pointer;margin-top:8px">${armed==="codrop"+u.k?"Tap again to remove "+esc(u.name):"Remove this unit"}</button>`}
+      h+=`</div>`}
+    h+=`<div class="row2" style="margin-top:10px"><a class="btn" href="${esc("sms:?&body="+encodeURIComponent(coText()))}">Text company numbers</a><button class="btn alt" id="coRef">↻ Refresh</button></div>`;
+    if(C.own||C.wk)h+=`<h2>Links</h2><div class="panel"><div class="rrow" style="--sc:var(--line)"><div class="who"><b>Platoon OIC link</b><div class="ph">Each platoon OIC opens it in their app. Their whole platoon reports here and stays live.</div></div><div class="row2"><a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent(C.name+": open this in EOP Numbers to report your platoon to the company board. Keep it private: "+coLink("rep")+" · iPhone: open in Safari, then Share → Add to Home Screen."))}">Text link</a><button class="btn alt" data-cocopy="rep">Copy</button></div></div>
+      <div class="rrow" style="--sc:var(--line)"><div class="who"><b>Company view link</b><div class="ph">View only: the whole company, every unit, who's off and why. For the CO, XO, 1stSgt.</div></div><div class="row2"><a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent(C.name+": open this to see the whole company's accountability live in EOP Numbers. Keep it private: "+coLink("view")+" · iPhone: open in Safari, then Share → Add to Home Screen."))}">Text link</a><button class="btn alt" data-cocopy="view">Copy</button></div></div>
+      ${!R&&S.source!=="sample"?`<button class="btn" id="coSelf" style="width:100%">Report my own unit (${esc(unitName())}) here too</button>`:""}</div>`}
+  if(R)h+=`<h2>My unit's report</h2><div class="panel"><div>This phone reports <b>${esc(R.name||unitName())}</b> to <b>${esc(R.co)}</b>.</div><div class="note">${R.err?`<span style="color:var(--warn)">${esc(R.err)}</span>`:S.source==="sample"?`<span style="color:var(--warn)">Load your roster first; sample Marines aren't sent.</span>`:R.at?"Last sent "+ago(R.at)+". Sends by itself when anything changes.":"Sending…"}</div>
+    <label class="tog"><input type="checkbox" id="coNames"${R.names!==false?" checked":""}> Include names, dates and locations (off = counts only)</label>
+    <div class="row2"><button class="btn" id="coSend">Send now</button><button class="btn alt" id="coStop">${armed==="costop"?"Tap again to stop reporting":"Stop reporting"}</button></div></div>`;
+  if(C)h+=`<button class="btn warn" id="coLeave" style="width:100%;margin-top:14px">${armed==="coleave"?(C.own?"Tap again: remove the company board from this phone":"Tap again to remove"):(C.own?"Remove company board from this phone":"Remove company view from this phone")}</button>`;
+  else h+=`<button class="btn alt" id="coNewB" style="width:100%;margin-top:14px">Set up a company board here</button>`;
+  $("#main").innerHTML=h}
+function coJoinPrompt(q,kind){const id=(q.get(kind)||"").replace(/[^a-z0-9]/g,"").slice(0,20),key=(q.get(kind==="coj"?"k":"r")||"").replace(/[^a-z0-9]/g,"").slice(0,40),ek=(q.get("e")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60),co=(q.get("u")||"Company").replace(/[|#<>]/g,"").slice(0,30);
+  try{history.replaceState(null,"",location.pathname)}catch(e){}if(id.length<10||key.length<24||ek.length<40)return toast("That company link is incomplete.");
+  if(kind==="cov"){if(S.coBoard&&S.coBoard.id===id){view="co";render();coPoll();return}S.coBoard={id,rk:key,ek,name:co,own:false,units:{},err:""};S.onb=true;if(!S.mode)S.mode="military";if(S.source==="sample")S.coOnly=true;save();view="co";render();window.scrollTo(0,0);coPoll();toast("You're viewing "+co);return}
+  sheetCtx={kind:"coj",id,wk:key,ek,co};$("#sheetT").innerHTML=`Report to ${esc(co)}?<small>Your whole unit's numbers go to the company board and stay live as you make changes.</small>`;
+  $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><label for="cjNm">Your unit's name on the company board</label><input type="text" id="cjNm" maxlength="30" value="${esc(unitName())}">
+    <label class="tog"><input type="checkbox" id="cjNames" checked> Include names, dates and locations (off = counts only)</label>${S.source==="sample"?`<p class="note" style="color:var(--warn)">Load your roster first, or nothing will be sent.</p>`:""}
+    <button class="btn" id="cjYes">Report to ${esc(co)}</button><button class="btn alt" data-sclose="1">Not now</button></div>`;
+  const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")))}
+document.addEventListener("click",e=>{const t=e.target;
+  if(t.id==="coMake"){const nm=($("#coNm").value||"").trim()||"Company";t.disabled=true;t.textContent="Setting up…";coCreate(nm).then(()=>{coNew=false;renderCo();toast("Company board ready. Text the links.")}).catch(err=>{t.disabled=false;t.textContent="Set up the company board";const o=$("#coOut");const m=String(err.message||err);if(o)o.textContent=/could not find|schema/i.test(m)?"Server needs setup part 14a and 14b (DATA → System check).":"Couldn't set up: "+m.slice(0,80)});return}
+  if(t.id==="coNewB"){coNew=true;renderCo();return}if(t.id==="coCancel"){coNew=false;renderCo();return}
+  if(t.id==="coRef"){coPoll();toast("Refreshing…");return}
+  const op=t.closest("[data-coopen]");if(op){coOpen=coOpen===op.dataset.coopen?null:op.dataset.coopen;renderCo();return}
+  const cp=t.closest("[data-cocopy]");if(cp){const u=coLink(cp.dataset.cocopy);try{navigator.clipboard.writeText(u).then(()=>toast("Link copied"),()=>toast(u))}catch(err){toast(u)}return}
+  const dr=t.closest("[data-codrop]");if(dr){const k=dr.dataset.codrop;if(armed!=="codrop"+k){armed="codrop"+k;renderCo();return}armed=null;SB.rpc("drop_unit",{p_company:S.coBoard.id,p_read_key:S.coBoard.rk,p_unit:k}).catch(()=>{});delete S.coBoard.units[k];save();renderCo();return}
+  if(t.id==="coSelf"){const C=S.coBoard;S.coRep={id:C.id,wk:C.wk,ek:C.ek,co:C.name,name:unitName(),uid:rndId(12),names:true,sig:"",at:0,err:""};save();coPush(true).then(()=>{coPoll();renderCo()});renderCo();return}
+  if(t.id==="coSend"){coPush(true).then(()=>{renderCo();toast(S.coRep&&S.coRep.err?S.coRep.err:"Sent")});return}
+  if(t.id==="coNames"){S.coRep.names=t.checked;S.coRep.sig="";save();coPush(true);return}
+  if(t.id==="coStop"){if(armed!=="costop"){armed="costop";renderCo();return}armed=null;S.coRep=null;save();renderCo();toast("Stopped reporting");return}
+  if(t.id==="coLeave"){if(armed!=="coleave"){armed="coleave";renderCo();return}armed=null;S.coBoard=null;S.coOnly=false;save();renderCo();return}
+  if(t.id==="cjYes"&&sheetCtx&&sheetCtx.kind==="coj"){const c=sheetCtx;S.coRep={id:c.id,wk:c.wk,ek:c.ek,co:c.co,name:(($("#cjNm").value||"").trim()||unitName()).slice(0,30),uid:(S.coRep&&S.coRep.id===c.id&&S.coRep.uid)||rndId(12),names:$("#cjNames").checked,sig:"",at:0,err:""};S.leaderMode=true;save();closeSheet();view="co";render();coPush(true).then(()=>{renderCo();toast(S.coRep.err?S.coRep.err:"Reporting to "+c.co)});return}});
+
 /* ---------- HEALTH: what's stale or broken, in plain words ---------- */
 const hrs=t=>Math.round((Date.now()-t)/3600000);
 function healthIssues(){const out=[];const B=S.board;
@@ -1384,6 +1463,7 @@ function healthIssues(){const out=[];const B=S.board;
     if(never.length)out.push({t:"Section leaders not connected yet: "+never.join(", ")+". Text them their links.",go:"live"});
     if(quiet.length)out.push({t:quiet.join(", ")+(quiet.length>1?" haven't":" hasn't")+" sent an update in over 24 hr.",go:"live"})}
   if(S.mpErr)out.push({t:"My pages: "+S.mpErr,go:"data"});
+  if(S.coRep&&S.coRep.err)out.push({t:"Company report: "+S.coRep.err,go:"co"});
   for(const f of S.feeds)if(f.err)out.push({t:"FEED "+f.unit+": "+f.err,go:"feed"});
   return out}
 function healthCard(){const I=healthIssues();if(!I.length)return `<div class="note" style="margin:10px 4px 0;color:var(--s-onhand);font-weight:700">● All systems working${SB.okAt?" · server reached "+ago(SB.okAt):""}${hubOn?" · hub mode on":""}</div>`;
@@ -1648,6 +1728,7 @@ function renderTools(){const al=alerts();const cf=upcomingConflicts(14).length;c
     ${T("recall","recall","Recall",S.rc.open?"In progress":S.roster.filter(m=>m.phone).length+" numbers loaded",S.rc.open?"on":"")}
     ${T("alerts","alert","Alerts",(cf?cf+" conflicts · ":"")+(al.over.length?al.over.length+" overdue · ":"")+al.ret.length+" returning",cf||al.over.length?"hot":"")}
     ${T("text","text","Send the numbers","Accountability report")}
+    ${T("co","rollup","Company",S.coBoard?Object.keys(S.coBoard.units||{}).length+" units live":S.coRep?"Reporting to "+esc(S.coRep.co):"Whole company, live",S.coBoard||S.coRep?"on":"")}
     ${T("rollup","rollup","Rollup",Object.keys(S.roll.units).length?Object.keys(S.roll.units).length+" units":"Add up units under you",rollStale().length?"hot":"")}
     ${T("live","live","Live sections",S.board?"On":"Off",S.board?"on":"")}
     ${T("armory","armory","Armory",S.arm.open?"Muster in progress":S.roster.filter(hasW).length+" weapons",S.arm.open?"on":"")}
@@ -1805,6 +1886,7 @@ const SC=[
  {k:"rq",n:"Requests",f:["08_requests"],t:[["feed_req",{p_feed:"zz",p_member_key:"x",p_ct:"QQ=="}],["feed_reqs_get",{p_feed:"zz",p_leader_key:"x",p_after:0}]]},
  {k:"bk",n:"Backup and sync",f:["06a_backup_put","06b_backup_read"],t:[["backup_put",{p_id:"zz",p_key:"x",p_ct:"QQ==",p_base:null}],["backup_get",{p_id:"zz",p_key:"x"}],["backup_ver",{p_id:"zz",p_key:"x"}],["backup_delete",{p_id:"zz",p_key:"x"}]]},
  {k:"mp",n:"My page",f:["07_my_page"],t:[["put_page",{p_id:"zz",p_wk:"x",p_ct:"QQ=="}],["get_page",{p_id:"zz"}],["delete_page",{p_id:"zz",p_wk:"x"}]]},
+ {k:"cy",n:"Company board",f:["14a_company_tables","14b_company_report"],t:[["create_company",{p_id:"zz",p_read_key:"x",p_write_key:"x"}],["put_unit",{p_company:"zz",p_write_key:"x",p_unit:"zzzzzz",p_ct:"QQ=="}],["get_units",{p_company:"zz",p_read_key:"x"}]]},
  {k:"oa",n:"OIC alerts for requests and problems",f:["13_oic_alerts"],t:[["set_feed_leader_sub",{p_feed:"zz",p_leader_key:"x",p_sub:{}}]]},
  {k:"sk",n:"Replace one section link",f:["12a_section_keys","12b_section_checks"],t:[["set_sec_key",{p_board:"zz",p_read_key:"x",p_sec:"HQ",p_key:"x"}]]},
  {k:"hub",n:"Unit hub (leader links pull your roster, one FEED)",f:["11a_hub_roster","11b_hub_feed"],t:[["put_roster",{p_board:"zz",p_read_key:"x",p_sec:"HQ",p_ct:"QQ=="}],["get_roster",{p_board:"zz",p_write_key:"x",p_sec:"HQ"}],["set_feed_poster",{p_feed:"zz",p_leader_key:"x",p_poster_key:"x"}],["feed_post_sl",{p_feed:"zz",p_poster_key:"x",p_ct:"QQ=="}]]}];
@@ -2827,7 +2909,7 @@ function openSheet(kind,id){const m=S.roster.find(x=>x.id===id);if(!m)return;she
   const sh=$("#sheet");sheetFocus();sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));buzz()}
 let sheetRet=null;
 function sheetFocus(){sheetRet=document.activeElement;setTimeout(()=>{const f=document.querySelector('#sheetOpts [aria-pressed="true"]')||document.querySelector("#sheetOpts button");if(f)f.focus({preventScroll:true})},60)}
-function closeSheet(){const sh=$("#sheet");sh.classList.remove("open");setTimeout(()=>{sh.hidden=true;if(sheetRet&&sheetRet.isConnected&&sheetRet.focus)sheetRet.focus({preventScroll:true});sheetRet=null},RM()?0:260);sheetCtx=null}
+function closeSheet(){const sh=$("#sheet");sh.classList.remove("open");setTimeout(()=>{if(sh.classList.contains("open"))return;sh.hidden=true;if(sheetRet&&sheetRet.isConnected&&sheetRet.focus)sheetRet.focus({preventScroll:true});sheetRet=null},RM()?0:260);sheetCtx=null}
 let lastView=null,slideDir="";
 function animateView(){const el=$("#main");if(!el)return;if(lastView!==view){el.classList.remove("vin","vl","vr");void el.offsetWidth;el.classList.add(slideDir||"vin");slideDir=""}lastView=view}
 const NUMS={};
@@ -2857,7 +2939,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetCtx)closeSheet
 document.addEventListener("dragleave",e=>{const d=$("#rcDrop");if(d&&!e.relatedTarget)d.classList.remove("over")});
 document.addEventListener("drop",e=>{if(view!=="recall"&&view!=="data")return;const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;e.preventDefault();const d=$("#rcDrop");if(d)d.classList.remove("over");rcLoadFile(f,view==="recall"?"#rcOutR":"#rcOut")});
 function render(){renderTabs();if(view!=="feed"){fdPend=0;fdPillShow()}
-  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="rollup")renderRollup();else if(view==="live")renderLive();else if(view==="act")renderAct();else if(view==="send")renderSend();else if(view==="feed")renderFeed();else if(view==="trends")renderTrends();else if(view==="ready")renderReady();else if(view==="duty")renderDuty();else if(view==="p")renderPerson();else if(view==="cal")renderCal();else if(view==="log")renderLog();else if(view==="me")renderMe();else if(view==="sys")renderSys();else if(view==="today")renderToday();else if(view==="ask")renderAsk();else if(view==="people")renderPeople();else if(view==="tools")renderTools();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
+  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="rollup")renderRollup();else if(view==="live")renderLive();else if(view==="act")renderAct();else if(view==="co")renderCo();else if(view==="send")renderSend();else if(view==="feed")renderFeed();else if(view==="trends")renderTrends();else if(view==="ready")renderReady();else if(view==="duty")renderDuty();else if(view==="p")renderPerson();else if(view==="cal")renderCal();else if(view==="log")renderLog();else if(view==="me")renderMe();else if(view==="sys")renderSys();else if(view==="today")renderToday();else if(view==="ask")renderAsk();else if(view==="people")renderPeople();else if(view==="tools")renderTools();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
 
 /* ---------- CSV import ---------- */
 function parseCSV(text){const rows=[];let row=[],f="",q=false;
@@ -3319,9 +3401,10 @@ let firstPick=false;{const qm=new URLSearchParams(location.search).get("m");if(!
 startXL();
 render();
 {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){if(q.get("r"))firstPick=false;setTimeout(()=>joinPrompt(q),firstPick?900:300)}if(q.get("feed")){firstPick=false;setTimeout(()=>fdJoinPrompt(q),300)}}
-{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("me")){firstPick=false;setTimeout(()=>mePrompt(q),200)}}
+{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("me")){firstPick=false;setTimeout(()=>mePrompt(q),200)}if(q.get("coj")||q.get("cov")){firstPick=false;setTimeout(()=>coJoinPrompt(q,q.get("coj")?"coj":"cov"),300)}}
 if(S.me&&S.roster.some(m=>m.pk&&m.pk===S.me.pk)){S.me=null;S.leaderMode=true;save();if(view==="me"||view==="today"){view="board"}render()}
 if(memberMode()&&!location.hash&&view==="board"){view="today";render()}
+if(S.coOnly&&S.coBoard&&!location.hash&&view==="board"){view="co";render();setTimeout(coPoll,800)}
 if(S.me){setTimeout(()=>mpFetch(),600)}
 if(S.roster.some(m=>m.pk))setTimeout(()=>mpPublish(),2500);
 setTimeout(()=>akStatus(),3000);
@@ -3331,11 +3414,11 @@ if(S.feeds.length){S.feeds.filter(f=>!f.lk&&f.me&&!f.meH).forEach(fdMeHash);setT
 if(bcActive())setTimeout(bcPoll,1000);
 if(S.board){setTimeout(livePollBoard,800);if(S.pushOn&&!S.board.push)setTimeout(boardPush,1500)}if(S.link)setTimeout(()=>linkPush(),1200);
 if(firstPick)setTimeout(()=>openModeSheet(true),350);
-if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",ev=>{if(ev.data&&ev.data.type==="updated"){if(/(^|[#&])(join|me|feed|ci|sync)=/.test(H0)&&Date.now()-T0<30000){location.replace(location.pathname+H0);return}const el=$("#toast");el.innerHTML='New version ready. <button id="updNow" style="margin-left:8px;border:0;border-radius:99px;padding:6px 12px;font-weight:800;background:var(--brass);color:#111">Reload</button>';el.hidden=false;clearTimeout(toast.t)}});
+if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",ev=>{if(ev.data&&ev.data.type==="updated"){if(/(^|[#&])(join|me|feed|ci|sync|coj|cov)=/.test(H0)&&Date.now()-T0<30000){location.replace(location.pathname+H0);return}const el=$("#toast");el.innerHTML='New version ready. <button id="updNow" style="margin-left:8px;border:0;border-radius:99px;padding:6px 12px;font-weight:800;background:var(--brass);color:#111">Reload</button>';el.hidden=false;clearTimeout(toast.t)}});
 document.addEventListener("click",e=>{if(e.target.id==="updNow")location.reload()});
 if("serviceWorker" in navigator&&document.querySelector("link[rel=manifest]")&&(location.protocol==="https:"||location.hostname==="localhost")){navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(()=>{const o=document.getElementById("offStat");if(o&&navigator.serviceWorker.controller)o.textContent="Ready: this app opens and works with no signal. Text reports once you have service."}).catch(()=>{})}
 setInterval(()=>{if(view==="recall"&&S.rc.open){const c=document.querySelector(".mbar .ct small");if(c)c.textContent="contacted · "+Math.round((Date.now()-S.rc.start)/60000)+" min"}},20000);
-window.addEventListener("hashchange",()=>{{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){joinPrompt(q);return}if(q.get("feed")){fdJoinPrompt(q);return}if(q.get("sync")){syncJoinPrompt(q.get("sync"),q.get("r"));return}if(q.get("me")){mePrompt(q);return}}const h=(location.hash||"").slice(1).toLowerCase();if((["recall","rollup","board","muster","alerts","live","send","feed","today","me","log","cal","ask","people","tools","duty","ready","events","act","data","sys","text","trends","armory","pt","w6","att"].includes(h)||SECTIONS.some(x=>x[0].toLowerCase()===h))&&h!==view){view=h;armed=null;render();window.scrollTo(0,0);if(h==="feed")fdPollAll(true)}});
+window.addEventListener("hashchange",()=>{{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){joinPrompt(q);return}if(q.get("feed")){fdJoinPrompt(q);return}if(q.get("sync")){syncJoinPrompt(q.get("sync"),q.get("r"));return}if(q.get("me")){mePrompt(q);return}if(q.get("coj")||q.get("cov")){coJoinPrompt(q,q.get("coj")?"coj":"cov");return}}const h=(location.hash||"").slice(1).toLowerCase();if((["recall","rollup","board","muster","alerts","live","send","feed","today","me","log","cal","ask","people","tools","duty","ready","events","act","co","data","sys","text","trends","armory","pt","w6","att"].includes(h)||SECTIONS.some(x=>x[0].toLowerCase()===h))&&h!==view){view=h;armed=null;render();window.scrollTo(0,0);if(h==="feed")fdPollAll(true)}});
 setInterval(()=>{const d=$("#dtg");if(d)d.textContent="AS OF "+dtg()},30000);
 </script>
 </body></html>
