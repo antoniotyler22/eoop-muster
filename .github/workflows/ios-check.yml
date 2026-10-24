@@ -1,0 +1,26 @@
+# Compiles the iPhone app (unsigned) on every change, so build problems show up before a TestFlight run.
+name: iPhone app build check
+on:
+  push:
+    branches: [main]
+    paths: ["ios/**", "native.js", "index.html", "package*.json", "capacitor.config.json", ".github/workflows/ios-*.yml"]
+  workflow_dispatch:
+jobs:
+  compile:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: maxim-lobanov/setup-xcode@v1
+        with: { xcode-version: latest-stable }
+      - run: npm ci && npm run build:web && npx cap sync ios
+      - name: Compile (no signing)
+        run: |
+          set -o pipefail
+          xcodebuild build -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            | grep -E "error:|warning: .*AppDelegate|BUILD (SUCCEEDED|FAILED)" || true
+          xcodebuild build -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO -quiet

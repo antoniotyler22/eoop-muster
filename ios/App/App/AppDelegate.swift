@@ -1,5 +1,7 @@
 import UIKit
 import Capacitor
+import LocalAuthentication
+import Security
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -49,5 +51,88 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                                           sessionRole: connectingSceneSession.role)
         config.delegateClass = SceneDelegate.self
         return config
+    }
+}
+
+// Main screen: the standard Capacitor web view, plus the app's own Face ID plugin.
+class MainViewController: CAPBridgeViewController {
+    override open func capacitorDidLoad() {
+        bridge?.registerPluginInstance(BiometricPlugin())
+    }
+}
+
+// Face ID / Touch ID unlock. Keeps the PIN in the iOS Keychain, readable only after a
+// successful Face ID or Touch ID check on this phone, and never synced to iCloud.
+@objc(BiometricPlugin)
+public class BiometricPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "BiometricPlugin"
+    public let jsName = "Biometric"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "available", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "save", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "load", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "remove", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "has", returnType: CAPPluginReturnPromise)
+    ]
+    private let service = "com.antoniotyler.musterboard.pin"
+    private let account = "unlock"
+
+    @objc func available(_ call: CAPPluginCall) {
+        let ctx = LAContext()
+        var err: NSError?
+        let ok = ctx.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &err)
+        var type = "none"
+        if ok { type = ctx.biometryType == .faceID ? "faceID" : (ctx.biometryType == .touchID ? "touchID" : "biometric") }
+        call.resolve(["available": ok, "type": type])
+    }
+
+    @objc func has(_ call: CAPPluginCall) {
+        let ctx = LAContext()
+        ctx.interactionNotAllowed = true
+        let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
+                                kSecAttrAccount as String: account, kSecUseAuthenticationContext as String: ctx]
+        let st = SecItemCopyMatching(q as CFDictionary, nil)
+        call.resolve(["has": st == errSecSuccess || st == errSecInteractionNotAllowed])
+    }
+
+    @objc func save(_ call: CAPPluginCall) {
+        guard let pin = call.getString("pin"), !pin.isEmpty, let data = pin.data(using: .utf8) else { call.reject("No PIN"); return }
+        deleteItem()
+        var cfErr: Unmanaged<CFError>?
+        guard let access = SecAccessControlCreateWithFlags(nil, kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly, .biometryCurrentSet, &cfErr) else {
+            call.reject("Face ID needs a phone passcode"); return
+        }
+        let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
+                                kSecAttrAccount as String: account, kSecAttrAccessControl as String: access, kSecValueData as String: data]
+        let st = SecItemAdd(q as CFDictionary, nil)
+        if st == errSecSuccess { call.resolve() } else { call.reject("Couldn't save (\(st))") }
+    }
+
+    @objc func load(_ call: CAPPluginCall) {
+        let reason = call.getString("reason") ?? "Unlock MusterBoard"
+        DispatchQueue.global(qos: .userInitiated).async {
+            let ctx = LAContext()
+            ctx.localizedFallbackTitle = "Use PIN"
+            ctx.localizedReason = reason
+            let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: self.service,
+                                    kSecAttrAccount as String: self.account, kSecReturnData as String: true,
+                                    kSecMatchLimit as String: kSecMatchLimitOne, kSecUseAuthenticationContext as String: ctx]
+            var out: AnyObject?
+            let st = SecItemCopyMatching(q as CFDictionary, &out)
+            if st == errSecSuccess, let d = out as? Data, let pin = String(data: d, encoding: .utf8) {
+                call.resolve(["pin": pin])
+            } else if st == errSecItemNotFound {
+                call.reject("Face ID changed or not set up. Use your PIN.", "NOT_FOUND")
+            } else {
+                call.reject("Cancelled", "CANCELLED")
+            }
+        }
+    }
+
+    @objc func remove(_ call: CAPPluginCall) { deleteItem(); call.resolve() }
+
+    private func deleteItem() {
+        let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account]
+        SecItemDelete(q as CFDictionary)
     }
 }

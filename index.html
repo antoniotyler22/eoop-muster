@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en"><head>
+<script src="native.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -468,12 +469,12 @@ const V=window.VAULT={key:null,cfg:getCfg(),ok:!!(window.crypto&&crypto.subtle),
   async setPin(pin,text,opts){const salt=crypto.getRandomValues(new Uint8Array(16));const key=await derive(pin,salt,ITER);
     const blob=await enc(key,text);localStorage.setItem(KE,blob);
     this.cfg=Object.assign({auto:5,wipe:false},this.cfg||{},opts||{},{salt:b64(salt),iter:ITER,len:pin.length,fails:0});putCfg(this.cfg);
-    this.key=key;localStorage.removeItem(K)},
+    this.key=key;this._p=pin;localStorage.removeItem(K);if(this.cfg.face&&window.MBN&&MBN.on)MBN.Bio.save({pin}).catch(()=>{})},
   async check(pin){const c=this.cfg;if(!c)return false;try{const k=await derive(pin,unb64(c.salt),c.iter);await dec(k,localStorage.getItem(KE));return true}catch(e){return false}},
-  off(text){try{localStorage.setItem(K,text)}catch(e){}localStorage.removeItem(KE);localStorage.removeItem(KC);this.key=null;this.cfg=null},
+  off(text){try{if(window.MBN&&MBN.on)MBN.Bio.remove()}catch(e){}this._p=null;try{localStorage.setItem(K,text)}catch(e){}localStorage.removeItem(KE);localStorage.removeItem(KC);this.key=null;this.cfg=null},
   set(p){this.cfg=Object.assign(this.cfg||{},p);putCfg(this.cfg)},
   lockNow(){location.reload()},
-  eraseAll(){try{[K,KE,KC].forEach(x=>localStorage.removeItem(x));Object.keys(localStorage).filter(x=>x.startsWith(K)).forEach(x=>localStorage.removeItem(x))}catch(e){}
+  eraseAll(){try{if(window.MBN&&MBN.on)MBN.Bio.remove()}catch(e){}try{[K,KE,KC].forEach(x=>localStorage.removeItem(x));Object.keys(localStorage).filter(x=>x.startsWith(K)).forEach(x=>localStorage.removeItem(x))}catch(e){}
     try{if(window.caches)caches.keys().then(ks=>Promise.all(ks.map(k=>caches.delete(k)))).finally(()=>location.replace(location.pathname))}catch(e){location.replace(location.pathname)}}
 };
 let hiddenAt=0;
@@ -586,7 +587,7 @@ window.addEventListener("DOMContentLoaded",()=>{
   draw();L.hidden=false;document.body.classList.add("locked");
   async function tryPin(){busy=true;document.getElementById("lockSub").textContent="Checking…";
     const ok=await V.check(pin);
-    if(ok){const k=await derive(pin,unb64(c.salt),c.iter);window.__RAW=await dec(k,localStorage.getItem(KE));V.key=k;V.set({fails:0});
+    if(ok){const k=await derive(pin,unb64(c.salt),c.iter);window.__RAW=await dec(k,localStorage.getItem(KE));V.key=k;V._p=pin;V.set({fails:0});
       L.hidden=true;document.body.classList.remove("locked");startApp();return}
     const f=(c.fails||0)+1;V.set({fails:f});pin="";draw();busy=false;document.getElementById("lockSub").textContent="Enter your PIN";
     if(c.wipe&&f>=10){err.textContent="Too many wrong PINs. Erasing data.";setTimeout(()=>V.eraseAll(),1200);busy=true;return}
@@ -600,6 +601,11 @@ window.addEventListener("DOMContentLoaded",()=>{
     if(!fArm){fArm=true;e.target.textContent="Tap again to ERASE all app data and start over";err.textContent="There is no PIN recovery. Your data is encrypted with your PIN.";return}
     V.eraseAll()});
   const f0=c.fails||0;if(f0>=5)until=Date.now()+30000;
+  /* Face ID (iPhone app only): reads the PIN from the Keychain after a face match */
+  const NB=window.MBN&&MBN.on&&c.face?MBN.Bio:null;
+  if(NB){const fb=document.createElement("button");fb.type="button";fb.className="btn alt";fb.id="lockFace";fb.textContent="Use Face ID";fb.style.marginTop="10px";pad.after(fb);
+    const go=()=>{if(busy||Date.now()<until)return;NB.load({reason:"Unlock "+(c.title||"MusterBoard")}).then(r=>{if(r&&r.pin&&!busy){pin=String(r.pin);draw();tryPin()}}).catch(x=>{if(/changed|not set/i.test(String(x&&x.message)))err.textContent="Face ID changed. Enter your PIN, then turn Face ID on again in Security."})};
+    fb.addEventListener("click",go);setTimeout(go,350)}
 });
 })();
 </script>
@@ -660,7 +666,7 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="3.1.4";const APP_BUILD="2026-10-23";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER="3.2.0";const APP_BUILD="2026-10-24";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -1025,7 +1031,7 @@ function renderData(){
     <li><b>Android:</b> open in Chrome → ⋮ menu → Add to Home screen.</li>
   </ul></div>`;
   $("#main").innerHTML=h;
-  {const o=$("#offStat");if(o){const sw="serviceWorker" in navigator&&document.querySelector("link[rel=manifest]");o.textContent=!sw?"Offline mode works from the home-screen app at the GitHub link, not inside Claude.":navigator.serviceWorker.controller?"Ready: this app opens and works with no signal. Text reports once you have service.":"Setting up offline mode. Open the app once more with signal to finish."}}
+  {const o=$("#offStat");if(o){const sw="serviceWorker" in navigator&&document.querySelector("link[rel=manifest]");o.textContent=window.MBN&&MBN.on?"Ready: the app is installed on this phone and works with no signal. Text reports once you have service.":!sw?"Offline mode works from the home-screen app at the GitHub link, not inside Claude.":navigator.serviceWorker.controller?"Ready: this app opens and works with no signal. Text reports once you have service.":"Setting up offline mode. Open the app once more with signal to finish."}}
   dl.then(d=>{const b=$("#exp");if(b&&d)b.hidden=false});
 }
 function ptGroups(){
@@ -3537,7 +3543,8 @@ function aboutHTML(){return `<h2>About</h2><div class="panel" data-noxl><div><b>
   ${storeLink()?`<button class="btn alt" data-onb="how">How it works</button>`:""}</div>`}
 /* ---------- security panel ---------- */
 const pinIn=(id,lbl,ac)=>`<div><label for="${id}">${lbl}</label><input id="${id}" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="${ac}" maxlength="8"></div>`;
-function secHTML(){const V=window.VAULT;
+function secHTML(){return secHTML0()+nativeHTML()}
+function secHTML0(){const V=window.VAULT;
   const erase=`<button class="btn warn" id="secErase">${armed==="erase"?"Tap again: erase ALL app data on this phone":"Erase all app data on this phone"}</button>`;
   if(!V||!V.ok)return `<h2>Security</h2><div class="panel"><p class="note">This browser can't encrypt data. Open the app in Safari or Chrome.</p>${erase}</div>`;
   if(!V.on())return `<h2>Security</h2><div class="panel"><p class="note"><b>Lock is off.</b> Set a PIN to lock the app and encrypt the roster stored on this phone. There is no PIN recovery: if you forget it, the only fix is erasing the data.</p>
@@ -3546,6 +3553,7 @@ function secHTML(){const V=window.VAULT;
   const c=V.cfg||{};const opt=(v,t)=>`<option value="${v}"${+c.auto===v?" selected":""}>${t}</option>`;
   return `<h2>Security</h2><div class="panel"><div><b>🔒 PIN lock is on.</b> <span class="note">Roster data on this phone is encrypted (AES-256).</span></div>
     <label for="secAuto">Lock again after leaving the app</label><select id="secAuto">${opt(0,"Right away")}${opt(1,"1 minute")}${opt(5,"5 minutes")}${opt(15,"15 minutes")}${opt(60,"1 hour")}${opt(-1,"Only when I tap Lock now")}</select>
+    ${window.MBN&&MBN.on?`<label class="tog"><input type="checkbox" id="secFace"${c.face?" checked":""}> Unlock with Face ID</label>`:""}
     <label class="tog"><input type="checkbox" id="secWipe"${c.wipe?" checked":""}> Erase all data after 10 wrong PINs</label>
     <button class="btn alt" id="secLock">Lock now</button>
     <details><summary>Change PIN or turn off lock</summary>
@@ -3569,6 +3577,23 @@ document.addEventListener("click",async e=>{const id=e.target.id;const V=window.
 document.addEventListener("change",e=>{const V=window.VAULT;if(!V||!V.on())return;
   if(e.target.id==="secAuto"){V.set({auto:+e.target.value});toast("Saved")}
   if(e.target.id==="secWipe"){V.set({wipe:e.target.checked});toast(e.target.checked?"Data erases after 10 wrong PINs.":"Auto-erase off.")}});
+
+/* iPhone app extras: Face ID unlock and a daily muster reminder */
+window.__mbOpen=o=>{if(typeof render!=="function")return;view=o;render();window.scrollTo(0,0)};
+function nativeHTML(){if(!(window.MBN&&MBN.on))return"";const r=MBN.reminder.get()||{};
+  return `<h2>Phone</h2><div class="panel"><label for="natRem">Daily muster reminder</label>
+    <div class="row2"><input type="time" id="natRem" value="${esc(r.t||"")}"><button class="btn alt" id="natRemSet">${r.t?"Update":"Set reminder"}</button></div>
+    ${r.t?`<p class="note">🔔 Every day at ${esc(r.t)}. <button class="btn alt" id="natRemOff" style="display:inline-block;width:auto;min-height:0;padding:4px 10px">Turn off</button></p>`:`<p class="note">This phone reminds you to take the numbers at the same time every day. Works with no signal.</p>`}</div>`}
+document.addEventListener("click",async e=>{if(!(window.MBN&&MBN.on))return;const id=e.target.id;
+  if(id==="natRemSet"){const t=($("#natRem")||{}).value;if(!/^\d\d:\d\d$/.test(t||""))return toast("Pick a time first.");
+    const ok=await MBN.reminder.set(t,"Time to take the "+unitName()+" numbers.");toast(ok?"Reminder set for "+t+" daily.":"Allow notifications for MusterBoard in Settings.");tabRedraw();return}
+  if(id==="natRemOff"){await MBN.reminder.set(null);toast("Reminder off.");tabRedraw();return}});
+document.addEventListener("change",async e=>{if(e.target.id!=="secFace"||!(window.MBN&&MBN.on))return;const V=window.VAULT,box=e.target;
+  if(!box.checked){try{await MBN.Bio.remove()}catch(x){}V.set({face:false});toast("Face ID unlock off.");return}
+  try{const a=await MBN.Bio.available();if(!a.available){box.checked=false;return toast("Set up Face ID in your phone's Settings first.")}
+    if(!V._p){box.checked=false;return toast("Lock the app and unlock it with your PIN once, then turn this on.")}
+    await MBN.Bio.save({pin:V._p});V.set({face:true});toast((a.type==="touchID"?"Touch ID":"Face ID")+" unlock on.")}
+  catch(x){box.checked=false;toast("Couldn't turn on Face ID: "+String(x&&x.message||x).slice(0,60))}});
 
 applyLists();applyTS();
 for(const f of ["reportText","ptText","wText","alertsText","musText","sectionUpdateText","recallText","evText","armText","rollText"]){const o=window[f];if(typeof o==="function")window[f]=(...a)=>RT(o(...a))}

@@ -2,7 +2,7 @@
 const fs = require("fs"), path = require("path");
 const root = path.join(__dirname, ".."), out = path.join(root, "www");
 fs.rmSync(out, { recursive: true, force: true }); fs.mkdirSync(out);
-const files = ["index.html", "help.html", "privacy.html", "support.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png"];
+const files = ["index.html", "native.js", "help.html", "privacy.html", "support.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png"];
 for (const f of files) fs.copyFileSync(path.join(root, f), path.join(out, f));
 for (const d of ["fonts", "lib", "supabase/setup", "supabase/functions"]) fs.cpSync(path.join(root, d), path.join(out, d), { recursive: true });
 // The native app serves files itself; no service worker.
