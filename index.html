@@ -721,6 +721,21 @@ function shareMode(k){const url=modeLink(k);const t=k==="all"?"Accountability ap
   if(navigator.share){navigator.share({title:t,text:t,url}).catch(()=>{});return}
   try{navigator.clipboard.writeText(url).then(()=>toast((k==="all"?"App":MODES[k].name)+" link copied"),()=>toast(url))}catch(e){toast(url)}}
 
+const LV=()=>S.level==="co"?{sec:"platoon",Sec:"Platoon",secs:"platoons",head:"platoon OIC",Head:"Platoon OIC",heads:"Platoon OICs"}:{sec:"section",Sec:"Section",secs:"sections",head:"section leader",Head:"Section leader",heads:"Section leaders"};
+const CO_SECS=[["HQ","Company HQ"],["1PLT","1st Platoon"],["2PLT","2nd Platoon"],["3PLT","3rd Platoon"]];
+function setLevel(k){if(k===(S.level||"plt"))return;const subs=MIL_SECS.map(x=>x[0]);
+  if(k==="co"){S.secsPlt=SECTIONS.map(x=>x.slice());const nw=(Array.isArray(S.secsCo)&&S.secsCo.length?S.secsCo:CO_SECS).map(x=>x.slice());SECTIONS.splice(0,SECTIONS.length,...nw);S.secs=nw;S.level="co";
+    if(S.source==="sample"){S.roster=sampleRoster();let i=0;for(const m of S.roster)if(m.sec!=="ATT")m.sub=subs[i++%subs.length]}
+    else for(const m of S.roster){if(m.sec==="ATT")continue;m.sub=m.sub||m.sec;m.sec=nw[0][0]}}
+  else{S.secsCo=SECTIONS.map(x=>x.slice());const nw=(Array.isArray(S.secsPlt)&&S.secsPlt.length?S.secsPlt:DEF_SECS).map(x=>x.slice());SECTIONS.splice(0,SECTIONS.length,...nw);S.secs=JSON.stringify(nw)===JSON.stringify(DEF_SECS)?null:nw;S.level="plt";
+    if(S.source==="sample")S.roster=sampleRoster();else for(const m of S.roster){if(m.sec==="ATT")continue;m.sec=nw.some(x=>x[0]===m.sub)?m.sub:nw[0][0];delete m.sub}}
+  secFix();secDraft=null;S.snap=null;save()}
+function mapCo(u){const U=(u||"").toUpperCase();const n=(U.match(/(\d)\s*(?:ST|ND|RD|TH)?\s*(?:PLT|PLATOON)/)||U.match(/(?:PLT|PLATOON)\s*(\d)/)||[])[1];let sec=null;
+  if(n)sec=(SECTIONS.find(s=>s[0]===n+"PLT"||(s[0].startsWith(n)&&/PLT/.test(s[0]))||new RegExp("^"+n+"(ST|ND|RD|TH)?\\s*P").test(s[1].toUpperCase()))||[])[0]||null;
+  if(!sec)sec=(SECTIONS.find(s=>U.split(/[-\s/]+/).includes(s[0])||U.includes(s[1].toUpperCase()))||SECTIONS[0])[0];
+  const t=U.split(/[-\s/]+/).filter(Boolean).pop()||"";const sub={HQ:"HQ",EE:"HE",HE:"HE",CE:"CE",ORD:"ORD",UT:"UT"}[t]||(/^[A-Z]{2,6}$/.test(t)&&!/PLT|PLATOON|CO/.test(t)?t:"");return {sec,sub}}
+function levelHTML(){const co=S.level==="co";return `<h2>Unit level</h2><div class="panel"><p class="note">${co?"<b>Company:</b> tabs are platoons. Each platoon OIC gets a link, loads their platoon from your board with their own sections, and sends their numbers up to you.":"<b>Platoon:</b> tabs are sections and section leaders send you their numbers. Switch to Company to run the whole company with platoons as tabs."}</p>
+  <div class="evts"><button data-lvl="plt" aria-pressed="${!co}">Platoon</button><button data-lvl="co" aria-pressed="${co}">Company</button></div>${co?`<p class="note">Rename or add platoons in Tabs below. Load the company MOL: Marines go to their platoon, and their section inside it comes along for the platoon OIC.</p>`:""}</div>`}
 function secFix(){for(const m of S.roster){if(m.sec!=="ATT"&&!SECTIONS.some(s=>s[0]===m.sec))m.sec=SECTIONS[0][0]}}
 function tabsHTML(){if(!secDraft)secDraft=SECTIONS.map(([k,n])=>({o:k,k,n}));const D=secDraft;
   const cnt=k=>S.roster.filter(m=>m.sec===k).length;const gone=SECTIONS.filter(([k])=>!D.some(d=>d.o===k)&&cnt(k));
@@ -920,6 +935,7 @@ function renderData(){
     <button class="btn alt" id="exp" hidden>Export backup (.csv)</button>
     <button class="btn warn" id="reset">${armed==="reset"?"Tap again to clear the roster":"Clear roster and show sample"}</button>
   </div>
+  ${levelHTML()}
   ${syncHTML()}
   ${tabsHTML()}
   ${displayHTML()}
@@ -1254,16 +1270,16 @@ const lf=m=>tok(m).split(".").slice(1).join(".");
 const fullK=m=>String(m.name).toUpperCase().replace(/[^A-Z0-9]+/g," ").trim();
 async function itemsFor(bid,ms){const out=[];const useId=!!(S.link&&S.link.rk2&&S.link.board===bid);
   for(const m of ms){const codes=[];if(m.status!=="On Hand"&&SCODE[m.status])codes.push(SCODE[m.status]);const d=dutyOf(m);if(d==="Light Duty")codes.push("LD");if(d==="LIMDU")codes.push("LIM");
-    if(!codes.length)continue;const a=useId?await SB.h(bid,"I:"+m.id):await SB.h(bid,"N:"+fullK(m)),b=await SB.h(bid,"L:"+lf(m));codes.forEach(c=>out.push(a+":"+b+":"+c))}
+    if(!codes.length)continue;const a=useId?await SB.h(bid,"I:"+(m.uid||m.id)):await SB.h(bid,"N:"+fullK(m)),b=await SB.h(bid,"L:"+lf(m));codes.forEach(c=>out.push(a+":"+b+":"+c))}
   return out.sort()}
 /* section leader side */
 function linkSchedule(){if(!S.link||lkBusy)return;clearTimeout(lkTimer);lkTimer=setTimeout(linkPush,3000)}
-async function linkPush(force){const L=S.link;if(!L||lkBusy)return;if(L.rk2&&!L.pulled){rosterPull();return}const ms=S.roster.filter(m=>m.sec===L.mysec);
+async function linkPush(force){const L=S.link;if(!L||lkBusy)return;if(L.rk2&&!L.pulled){rosterPull();return}const ms=L.whole?S.roster.slice():S.roster.filter(m=>m.sec===L.mysec);
   lkBusy=true;try{const items=await itemsFor(L.board,ms);const st=ms.length+"|"+items.join(",");
     if(force||st!==L.sig){const me=await Promise.all(SB.words(L.me).map(w=>SB.h(L.board,w)));
       await SB.rpc("push_update",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_sender:me,p_strength:ms.length,p_items:items});
       L.sig=st;L.sent=Date.now();L.lsig=lsigOf(ms);L.err="";save();SB.notify(null,{board:L.board})}
-    if(L.ek){const cal=ms.flatMap(m=>(m.cal||[]).filter(e=>(e.end||e.d)>=dkey(new Date(Date.now()-30*86400000))).map(e=>({nk:fullK(m),d:e.d,tm:e.tm||"",end:e.end||"",ty:e.ty,ti:e.ti,no:e.no||""})));const dt=ms.map(m=>({nk:fullK(m),id:m.id,st:m.status,s:m.start||"",e:m.end||"",l:m.loc||"",x:m.detail||"",du:m.due||{}}));const cs=sigF([cal,dt]);
+    if(L.ek){const cal=ms.flatMap(m=>(m.cal||[]).filter(e=>(e.end||e.d)>=dkey(new Date(Date.now()-30*86400000))).map(e=>({nk:fullK(m),d:e.d,tm:e.tm||"",end:e.end||"",ty:e.ty,ti:e.ti,no:e.no||""})));const dt=ms.map(m=>({nk:fullK(m),id:m.uid||m.id,sb:L.whole&&m.sec!=="ATT"?m.sec:undefined,st:m.status,s:m.start||"",e:m.end||"",l:m.loc||"",x:m.detail||"",du:m.due||{}}));const cs=sigF([cal,dt]);
       if(force||cs!==L.calSig){const ct=await fdEnc(L.ek,{e:cal,d:dt});await SB.rpc("push_cal",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_ct:ct});L.calSig=cs;L.err="";rawSave()}}}
   catch(e){const t=String(e.message||e);L.err=/link not valid/i.test(t)?"This link was replaced by your OIC. Ask them for the new one.":t.slice(0,80);save();clearTimeout(lkTimer);if(!/replaced/.test(L.err))lkTimer=setTimeout(linkPush,60000)}
   finally{lkBusy=false;if(view==="live"||view===(L.mysec||"").toLowerCase()){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;render();window.scrollTo(0,y)}}}}
@@ -1281,7 +1297,7 @@ async function boardCreate(){const id=rndId(14),rk=rndId(32),wk=rndId(32);await 
 async function livePollCal(){const B=S.board;if(!B||!B.ek)return;try{const rows=await SB.rpc("get_cal",{p_board:B.id,p_read_key:B.rk});let ch=false;
   for(const r of rows||[]){const t=Date.parse(r.updated_at)||0;if(S.secCal[r.sec]&&S.secCal[r.sec].t>=t)continue;const o=await fdDec(B.ek,r.ct);if(!o||!Array.isArray(o.e))continue;const calCh=!S.secCal[r.sec]||sigF(S.secCal[r.sec].e)!==sigF(o.e.slice(0,2000));if(S.secCal[r.sec]&&calCh)actAdd("🗓",r.sec+" section calendar updated","cal");S.secCal[r.sec]={t,e:o.e.slice(0,2000)};ch=true;
     if(Array.isArray(o.d)){const ms=S.roster.filter(m=>m.sec===r.sec);const by={};ms.forEach(m=>(by[fullK(m)]=by[fullK(m)]||[]).push(m));const who=[];
-      const dueWho=[];for(const x of o.d.slice(0,600)){const byId=x.id?ms.find(m=>m.id===String(x.id)):null;const hit=byId?[byId]:by[String(x.nk)];if(!hit||hit.length!==1)continue;const m=hit[0];let c=false;
+      const dueWho=[];for(const x of o.d.slice(0,600)){const byId=x.id?ms.find(m=>m.id===String(x.id)):null;const hit=byId?[byId]:by[String(x.nk)];if(!hit||hit.length!==1)continue;const m=hit[0];let c=false;if(x.sb&&/^[A-Z0-9]{1,6}$/.test(x.sb)&&m.sub!==x.sb){m.sub=x.sb;c=true}
         if(x.du&&typeof x.du==="object"){const nd=sanDue(x.du);if(JSON.stringify(nd)!==JSON.stringify(sanDue(m.due||{}))){const chg=Object.keys(nd).filter(k=>JSON.stringify(nd[k])!==JSON.stringify((m.due||{})[k]));m.due=nd;dueWho.push(m.rank+" "+lastOf(m)+(chg.length?" ("+chg.slice(0,2).join(", ")+")":""))}}
         for(const [k,v] of [["start",x.s],["end",x.e],["loc",x.l],["detail",x.x]]){const nv=String(v||"").slice(0,120);if((m[k]||"")!==nv){if(nv)m[k]=nv;else delete m[k];c=true}}if(c)who.push(m.rank+" "+lastOf(m)+(x.e?" thru "+String(x.e).slice(0,10):""))}
       if(dueWho.length)actAdd("✅",r.sec+" leader updated due-outs: "+dueWho.slice(0,6).join(", ")+(dueWho.length>6?" +"+(dueWho.length-6)+" more":""),"ready");
@@ -1313,19 +1329,19 @@ function liveStrip(){const B=S.board;if(!B)return `<button class="att" data-go="
   return `<button class="att" data-go="live" style="text-align:left;width:100%;cursor:pointer"><div><div class="lbl">● Live sections</div><div class="note" style="display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:4px">${SECTIONS.map(([k])=>{const r=B.last[k];const old=r&&Date.now()-r.t>4*3600000;
     return `<span><b>${k}</b> <span style="color:var(${!r?"--muted":old?"--warn":"--s-onhand"})">${r?ago(r.t):"waiting"}</span></span>`}).join("")}</div></div></button>`}
 function renderLive(){let h=banner();const B=S.board,L=S.link;
-  h+=`<h2>Live section updates</h2>`;if(!B)h+=accessHTML();
+  h+=`<h2>Live ${LV().sec} updates</h2>`;if(!B)h+=accessHTML();
   if(!B){h+=`<div class="panel"><p class="note">Section leaders change their people's statuses on their own phones, and your board updates by itself. You see which section updated, who sent it and when. Names never go to the server: only scrambled codes your phone matches to your roster.</p>
       <button class="btn" id="lvOn">Turn on live updates for my board</button><div class="note" id="lvOut"></div></div>`}
   else{h+=`<div class="panel"><div><b style="color:var(--s-onhand)">● Live</b> · checks every 15 seconds while the app is open${B.err?` · <span style="color:var(--warn)">${esc(B.err)}</span>`:""}</div>
       ${boardPushHTML()}
-      <p class="note">Send each section leader their link. Their section roster loads from your board, so they don't load anything. Every change they make shows up here, and they land in your FEED where you see every post.</p>${hubHTML()}${accessHTML()}</div>
+      <p class="note">Send each ${LV().head} their link. Their ${LV().sec} roster loads from your board, so they don't load anything.${S.level==="co"?" Each platoon OIC gets their platoon with its own sections and can run their own section leaders.":""} Every change they make shows up here, and they land in your FEED where you see every post.</p>${hubHTML()}${accessHTML()}</div>
     <div class="alist" style="margin-top:10px">${SECTIONS.map(([k,n])=>{const r=B.last[k];const old=r&&Date.now()-r.t>4*3600000;
       return `<div class="rrow" style="--sc:var(${!r?"--line":old?"--warn":"--s-onhand"})"><div class="rtop"><div class="who"><b>${k}</b> ${esc(n)}
         <div class="ph">${B.rsig&&B.rsig[k]?`<b style="color:var(--s-onhand)">✓ Roster shared</b> · `:S.source==="sample"?"":`Roster sharing… · `}${r?`Updated ${ago(r.t)} (${dtg(new Date(r.t)).slice(0,7)})${r.by?" by "+esc(r.by):""} · ${r.ch} change${r.ch===1?"":"s"}`:"No update yet"}</div>
         ${r&&(r.miss||r.str!==r.mine)?`<div class="ph" style="color:var(--warn)">${r.miss?r.miss+" name"+(r.miss>1?"s":"")+" not on your roster. ":""}${r.str!==r.mine?"Their strength "+r.str+", yours "+r.mine+".":""}</div>`:""}</div></div>
-        <div class="row2">${(()=>{const hd=S.roster.find(m=>m.id===(B.heads||{})[k]);return `<select class="wsel" data-lvhead="${k}" aria-label="${k} section head"><option value="">Section head: pick from ${k}…</option>${sorted(S.roster.filter(m=>m.sec===k)).map(m=>`<option value="${m.id}"${hd&&hd.id===m.id?" selected":""}>${esc(m.rank+" "+m.name)}${m.phone?"":" (no number)"}</option>`).join("")}</select><a class="btn alt" href="${esc((hd&&hd.phone?"sms:+1"+String(hd.phone).replace(/\D/g,"").slice(-10):"sms:")+"?&body="+encodeURIComponent(unitName()+": you're the "+k+" section leader. Open this link in EOP Numbers. Your section roster loads from my board, your updates come straight to me, and you can post to the unit FEED: "+boardLink(k)+" · iPhone: open in Safari, then Share → Add to Home Screen so alerts work."))}">Text ${k} link${hd?" to "+esc(hd.rank+" "+lastOf(hd)):""}</a>`})()}<button class="btn alt" data-lvcopy="${k}">Copy link</button></div><button class="chip" data-lvreset="${k}" style="cursor:pointer;margin-top:6px">${armed==="lvreset"+k?"Tap again: old "+k+" link stops working":"↺ Replace "+k+" link (cut off the old one)"}</button></div>`}).join("")}</div>
+        <div class="row2">${(()=>{const hd=S.roster.find(m=>m.id===(B.heads||{})[k]);return `<select class="wsel" data-lvhead="${k}" aria-label="${k} section head"><option value="">${LV().Head}: pick from ${k}…</option>${sorted(S.roster.filter(m=>m.sec===k)).map(m=>`<option value="${m.id}"${hd&&hd.id===m.id?" selected":""}>${esc(m.rank+" "+m.name)}${m.phone?"":" (no number)"}</option>`).join("")}</select><a class="btn alt" href="${esc((hd&&hd.phone?"sms:+1"+String(hd.phone).replace(/\D/g,"").slice(-10):"sms:")+"?&body="+encodeURIComponent(unitName()+": you're the "+k+" "+LV().head+". Open this link in EOP Numbers. Your "+LV().sec+" roster loads from my board, your updates come straight to me, and you can post to the unit FEED: "+boardLink(k)+" · iPhone: open in Safari, then Share → Add to Home Screen so alerts work."))}">Text ${k} link${hd?" to "+esc(hd.rank+" "+lastOf(hd)):""}</a>`})()}<button class="btn alt" data-lvcopy="${k}">Copy link</button></div><button class="chip" data-lvreset="${k}" style="cursor:pointer;margin-top:6px">${armed==="lvreset"+k?"Tap again: old "+k+" link stops working":"↺ Replace "+k+" link (cut off the old one)"}</button></div>`}).join("")}</div>
     <button class="btn warn" id="lvOff" style="margin-top:16px;width:100%">${armed==="lvoff"?"Tap again: turn off and disconnect all sections":"Turn off live updates"}</button>`}
-  if(L)h+=`<h2>My link</h2><div class="panel"><div>This phone sends <b>${esc(L.mysec)}</b> to <b>${esc(L.unit)}</b> as <b>${esc(L.sec)}</b>${L.me?" · sender "+esc(L.me):""}.</div><div class="note">${linkStatus()}</div>${L.rk2?`<div class="note">${L.perr?`<span style="color:var(--warn)">Roster: ${esc(L.perr)}</span>`:L.pulled?`Roster from ${esc(L.unit)} · ${S.roster.filter(m=>m.sec===L.mysec).length} people · updated ${ago(L.pt)}`:"Loading your section roster…"}</div>`:""}
+  if(L)h+=`<h2>My link</h2><div class="panel"><div>This phone sends <b>${esc(L.mysec)}</b> to <b>${esc(L.unit)}</b> as <b>${esc(L.sec)}</b>${L.me?" · sender "+esc(L.me):""}.</div><div class="note">${linkStatus()}</div>${L.rk2?`<div class="note">${L.perr?`<span style="color:var(--warn)">Roster: ${esc(L.perr)}</span>`:L.pulled?`Roster from ${esc(L.unit)} · ${(L.whole?S.roster:S.roster.filter(m=>m.sec===L.mysec)).length} people · updated ${ago(L.pt)}`:"Loading your section roster…"}</div>`:""}
     <div class="row2"><button class="btn" id="lkNow">Send now</button><button class="btn alt" id="lkOff">${armed==="lkoff"?"Tap again to unlink":"Unlink"}</button></div></div>`;
   $("#main").innerHTML=h}
 function joinPrompt(q){const bid=(q.get("join")||"").replace(/[^a-z0-9]/g,"").slice(0,20),wk=(q.get("k")||"").replace(/[^a-z0-9]/g,"").slice(0,40),sec=(q.get("s")||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6),unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24);
@@ -1439,6 +1455,7 @@ function coJoinPrompt(q,kind){const id=(q.get(kind)||"").replace(/[^a-z0-9]/g,""
     <button class="btn" id="cjYes">Report to ${esc(co)}</button><button class="btn alt" data-sclose="1">Not now</button></div>`;
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")))}
 document.addEventListener("click",e=>{const t=e.target;
+  const lvb=t.closest("[data-lvl]");if(lvb){if(!isOwner())return denyMsg();setLevel(lvb.dataset.lvl);tabRedraw();toast(S.level==="co"?"Company level: tabs are platoons.":"Platoon level: tabs are sections.");return}
   if(t.id==="coMake"){const nm=($("#coNm").value||"").trim()||"Company";t.disabled=true;t.textContent="Setting up…";coCreate(nm).then(()=>{coNew=false;renderCo();toast("Company board ready. Text the links.")}).catch(err=>{t.disabled=false;t.textContent="Set up the company board";const o=$("#coOut");const m=String(err.message||err);if(o)o.textContent=/could not find|schema/i.test(m)?"Server needs setup part 14a and 14b (DATA → System check).":"Couldn't set up: "+m.slice(0,80)});return}
   if(t.id==="coNewB"){coNew=true;renderCo();return}if(t.id==="coCancel"){coNew=false;renderCo();return}
   if(t.id==="coRef"){coPoll();toast("Refreshing…");return}
@@ -1460,7 +1477,7 @@ function healthIssues(){const out=[];const B=S.board;
   if(S.sync&&S.sync.err)out.push({t:"Backup: "+S.sync.err,go:"data"});
   if(B){if(B.err)out.push({t:"Live sections: "+B.err,go:"live"});if(B.rerr)out.push({t:"Sharing rosters: "+B.rerr,go:"live"});if(S.hubErr)out.push({t:"FEED setup: "+S.hubErr,go:"live"});
     const keyed=Object.keys(B.sk||{});const never=keyed.filter(k=>!B.last[k]);const quiet=keyed.filter(k=>B.last[k]&&Date.now()-B.last[k].t>24*3600000);
-    if(never.length)out.push({t:"Section leaders not connected yet: "+never.join(", ")+". Text them their links.",go:"live"});
+    if(never.length)out.push({t:LV().heads+" not connected yet: "+never.join(", ")+". Text them their links.",go:"live"});
     if(quiet.length)out.push({t:quiet.join(", ")+(quiet.length>1?" haven't":" hasn't")+" sent an update in over 24 hr.",go:"live"})}
   if(S.mpErr)out.push({t:"My pages: "+S.mpErr,go:"data"});
   if(S.coRep&&S.coRep.err)out.push({t:"Company report: "+S.coRep.err,go:"co"});
@@ -1489,11 +1506,11 @@ document.addEventListener("click",e=>{const rs=e.target.closest("[data-lvreset]"
 function secAcks(sec){const f=mainFeed();if(!f)return[];const ids=new Set(S.roster.filter(m=>m.sec===sec).map(m=>m.id));
   return (f.posts||[]).filter(p=>Date.now()-p.t<14*86400000).slice(0,25).map(p=>{const A=(f.acks||{})[String(p.id)]||{};const g=[],pr=[];for(const [id,a] of Object.entries(A)){if(!ids.has(id))continue;if(a.c===2)pr.push([id,String(a.note||"").slice(0,40)]);else g.push(id)}return {id:p.id,g,pr}})}
 function slStats(f,p){const L=S.link;if(!L||!L.rk2||!f.pk||!f.hub)return"";const e=(L.acks||[]).find(x=>+x.id===+p.id);const to=p.to||{k:"all"};
-  let pool=S.roster.filter(m=>m.sec===L.mysec);if(to.k==="secs"&&!(to.s||[]).includes(L.sec))return"";if(to.k==="one")pool=pool.filter(m=>m.id===to.mid);if(!pool.length)return"";
+  let pool=L.whole?S.roster.slice():S.roster.filter(m=>m.sec===L.mysec);if(to.k==="secs"&&!(to.s||[]).includes(L.sec))return"";if(to.k==="one")pool=pool.filter(m=>(m.uid||m.id)===to.mid);if(!pool.length)return"";
   if(!e)return `<div class="note" style="margin:0">${esc(L.sec)}: Got its show here after ${esc(L.unit)}'s app syncs.</div>`;
-  const g=new Set(e.g),pr=new Map(e.pr);const miss=sorted(pool.filter(m=>!g.has(m.id)&&!pr.has(m.id)));const n=pool.length-miss.length;
+  const g=new Set(e.g),pr=new Map(e.pr);const U=m=>m.uid||m.id;const miss=sorted(pool.filter(m=>!g.has(U(m))&&!pr.has(U(m))));const n=pool.length-miss.length;
   return `<div class="fci"><div style="display:flex;justify-content:space-between"><span class="ttl">${esc(L.sec)} confirmed</span>${pr.size?`<span class="fcchip" style="color:var(--warn)">⚠ ${pr.size}</span>`:""}</div><div class="big">${n}<span style="font-size:15px;color:var(--muted);font-weight:700"> / ${pool.length}</span></div>
-    ${[...pr].map(([id,no])=>{const m=pool.find(x=>x.id===id);return m?`<div class="note" style="margin:0;color:var(--warn)">⚠ ${esc(m.rank+" "+lastOf(m))}: ${esc(no)}</div>`:""}).join("")}
+    ${[...pr].map(([id,no])=>{const m=pool.find(x=>U(x)===id);return m?`<div class="note" style="margin:0;color:var(--warn)">⚠ ${esc(m.rank+" "+lastOf(m))}: ${esc(no)}</div>`:""}).join("")}
     ${miss.length?`<div class="note" style="margin:0">Not yet: ${miss.map(m=>esc(m.rank+" "+lastOf(m))).join(" · ")}</div>${bcBatches(miss,L.unit+": new word in FEED you haven't confirmed. Open EOP Numbers → FEED.").map((x,i,a)=>`<a class="btn alt" href="${esc(x.href)}">Remind them${a.length>1?" ("+(i+1)+")":""}</a>`).join("")}`:`<div class="note" style="margin:0;color:var(--s-onhand);font-weight:700">Everyone in ${esc(L.sec)} confirmed.</div>`}</div>`}
 let rpT=null,rpBusy=false,hubBusy=false,rpullBusy=false;
 function autoLink(c){try{history.replaceState(null,"",location.pathname)}catch(e){}if(typeof closeSheet==="function")try{closeSheet()}catch(e){}
@@ -1511,13 +1528,13 @@ setInterval(()=>{if(!document.hidden&&S.link&&S.link.rk2&&!S.link.pulled)rosterP
 const mainFeed=()=>S.feeds.find(f=>f.lk&&f.main)||S.feeds.find(f=>f.lk)||null;
 function secKey(sec){const B=S.board;B.sk=B.sk||{};if(!B.sk[sec]){B.sk[sec]=b64url(crypto.getRandomValues(new Uint8Array(32)));B.rsig={};setTimeout(save,0)}return B.sk[sec]}
 const lsigOf=ms=>sigF(ms.map(m=>[m.id,m.status,dutyOf(m),m.start||"",m.end||"",m.loc||"",m.detail||"",m.due||{}]));
-const RPF=["id","rank","name","sec","status","duty","phone","detail","loc","start","end","parent","due"];
+const RPF=["id","rank","name","sec","status","duty","phone","detail","loc","start","end","parent","due","sub"];
 function sanDue(o){const r={};if(!o||typeof o!=="object")return r;for(const [k,v] of Object.entries(o).slice(0,40)){if(!v||typeof v!=="object")continue;r[String(k).slice(0,40)]={due:String(v.due||"").slice(0,10),done:String(v.done||"").slice(0,10)}}return r}
 function rpSchedule(){if(!S.board||!S.board.sk||S.role==="view")return;clearTimeout(rpT);rpT=setTimeout(rpPublish,4000)}
 async function rpPublish(force){const B=S.board;if(!B||!B.sk||rpBusy||S.role==="view")return;rpBusy=true;
   try{const f=mainFeed();const feed=f&&f.pk?{id:f.id,mk:f.mk,ek:f.ek,pk:f.pk,unit:f.unit}:null;B.rsig=B.rsig||{};let n=0;
     for(const [sec,k] of Object.entries(B.sk)){const ms=S.roster.filter(m=>m.sec===sec).map(m=>{const o={};for(const x of RPF)if(m[x]!=null&&m[x]!=="")o[x]=x==="duty"?dutyOf(m):m[x];o.duty=dutyOf(m);return o});
-      const body0={v:1,unit:unitName(),sec,secName:((SECTIONS.find(x=>x[0]===sec)||[])[1]||sec),secs:SECTIONS.map(x=>x[0]),sl:SECTIONS.map(x=>x.slice()),mode:S.mode||"military",ri:readyItems().map(it=>({n:it.n,mo:it.mo||0})),acks:secAcks(sec),ms,feed};const sg=sigF(body0);B.rat=B.rat||{};
+      const body0={v:1,lvl:S.level==="co"?"co":"plt",unit:unitName(),sec,secName:((SECTIONS.find(x=>x[0]===sec)||[])[1]||sec),secs:SECTIONS.map(x=>x[0]),sl:SECTIONS.map(x=>x.slice()),mode:S.mode||"military",ri:readyItems().map(it=>({n:it.n,mo:it.mo||0})),acks:secAcks(sec),ms,feed};const sg=sigF(body0);B.rat=B.rat||{};
       if(!force&&B.rsig[sec]===sg&&Date.now()-(B.rat[sec]||0)<6*3600000)continue;const body=Object.assign({hb:Date.now()},body0);
       if(S.source==="sample")continue;
       await SB.rpc("put_roster",{p_board:B.id,p_read_key:B.rk,p_sec:sec,p_ct:await fdEnc(k,body)});B.rsig[sec]=sg;B.rat[sec]=Date.now();n++}
@@ -1548,15 +1565,19 @@ async function rosterPull(force){const L=S.link;if(!L||!L.rk2||rpullBusy)return;
     if(!r){L.perr="Your OIC's board hasn't shared "+L.sec+" yet. It loads when they open the app.";rawSave();return}
     const t=Date.parse(r.updated_at)||0;if(!force&&L.pulled&&t<=(L.pt||0)){if(L.perr){L.perr="";rawSave()}return}
     const o=await fdDec(L.rk2,r.ct);if(!o||!Array.isArray(o.ms)){L.perr="Couldn't open the roster. Ask your OIC for a new link.";rawSave();return}
-    const cur=S.roster.filter(m=>m.sec===L.mysec);const dirty=L.pulled&&lsigOf(cur)!==(L.lsig||"");const takeSt=!dirty&&t>(L.sent||0);
-    const byId={};cur.forEach(m=>byId[m.id]=m);
-    const next=o.ms.slice(0,600).map(x=>{const m={};for(const k of RPF)if(k!=="due"&&x[k]!=null)m[k]=String(x[k]).slice(0,120);if(x.due)m.due=sanDue(x.due);m.sec=L.mysec;if(!STATUSES.includes(m.status))m.status="On Hand";
-      const old=byId[m.id];if(old){for(const k of Object.keys(old))if(!(k in m)&&!RPF.includes(k))m[k]=old[k];if(!takeSt){m.status=old.status;m.duty=dutyOf(old);for(const k of ["start","end","loc","detail","due"]){if(old[k])m[k]=old[k];else delete m[k]}}}return m});
-    if(S.source==="sample"){S.roster=[];S.source="link";S.loadedAt=dtg(new Date())}
+    const whole=o.lvl==="co";L.whole=whole;
+    const cur=whole?S.roster.slice():S.roster.filter(m=>m.sec===L.mysec);const dirty=L.pulled&&lsigOf(cur)!==(L.lsig||"");const takeSt=!dirty&&t>(L.sent||0);
+    const byId={},byN={};cur.forEach(m=>{byId[m.uid||m.id]=m;const k=fullK(m);byN[k]=byN[k]?"dup":m});
+    const next=o.ms.slice(0,600).map(x=>{const m={};for(const k of RPF)if(k!=="due"&&x[k]!=null)m[k]=String(x[k]).slice(0,120);if(x.due)m.due=sanDue(x.due);const ouid=m.id;m.uid=ouid;m.sec=whole?(/^[A-Z0-9]{1,6}$/.test(m.sub||"")?m.sub:"HQ"):L.mysec;if(whole)delete m.sub;if(!STATUSES.includes(m.status))m.status="On Hand";
+      const old=byId[ouid]||(whole&&byN[fullK(m)]&&byN[fullK(m)]!=="dup"?byN[fullK(m)]:null);if(old){m.id=old.id;if(whole&&!takeSt&&old.sec)m.sec=old.sec;for(const k of Object.keys(old))if(!(k in m)&&!RPF.includes(k))m[k]=old[k];if(!takeSt){m.status=old.status;m.duty=dutyOf(old);for(const k of ["start","end","loc","detail","due"]){if(old[k])m[k]=old[k];else delete m[k]}}}return m});
+    if(S.source==="sample"||(whole&&S.source!=="link")){S.roster=[];S.source="link";S.loadedAt=dtg(new Date())}
+    if(whole){const codes=[...new Set(next.map(m=>m.sec).filter(c=>c!=="ATT"))];const nm={};MIL_SECS.concat(SECTIONS).forEach(x=>{nm[x[0]]=nm[x[0]]||x[1]});
+      const ord=MIL_SECS.map(x=>x[0]);codes.sort((a,b)=>(ord.indexOf(a)<0?99:ord.indexOf(a))-(ord.indexOf(b)<0?99:ord.indexOf(b)));const nw=(codes.length?codes:["HQ"]).slice(0,10).map(c=>[c,nm[c]||c]);
+      if(JSON.stringify(nw)!==JSON.stringify(SECTIONS)){SECTIONS.splice(0,SECTIONS.length,...nw);S.secs=nw}}
     if(S.source==="link"&&Array.isArray(o.ri)&&o.ri.length){const k=MODES[S.mode]?S.mode:"military";S.ready[k]=o.ri.slice(0,40).map(x=>({n:String(x.n).slice(0,40),mo:+x.mo||0}))}
     L.acks=Array.isArray(o.acks)?o.acks.slice(0,30):[];
-    if(S.source==="link"&&Array.isArray(o.sl)&&o.sl.length&&o.sl.every(x=>Array.isArray(x)&&x[0])){const nw=o.sl.slice(0,10).map(x=>[String(x[0]).replace(/[^A-Z0-9]/g,"").slice(0,6),String(x[1]||x[0]).slice(0,30)]);if(JSON.stringify(nw)!==JSON.stringify(SECTIONS)){SECTIONS.splice(0,SECTIONS.length,...nw);S.secs=nw}}
-    S.roster=S.roster.filter(m=>m.sec!==L.mysec).concat(next);
+    if(!whole&&S.source==="link"&&Array.isArray(o.sl)&&o.sl.length&&o.sl.every(x=>Array.isArray(x)&&x[0])){const nw=o.sl.slice(0,10).map(x=>[String(x[0]).replace(/[^A-Z0-9]/g,"").slice(0,6),String(x[1]||x[0]).slice(0,30)]);if(JSON.stringify(nw)!==JSON.stringify(SECTIONS)){SECTIONS.splice(0,SECTIONS.length,...nw);S.secs=nw}}
+    S.roster=whole?next:S.roster.filter(m=>m.sec!==L.mysec).concat(next);
     L.unit=String(o.unit||L.unit).slice(0,24);L.pt=t;if(o.hb)L.hb=+o.hb||0;L.pulled=true;L.perr="";L.lsig=lsigOf(next);
     if(takeSt){try{const items=await itemsFor(L.board,next);L.sig=next.length+"|"+items.join(",")}catch(e){}}
     if(o.feed&&o.feed.id){const F=o.feed;const own=S.feeds.find(f=>f.id===F.id);
@@ -2964,13 +2985,13 @@ function importCSV(text){
   const own=col("section")>=0&&col("status")>=0;
   const out=[];let n=0;
   for(const r of rows.slice(hi+1)){const rank=(r[col("rank")]||"").toUpperCase();const name=r[col("name")]||"";if(!rank||!name)continue;
-    if(own) out.push({id:"m"+(++n),rank,name,sec:(SECTIONS.some(s=>s[0]===r[col("section")])||r[col("section")]==="ATT")?r[col("section")]:SECTIONS[0][0],parent:col("parent unit")>=0?(r[col("parent unit")]||""):"",duty:col("duty")>=0&&DUTIES.includes(r[col("duty")])?r[col("duty")]:"Full Duty",status:mapStatus(r[col("status")]),detail:r[col("detail")]||"",loc:r[col("location")]||"",edd:r[col("edd")]||"",phone:normPh(r[col("phone")]||""),phone2:normPh(r[col("alt phone")]||""),wpn:(r[col("weapon")]||"")?{t:r[col("weapon")],rack:r[col("rack")]||"",s4:digits(r[col("serial4")]||"").slice(-4)}:undefined,start:r[col("start")]||"",end:r[col("end")]||""});
-    else{const det=r[col("duty status")]||"";out.push({id:"m"+(++n),rank,name,sec:mapSec(r[col("unit")]),status:mapStatus(det),detail:det,loc:r[col("location")]||"",start:fmtD(r[col("start date")]),end:fmtD(r[col("end date")]),edd:fmtD(r[col("edd")]||"")})}}
+    if(own) out.push({id:"m"+(++n),rank,name,sec:(SECTIONS.some(s=>s[0]===r[col("section")])||r[col("section")]==="ATT")?r[col("section")]:SECTIONS[0][0],sub:(r[col("sub section")]||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6)||undefined,parent:col("parent unit")>=0?(r[col("parent unit")]||""):"",duty:col("duty")>=0&&DUTIES.includes(r[col("duty")])?r[col("duty")]:"Full Duty",status:mapStatus(r[col("status")]),detail:r[col("detail")]||"",loc:r[col("location")]||"",edd:r[col("edd")]||"",phone:normPh(r[col("phone")]||""),phone2:normPh(r[col("alt phone")]||""),wpn:(r[col("weapon")]||"")?{t:r[col("weapon")],rack:r[col("rack")]||"",s4:digits(r[col("serial4")]||"").slice(-4)}:undefined,start:r[col("start")]||"",end:r[col("end")]||""});
+    else{const det=r[col("duty status")]||"";const cm=S.level==="co"?mapCo(r[col("unit")]):null;out.push({id:"m"+(++n),rank,name,sec:cm?cm.sec:mapSec(r[col("unit")]),sub:cm&&cm.sub?cm.sub:undefined,status:mapStatus(det),detail:det,loc:r[col("location")]||"",start:fmtD(r[col("start date")]),end:fmtD(r[col("end date")]),edd:fmtD(r[col("edd")]||"")})}}
   if(!out.length)throw new Error("The file had a header but no Marines under it.");
   return {roster:out,own};
 }
 function exportCSV(){const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
-  return ["Rank,Name,Section,Status,Detail,Location,Start,End,Parent Unit,Duty,EDD,Phone,Alt Phone,Weapon,Rack,Serial4"].concat(sorted(S.roster).map(m=>[m.rank,m.name,m.sec,m.status,m.detail,m.loc,m.start,m.end,m.parent||"",dutyOf(m),m.edd||"",m.phone||"",m.phone2||"",m.wpn?m.wpn.t:"",m.wpn?m.wpn.rack:"",m.wpn?m.wpn.s4:""].map(q).join(","))).join("\n")}
+  return ["Rank,Name,Section,Status,Detail,Location,Start,End,Parent Unit,Duty,EDD,Phone,Alt Phone,Weapon,Rack,Serial4,Sub Section"].concat(sorted(S.roster).map(m=>[m.rank,m.name,m.sec,m.status,m.detail,m.loc,m.start,m.end,m.parent||"",dutyOf(m),m.edd||"",m.phone||"",m.phone2||"",m.wpn?m.wpn.t:"",m.wpn?m.wpn.rack:"",m.wpn?m.wpn.s4:"",m.sub||""].map(q).join(","))).join("\n")}
 
 /* ---------- events ---------- */
 document.addEventListener("click",e=>{
