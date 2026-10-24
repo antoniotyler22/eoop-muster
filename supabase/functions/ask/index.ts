@@ -14,13 +14,13 @@ const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
 const DOMAINS: Record<string, string[]> = {
-  military: ["marines.mil", "hqmc.marines.mil", "navy.mil", "secnav.navy.mil", "mynavyhr.navy.mil", "army.mil", "armypubs.army.mil",
-    "af.mil", "e-publishing.af.mil", "spaceforce.mil", "uscg.mil", "defense.gov", "esd.whs.mil", "dfas.mil", "tricare.mil",
+  military: ["marines.mil", "navy.mil", "army.mil",
+    "af.mil", "spaceforce.mil", "uscg.mil", "defense.gov", "esd.whs.mil", "dfas.mil", "tricare.mil",
     "militaryonesource.mil", "va.gov", "jcs.mil", "uscode.house.gov", "ecfr.gov"],
-  police: ["justice.gov", "bja.ojp.gov", "nij.ojp.gov", "ojp.gov", "dol.gov", "osha.gov", "ecfr.gov", "uscode.house.gov", "cdc.gov"],
+  police: ["justice.gov", "ojp.gov", "dol.gov", "osha.gov", "ecfr.gov", "uscode.house.gov", "cdc.gov"],
   jobs: ["osha.gov", "dol.gov", "cdc.gov", "ecfr.gov", "fmcsa.dot.gov", "epa.gov", "nfpa.org"],
   hr: ["dol.gov", "eeoc.gov", "opm.gov", "irs.gov", "ecfr.gov", "osha.gov", "ssa.gov", "uscis.gov"],
-  civilian: ["ready.gov", "cdc.gov", "redcross.org", "osha.gov", "nws.noaa.gov", "weather.gov", "fema.gov"],
+  civilian: ["ready.gov", "cdc.gov", "redcross.org", "osha.gov", "noaa.gov", "weather.gov", "fema.gov"],
 };
 const TOPIC: Record<string, string> = {
   military: "U.S. military orders, directives and regulations (Marine Corps orders/MCOs, MARADMINs, NAVADMINs, DoD instructions, service regulations), administration, leave and liberty, pay and entitlements, PFT/CFT and fitness standards, uniforms, promotions, PME, training, safety, and UCMJ basics",
@@ -43,7 +43,8 @@ Style: the reader is on a phone. Lead with the direct answer in 1-2 sentences, t
 
 type Cfg = { on: boolean; who: "all" | "feed" | "leaders"; cap?: number; per?: number; feeds?: string[] };
 async function getCfg(): Promise<Cfg> {
-  const { data } = await db.from("ai_settings").select("cfg").eq("id", 1).maybeSingle();
+  const { data, error } = await db.from("ai_settings").select("cfg").eq("id", 1).maybeSingle();
+  if (error) return { on: true, who: "all", feeds: [] };
   const c = (data?.cfg ?? {}) as Partial<Cfg>;
   return { on: c.on !== false, who: (["all", "feed", "leaders"].includes(c.who as string) ? c.who : "all") as Cfg["who"], cap: c.cap, per: c.per, feeds: Array.isArray(c.feeds) ? c.feeds : [] };
 }
@@ -114,13 +115,17 @@ Deno.serve(async (req) => {
 
   // Daily caps: whole server and each device (by a one-way hash of its network address).
   const cap = cfg.cap ?? Number(Deno.env.get("AI_DAILY_CAP") ?? 150), per = cfg.per ?? Number(Deno.env.get("AI_PER_DEVICE") ?? 20);
+  // Per phone: the app's own random phone ID (falls back to network address). A whole unit on base Wi-Fi shares one address.
   const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
-  const dev = await sha(ip + "|" + (Deno.env.get("SUPABASE_URL") ?? ""));
-  const all = await db.rpc("ai_bump", { p_k: "all" });
-  if (all.error) return json({ error: "Ask isn't set up yet (usage table missing)." }, 503);
-  if ((all.data as number) > cap) return json({ error: "Today's question limit for your unit has been reached. Try again tomorrow." }, 429);
+  const devId = typeof body.dev === "string" && /^[a-z0-9]{16,40}$/.test(body.dev) ? body.dev : "ip:" + ip;
+  const dev = await sha(devId + "|" + (Deno.env.get("SUPABASE_URL") ?? ""));
+  // Check the phone's own limit first, so one phone hitting its limit doesn't use up the unit's.
   const mine = await db.rpc("ai_bump", { p_k: "d:" + dev });
+  if (mine.error) return json({ error: "Ask isn't set up yet (usage table missing). Leader: run SQL part 10." }, 503);
   if ((mine.data as number) > per) return json({ error: "You've reached today's question limit on this phone. Try again tomorrow." }, 429);
+  const all = await db.rpc("ai_bump", { p_k: "all" });
+  if (all.error) return json({ error: "Ask isn't set up yet (usage table missing). Leader: run SQL part 10." }, 503);
+  if ((all.data as number) > cap) return json({ error: "Today's question limit for your unit has been reached. Try again tomorrow." }, 429);
 
   const messages: { role: string; content: unknown }[] = [];
   if (Array.isArray(body.hist)) {

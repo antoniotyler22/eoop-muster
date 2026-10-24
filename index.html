@@ -483,7 +483,7 @@ function startApp(){const s=document.createElement("script");s.textContent=docum
 /* live check-ins: Supabase relay. Stores no names: only salted hashes of the words a person types, a code and a short note. */
 const SB=window.SB={url:"https://vdhxhvklwbimjpoomnui.supabase.co",key:"sb_publishable_e1VOssMquS5UkOnwEWTrfA_fPwZqorM",
   vapid:"BGWkOoK35r0UiMWL6bYX1uwz9L_8qXwQvp4Qc_4Bv_8Ddy3c-iKPpU_ynvIxt116eKBQvlFvtBobyHKB910S3q4",
-  nfn:"notify",async findNotify(){for(const n of ["notify","Notify"]){try{const r=await fetch(this.url+"/functions/v1/"+n,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:"{}"});if(r.status!==404){this.nfn=n;try{localStorage.setItem("eop-nfn",n)}catch(e){}return n}}catch(e){}}return this.nfn},
+  nfn:"notify",afn:"ask",async findAsk(){for(const n of ["ask","Ask"]){try{const r=await fetch(this.url+"/functions/v1/"+n,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify({ping:1})});if(r.status!==404){this.afn=n;return n}}catch(e){}}return this.afn},async findNotify(){for(const n of ["notify","Notify"]){try{const r=await fetch(this.url+"/functions/v1/"+n,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:"{}"});if(r.status!==404){this.nfn=n;try{localStorage.setItem("eop-nfn",n)}catch(e){}return n}}catch(e){}}return this.nfn},
   notify(rid,body){try{fetch(this.url+"/functions/v1/"+this.nfn,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify(body||{recall:rid}),keepalive:true}).catch(()=>{})}catch(e){}},
   async rpc(fn,args){const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),12000);
     try{const r=await fetch(this.url+"/rest/v1/rpc/"+fn,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify(args),signal:ac.signal});
@@ -750,7 +750,7 @@ const DUTIES=["Full Duty","Light Duty","LIMDU"];
 const EVENTS=["Unit PT","Hike","Run","PFT","CFT","Field event"];
 const RANKS=["CWO5","CWO4","CWO3","CWO2","WO","MAJ","CAPT","1STLT","2NDLT","SGTMAJ","MGYSGT","1STSGT","MSGT","GYSGT","SSGT","SGT","CPL","LCPL","PFC","PVT"];
 const MIL_RANKS=RANKS.slice();
-const KEY="eoop-muster-v1";setTimeout(()=>{try{const n=localStorage.getItem("eop-nfn");if(n)SB.nfn=n}catch(e){}SB.findNotify()},1500);const H0=location.hash||"",T0=Date.now();
+const KEY="eoop-muster-v1";setTimeout(()=>{try{const n=localStorage.getItem("eop-nfn");if(n)SB.nfn=n}catch(e){}SB.findNotify();SB.findAsk()},1500);const H0=location.hash||"",T0=Date.now();
 
 function sampleRoster(){
   const spec=[["HQ",["MSGT","SGT","CPL","LCPL"],["On Hand","On Hand","TAD","Leave"]],
@@ -1493,10 +1493,10 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.link&&S
 /* ---------- ASK: OIC controls + status ---------- */
 let akCtl=null,akCtlBusy=false,akCtlErr="",akShowKey=false;
 const akHidden=()=>!!(S.askSt&&S.askSt.on===false);
-async function akStatus(force){if(!force&&S.askSt&&Date.now()-S.askSt.t<6*3600000)return;try{const r=await fetch(SB.url+"/functions/v1/ask",{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify({ping:1})});
+async function akStatus(force){if(!force&&S.askSt&&Date.now()-S.askSt.t<6*3600000)return;try{const r=await fetch(SB.url+"/functions/v1/"+SB.afn,{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify({ping:1})});
   if(r.status===404){S.askSt={on:false,setup:false,t:Date.now()}}else{const o=await r.json();S.askSt={on:o.on!==false&&!!o.key,who:o.who||"all",admin:!!o.admin,setup:!!o.key,t:Date.now()}}rawSave();if(["board","today","ask"].includes(view)){const y=window.scrollY;render();window.scrollTo(0,y)}}catch(e){}}
 async function akManage(set){akCtlBusy=true;akCtlErr="";renderAsk();
-  try{const r=await fetch(SB.url+"/functions/v1/ask",{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify({manage:1,admin:S.askAdmin,set})});const o=await r.json().catch(()=>({}));
+  try{const r=await fetch(SB.url+"/functions/v1/"+SB.afn,{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify({manage:1,admin:S.askAdmin,set})});const o=await r.json().catch(()=>({}));
     if(r.status===404)throw new Error("The ask function isn't deployed yet.");if(!r.ok)throw new Error(o.error||"Couldn't reach Ask controls.");akCtl=o;S.askSt={on:o.cfg.on,who:o.cfg.who,admin:true,setup:true,t:Date.now()};save();if(set)toast("Ask settings saved")}
   catch(e){akCtlErr=String(e.message||e)}finally{akCtlBusy=false;if(view==="ask")renderAsk()}}
 function akCtlHTML(){if(!canEdit()||memberMode())return"";
@@ -1529,7 +1529,7 @@ function akPII(q){if(/\b\d{3}-\d{2}-\d{4}\b/.test(q))return "That looks like a S
 function akFmt(t){return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/^\s*[-•*]\s+/gm,"• ").replace(/\n/g,"<br>")}
 async function akSend(q){akBusy=true;akErr="";renderAsk();
   const hist=S.ask.slice(0,2).reverse().map(x=>({q:x.q,a:x.a}));const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),75000);
-  try{const r=await fetch(SB.url+"/functions/v1/ask",{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify(Object.assign({q,mode:MODES[S.mode]?S.mode:"military",hist},(()=>{const f=S.feeds.find(f=>!f.lk);return f?{feed:f.id,mk:f.mk}:{}})(),S.askAdmin&&canEdit()?{admin:S.askAdmin}:{})),signal:ac.signal});
+  try{const r=await fetch(SB.url+"/functions/v1/"+SB.afn,{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify(Object.assign({q,dev:(S.dev=S.dev||rndId(24)),mode:MODES[S.mode]?S.mode:"military",hist},(()=>{const f=S.feeds.find(f=>!f.lk);return f?{feed:f.id,mk:f.mk}:{}})(),S.askAdmin&&canEdit()?{admin:S.askAdmin}:{})),signal:ac.signal});
     let o={};try{o=await r.json()}catch(e){}
     if(r.status===404)throw new Error("Ask isn't set up on your server yet. Leader: DATA → System check.");
     if((r.status===401||r.status===403)&&!o.error)throw new Error("Ask is set up but JWT checking is on. Leader: turn off Enforce JWT verification for the ask function.");
@@ -1814,7 +1814,7 @@ async function scRun(){scBusy=true;scRes={at:Date.now(),g:{},nt:null};renderSys(
   await Promise.all(SC.map(async g=>{const r=await Promise.all(g.t.map(one));scRes.g[g.k]={ok:r.every(x=>x.ok),miss:r.filter(x=>x.miss).map(x=>x.fn),perm:r.filter(x=>x.perm).map(x=>x.fn),net:r.some(x=>x.net)}}));
   const nt={};try{await SB.findNotify();const r=await fetch(SB.url+"/functions/v1/"+SB.nfn,{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:"{}"});nt.s=r.status;nt.t=(await r.text()).slice(0,120);
     if(r.status===400&&/bad/.test(nt.t)){const r2=await fetch(SB.url+"/functions/v1/"+SB.nfn,{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify({feed:"aaaaaaaaaa",lk:"a".repeat(24)})});nt.s2=r2.status;nt.t2=(await r2.text()).slice(0,60)}}catch(e){nt.err=String(e.message||e)}
-  scRes.nt=nt;{const ak={};try{const r=await fetch(SB.url+"/functions/v1/ask",{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify({ping:1})});ak.s=r.status;try{Object.assign(ak,await r.json())}catch(e){}}catch(e){ak.err=1}scRes.ak=ak}
+  scRes.nt=nt;{const ak={};try{await SB.findAsk();const r=await fetch(SB.url+"/functions/v1/"+SB.afn,{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify({ping:1})});ak.s=r.status;try{Object.assign(ak,await r.json())}catch(e){}}catch(e){ak.err=1}scRes.ak=ak}
   scBusy=false;renderSys()}
 function akState(a){if(!a)return null;if(a.err)return {ok:0,msg:"Couldn't reach it. Check signal."};if(a.s===404)return {ok:0,msg:"Optional. Not set up: create the Edge Function named ask, add ANTHROPIC_API_KEY, run part 10."};
   if(a.s===401||a.s===403)return {ok:0,msg:"JWT checking is on. Open ask → Details and turn off Enforce JWT verification."};if(a.s>=500)return {ok:0,msg:"It crashed. Usually the code was cut off when pasted."};
@@ -2008,7 +2008,7 @@ async function exportXL(kind){try{const X=await loadXLSX();const wb=X.utils.book
 const xlBtn=k=>`<button class="chip" data-xl="${k}" style="cursor:pointer;font-size:13px">⬇ Excel</button>`;
 
 /* ---------- backup + sync: encrypted with a recovery code; server stores an unreadable blob ---------- */
-const SYNC_SKIP=["sync","pushOn","link","ts","onb","role","me","ask","askSt"];const CODE_AB="23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+const SYNC_SKIP=["sync","pushOn","link","ts","onb","role","me","ask","askSt","dev","hubMode"];const CODE_AB="23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 let syncT=null,syncBusy=false,syncShow=false;
 const fnv=str=>{let h=0x811c9dc5;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)}return (h>>>0).toString(36)+str.length.toString(36)};
 const sig=v=>fnv(JSON.stringify(v===undefined?null:v));
