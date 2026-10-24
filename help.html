@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Quick-start · Accounted For / EOP Numbers</title>
 <style>
 @font-face{font-family:"Plus Jakarta Sans";font-weight:400;font-display:swap;src:url(fonts/pjs-400.woff2) format("woff2")}
@@ -9,7 +9,9 @@
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
 main{max-width:720px;margin:0 auto;padding:28px 16px 60px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px 8px;margin-top:14px}
 h1{font-size:28px;font-weight:800;margin:0}h2{font-size:19px;font-weight:800;margin:0 0 6px}li{margin-bottom:8px}a{color:var(--acc);font-weight:700}.muted{color:var(--muted)}
-</style></head><body><main>
+.backbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;border-bottom:1px solid var(--line)}.backbar a{display:inline-flex;align-items:center;min-height:44px;font-weight:800;text-decoration:none;font-size:17px}
+</style></head><body><nav class="backbar"><a href="./" id="backApp">&#8592; Back to app</a></nav>
+<script>document.getElementById("backApp").addEventListener("click",function(e){e.preventDefault();try{if(window.opener&&!window.opener.closed){window.close();return}}catch(x){}if(history.length>1&&document.referrer&&new URL(document.referrer).origin===location.origin){history.back()}else{location.href="./"}});</script><main>
 <h1>Quick-start guide</h1><p class="muted">For leaders, section leaders and members. Five minutes to get running.</p>
 <div class="card"><h2>1. Leader: first 10 minutes</h2><ol>
 <li>Open the app, pick your version (Military, Police, Jobs, HR or Civilian), and add it to your Home Screen (iPhone: Share → Add to Home Screen).</li>

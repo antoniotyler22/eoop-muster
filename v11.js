@@ -233,5 +233,48 @@ document.addEventListener("click",e=>{if(e.target.id!=="v11NameSave")return;S.ap
   const u=cleanName($("#v11UnitN").value||"");if(u||S.unit)S.unit=u;save();closeSheet();paintTitle();render();toast("Saved: "+appName()+" · "+unitName())});
 paintTitle();
 
+/* ================= 7. FIX A WRONG LIST: undo a load, remove duplicates, remove people, clear numbers ================= */
+S.loads=S.loads||[];
+if(typeof SYNC_SKIP==="object"&&Array.isArray(SYNC_SKIP))SYNC_SKIP.push("loads");
+const snap=()=>({roster:JSON.parse(JSON.stringify(S.roster)),source:S.source,loadedAt:S.loadedAt||""});
+function logLoad(kind,label){const e={id:"L"+Date.now().toString(36)+rndId(3),t:Date.now(),kind,label:String(label||"").slice(0,60),before:snap(),n0:S.roster.length,ph0:S.roster.filter(m=>m.phone).length};
+  S.loads.unshift(e);S.loads=S.loads.slice(0,5);save();setTimeout(()=>{e.n1=S.roster.length;e.ph1=S.roster.filter(m=>m.phone).length;save();if(view==="data")redraw(tabRedraw)},3500)}
+/* snapshot right before the app reads a file or adds people */
+document.addEventListener("change",e=>{const t=e.target;if(!t||t.type!=="file"||!t.files||!t.files[0])return;const nm=t.files[0].name;
+  if(t.id==="file")logLoad("Loaded roster",nm);else if(t.id==="fileAdd"||t.id==="coFileAdd")logLoad("Added from file",nm);else if(t.id==="rcFile"||t.id==="rcFileR")logLoad("Phone numbers",nm)},true);
+document.addEventListener("click",e=>{const t=e.target;if(!t||!t.id)return;
+  if(t.id==="amListAdd")logLoad("Added people","typed list");else if(t.id==="rvSave")logLoad("Phone numbers","saved numbers");else if(t.id==="rcPasteGo")logLoad("Phone numbers","pasted numbers")},true);
+const nkey2=m=>String(m.rank||"").toUpperCase().replace(/[^A-Z0-9]/g,"")+"|"+String(m.name||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+function dupes(){const seen=new Map(),out=[];for(const m of S.roster){const k=nkey2(m);if(!k.split("|")[1])continue;if(seen.has(k))out.push([seen.get(k),m]);else seen.set(k,m)}return out}
+let rmSel=new Set(),rmQ="",rmOpen=false;
+function fixHTML(){const D=dupes();const L=S.loads;const ph=S.roster.filter(m=>m.phone).length;
+  let h=`<h2>Fix a wrong list</h2><div class="panel" id="v11Fix"><p class="note">Loaded the wrong file or the same one twice? Undo it, remove duplicates, or pick people to remove.</p>`;
+  if(L.length)h+=`<b>Recent loads</b><div class="alist">${L.map((e,i)=>`<div class="rrow" style="--sc:var(--line)"><div class="who"><b>${esc(e.kind)}</b> · ${esc(e.label)}<div class="ph">${ago(e.t)} · ${e.kind==="Phone numbers"?(e.ph1!=null?`numbers ${e.ph0} → ${e.ph1}`:"numbers"):(e.n1!=null?`people ${e.n0} → ${e.n1}`:"")}</div></div>
+      <button class="btn ${armed==="v11undo"+e.id?"warn":"alt"}" data-v11undo="${e.id}">${armed==="v11undo"+e.id?(i?"Tap again: undo this and the "+i+" newer":"Tap again to undo"):"Undo"}</button></div>`).join("")}</div>`;
+  else h+=`<p class="note">No loads yet on this version. From now on every roster or number file you load shows here with an Undo.</p>`;
+  h+=D.length?`<button class="btn warn" id="v11Dedupe">${armed==="v11dedupe"?"Tap again: remove "+D.length+" duplicate"+(D.length>1?"s":""):"Remove "+D.length+" duplicate"+(D.length>1?"s":"")+" (same rank and name)"}</button>`:`<p class="note" style="color:var(--s-onhand)">✓ No duplicates.</p>`;
+  h+=`<button class="btn alt" id="v11RmOpen">${rmOpen?"Close":"Pick people to remove"}</button>`;
+  if(rmOpen){const q=rmQ.toLowerCase();const list=sorted(S.roster).filter(m=>!q||(m.rank+" "+m.name+" "+m.sec).toLowerCase().includes(q));
+    h+=`<input class="search" id="v11RmQ" type="search" placeholder="Find a person" value="${esc(rmQ)}"><div class="row2"><button class="btn alt" id="v11RmAll">Select all shown (${list.length})</button><button class="btn alt" id="v11RmNone">Clear selection</button></div>
+      <div class="alist" style="max-height:340px;overflow:auto">${list.slice(0,400).map(m=>`<label class="tog" style="padding:6px 2px;border-bottom:1px solid var(--line)"><input type="checkbox" data-v11rm1="${m.id}"${rmSel.has(m.id)?" checked":""}> <span><b>${esc(m.rank)}</b> ${esc(m.name)} <span class="note">· ${esc(m.sec)}</span></span></label>`).join("")}</div>
+      <button class="btn warn" id="v11RmGo"${rmSel.size?"":" disabled"}>${armed==="v11rmgo"?"Tap again: remove "+rmSel.size:"Remove "+rmSel.size+" selected"}</button>`}
+  h+=ph?`<button class="btn warn" id="v11ClrPh">${armed==="v11clrph"?"Tap again: delete all "+ph+" phone numbers":"Delete all phone numbers ("+ph+")"}</button>`:"";
+  return h+`</div>`}
+{const _rd=renderData;renderData=function(){_rd.apply(this,arguments);const r=$("#reset");const pnl=r&&r.closest(".panel");if(pnl)pnl.insertAdjacentHTML("afterend",fixHTML());else $("#main").insertAdjacentHTML("afterbegin",fixHTML())}}
+function afterRosterChange(msg){save();try{if(S.board)rpPublish(true)}catch(e){}redraw(tabRedraw);renderTabs();toast(msg)}
+document.addEventListener("click",e=>{const t=e.target;
+  const u=t.closest("[data-v11undo]");if(u){const id=u.dataset.v11undo;if(armed!=="v11undo"+id){armed="v11undo"+id;redraw(tabRedraw);return}armed=null;const i=S.loads.findIndex(x=>x.id===id);if(i<0)return;const b=S.loads[i].before;
+    S.roster=b.roster;S.source=b.source;S.loadedAt=b.loadedAt;S.loads=S.loads.slice(i+1);afterRosterChange("Undone. Back to "+S.roster.length+" people.");return}
+  if(t.id==="v11Dedupe"){if(armed!=="v11dedupe"){armed="v11dedupe";redraw(tabRedraw);return}armed=null;const D=dupes();logLoad("Removed duplicates",D.length+" removed");const gone=new Set();
+    for(const [keep,dup] of D){if(!keep.phone&&dup.phone)keep.phone=dup.phone;if(!keep.phone2&&dup.phone2)keep.phone2=dup.phone2;gone.add(dup.id)}S.roster=S.roster.filter(m=>!gone.has(m.id));afterRosterChange(gone.size+" duplicates removed");return}
+  if(t.id==="v11RmOpen"){rmOpen=!rmOpen;rmSel=new Set();armed=null;redraw(tabRedraw);return}
+  if(t.id==="v11RmAll"){const q=rmQ.toLowerCase();S.roster.filter(m=>!q||(m.rank+" "+m.name+" "+m.sec).toLowerCase().includes(q)).forEach(m=>rmSel.add(m.id));redraw(tabRedraw);return}
+  if(t.id==="v11RmNone"){rmSel=new Set();redraw(tabRedraw);return}
+  if(t.id==="v11RmGo"){if(!rmSel.size)return;if(armed!=="v11rmgo"){armed="v11rmgo";redraw(tabRedraw);return}armed=null;const n=rmSel.size;logLoad("Removed people",n+" removed");S.roster=S.roster.filter(m=>!rmSel.has(m.id));rmSel=new Set();rmOpen=false;
+    if(!S.roster.length){S.roster=sampleRoster();S.source="sample"}afterRosterChange(n+" removed");return}
+  if(t.id==="v11ClrPh"){if(armed!=="v11clrph"){armed="v11clrph";redraw(tabRedraw);return}armed=null;logLoad("Phone numbers","deleted all numbers");S.roster.forEach(m=>{delete m.phone;delete m.phone2});afterRosterChange("All phone numbers deleted")}});
+document.addEventListener("change",e=>{const c=e.target.closest&&e.target.closest("[data-v11rm1]");if(!c)return;const id=c.dataset.v11rm1;c.checked?rmSel.add(id):rmSel.delete(id);armed=null;const b=$("#v11RmGo");if(b){b.disabled=!rmSel.size;b.textContent="Remove "+rmSel.size+" selected"}});
+document.addEventListener("input",e=>{if(e.target.id!=="v11RmQ")return;rmQ=e.target.value;const pos=e.target.selectionStart;redraw(tabRedraw);const q=$("#v11RmQ");if(q){q.focus();q.setSelectionRange(pos,pos)}});
+
 render();
 })();

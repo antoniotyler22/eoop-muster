@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Privacy Policy · Accounted For</title>
 <style>
 @font-face{font-family:"Plus Jakarta Sans";font-weight:400;font-display:swap;src:url(fonts/pjs-400.woff2) format("woff2")}
@@ -14,7 +14,9 @@ main{max-width:720px;margin:0 auto;padding:28px 16px 60px}
 h1{font-size:28px;font-weight:800;margin:0}h2{font-size:18px;font-weight:800;margin:0 0 6px}
 p,li{margin:0 0 12px}.muted{color:var(--muted)}a{color:var(--acc);font-weight:700}
 .key{border-left:4px solid var(--acc)}
-</style></head><body><main>
+.backbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;border-bottom:1px solid var(--line)}.backbar a{display:inline-flex;align-items:center;min-height:44px;font-weight:800;text-decoration:none;font-size:17px}
+</style></head><body><nav class="backbar"><a href="./" id="backApp">&#8592; Back to app</a></nav>
+<script>document.getElementById("backApp").addEventListener("click",function(e){e.preventDefault();try{if(window.opener&&!window.opener.closed){window.close();return}}catch(x){}if(history.length>1&&document.referrer&&new URL(document.referrer).origin===location.origin){history.back()}else{location.href="./"}});</script><main>
 <h1>Privacy Policy</h1>
 <p class="muted">Accounted For (the person running a team can rename the app header on their phone).<br>Effective October 25, 2026.</p>
 
