@@ -52,9 +52,23 @@ jobs:
             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/App.xcarchive" \
             -allowProvisioningUpdates \
             -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey_$KID.p8" -authenticationKeyID "$KID" -authenticationKeyIssuerID "$ISS" \
-            DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM="$TEAM" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             MARKETING_VERSION="${{ github.event.inputs.version }}" CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             archive
+          # The archive is built unsigned (a development profile would need a registered iPhone).
+          # Give it an ad-hoc signature that carries the app's entitlements (push, universal links);
+          # the export step below re-signs it with the App Store distribution profile and keeps them.
+          APP="$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+          ls "$APP" >/dev/null
+          if [ -d "$APP/Frameworks" ]; then
+            find "$APP/Frameworks" -maxdepth 1 \( -name "*.framework" -o -name "*.dylib" \) -exec codesign --force --sign - {} \;
+          fi
+          ENT="$RUNNER_TEMP/App.entitlements"
+          cp ios/App/App/App.entitlements "$ENT"
+          /usr/libexec/PlistBuddy -c "Add :application-identifier string $TEAM.com.antoniotyler.accountedfor" "$ENT"
+          /usr/libexec/PlistBuddy -c "Add :com.apple.developer.team-identifier string $TEAM" "$ENT"
+          codesign --force --sign - --entitlements "$ENT" "$APP"
+          codesign -d --entitlements - "$APP"
       - name: Upload to App Store Connect (TestFlight)
         env:
           KID: ${{ secrets.ASC_KEY_ID }}
