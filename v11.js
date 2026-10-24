@@ -300,10 +300,14 @@ function pushHelp(){const why=window.__pushWhy||"",err=window.__pushErr||"";cons
   else if(why==="denied"||(!N&&"Notification" in window&&Notification.permission==="denied")){msg="Notifications are turned off for Accounted For. Turn them on: Settings → Notifications → Accounted For → Allow Notifications. Then come back and tap the alert button again.";if(N)btn=`<a class="btn" href="app-settings:">Open Settings</a>`}
   else if(why==="notoken")msg="Your phone allowed alerts, but Apple didn't register it yet"+(err?" ("+esc(err)+")":"")+". Check that you have signal and try again in a minute. If it keeps happening, send this message to support.";
   else if(why==="default")msg="The permission question was closed without an answer. Tap the alert button again and choose Allow.";
-  else msg="Alerts couldn't be turned on"+(err?" ("+esc(err)+")":"")+". Try again with signal.";
+  else msg="Alerts couldn't be turned on"+(err?": "+esc(err):"")+". Tap the alert button once more. If this shows again, take a screenshot of this message and send it to support.";
+  const D=["app="+(N?"iphone":"web"+((typeof standalone==="function"&&standalone())?"-home":"")),"perm="+(why||(("Notification" in window)&&Notification.permission)||"?"),"plugin="+(window.NP&&window.NATIVE&&NP("PushNotifications")?"yes":"no"),"token="+((()=>{try{return localStorage.getItem("eop-apns")?"yes":"no"}catch(e){return"?"}})()),"err="+(err||"none")].join(" · ");
+  msg+=`<br><span class="note" style="font-size:11.5px;user-select:all">Details: ${esc(D)}</span>`;
   sheetCtx={kind:"v11push"};$("#sheetT").innerHTML=`Alerts aren't on yet<small>Here's how to fix it</small>`;
   $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><p style="margin:0">${msg}</p>${btn}<button class="btn alt" data-sclose="1">OK</button></div>`;sheetOpen()}
-{const _ps=pushSub;pushSub=async function(ask){window.__pushWhy="";let r=null;try{r=await _ps.apply(this,arguments)}catch(e){window.__pushErr=String(e&&e.message||e).slice(0,160);if(ask)setTimeout(pushHelp,400);throw e}if(!r&&ask)setTimeout(pushHelp,400);return r}}
+{const _ps=pushSub;pushSub=async function(ask){window.__pushWhy="";window.__pushErr="";let r=null;try{r=await _ps.apply(this,arguments);
+    if(!r&&ask&&window.NATIVE&&window.__pushWhy==="notoken"){window.__pushWhy="";r=await _ps.apply(this,arguments)}
+    if(!r&&!window.NATIVE&&!window.__pushWhy&&"Notification" in window)window.__pushWhy=Notification.permission==="granted"?"":Notification.permission}catch(e){window.__pushErr=String(e&&e.message||e).slice(0,160);if(ask)setTimeout(pushHelp,400);throw e}if(!r&&ask)setTimeout(pushHelp,400);return r}}
 document.addEventListener("click",e=>{const t=e.target;const b=t.closest("[data-v11ci]");if(b){const [fid,pid]=b.dataset.v11ci.split(":");const f=S.feeds.find(x=>x.id===fid);const p=f&&(f.posts||[]).find(x=>String(x.id)===pid);if(p)ciSheet(f,p);return}
   const c=t.closest("[data-v11cic]");if(c){ciSend(+c.dataset.v11cic);return}});
 
