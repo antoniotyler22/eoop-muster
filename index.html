@@ -1466,6 +1466,8 @@ document.addEventListener("change",e=>{if(e.target.id!=="coFileAdd"&&e.target.id
   mergeFile(f).then(n=>{toast(n+" new Marines added");if(o)o.textContent=n+" new Marines added. Everyone already here was kept.";if(S.board)rpPublish(true);render()}).catch(err=>{if(o)o.textContent=String(err.message||err)});e.target.value=""});
 
 /* ---------- COMPANY ROSTER: drop one file, build the whole company board ---------- */
+function coLabel(){return (S.coName||"").trim()||"Company"}
+function coFeedName(){const n=coLabel();return /company$/i.test(n)?n:n+" Company"}
 function plCode(v){const U=String(v||"").toUpperCase().trim();if(!U)return"";if(/^(HQ|HQS|HEADQUARTERS|CO HQ|COMPANY HQ|HQ PLT|HQ PLATOON)$/.test(U))return"HQ";
   const n=(U.match(/^(\d)\s*(?:ST|ND|RD|TH)?\s*(?:PLT|PLATOON)?$/)||U.match(/(\d)\s*(?:ST|ND|RD|TH)?\s*(?:PLT|PLATOON)/)||U.match(/(?:PLT|PLATOON)\s*(\d)/)||[])[1];if(n)return n+"PLT";
   return U.replace(/[^A-Z0-9]/g,"").slice(0,6)||""}
@@ -1486,25 +1488,27 @@ function companyParse(text){const rows=parseCSV(text).filter(r=>r.some(x=>x));co
     const st=cSt>=0?mapStatus(r[cSt]):"On Hand";
     out.push({id:"m"+(++n),rank:(cR>=0?r[cR]:"").toUpperCase().slice(0,10)||"",name:name.toUpperCase().trim().slice(0,60),sec:pc,sub:sub||undefined,status:st,detail:cSt>=0?(r[cSt]||""):"",loc:cLo>=0?(r[cLo]||""):"",start:cB>=0?fmtD(r[cB]):"",end:cE>=0?fmtD(r[cE]):"",phone:cPh>=0?normPh(r[cPh]||""):""})}
   if(!out.length)throw new Error("The file had a header but no people under it.");
+  const title=(rows.slice(0,hi).map(r=>r.find(x=>x&&x.trim()))||[]).filter(Boolean)[0]||"";
   const codes=[...new Set(out.map(m=>m.sec))].sort((a,b)=>(a==="HQ"?-1:b==="HQ"?1:a.localeCompare(b,undefined,{numeric:true}))).slice(0,10);
   for(const m of out)if(!codes.includes(m.sec))m.sec=codes[codes.length-1];
-  return {roster:out,secs:codes.map(c=>[c,plName(c,plRaw[c])]),byPlt:codes.map(c=>[c,out.filter(m=>m.sec===c).length]),subs:[...new Set(out.map(m=>m.sub).filter(Boolean))]}}
+  return {title:String(title).replace(/\(.*?\)/g,"").trim().slice(0,30),roster:out,secs:codes.map(c=>[c,plName(c,plRaw[c])]),byPlt:codes.map(c=>[c,out.filter(m=>m.sec===c).length]),subs:[...new Set(out.map(m=>m.sub).filter(Boolean))]}}
 async function companyLoad(f){const P=companyParse(await fileToCSV(f));
   if(S.level!=="co"){S.secsPlt=SECTIONS.map(x=>x.slice());S.level="co"}
   SECTIONS.splice(0,SECTIONS.length,...P.secs);S.secs=P.secs;S.secsCo=P.secs.map(x=>x.slice());
   const pm={};S.roster.forEach(m=>{if(m.phone)pm[m.name.toUpperCase()]=m.phone});P.roster.forEach(m=>{if(!m.phone&&pm[m.name])m.phone=pm[m.name]});
+  if(!S.coName&&P.title)S.coName=P.title;
   S.roster=P.roster;S.source="mol";S.loadedAt=new Date().toLocaleString([], {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});S.leaderMode=true;secDraft=null;S.snap=null;save();coLoaded=P;return P}
 let coLoaded=null;
 function coRosterHTML(){const co=S.level==="co"&&S.source!=="sample";
   return `<div class="panel" style="border-color:var(--brass)"><b>${co?"Company roster loaded":"Build the company board from a roster"}</b>
-    ${co?`<div class="note">${S.roster.length} people · ${SECTIONS.map(([k])=>`<b>${esc(k)}</b> ${S.roster.filter(m=>m.sec===k).length}`).join(" · ")}</div>
+    ${co?`<label for="coNmSet">Company name (shows on the company FEED and reports)</label><input type="text" id="coNmSet" maxlength="30" value="${esc(S.coName||"")}" placeholder="CLC 33"><div class="note">${S.roster.length} people · ${SECTIONS.map(([k])=>`<b>${esc(k)}</b> ${S.roster.filter(m=>m.sec===k).length}`).join(" · ")}</div>
       <div class="row2"><button class="btn" data-go="live">Send platoon OIC links</button><button class="btn alt" data-go="board">See the company</button></div>
       <button class="btn alt" data-addm="" style="width:100%">+ Add Marines</button>
       <label for="coFileAdd">Add more Marines from a file (keeps everyone already here)</label><input type="file" id="coFileAdd" accept=".csv,.xlsx,.xls,.numbers,text/csv">
       <p class="note">Or load an updated full roster below to replace it.</p>`:`<p class="note">Drop in the company roster (Excel or CSV). Each platoon becomes a tab, each platoon OIC gets a link, and the whole company shows here live.</p>
       <p class="note">Columns it reads: <b>Name</b> (or Last / First), <b>Rank</b>, <b>Platoon</b>, <b>Section</b>, Phone, Status. No Platoon column? It reads the Unit column (e.g. "1ST PLT-HE").</p>`}
     <label for="coFile">${co?"Load an updated company roster":"Company roster file"}</label><input type="file" id="coFile" accept=".csv,.xlsx,.xls,.numbers,text/csv"><div class="note" id="coFOut"></div></div>`}
-document.addEventListener("change",e=>{if(e.target.id!=="coFile")return;const f=e.target.files[0];if(!f)return;const o=$("#coFOut");if(o)o.textContent="Reading "+f.name+"…";
+document.addEventListener("change",e=>{if(e.target.id==="coNmSet"){S.coName=cleanName(e.target.value)||"";const f=mainFeed();if(f&&S.level==="co"){f.unit=coFeedName();if(S.board)rpPublish(true);mpSchedule()}save();toast("Company name saved");return}if(e.target.id!=="coFile")return;const f=e.target.files[0];if(!f)return;const o=$("#coFOut");if(o)o.textContent="Reading "+f.name+"…";
   companyLoad(f).then(P=>{toast(P.roster.length+" people loaded into "+P.secs.length+" platoons");if(S.board){rpPublish(true)}renderCo();window.scrollTo(0,0)}).catch(err=>{if(o)o.textContent=String(err.message||err)});e.target.value=""});
 
 /* ---------- COMPANY: several platoon boards rolled up live into one company view ----------
@@ -1651,11 +1655,14 @@ function secKey(sec){const B=S.board;B.sk=B.sk||{};if(!B.sk[sec]){B.sk[sec]=b64u
 const lsigOf=ms=>sigF(ms.map(m=>[m.id,m.status,dutyOf(m),m.start||"",m.end||"",m.loc||"",m.detail||"",m.due||{}]));
 const RPF=["id","rank","name","sec","status","duty","phone","detail","loc","start","end","parent","due","sub"];
 function sanDue(o){const r={};if(!o||typeof o!=="object")return r;for(const [k,v] of Object.entries(o).slice(0,40)){if(!v||typeof v!=="object")continue;r[String(k).slice(0,40)]={due:String(v.due||"").slice(0,10),done:String(v.done||"").slice(0,10)}}return r}
+function coFeedDown(){const L=S.link;if(!L||!L.whole)return null;const f=S.feeds.find(x=>x.hub&&!x.lk);return f?{id:f.id,mk:f.mk,ek:f.ek,unit:f.unit,sec:L.sec}:null}
+function joinCoFeed(C,me,mid){if(!C||!C.id||S.feeds.some(f=>f.id===C.id))return false;const nf={id:String(C.id).slice(0,20),mk:String(C.mk).slice(0,40),ek:String(C.ek).slice(0,60),unit:String(C.unit||"Company").slice(0,30),me:String(me||"").slice(0,30),sec:String(C.sec||"").slice(0,6),secsLink:[String(C.sec||"")],posts:[],seen:0,mine:{},hub2:1};if(mid)nf.mid=String(mid).slice(0,40);
+  S.feeds=S.feeds.filter(f=>!f.hub2||f.lk);S.feeds.push(nf);fdMeHash(nf).then(()=>{fdPollAll(true);if(typeof fdPushAttach==="function")fdPushAttach(nf)});return true}
 function rpSchedule(){if(!S.board||!S.board.sk||S.role==="view")return;clearTimeout(rpT);rpT=setTimeout(rpPublish,4000)}
 async function rpPublish(force){const B=S.board;if(!B||!B.sk||rpBusy||S.role==="view")return;rpBusy=true;
   try{const f=mainFeed();const feed=f&&f.pk?{id:f.id,mk:f.mk,ek:f.ek,pk:f.pk,unit:f.unit}:null;B.rsig=B.rsig||{};let n=0;
     for(const [sec,k] of Object.entries(B.sk)){const ms=S.roster.filter(m=>m.sec===sec).map(m=>{const o={};for(const x of RPF)if(m[x]!=null&&m[x]!=="")o[x]=x==="duty"?dutyOf(m):m[x];o.duty=dutyOf(m);return o});
-      const body0={v:1,lvl:S.level==="co"?"co":"plt",unit:unitName(),sec,secName:((SECTIONS.find(x=>x[0]===sec)||[])[1]||sec),secs:SECTIONS.map(x=>x[0]),sl:SECTIONS.map(x=>x.slice()),mode:S.mode||"military",ri:readyItems().map(it=>({n:it.n,mo:it.mo||0})),acks:secAcks(sec),ms,feed};const sg=sigF(body0);B.rat=B.rat||{};
+      const body0={v:1,lvl:S.level==="co"?"co":"plt",unit:unitName(),sec,secName:((SECTIONS.find(x=>x[0]===sec)||[])[1]||sec),secs:SECTIONS.map(x=>x[0]),sl:SECTIONS.map(x=>x.slice()),mode:S.mode||"military",ri:readyItems().map(it=>({n:it.n,mo:it.mo||0})),acks:secAcks(sec),cofeed:coFeedDown(),ms,feed};const sg=sigF(body0);B.rat=B.rat||{};
       if(!force&&B.rsig[sec]===sg&&Date.now()-(B.rat[sec]||0)<6*3600000)continue;const body=Object.assign({hb:Date.now()},body0);
       if(S.source==="sample")continue;
       await SB.rpc("put_roster",{p_board:B.id,p_read_key:B.rk,p_sec:sec,p_ct:await fdEnc(k,body)});B.rsig[sec]=sg;B.rat[sec]=Date.now();n++}
@@ -1663,7 +1670,7 @@ async function rpPublish(force){const B=S.board;if(!B||!B.sk||rpBusy||S.role==="
   catch(e){const t=String(e.message||e);B.rerr=/could not find|schema cache|404/i.test(t)?"Server needs setup part 11a.":t.slice(0,80);rawSave()}
   finally{rpBusy=false}}
 async function ensureHub(){if(hubBusy||S.role==="view"||!S.board)return;hubBusy=true;let ch=false;
-  try{let f=mainFeed();if(!f){await fdCreate();f=mainFeed();f.main=true;ch=true;toast("Started your unit FEED. Leaders and Marines land in it from their links.")}
+  try{let f=mainFeed();if(f&&S.level==="co"&&f.unit!==coFeedName()){f.unit=coFeedName();ch=true}if(!f){await fdCreate();f=mainFeed();f.main=true;ch=true;toast("Started your unit FEED. Leaders and Marines land in it from their links.")}
     if(!f.pk){const pk=rndId(32);await SB.rpc("set_feed_poster",{p_feed:f.id,p_leader_key:f.lk,p_poster_key:pk});f.pk=pk;f.main=true;ch=true}
     S.hubErr="";if(ch){save();rpPublish(true);mpSchedule()}}
   catch(e){const t=String(e.message||e);S.hubErr=/could not find|schema cache|404/i.test(t)?"Server needs setup part 11b.":t.slice(0,80);rawSave()}
@@ -1705,6 +1712,7 @@ async function rosterPull(force){const L=S.link;if(!L||!L.rk2||rpullBusy)return;
       if(JSON.stringify(nw)!==JSON.stringify(SECTIONS)){SECTIONS.splice(0,SECTIONS.length,...nw);S.secs=nw}}
     if(S.source==="link"&&Array.isArray(o.ri)&&o.ri.length){const k=MODES[S.mode]?S.mode:"military";S.ready[k]=o.ri.slice(0,40).map(x=>({n:String(x.n).slice(0,40),mo:+x.mo||0}))}
     L.acks=Array.isArray(o.acks)?o.acks.slice(0,30):[];
+    if(o.cofeed&&joinCoFeed(o.cofeed,L.me||S.myName,""))toast("You're in the "+o.cofeed.unit+" FEED too");
     if(!whole&&S.source==="link"&&Array.isArray(o.sl)&&o.sl.length&&o.sl.every(x=>Array.isArray(x)&&x[0])){const nw=o.sl.slice(0,10).map(x=>[String(x[0]).replace(/[^A-Z0-9]/g,"").slice(0,6),String(x[1]||x[0]).slice(0,30)]);if(JSON.stringify(nw)!==JSON.stringify(SECTIONS)){SECTIONS.splice(0,SECTIONS.length,...nw);S.secs=nw}}
     if(!own)S.roster=whole?next:S.roster.filter(m=>m.sec!==L.mysec).concat(next);
     L.unit=String(o.unit||L.unit).slice(0,24);L.pt=t;if(o.hb)L.hb=+o.hb||0;L.pulled=true;L.perr="";L.lsig=lsigOf(next);
@@ -2079,8 +2087,8 @@ function mpDigest(m){const t=dkey();const to=dkey(new Date(Date.now()+60*8640000
   const due=readyItems().map(it=>{const st=dueState(m,it);return {n:it.n,st:st.st,txt:st.txt,d:st.iso||""}}).filter(x=>x.st!=="none");
   const owe=(S.events||[]).filter(e=>evReq(e).some(x=>x.id===m.id)&&!evDone(e,m)).map(e=>({n:e.name,d:e.date||""}));
   const reqs=S.reqs.filter(r=>r.mid===m.id).slice(0,10).map(r=>({rid:r.rid,ty:r.ty,from:r.from,to:r.to,st:r.st,dnote:r.dnote||""}));const pod=latestPod();
-  const hf=mainFeed();const feed=hf?{id:hf.id,mk:hf.mk,ek:hf.ek,unit:hf.unit,secs:SECTIONS.map(x=>x[0])}:null;
-  return {v:1,mid:m.id,feed,reqs,pod,unit:unitName(),rank:m.rank,name:m.name,sec:m.sec,secName:((SECTIONS.find(x=>x[0]===m.sec)||[])[1]||m.sec),status:m.status,statusShort:SHORT[m.status]||m.status,duty:dutyOf(m),since:sn||0,start:isoOf(m.start),end:isoOf(m.end),edd:isoOf(m.edd),eas:isoOf(m.eas),duties:duties.sort((a,b)=>a.d.localeCompare(b.d)),due,cal,owe}}
+  const hf=mainFeed();const feed=hf?{id:hf.id,mk:hf.mk,ek:hf.ek,unit:hf.unit,secs:SECTIONS.map(x=>x[0])}:null;const cf=coFeedDown();const cofeed=cf?Object.assign({},cf,{mid:m.uid||""}):null;
+  return {v:1,mid:m.id,feed,cofeed,reqs,pod,unit:unitName(),rank:m.rank,name:m.name,sec:m.sec,secName:((SECTIONS.find(x=>x[0]===m.sec)||[])[1]||m.sec),status:m.status,statusShort:SHORT[m.status]||m.status,duty:dutyOf(m),since:sn||0,start:isoOf(m.start),end:isoOf(m.end),edd:isoOf(m.edd),eas:isoOf(m.eas),duties:duties.sort((a,b)=>a.d.localeCompare(b.d)),due,cal,owe}}
 function mpSchedule(){if(!S.roster.some(m=>m.pk))return;clearTimeout(mpT);mpT=setTimeout(mpPublish,5000)}
 async function mpPublish(force){if(mpBusy){clearTimeout(mpT);mpT=setTimeout(()=>mpPublish(force),4000);return 0}mpBusy=true;let n=0;
   try{for(const m of S.roster.filter(m=>m.pk)){const d=mpDigest(m);const sg=sigF(d);if(!force&&sg===m.pkSig&&Date.now()-(m.pkAt||0)<12*3600000)continue;d.at=Date.now();
@@ -2091,7 +2099,7 @@ async function mpTurnOn(m){if(!m.pk){m.pk=rndId(28);m.pkSig="";save()}await mpPu
 async function mpFetch(){const M=S.me;if(!M)return;try{const K=await mpKeys(M.pk);const rows=await SB.rpc("get_page",{p_id:K.id});const r=rows&&rows[0];
   if(!r){M.err="Your leader hasn't published your page yet.";rawSave();return}const t=Date.parse(r.updated_at)||0;if(M.t===t&&M.d){M.err="";return}
   M.d=await openBlob(K,r.ct);M.t=t;M.err="";rawSave();mpJoinFeed(M.d);if(view==="me"||view==="today"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;view==="me"?renderMe():renderToday();window.scrollTo(0,y)}}}catch(e){const t=String(e.message||e);M.err=/could not find|schema cache|404/i.test(t)?"Your unit's server isn't set up for My page yet. Tell your leader: setup part 07.":/fetch|network/i.test(t)?"No signal. Pull down or tap Refresh to try again.":t.slice(0,80);rawSave();if(view==="me")renderMe()}}
-function mpJoinFeed(D){const F=D&&D.feed;if(!F||!F.id)return;{const ex=S.feeds.find(f=>f.id===F.id);if(ex){if(D.mid&&!ex.lk&&ex.mid!==D.mid){ex.mid=String(D.mid).slice(0,40);rawSave()}return}}
+function mpJoinFeed(D){if(D&&D.cofeed){const last0=(String(D.name).split(",")[0]||D.name).trim(),first0=(String(D.name).split(",")[1]||"").trim().split(/\s+/)[0]||"";joinCoFeed(D.cofeed,(D.rank+" "+last0+(first0?" "+first0:"")).toUpperCase(),D.cofeed.mid)}const F=D&&D.feed;if(!F||!F.id)return;{const ex=S.feeds.find(f=>f.id===F.id);if(ex){if(D.mid&&!ex.lk&&ex.mid!==D.mid){ex.mid=String(D.mid).slice(0,40);rawSave()}return}}
   const last=(String(D.name).split(",")[0]||D.name).trim();const first=(String(D.name).split(",")[1]||"").trim().split(/\s+/)[0]||"";const nf={id:String(F.id).slice(0,20),mk:String(F.mk).slice(0,40),ek:String(F.ek).slice(0,60),unit:String(F.unit||D.unit).slice(0,24),me:(D.rank+" "+last+(first?" "+first:"")).toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim().slice(0,30),sec:D.sec==="ATT"?"ATT":D.sec,secsLink:(F.secs||[]).slice(0,12),posts:[],seen:0,mine:{},hub:1,mid:String(D.mid||"").slice(0,40)};
   S.feeds=S.feeds.filter(f=>!f.hub||f.lk);S.feeds.push(nf);if(!S.myName)S.myName=nf.me;save();fdMeHash(nf).then(()=>{fdPollAll(true);fdPushAttach(nf)});toast("You're in the "+nf.unit+" FEED")}
 setInterval(()=>{if(S.me&&!document.hidden)mpFetch()},60000);
@@ -2618,7 +2626,7 @@ setInterval(()=>{const d=fdDue();for(const x of d){x.f.rn=x.f.rn||{};if(x.f.rn[x
   if(view==="board"){const y=window.scrollY;render();window.scrollTo(0,y)}}},60000);
 function fdToLabel(to){if(!to||to.k==="all")return"Everyone";if(to.k==="secs")return to.s.concat(to.att?["ATT"]:[]).join(", ")||"No one";if(to.k==="one")return to.n||"One person";return"Everyone"}
 function fdLink(f){const q=new URLSearchParams();q.set("feed",f.id);q.set("k",f.mk);q.set("e",f.ek);q.set("u",f.unit);q.set("s",SECTIONS.map(x=>x[0]).join(","));return location.origin+location.pathname+"#"+q.toString()}
-async function fdCreate(){const f={id:rndId(14),mk:rndId(32),lk:rndId(32),ek:b64url(crypto.getRandomValues(new Uint8Array(32))),unit:unitName(),posts:[],seen:0,acks:{},ackAfter:0,mine:{},un:{}};
+async function fdCreate(){const f={id:rndId(14),mk:rndId(32),lk:rndId(32),ek:b64url(crypto.getRandomValues(new Uint8Array(32))),unit:S.level==="co"?coFeedName():unitName(),posts:[],seen:0,acks:{},ackAfter:0,mine:{},un:{}};
   await SB.rpc("create_feed",{p_id:f.id,p_member_key:f.mk,p_leader_key:f.lk});S.feeds.unshift(f);fdSel=f.id;save()}
 async function fdPoll(f,full){const ackN={};const after=full?0:Math.max(0,f.ctl||0,...(f.posts||[]).map(p=>p.id));
   const rows=await SB.rpc("feed_get",{p_feed:f.id,p_member_key:f.mk,p_after:after});let fresh=0;const keep=full?[]:(f.posts||[]);const have=new Set(keep.map(p=>p.id));
@@ -2673,9 +2681,9 @@ function renderFeed(){let h=S.source==="sample"?"":banner();const f=fdCur();
       <button class="btn" id="fdCreate">Start a feed for ${esc(unitName())}</button>${fdNew?`<button class="btn alt" id="fdCancelNew">Cancel</button>`:""}<div class="note" id="fdOut"></div>
       <p class="note">Joining someone else's feed? Open the link they sent on this phone.</p></div>`;$("#main").innerHTML=h;return}
   const maxId=Math.max(0,...fdVisible(f).map(p=>p.id));const prevSeen=f.seen||0;
-  h+=`<div class="sechead" style="margin-top:12px"><h2>${esc(f.unit)} feed</h2><div class="ratio" style="font-size:13px">${f.lk?xlBtn("feed")+" ":""}${f.err?`<span style="color:var(--warn)">offline</span>`:`<span style="color:var(--s-onhand)">● live</span>`}</div></div>`;
+  h+=`<div class="sechead" style="margin-top:12px"><h2>${esc(f.unit)} ${/company$/i.test(f.unit)?"FEED":"feed"}</h2><div class="ratio" style="font-size:13px">${f.lk?xlBtn("feed")+" ":""}${f.err?`<span style="color:var(--warn)">offline</span>`:`<span style="color:var(--s-onhand)">● live</span>`}</div></div>`;
   if(f.lk){h+=reqHTML(f)+(fdPod?podForm():`<button class="btn alt" id="pdOpen" style="width:100%;margin-top:8px">📋 Post the Plan of the Day</button>`);h+=`<div class="panel"><div class="fch">${fdAv(fdBy(f))}<div class="hd"><div class="nm">${esc(fdBy(f))}</div><button class="chip" id="fdByEd" style="cursor:pointer;margin-top:2px">Posting as · change</button></div></div><label for="fdTxt">Pass the word</label><textarea id="fdTxt" maxlength="1000" style="min-height:90px" placeholder="Formation 0700 tomorrow, PT gear. Duty section report to the S-3 at 0800.">${esc(fdDraft.txt)}</textarea>
-      <div class="note">Send to:</div><div class="evts">${[["all","Everyone"],["secs","Sections"],["one","One person"]].map(([k,l])=>`<button data-fdto="${k}" aria-pressed="${fdDraft.to===k}">${l}</button>`).join("")}</div>
+      <div class="note">Send to:</div><div class="evts">${[["all","Everyone"],["secs",LV().Sec+"s"],["one","One person"]].map(([k,l])=>`<button data-fdto="${k}" aria-pressed="${fdDraft.to===k}">${l}</button>`).join("")}</div>
       ${fdDraft.to==="secs"?`<div class="evts">${SECTIONS.map(([k])=>`<label class="tog"><input type="checkbox" data-fdsec="${k}"${fdDraft.secs.includes(k)?" checked":""}> ${k}</label>`).join("")}<label class="tog"><input type="checkbox" id="fdAtt"${fdDraft.att?" checked":""}> ATT</label></div>`:""}
       ${fdDraft.to==="one"?`<select id="fdWho" class="wsel"><option value="">Pick the person…</option>${SECTIONS.map(s=>s[0]).concat("ATT").map(k=>{const ms=sorted(S.roster.filter(m=>m.sec===k));return ms.length?`<optgroup label="${k}">${ms.map(m=>`<option value="${m.id}"${m.id===fdDraft.mid?" selected":""}>${esc(m.rank+" "+m.name)}</option>`).join("")}</optgroup>`:""}).join("")}</select>
         <p class="note">Only that person sees it in their feed. It matches the rank and last name they joined with. For anything sensitive, call or text them directly.</p>`:""}
