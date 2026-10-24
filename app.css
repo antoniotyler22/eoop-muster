@@ -401,3 +401,4 @@ details[open]>summary::before{transform:rotate(90deg)}
 .pill{min-height:40px}
 .rm,.w6,.chip,.titlebtn,.pill,.acts button,.tabs button,.hic button,#subnav button,.evts button,.tabmv button,.banner button,.tabrow button{position:relative}
 .rm::after,.w6::after,.chip::after,.titlebtn::after,.pill::after,.acts button::after,.tabs button::after,.hic button::after,#subnav button::after,.evts button::after,.tabmv button::after,.banner button::after,.tabrow button::after{content:"";position:absolute;left:-3px;right:-3px;top:50%;height:44px;min-height:100%;transform:translateY(-50%)}
+.panel input[type=password]{width:100%;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);min-height:44px;font:inherit;color:inherit}

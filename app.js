@@ -61,7 +61,7 @@ const JOBS=[];function every(ms,fn,name){JOBS.push({ms,fn,name,next:Date.now()+M
 function runDue(stagger){const t=Date.now();let k=0;for(const j of JOBS){if(t<j.next)continue;j.next=t+j.ms;const go=()=>{try{j.fn()}catch(e){}};if(stagger)setTimeout(go,(k++)*300);else go()}}
 setInterval(()=>{if(!document.hidden)runDue(false)},2000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)runDue(true)});
-const APP_VER=window.AV||"3.4.0";const APP_BUILD="2026-10-24";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER=window.AV||"3.5.0";const APP_BUILD="2026-10-24";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -3033,3 +3033,130 @@ if("serviceWorker" in navigator&&document.querySelector("link[rel=manifest]")&&(
 every(20000,()=>{if(view==="recall"&&S.rc.open){const c=document.querySelector(".mbar .ct small");if(c)c.textContent="contacted · "+Math.round((Date.now()-S.rc.start)/60000)+" min"}},"recall-clock");
 window.addEventListener("hashchange",()=>{{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){joinPrompt(q);return}if(q.get("feed")){fdJoinPrompt(q);return}if(q.get("sync")){syncJoinPrompt(q.get("sync"),q.get("r"),q.get("w"));return}if(q.get("me")){mePrompt(q);return}if(q.get("coj")||q.get("cov")){coJoinPrompt(q,q.get("coj")?"coj":"cov");return}}const h=(location.hash||"").slice(1).toLowerCase();if((["recall","rollup","board","muster","alerts","live","send","feed","today","me","log","cal","ask","people","tools","duty","ready","events","act","co","data","sys","text","trends","armory","pt","w6","att"].includes(h)||SECTIONS.some(x=>x[0].toLowerCase()===h))&&h!==view){view=h;armed=null;render();window.scrollTo(0,0);if(h==="feed")fdPollAll(true)}});
 every(30000,()=>{const d=$("#dtg");if(d)d.textContent="AS OF "+dtg()},"clock");
+
+/* ---------- LOGINS: a username + password that opens the right page instead of a long link ---------- */
+// The OIC's phone seals the person's link with a key made from their password (PBKDF2 → AES-GCM).
+// The server keeps only the sealed copy plus a check value, so it can't read the link. Server: setup part 15.
+const LG_TE=new TextEncoder(),LG_TD=new TextDecoder();
+const LG_WORDS="acorn amber anchor apple arrow aspen atlas badge bamboo banjo basil beacon birch bison blaze bloom bolt brave breeze brook cabin cactus canyon cedar chalk cliff clover cobalt comet coral crane creek crest crown dawn delta dune eagle ember falcon fern field flame flint forest fox frost garnet gecko glade granite grove harbor hawk hazel heron honey iris ivory jade jasper juniper kayak kettle lake lantern laurel lemon lilac lime lotus maple marble meadow mesa mint moon moss nectar north oak oasis ocean olive onyx orbit otter palm pearl pebble pepper pine plum polar prairie quail quartz raven reef ridge river robin rocket ruby sage sierra silver slate snow solar spruce star stone storm summit tiger timber topaz trail tulip valley violet willow wolf".split(" ");
+const lgHex=u=>[...new Uint8Array(u)].map(x=>x.toString(16).padStart(2,"0")).join("");
+const lgRnd=n=>{const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%n};
+const lgNormU=u=>String(u||"").trim().toLowerCase();
+const lgNormP=p=>String(p||"").trim().toLowerCase().replace(/\s+/g,"-");
+const lgUserOK=u=>/^[a-z0-9._-]{4,32}$/.test(lgNormU(u));
+function lgPw(){return LG_WORDS[lgRnd(LG_WORDS.length)]+"-"+LG_WORDS[lgRnd(LG_WORDS.length)]+"-"+(1000+lgRnd(9000))}
+function lgUser(base){const b=String(base||"user").toLowerCase().replace(/[^a-z0-9]+/g,"").slice(0,14)||"user";return (b.length<2?b+"user":b)+(100+lgRnd(900))}
+async function lgKeys(user,pw){const uid=lgHex(await crypto.subtle.digest("SHA-256",LG_TE.encode("af-login-v1:"+lgNormU(user))));
+  const base=await crypto.subtle.importKey("raw",LG_TE.encode(lgNormP(pw)),"PBKDF2",false,["deriveBits"]);
+  const bits=new Uint8Array(await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt:LG_TE.encode("af-login-v1:"+uid),iterations:210000},base,512));
+  const ek=await crypto.subtle.importKey("raw",bits.slice(0,32),"AES-GCM",false,["encrypt","decrypt"]);
+  return {uid,ek,vf:lgHex(bits.slice(32))}}
+async function lgSeal(K,obj){const iv=crypto.getRandomValues(new Uint8Array(12));const c=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},K.ek,LG_TE.encode(JSON.stringify(obj))));const o=new Uint8Array(12+c.length);o.set(iv);o.set(c,12);return b64e(o)}
+async function lgOpen(K,ct){const b=b64d(ct);return JSON.parse(LG_TD.decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:b.slice(0,12)},K.ek,b.slice(12))))}
+
+/* what a login can open: every link this phone can already send */
+function lgDests(){const D=[];if(!isOwner())return D;
+  if(S.source!=="sample")for(const m of S.roster)D.push({id:"me:"+m.id,g:"My page (their status, duty, calendar, unit FEED)",l:m.rank+" "+m.name,base:String(m.name||"").split(",")[0],ph:m.phone||""});
+  if(S.board)for(const x of SECTIONS)D.push({id:"sec:"+x[0],g:"Section leader (updates their section)",l:x[0]+" section leader",base:x[0]+"lead"});
+  if(S.coBoard){if(S.coBoard.wk)D.push({id:"co:rep",g:"Company",l:"Platoon reporting to "+(S.coBoard.name||"the company"),base:"plt"});if(S.coBoard.rk)D.push({id:"co:view",g:"Company",l:"Company view (CO, 1stSgt, XO)",base:"co"})}
+  for(const f of S.feeds||[])if(f.lk)D.push({id:"feed:"+f.id,g:"FEED only",l:"FEED · "+(f.unit||unitName()),base:"feed"});
+  if(S.sync&&S.sync.on)for(const r of ["view","sncoic","co"])D.push({id:"acc:"+r,g:"Your full board on their phone",l:ROLE_N[r],base:r==="view"?"viewer":r==="co"?"oic":"editor"});
+  return D}
+async function lgHash(id,create){const i=id.indexOf(":"),k=id.slice(0,i),v=id.slice(i+1);let u="";
+  if(k==="me"){const m=S.roster.find(x=>x.id===v);if(!m||S.source==="sample")return null;if(m.pk)u=mpLink(m);else if(create)u=await mpTurnOn(m);else return null}
+  else if(k==="sec"){if(!S.board||!SECTIONS.some(x=>x[0]===v))return null;u=boardLink(v)}
+  else if(k==="co"){if(!S.coBoard)return null;if(v==="rep"&&!S.coBoard.wk||v==="view"&&!S.coBoard.rk)return null;u=coLink(v==="rep"?"rep":"view")}
+  else if(k==="feed"){const f=(S.feeds||[]).find(x=>x.id===v&&x.lk);if(!f)return null;u=fdLink(f)}
+  else if(k==="acc"){if(!S.sync||!S.sync.on)return null;u=accLink(v)}
+  const j=u.indexOf("#");return j<0?null:u.slice(j+1)}
+function lgErr(e){const t=String(e&&e.message||e);return /taken/.test(t)?"That username is taken. Try another.":/could not find the function|schema cache|PGRST202/i.test(t)?"Logins aren't set up on the server yet. DATA → System check → Logins.":/abort|Failed to fetch|NetworkError|Load failed/i.test(t)?"No connection. Get signal and try again.":t.slice(0,80)}
+async function lgPut(L,h){const K=await lgKeys(L.user,L.pw);await SB.rpc("login_put",{p_uid:K.uid,p_owner:S.lgOwner,p_vf:K.vf,p_ct:await lgSeal(K,{v:1,h,m:S.mode||"",u:unitName(),l:L.label})});return K.uid}
+async function lgCreate(dest,user,pw){if(!isOwner())throw new Error("Only the OIC's phone makes logins.");
+  if(!lgUserOK(user))throw new Error("Username: 4–32 letters or numbers (. _ - ok).");if(lgNormP(pw).length<8)throw new Error("Password: at least 8 characters.");
+  const d=lgDests().find(x=>x.id===dest);if(!d)throw new Error("Pick what it opens.");
+  if(!S.lgOwner)S.lgOwner=rndId(32);const h=await lgHash(dest,true);if(!h)throw new Error("That page isn't available on this phone.");
+  const L={user:lgNormU(user),pw:lgNormP(pw),dest,label:d.l,h,at:Date.now()};L.uid=await lgPut(L,h);
+  S.logins=(S.logins||[]).filter(x=>x.uid!==L.uid);S.logins.unshift(L);save();return L}
+let lgBusy=false;
+async function lgRefresh(){if(lgBusy||!isOwner()||!S.lgOwner||!(S.logins||[]).length)return;lgBusy=true;let ch=false;
+  try{for(const L of S.logins){const h=await lgHash(L.dest,false);if(!h){if(!L.gone){L.gone=1;ch=true}continue}if(L.gone){delete L.gone;ch=true}
+    if(h!==L.h){try{await lgPut(L,h);L.h=h;delete L.err;ch=true}catch(e){L.err=lgErr(e);ch=true}}}}
+  finally{lgBusy=false;if(ch){save();if(view==="logins")renderLogins()}}}
+function lgText(L){return unitName()+" · Accounted For login\nUsername: "+L.user+"\nPassword: "+L.pw+"\nOpen "+PUB()+"#login (or the Accounted For app → Sign in). It takes you to: "+L.label+". Keep these private."}
+
+/* OIC screen: make, send and remove logins */
+let lgForm=null,lgArm=null,lgLast=null,lgMsg="";
+function renderLogins(){let h=`<h2>Logins</h2>`;
+  if(!isOwner()){$("#main").innerHTML=h+`<div class="panel"><p class="note">Got a username and password? Sign in to open your page.</p><button class="btn" id="lgSignOpen">Sign in</button></div>`;return}
+  const D=lgDests();
+  if(!lgForm||!D.some(x=>x.id===lgForm.dest)){const d=D[0];lgForm={dest:d?d.id:"",user:d?lgUser(d.base):"",pw:lgPw(),ed:false}}
+  const last=lgLast&&(S.logins||[]).find(x=>x.uid===lgLast);
+  if(last)h+=`<div class="panel" style="border-color:var(--s-onhand)"><b>Login ready · ${esc(last.label)}</b><div style="font-family:ui-monospace,Menlo,monospace;font-weight:800;font-size:17px;margin:8px 0;line-height:1.6" data-noxl>Username: ${esc(last.user)}<br>Password: ${esc(last.pw)}</div><div class="row2">${lgSmsBtn(last)}<button class="btn alt" data-lgcopy="${last.uid}">Copy</button></div><button class="btn alt" id="lgDone" style="width:100%">Done</button></div>`;
+  h+=`<div class="panel"><p class="note">Give someone a username and password instead of a link. They open the app, tap <b>Sign in</b>, and land on the page you picked. The server can't read what's behind it.</p>`;
+  if(D.length){const groups=[...new Set(D.map(x=>x.g))];
+    h+=`<label for="lgDest">Opens</label><select id="lgDest" style="width:100%">${groups.map(g=>`<optgroup label="${esc(g)}">${D.filter(x=>x.g===g).map(x=>`<option value="${esc(x.id)}"${x.id===lgForm.dest?" selected":""}>${esc(x.l)}</option>`).join("")}</optgroup>`).join("")}</select>
+      <label for="lgU">Username</label><input type="text" id="lgU" value="${esc(lgForm.user)}" autocomplete="off" autocapitalize="none" spellcheck="false">
+      <label for="lgP">Password</label><input type="text" id="lgP" value="${esc(lgForm.pw)}" autocomplete="off" autocapitalize="none" spellcheck="false">
+      <div class="row2"><button class="btn" id="lgMake">Create login</button><button class="btn alt" id="lgNewPw">New password</button></div><div class="note" id="lgOut" role="status">${esc(lgMsg)}</div>`}
+  else h+=`<p class="note">Nothing to give out yet. Load your roster in DATA for My page logins.</p>`;
+  const tips=[];if(!S.board)tips.push(`Turn on <b>Live sections</b> to make section leader logins.`);if(!(S.sync&&S.sync.on))tips.push(`Set up <b>access links</b> in DATA to give your full board (view, edit or same as you).`);if(!S.coBoard)tips.push(`Set up the <b>Company</b> board for CO, 1stSgt and XO logins.`);
+  if(tips.length)h+=`<p class="note">${tips.join("<br>")}</p>`;h+=`</div>`;
+  const Ls=S.logins||[];
+  if(Ls.length)h+=`<div class="sech"><h2>Given out · ${Ls.length}</h2></div><div class="alist">${Ls.map(L=>{const sec=L.dest.startsWith("sec:")?L.dest.slice(4):"";
+    return `<div class="rrow" style="--sc:var(${L.gone||L.err?"--warn":"--line"})"><div class="who"><b>${esc(L.label)}</b><div class="ph">${esc(L.user)} · made ${esc(ago(L.at))}${L.gone?" · that page is gone, so this login won't open anything":""}${L.err?" · couldn't update: "+esc(L.err):""}</div></div>
+      ${lgArm===L.uid?`<div class="note">Removes the login. A phone that already signed in keeps its page${sec?" until you replace the "+esc(sec)+" link":""}.</div><div class="row2"><button class="btn warn" data-lgdel="${L.uid}">Remove login</button>${sec?`<button class="btn warn" data-lgcut="${L.uid}">Remove + cut off ${esc(sec)} phones</button>`:""}<button class="btn alt" id="lgKeep">Keep</button></div>`
+        :`<div class="row2">${lgSmsBtn(L)}<button class="btn alt" data-lgcopy="${L.uid}">Copy</button><button class="btn alt" data-lgarm="${L.uid}">Remove</button></div>`}</div>`}).join("")}</div>`;
+  $("#main").innerHTML=h}
+function lgSmsBtn(L){const m=L.dest.startsWith("me:")&&S.roster.find(x=>x.id===L.dest.slice(3));const to=m&&m.phone?"+1"+String(m.phone).replace(/\D/g,"").slice(-10):"";
+  return `<a class="btn alt" href="${esc("sms:"+to+"?&body="+encodeURIComponent(lgText(L)))}">Text it</a>`}
+
+/* sign-in sheet: anyone can use it */
+function lgSignSheet(){sheetCtx={kind:"login"};
+  $("#sheetT").innerHTML=`Sign in<small>Enter the username and password you were given. It opens your page on this phone.</small>`;
+  $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><label for="lgSU">Username</label><input type="text" id="lgSU" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+    <label for="lgSP">Password</label><input type="password" id="lgSP" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false">
+    <button class="btn" id="lgGo">Sign in</button><button class="btn alt" data-sclose="1">Cancel</button><div class="note" id="lgSOut" role="status"></div></div>`;
+  const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));setTimeout(()=>{const i=$("#lgSU");if(i)i.focus({preventScroll:true})},320)}
+async function lgSignIn(){const U=$("#lgSU"),P=$("#lgSP"),o=$("#lgSOut"),b=$("#lgGo");if(!U||!P)return;
+  if(!U.value.trim()||!P.value.trim()){o.textContent="Enter your username and password.";return}
+  b.disabled=true;o.textContent="Checking…";
+  try{const K=await lgKeys(U.value,P.value);const r=await SB.rpc("login_get",{p_uid:K.uid,p_vf:K.vf});const row=Array.isArray(r)?r[0]:r;
+    if(!row||!row.ct){o.textContent=row&&row.wait>0?"Too many tries. Wait "+Math.ceil(row.wait/60)+" min, then try again.":"Username or password is wrong. Check with whoever gave it to you.";return}
+    const X=await lgOpen(K,row.ct);if(!X||typeof X.h!=="string"||!/^[a-z]+=/.test(X.h))throw new Error("This login is damaged. Ask for a new one.");
+    if(!S.mode&&X.m&&MODES[X.m]){setMode(X.m);if(!S.mode){S.mode=X.m;save()}}
+    o.textContent="Opening "+(X.l||"your page")+"…";closeSheet();
+    setTimeout(()=>{try{history.replaceState(null,"",location.pathname)}catch(e){}location.hash=X.h},320)}
+  catch(e){o.textContent=/OperationError/.test(String(e&&e.name))?"This login is damaged. Ask for a new one.":lgErr(e)}
+  finally{if(b.isConnected)b.disabled=false}}
+
+/* hook into the app */
+IC.key='<circle cx="7.5" cy="15.5" r="4"/><path d="M10.5 12.5L20 3"/><path d="M16 7l3 3"/><path d="M13.5 9.5l2 2"/>';
+SYNC_SKIP.push("logins","lgOwner");
+SC.push({k:"lg",n:"Logins (username + password instead of a link)",f:["15_logins"],t:[["login_get",{p_uid:"zz",p_vf:"x"}],["login_put",{p_uid:"zz",p_owner:"x",p_vf:"x",p_ct:"QQ=="}],["login_delete",{p_uid:"zz",p_owner:"x"}]]});
+HELP.logins=["Logins","A username and password that opens the right page.",["Pick what it opens, then Create login. Text or copy it to them.","They open the app, tap Sign in, and land on that page. After that the app opens straight to it.","If a link changes (you replace a section link or reset access links), their login updates by itself.","Remove stops the login working. For section leaders, Remove + cut off also replaces that section's link so a phone already in loses access."]];
+{const _render=render;render=function(){if(view==="logins"){renderTabs();renderLogins();if(typeof animateView==="function")animateView();return}return _render.apply(this,arguments)}}
+{const _rt=renderTools;renderTools=function(){_rt.apply(this,arguments);const vb=document.querySelector("#main [data-mode-open]");if(!vb)return;
+  vb.insertAdjacentHTML("beforebegin",isOwner()?`<button data-go="logins"><span class="ic">${svg("key")}</span><span><b>Logins</b><small>${(S.logins||[]).length?(S.logins||[]).length+" given out":"Username + password, no link"}</small></span></button>`:`<button id="lgSignOpen"><span class="ic">${svg("key")}</span><span><b>Sign in</b><small>Have a username and password?</small></span></button>`)}}
+{const _ms=openModeSheet;openModeSheet=function(first){_ms.apply(this,arguments);if(first)$("#sheetOpts").insertAdjacentHTML("afterbegin",`<button class="btn alt" id="lgSignOpen" data-noxl style="width:100%;margin:0 0 10px">I was given a username and password</button>`)}}
+{const _rs=resetSecLink;resetSecLink=async function(){const r=await _rs.apply(this,arguments);lgRefresh();return r}}
+document.addEventListener("click",e=>{const t=e.target;
+  if(t.closest("#lgSignOpen")){e.stopImmediatePropagation();lgSignSheet();return}
+  if(t.closest("#lgGo")){lgSignIn();return}
+  if(t.id==="lgNewPw"){lgForm.pw=lgPw();const p=$("#lgP");if(p)p.value=lgForm.pw;return}
+  if(t.id==="lgDone"){lgLast=null;renderLogins();return}
+  if(t.id==="lgKeep"){lgArm=null;renderLogins();return}
+  if(t.id==="lgMake"){lgMsg="";const o=$("#lgOut");t.disabled=true;o.textContent="Making it…";
+    lgCreate(lgForm.dest,lgForm.user,lgForm.pw).then(L=>{lgLast=L.uid;const d=lgDests().find(x=>x.id===lgForm.dest);lgForm={dest:lgForm.dest,user:d?lgUser(d.base):"",pw:lgPw(),ed:false};actAdd("🔑","Made a login for "+L.label+".","live");renderLogins();window.scrollTo(0,0)})
+      .catch(err=>{lgMsg=lgErr(err);if(/taken/.test(String(err.message))){lgForm.user=lgUser(lgForm.user.replace(/\d+$/,""));lgMsg+=" Suggested a new one."}renderLogins()});return}
+  const cp=t.closest("[data-lgcopy]");if(cp){const L=(S.logins||[]).find(x=>x.uid===cp.dataset.lgcopy);if(!L)return;const s=lgText(L);try{navigator.clipboard.writeText(s).then(()=>toast("Login copied"),()=>toast(s))}catch(err){toast(s)}return}
+  const ar=t.closest("[data-lgarm]");if(ar){lgArm=ar.dataset.lgarm;renderLogins();return}
+  const dl=t.closest("[data-lgdel],[data-lgcut]");if(dl){const uid=dl.dataset.lgdel||dl.dataset.lgcut,cut=!!dl.dataset.lgcut;const L=(S.logins||[]).find(x=>x.uid===uid);if(!L)return;dl.disabled=true;dl.textContent="Removing…";
+    (async()=>{await SB.rpc("login_delete",{p_uid:uid,p_owner:S.lgOwner});S.logins=S.logins.filter(x=>x.uid!==uid);lgArm=null;if(lgLast===uid)lgLast=null;save();
+      if(cut&&L.dest.startsWith("sec:")&&S.board){await resetSecLink(L.dest.slice(4));toast("Login removed. New "+L.dest.slice(4)+" link made; other "+L.dest.slice(4)+" logins updated.")}else toast("Login removed");renderLogins()})()
+      .catch(err=>{toast("Couldn't remove: "+lgErr(err));renderLogins()});return}});
+document.addEventListener("input",e=>{if(!lgForm)return;if(e.target.id==="lgU"){lgForm.user=e.target.value;lgForm.ed=true}else if(e.target.id==="lgP")lgForm.pw=e.target.value});
+document.addEventListener("change",e=>{if(e.target.id!=="lgDest"||!lgForm)return;lgForm.dest=e.target.value;if(!lgForm.ed){const d=lgDests().find(x=>x.id===lgForm.dest);lgForm.user=d?lgUser(d.base):"";const u=$("#lgU");if(u)u.value=lgForm.user}});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.target.id==="lgSP"||e.target.id==="lgSU")){e.preventDefault();if(e.target.id==="lgSU"){const p=$("#lgSP");if(p)p.focus()}else lgSignIn()}});
+window.addEventListener("hashchange",()=>{if((location.hash||"").toLowerCase()==="#login"){try{history.replaceState(null,"",location.pathname)}catch(e){}lgSignSheet()}});
+if(/^#login$/i.test(H0)){try{history.replaceState(null,"",location.pathname)}catch(e){}setTimeout(lgSignSheet,firstPick?600:250)}
+setTimeout(lgRefresh,5000);every(10*60000,lgRefresh,"logins");
