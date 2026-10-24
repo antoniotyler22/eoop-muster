@@ -218,7 +218,7 @@ function meTabs(cur){const un=dmUnreadMine();return `<div class="evts v12tabs" s
 {const _rm=renderMe;renderMe=function(){_rm.apply(this,arguments);if(view!=="me"||!S.me||String(S.me.pk)==="preview")return;$("#main").insertAdjacentHTML("afterbegin",meTabs("me"))}}
 
 /* ================= render hook ================= */
-{const _r=render;render=function(){if(view==="w6"){renderTabs();renderW6();return}
+{const _r=render;render=function(){if(view==="w6"&&(!PRO_FEAT.w6||proOK())){renderTabs();renderW6();return}
   if(["mepv","dms","dm","pages","pg"].includes(view)){renderTabs();({mepv:renderMePv,dms:renderDmList,dm:renderDm,pages:renderPages,pg:renderPg})[view]();if(typeof animateView==="function")animateView();return}
   if(view==="ask"&&!aiOn()){renderTabs();$("#main").innerHTML=`<div class="panel" style="margin-top:14px"><b>Ask (AI) is off</b><p class="note">Ask is an optional AI helper for Pro. Turn it on in Data and settings → AI.</p>${leader()?`<button class="btn" data-go="data">Open settings</button>`:""}</div>`;return}
   return _r.apply(this,arguments)}}
