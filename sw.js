@@ -1,7 +1,7 @@
 // Offline cache. The app opens from the phone instantly; a newer version is fetched in the background.
 // Everything the app uses is served from this site: no outside fonts, scripts or trackers.
-const CACHE = "eop-numbers-v69";
-const CORE = ["./", "./index.html", "./native.js", "./privacy.html", "./support.html", "./help.html", "./manifest.webmanifest",
+const CACHE = "eop-numbers-v70";
+const CORE = ["./", "./index.html", "./app.js", "./app.css", "./native.js", "./privacy.html", "./support.html", "./help.html", "./manifest.webmanifest",
   "./icon-180.png", "./icon-192.png", "./icon-512.png",
   "./fonts/pjs-400.woff2", "./fonts/pjs-500.woff2", "./fonts/pjs-600.woff2", "./fonts/pjs-700.woff2", "./fonts/pjs-800.woff2"];
 const LIBS = ["./lib/qrcode.js", "./lib/xlsx.full.min.js", "./lib/pdf.min.js", "./lib/pdf.worker.min.js", "./lib/mammoth.browser.min.js"];
@@ -40,6 +40,12 @@ self.addEventListener("fetch", e => {
       if (cached) { const quick = await Promise.race([net, new Promise(r => setTimeout(() => r(null), 3000))]); if (quick && quick.ok) return quick; servedCache = true; e.waitUntil(net); return cached; }
       return (await net) || caches.match(key);
     }));
+    return;
+  }
+  // App code and styles: exact version from cache, else network (and keep a copy), else any cached version.
+  if (/\/app\.(js|css)$/.test(url.pathname)) {
+    e.respondWith(caches.match(req).then(r => r || fetch(req, { cache: "no-cache" }).then(res => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); } return res; })
+      .catch(() => caches.match(req, { ignoreSearch: true }))));
     return;
   }
   if (isStatic) {
