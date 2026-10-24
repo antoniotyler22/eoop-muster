@@ -1,5 +1,5 @@
 // Supabase Edge Function "notify": push alerts to the leader's phone.
-//  {recall}: after a live recall check-in.  {board}: after a section leader's live update.  {feed, lk, urg}: after a FEED post.
+//  {recall}: after a live recall check-in.  {board}: after a section leader's live update.  {feed, lk, urg}: after a Feed post.
 //  {alert, feed, mk}: a member's request or problem report, to the OIC.
 // Payloads carry no names. Turn OFF "Enforce JWT verification" (the function validates input itself).
 // Secrets: VAPID_PUBLIC, VAPID_PRIVATE (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are built in).
@@ -102,8 +102,8 @@ async function feed(id: string, lk: string, urg: boolean) {
   if (!claimed || !claimed.length) return out("already sent");
   const { data: subs } = await db.from("feed_subs").select("id,sub").eq("feed_id", id).limit(500);
   const payload = urg
-    ? { title: "⚠ URGENT: new word", body: "Open FEED to read it and tap Got it.", help: true, open: "feed" }
-    : { title: "New word in FEED", body: "Open FEED to read it and tap Got it.", help: false, open: "feed" };
+    ? { title: "⚠ URGENT: new word", body: "Open Feed to read it and tap Got it.", help: true, open: "feed" }
+    : { title: "New word in Feed", body: "Open Feed to read it and tap Got it.", help: false, open: "feed" };
   const dead: number[] = [];
   await Promise.allSettled((subs ?? []).map(async (s) => {
     if (await pushAny(s.sub, payload, urg, 86400) === "gone") dead.push(s.id);
@@ -112,7 +112,7 @@ async function feed(id: string, lk: string, urg: boolean) {
   return out("sent " + ((subs?.length ?? 0) - dead.length));
 }
 
-// {alert: "req"|"prob", feed, mk}: a member sent a request or reported a problem; buzz the OIC (at most every 15 s).
+// {alert: "req"|"prob"|"rep", feed, mk}: a member sent a request or reported a problem; buzz the OIC (at most every 15 s).
 async function alertOic(id: string, mk: string, kind: string) {
   const { data: f } = await db.from("feeds").select("*").eq("id", id).maybeSingle();
   if (!f || !f.leader_sub) return out("no sub");
@@ -121,10 +121,12 @@ async function alertOic(id: string, mk: string, kind: string) {
   if (hex !== f.member_key_hash) return out("not allowed", 403);
   if (f.leader_push_at && Date.now() - new Date(f.leader_push_at).getTime() < 15000) return out("throttled");
   await db.from("feeds").update({ leader_push_at: new Date().toISOString() }).eq("id", id);
-  const payload = kind === "prob"
-    ? { title: "⚠ Problem reported", body: "Someone flagged a problem with a FEED post. Open FEED to see who.", help: true, open: "feed" }
-    : { title: "📨 New request", body: "Someone sent a leave, liberty or appointment request. Open FEED to approve.", help: false, open: "feed" };
-  const r = await pushAny(f.leader_sub, payload, kind === "prob", 86400);
+  const payload = kind === "rep"
+    ? { title: "⚑ Post reported", body: "A member reported a Feed post. Review it within 24 hours: open Feed.", help: true, open: "feed" }
+    : kind === "prob"
+    ? { title: "⚠ Problem reported", body: "Someone flagged a problem with a Feed post. Open Feed to see who.", help: true, open: "feed" }
+    : { title: "📨 New request", body: "Someone sent a leave, liberty or appointment request. Open Feed to approve.", help: false, open: "feed" };
+  const r = await pushAny(f.leader_sub, payload, kind !== "req", 86400);
   if (r === "gone") await db.from("feeds").update({ leader_sub: null }).eq("id", id);
   return out(r === "ok" ? "sent" : "push failed");
 }
@@ -134,7 +136,7 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return out("method", 405);
   let body: { recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown } = {};
   try { body = await req.json(); } catch { return out("bad", 400); }
-  if ((body.alert === "req" || body.alert === "prob") && typeof body.feed === "string" && /^[a-z0-9]{10,20}$/.test(body.feed) && typeof body.mk === "string" && /^[a-z0-9]{24,40}$/.test(body.mk))
+  if ((body.alert === "req" || body.alert === "prob" || body.alert === "rep") && typeof body.feed === "string" && /^[a-z0-9]{10,20}$/.test(body.feed) && typeof body.mk === "string" && /^[a-z0-9]{24,40}$/.test(body.mk))
     return alertOic(body.feed, body.mk, body.alert);
   if (typeof body.recall === "string" && /^[a-z0-9]{8,16}$/.test(body.recall)) return recall(body.recall);
   if (typeof body.board === "string" && /^[a-z0-9]{10,20}$/.test(body.board)) return board(body.board);
