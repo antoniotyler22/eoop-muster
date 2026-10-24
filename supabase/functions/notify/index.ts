@@ -3,7 +3,7 @@
 //  {alert, feed, mk}: a member's request or problem report, to the OIC.
 // Payloads carry no names. Turn OFF "Enforce JWT verification" (the function validates input itself).
 // Secrets: VAPID_PUBLIC, VAPID_PRIVATE (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are built in).
-// iPhone app (optional): APNS_KEY (the .p8 file contents), APNS_KEY_ID, APNS_TEAM_ID, APNS_TOPIC (bundle id; default com.antoniotyler.musterboard).
+// iPhone app (optional): APNS_KEY (the .p8 file contents), APNS_KEY_ID, APNS_TEAM_ID, APNS_TOPIC (bundle id; default com.antoniotyler.accountedfor).
 import webpush from "npm:web-push@3.6.7";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -36,7 +36,7 @@ async function apnsSend(token: string, p: Record<string, unknown>, urgent: boole
     const host = Deno.env.get("APNS_SANDBOX") === "1" ? "api.sandbox.push.apple.com" : "api.push.apple.com";
     const r = await fetch(`https://${host}/3/device/${token}`, {
       method: "POST",
-      headers: { authorization: "bearer " + await apnsToken(), "apns-topic": Deno.env.get("APNS_TOPIC") || "com.antoniotyler.musterboard", "apns-push-type": "alert", "apns-priority": urgent ? "10" : "5", "content-type": "application/json" },
+      headers: { authorization: "bearer " + await apnsToken(), "apns-topic": Deno.env.get("APNS_TOPIC") || "com.antoniotyler.accountedfor", "apns-push-type": "alert", "apns-priority": urgent ? "10" : "5", "content-type": "application/json" },
       body: JSON.stringify({ aps: { alert: { title: p.title, body: p.body }, sound: "default", "interruption-level": urgent ? "time-sensitive" : "active" }, open: p.open }),
     });
     if (r.ok) return "ok";

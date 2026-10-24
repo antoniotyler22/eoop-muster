@@ -1,6 +1,6 @@
 {
-  "name": "MusterBoard: Team Accountability",
-  "short_name": "MusterBoard",
+  "name": "Accounted For: Team Roster & Muster",
+  "short_name": "Accounted For",
   "description": "Accountability, muster and headcount for military units, police shifts, job crews, HR and civilian teams. Data stays on your phone.",
   "start_url": "./",
   "scope": "./",

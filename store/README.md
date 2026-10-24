@@ -1,4 +1,4 @@
-# Getting MusterBoard into the App Store and Google Play
+# Getting Accounted For into the App Store and Google Play
 
 Everything here is ready except the parts that need your own accounts.
 
@@ -23,7 +23,7 @@ The iPhone app lives in `ios/` and wraps this same web app, with native Face ID 
 **A. Apple account (once)**
 1. Join the Apple Developer Program ($99/year) at developer.apple.com/programs. Approval can take 1–2 days.
 2. Note your **Team ID**: developer.apple.com → Account → Membership details.
-3. App Store Connect → Apps → **+ New App**: platform iOS, name **MusterBoard: Team Accountability**, bundle ID **com.antoniotyler.musterboard** (if it isn't listed, register it under Certificates, Identifiers & Profiles → Identifiers with *Push Notifications* and *Associated Domains* checked), SKU `musterboard`.
+3. App Store Connect → Apps → **+ New App**: platform iOS, name **Accounted For: Team Roster & Muster**, bundle ID **com.antoniotyler.accountedfor** (if it isn't listed, register it under Certificates, Identifiers & Profiles → Identifiers with *Push Notifications* and *Associated Domains* checked), SKU `musterboard`.
 
 **B. Keys (once)**
 1. App Store Connect → Users and Access → Integrations → **App Store Connect API** → generate a key with **Admin** access. Download the `.p8` (one download only). Note the **Key ID** and **Issuer ID**.
@@ -43,7 +43,7 @@ The iPhone app lives in `ios/` and wraps this same web app, with native Face ID 
 **E. Submit**
 1. App Store Connect → the app → iOS app 1.0: paste `listing.md`, upload iPhone 6.9" screenshots, answer App Privacy from `privacy-labels.md`, age rating 4+, category Productivity.
 2. Pick the TestFlight build, then **Submit for Review**. Export compliance is already answered in the app (standard encryption only).
-3. **Review notes to paste:** "MusterBoard is a native accountability app: roster and status board stored encrypted on the device, Face ID unlock, Apple push alerts for check-ins and section updates, QR formation check-in, daily muster reminder, and offline use. No account or login: sample data loads on first open so every screen can be reviewed. Tap the title to switch versions (Military, Police, Jobs, HR, Civilian)."
+3. **Review notes to paste:** "Accounted For is a native accountability app: roster and status board stored encrypted on the device, Face ID unlock, Apple push alerts for check-ins and section updates, QR formation check-in, daily muster reminder, and offline use. No account or login: sample data loads on first open so every screen can be reviewed. Tap the title to switch versions (Military, Police, Jobs, HR, Civilian)."
 4. Review usually takes 1–3 days. If Apple asks questions, answer in Resolution Center; don't resubmit blindly.
 
 ## Before you submit

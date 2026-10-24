@@ -1,10 +1,10 @@
 {
-  "appId": "com.antoniotyler.musterboard",
-  "appName": "MusterBoard",
+  "appId": "com.antoniotyler.accountedfor",
+  "appName": "Accounted For",
   "webDir": "www",
   "ios": {
     "contentInset": "never",
-    "scheme": "MusterBoard",
+    "scheme": "App",
     "limitsNavigationsToAppBoundDomains": false
   },
   "plugins": {

@@ -1,8 +1,8 @@
 {
-  "name": "musterboard",
+  "name": "accounted-for",
   "version": "1.0.0",
   "private": true,
-  "description": "MusterBoard (EOP Numbers) native shell",
+  "description": "Accounted For (EOP Numbers) native shell",
   "scripts": {
     "build:web": "node native/build-web.js",
     "sync:ios": "npm run build:web && npx cap sync ios"

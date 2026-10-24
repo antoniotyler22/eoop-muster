@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>MusterBoard</string>
+        <string>Accounted For</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -23,7 +23,7 @@
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>NSFaceIDUsageDescription</key>
-	<string>Unlock MusterBoard with Face ID instead of typing your PIN.</string>
+	<string>Unlock Accounted For with Face ID instead of typing your PIN.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
@@ -52,9 +52,9 @@
 		<string>remote-notification</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>Take a photo of a roster or document to load it into MusterBoard.</string>
+	<string>Take a photo of a roster or document to load it into Accounted For.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Pick a roster file or image to load into MusterBoard.</string>
+	<string>Pick a roster file or image to load into Accounted For.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

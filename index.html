@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="MusterBoard">
+<meta name="apple-mobile-web-app-title" content="Accounted For">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#eef2f6" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0b1016" media="(prefers-color-scheme: dark)">
@@ -14,7 +14,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%233b4a2c'/%3E%3Ctext x='32' y='42' font-family='Arial' font-weight='700' font-size='26' text-anchor='middle' fill='%23d4ae4f'%3EEO%3C/text%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%233b4a2c'/%3E%3Ctext x='32' y='42' font-family='Arial' font-weight='700' font-size='26' text-anchor='middle' fill='%23d4ae4f'%3EEO%3C/text%3E%3C/svg%3E">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
-<title>EOP Numbers</title>
+<title>Accounted For</title>
 <style>
 @font-face{font-family:"Plus Jakarta Sans";font-style:normal;font-weight:400;font-display:swap;src:url(fonts/pjs-400.woff2) format("woff2")}
 @font-face{font-family:"Plus Jakarta Sans";font-style:normal;font-weight:500;font-display:swap;src:url(fonts/pjs-500.woff2) format("woff2")}
@@ -235,16 +235,16 @@ a.btn{text-decoration:none;text-align:center;display:block}
 ul.plain{margin:0;padding-left:18px;font-size:13.5px}
 @media (prefers-reduced-motion: no-preference){ .bar i{transition:width .3s ease} }
 /* ===== Glass theme ===== */
-:root{--bg:#eef2f6;--surface:rgba(255,255,255,.78);--surface-solid:#ffffff;--surface-2:#e6ebf1;--ink:#0f1720;--muted:#5b6673;--line:rgba(15,23,32,.09);
+:root{--bg:#eef2f6;--surface:rgba(255,255,255,.78);--card:rgba(255,255,255,.92);--surface-solid:#ffffff;--surface-2:#e6ebf1;--ink:#0f1720;--muted:#5b6673;--line:rgba(15,23,32,.09);
  --olive:#0f1720;--olive-ink:#ffffff;--brass:#17795f;--on-brass:#ffffff;--brass-soft:#dff3ec;--glass:rgba(255,255,255,.72);--glass-line:rgba(255,255,255,.65);--shadow:0 8px 24px rgba(15,23,32,.07);
  --s-onhand:#17795f;--s-aob:#2e78d2;--s-aoff:#6a5ae0;--s-duty:#c98a12;--s-op:#e26a3d;--s-tad:#9b51e0;--s-leave:#8a94a3;--warn:#d93a3a;
  --g1:#d9e7ff;--g2:#d5f5ea;--display:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;--body:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
- --bg:#0b1016;--surface:rgba(24,31,40,.72);--surface-solid:#18202a;--surface-2:#1f2833;--ink:#e8eef5;--muted:#93a1b1;--line:rgba(255,255,255,.08);
+ --bg:#0b1016;--surface:rgba(24,31,40,.72);--card:rgba(24,31,40,.94);--surface-solid:#18202a;--surface-2:#1f2833;--ink:#e8eef5;--muted:#93a1b1;--line:rgba(255,255,255,.08);
  --olive:#e8eef5;--olive-ink:#0b1016;--brass:#3ccf9e;--on-brass:#04231a;--brass-soft:#13302a;--glass:rgba(16,22,30,.7);--glass-line:rgba(255,255,255,.07);--shadow:0 8px 24px rgba(0,0,0,.35);
  --s-onhand:#3ccf9e;--s-aob:#5aa2ff;--s-aoff:#9a8cff;--s-duty:#f0b43c;--s-op:#ff8a5c;--s-tad:#c58cff;--s-leave:#9aa5b4;--warn:#ff6b6b;--g1:#132544;--g2:#0f2f27;color-scheme:dark}}
 :root[data-theme="dark"]{
- --bg:#0b1016;--surface:rgba(24,31,40,.72);--surface-solid:#18202a;--surface-2:#1f2833;--ink:#e8eef5;--muted:#93a1b1;--line:rgba(255,255,255,.08);
+ --bg:#0b1016;--surface:rgba(24,31,40,.72);--card:rgba(24,31,40,.94);--surface-solid:#18202a;--surface-2:#1f2833;--ink:#e8eef5;--muted:#93a1b1;--line:rgba(255,255,255,.08);
  --olive:#e8eef5;--olive-ink:#0b1016;--brass:#3ccf9e;--on-brass:#04231a;--brass-soft:#13302a;--glass:rgba(16,22,30,.7);--glass-line:rgba(255,255,255,.07);--shadow:0 8px 24px rgba(0,0,0,.35);
  --s-onhand:#3ccf9e;--s-aob:#5aa2ff;--s-aoff:#9a8cff;--s-duty:#f0b43c;--s-op:#ff8a5c;--s-tad:#c58cff;--s-leave:#9aa5b4;--warn:#ff6b6b;--g1:#132544;--g2:#0f2f27;color-scheme:dark}
 body{background:radial-gradient(1100px 560px at 15% -10%,var(--g1) 0,transparent 60%),radial-gradient(900px 520px at 110% 8%,var(--g2) 0,transparent 55%),var(--bg);background-attachment:fixed;-webkit-font-smoothing:antialiased}
@@ -257,7 +257,7 @@ body::before{background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop
 .tabs::-webkit-scrollbar{display:none}
 .tabs button{flex:1 0 auto;min-width:46px;color:var(--ink);border:0;border-radius:11px;padding:6px 4px;font-family:var(--body);font-weight:700;font-size:13px;letter-spacing:0;opacity:.7}
 .tabs button[aria-selected="true"]{background:var(--surface-solid);box-shadow:0 1px 4px rgba(0,0,0,.14);opacity:1;border-bottom-color:transparent}
-.tile,.pct,.bigbtn,.att,.gridwrap,.panel,.m,.rrow,.wrow,.arow,.evrow,.mrow,.names,.sync,.addbox,.pt-sum div,.search{border:1px solid var(--glass-line);border-radius:20px;background:var(--surface);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:var(--shadow)}
+.tile,.pct,.bigbtn,.att,.gridwrap,.panel,.m,.rrow,.wrow,.arow,.evrow,.mrow,.names,.sync,.addbox,.pt-sum div,.search{border:1px solid var(--glass-line);border-radius:20px;background:var(--card,var(--surface));box-shadow:var(--shadow)}
 .m,.rrow,.wrow,.arow{border-left:4px solid var(--sc,var(--glass-line));border-radius:18px}
 .mrow,.search{border-radius:14px}
 .tile .num{font-weight:800;letter-spacing:-.035em}.tile .lbl,.att .lbl{letter-spacing:.06em}
@@ -281,7 +281,7 @@ textarea,.panel input[type=text],.panel input[type=tel],select,.wsel,.wta{border
 .pill.dp{min-width:132px;padding:5px 12px;font-size:12.5px;background:transparent}
 .pill.dp.ld{color:var(--s-duty);border-color:var(--s-duty)}.pill.dp.lim{color:var(--warn);border-color:var(--warn)}
 .sheet{position:fixed;inset:0;z-index:50}
-.sheet-bg{position:absolute;inset:0;background:rgba(5,10,16,.38);backdrop-filter:blur(2px);opacity:0;transition:opacity .2s ease}
+.sheet-bg{position:absolute;inset:0;background:rgba(5,10,16,.42);opacity:0;transition:opacity .2s ease}
 .sheet-panel{position:absolute;left:0;right:0;bottom:0;max-width:560px;margin:0 auto;background:var(--surface-solid);border-radius:24px 24px 0 0;
   padding:10px max(16px,env(safe-area-inset-left,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-right,0px));box-shadow:0 -10px 40px rgba(0,0,0,.25);transform:translateY(100%);transition:transform .26s cubic-bezier(.2,.8,.2,1)}
 .sheet.open .sheet-bg{opacity:1}.sheet.open .sheet-panel{transform:none}
@@ -439,7 +439,7 @@ body.member-mode #hSearch{display:none}
 <div class="lock" id="lock" hidden role="dialog" aria-modal="true" aria-labelledby="lockT">
   <div class="lock-in">
     <div class="lock-ic" aria-hidden="true">🔒</div>
-    <h2 id="lockT">MusterBoard</h2>
+    <h2 id="lockT">Accounted For</h2>
     <p class="lock-sub" id="lockSub">Enter your PIN</p>
     <div class="dots" id="lockDots" aria-hidden="true"></div>
     <p class="lock-err" id="lockErr" role="alert"></p>
@@ -581,7 +581,7 @@ window.addEventListener("DOMContentLoaded",()=>{
   {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("ci")){ciPage(q);return}if(q.get("bc")){bcPage(q);return}if(q.get("qr")){qrPage(q);return}}
   if(!V.cfg||!localStorage.getItem(KE)){if(V.cfg&&!localStorage.getItem(KE)){try{localStorage.removeItem(KC)}catch(e){}V.cfg=null}startApp();return}
   const L=document.getElementById("lock"),dots=document.getElementById("lockDots"),err=document.getElementById("lockErr"),pad=document.getElementById("lockPad");
-  const c=V.cfg;document.getElementById("lockT").textContent=c.title||"MusterBoard";let pin="",busy=false,until=0;
+  const c=V.cfg;document.getElementById("lockT").textContent=c.title||"Accounted For";let pin="",busy=false,until=0;
   const draw=()=>{dots.innerHTML=Array.from({length:c.len||6},(_,i)=>`<i class="${i<pin.length?"on":""}"></i>`).join("")};
   pad.innerHTML=["1","2","3","4","5","6","7","8","9","","0","⌫"].map(k=>k?`<button type="button" data-k="${k}" aria-label="${k==="⌫"?"Delete":k}">${k}</button>`:"<span></span>").join("");
   draw();L.hidden=false;document.body.classList.add("locked");
@@ -604,7 +604,7 @@ window.addEventListener("DOMContentLoaded",()=>{
   /* Face ID (iPhone app only): reads the PIN from the Keychain after a face match */
   const NB=window.MBN&&MBN.on&&c.face?MBN.Bio:null;
   if(NB){const fb=document.createElement("button");fb.type="button";fb.className="btn alt";fb.id="lockFace";fb.textContent="Use Face ID";fb.style.marginTop="10px";pad.after(fb);
-    const go=()=>{if(busy||Date.now()<until)return;NB.load({reason:"Unlock "+(c.title||"MusterBoard")}).then(r=>{if(r&&r.pin&&!busy){pin=String(r.pin);draw();tryPin()}}).catch(x=>{if(/changed|not set/i.test(String(x&&x.message)))err.textContent="Face ID changed. Enter your PIN, then turn Face ID on again in Security."})};
+    const go=()=>{if(busy||Date.now()<until)return;NB.load({reason:"Unlock "+(c.title||"Accounted For")}).then(r=>{if(r&&r.pin&&!busy){pin=String(r.pin);draw();tryPin()}}).catch(x=>{if(/changed|not set/i.test(String(x&&x.message)))err.textContent="Face ID changed. Enter your PIN, then turn Face ID on again in Security."})};
     fb.addEventListener("click",go);setTimeout(go,350)}
 });
 })();
@@ -666,7 +666,13 @@ const MODES={
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
 };
-const APP_VER="3.2.0";const APP_BUILD="2026-10-24";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+/* One scheduler for all background checks: pauses while the app is in the background,
+   then catches up in a staggered burst when you come back (instead of ~15 separate timers). */
+const JOBS=[];function every(ms,fn,name){JOBS.push({ms,fn,name,next:Date.now()+Math.min(ms,1500+JOBS.length*250)})}
+function runDue(stagger){const t=Date.now();let k=0;for(const j of JOBS){if(t<j.next)continue;j.next=t+j.ms;const go=()=>{try{j.fn()}catch(e){}};if(stagger)setTimeout(go,(k++)*300);else go()}}
+setInterval(()=>{if(!document.hidden)runDue(false)},2000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)runDue(true)});
+const APP_VER="3.3.0";const APP_BUILD="2026-10-24";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 const MODE_ORDER=["military","police","jobs","hr","civilian"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -714,7 +720,7 @@ function xlTree(root){if(!root)return;if(root.nodeType===3){xlText(root);return}
   if(root.nodeName==="INPUT")return;
   const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const L=[];while(w.nextNode())L.push(w.currentNode);L.forEach(xlText)}
 let XOBS=null;
-function startXL(){if(XOBS){XOBS.disconnect();XOBS=null}XL=modeDict(MODE());document.title=MODE().title;if(window.VAULT&&VAULT.cfg&&VAULT.cfg.title!==MODE().title)VAULT.set({title:MODE().title});
+function startXL(){if(XOBS){XOBS.disconnect();XOBS=null}XL=modeDict(MODE());document.title=MODE().title+" · Accounted For";if(window.VAULT&&VAULT.cfg&&VAULT.cfg.title!==MODE().title)VAULT.set({title:MODE().title});
   xlTree(document.body);if(!XL)return;
   XOBS=new MutationObserver(rs=>{for(const r of rs){if(r.type==="characterData")xlText(r.target);else r.addedNodes.forEach(xlTree)}});
   XOBS.observe(document.body,{subtree:true,childList:true,characterData:true})}
@@ -1381,7 +1387,7 @@ async function livePollBoard(){const B=S.board;if(!B||lvBusy)return;livePollCal(
       save();renderTabs();if(["board","live"].includes(view)||Object.keys(latest).includes(view.toUpperCase())){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;render();window.scrollTo(0,y)}}
       toast("Live: "+msgs.join(" · "));try{navigator.vibrate&&navigator.vibrate(30)}catch(e){}}
   }catch(e){B.err=String(e.message||e).slice(0,80)}finally{lvBusy=false}}
-setInterval(()=>{if(S.board&&!document.hidden)livePollBoard()},15000);
+every(15000,()=>{if(S.board)livePollBoard()},"board");
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.board)livePollBoard()});
 const ago=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?"just now":m<60?m+" min ago":m<1440?Math.round(m/60)+" hr ago":Math.round(m/1440)+" d ago"};
 function liveStrip(){const B=S.board;if(!B)return `<button class="att" data-go="live" style="text-align:left;width:100%;cursor:pointer"><div><div class="lbl">Live sections · off</div><div class="note" style="margin-top:4px">Let section leaders update your board from their phones. Tap to set up.</div></div></button>`;
@@ -1557,7 +1563,7 @@ async function coPoll(){const C=S.coBoard;if(!C||coBusy)return;coBusy=true;
     if(view==="co"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"&&a!=="SELECT"){const y=window.scrollY;renderCo();window.scrollTo(0,y)}}}
   catch(e){const t=String(e.message||e);C.err=/link not valid/.test(t)?"This company link no longer works. Ask for a new one.":/could not find|schema/i.test(t)?"Server needs setup part 14a and 14b.":/fetch|network/i.test(t)?"No signal.":t.slice(0,80);rawSave();if(view==="co")renderCo()}
   finally{coBusy=false}}
-setInterval(()=>{if(document.hidden)return;if(S.coBoard&&(view==="co"||hubOn))coPoll();if(S.coRep)coPush()},30000);
+every(30000,()=>{if(S.coBoard&&(view==="co"||hubOn))coPoll();if(S.coRep)coPush()},"company");
 function coTally(ms){const c={};STATUSES.forEach(x=>c[x]=0);let tot=0;for(const m of ms){if(m.sec==="ATT")continue;tot++;c[STATUSES.includes(m.status)?m.status:"On Hand"]++}return {c,tot,oh:c["On Hand"]}}
 function coText(){const C=S.coBoard;const U=Object.values(C.units);const all=U.flatMap(u=>u.ms);const T=coTally(all);const L=[C.name.toUpperCase()+" ACCOUNTABILITY "+dtg(new Date()),"TOTAL: "+T.oh+"/"+T.tot+" ON HAND ("+pct(T.oh,T.tot)+"%)"];
   for(const u of U.sort((a,b)=>a.name.localeCompare(b.name))){const x=coTally(u.ms);L.push(u.name+": "+x.oh+"/"+x.tot+(Date.now()-u.t>4*3600000?" (as of "+dtg(new Date(u.t)).slice(0,7)+")":""))}
@@ -1672,7 +1678,7 @@ function lkNameSheet(){sheetCtx={kind:"lkname"};$("#sheetT").innerHTML=`Your ran
 document.addEventListener("click",e=>{if(e.target.id==="lkName"){lkNameSheet();return}if(e.target.id==="lkRetry"){rosterPull(true);toast("Loading…");return}
   if(e.target.id==="lkMeSave"){const me=($("#lkMe").value||"").toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim().slice(0,30);if(!me){toast("Enter your rank and last name.");return}
     S.myName=me;if(S.link)S.link.me=me;const f=S.feeds.find(x=>x.hub&&!x.lk);if(f){f.me=me;fdMeHash(f)}save();closeSheet();render();linkPush(true);toast("Saved")}});
-setInterval(()=>{if(!document.hidden&&S.link&&S.link.rk2&&!S.link.pulled)rosterPull()},8000);
+every(8000,()=>{if(S.link&&S.link.rk2&&!S.link.pulled)rosterPull()},"roster-first");
 const mainFeed=()=>S.feeds.find(f=>f.lk&&f.main)||S.feeds.find(f=>f.lk)||null;
 function secKey(sec){const B=S.board;B.sk=B.sk||{};if(!B.sk[sec]){B.sk[sec]=b64url(crypto.getRandomValues(new Uint8Array(32)));B.rsig={};setTimeout(save,0)}return B.sk[sec]}
 const lsigOf=ms=>sigF(ms.map(m=>[m.id,m.status,dutyOf(m),m.start||"",m.end||"",m.loc||"",m.detail||"",m.due||{}]));
@@ -1748,7 +1754,7 @@ async function rosterPull(force){const L=S.link;if(!L||!L.rk2||rpullBusy)return;
     if(dirty)linkSchedule()}
   catch(e){const t=String(e.message||e);L.perr=/link not valid/i.test(t)?"This link was replaced by your OIC. Ask them for the new one.":/could not find|schema cache|404/i.test(t)?"Your OIC's server needs setup part 11a.":/fetch|network/i.test(t)?"No signal. Retrying.":t.slice(0,80);rawSave()}
   finally{rpullBusy=false}}
-setInterval(()=>{if(document.hidden)return;if(S.link&&S.link.rk2)rosterPull();if(S.board)ensureHub()},30000);
+every(30000,()=>{if(S.link&&S.link.rk2&&S.link.pulled)rosterPull();if(S.board)ensureHub()},"roster");
 setTimeout(()=>{if(S.board){ensureHub();rpSchedule()}if(S.link&&S.link.rk2)rosterPull()},2500);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.link&&S.link.rk2)rosterPull()});
 
@@ -2125,8 +2131,8 @@ async function mpFetch(){const M=S.me;if(!M)return;try{const K=await mpKeys(M.pk
 function mpJoinFeed(D){if(D&&D.cofeed){const last0=(String(D.name).split(",")[0]||D.name).trim(),first0=(String(D.name).split(",")[1]||"").trim().split(/\s+/)[0]||"";joinCoFeed(D.cofeed,(D.rank+" "+last0+(first0?" "+first0:"")).toUpperCase(),D.cofeed.mid)}const F=D&&D.feed;if(!F||!F.id)return;{const ex=S.feeds.find(f=>f.id===F.id);if(ex){if(D.mid&&!ex.lk&&ex.mid!==D.mid){ex.mid=String(D.mid).slice(0,40);rawSave()}return}}
   const last=(String(D.name).split(",")[0]||D.name).trim();const first=(String(D.name).split(",")[1]||"").trim().split(/\s+/)[0]||"";const nf={id:String(F.id).slice(0,20),mk:String(F.mk).slice(0,40),ek:String(F.ek).slice(0,60),unit:String(F.unit||D.unit).slice(0,24),me:(D.rank+" "+last+(first?" "+first:"")).toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim().slice(0,30),sec:D.sec==="ATT"?"ATT":D.sec,secsLink:(F.secs||[]).slice(0,12),posts:[],seen:0,mine:{},hub:1,mid:String(D.mid||"").slice(0,40)};
   S.feeds=S.feeds.filter(f=>!f.hub||f.lk);S.feeds.push(nf);if(!S.myName)S.myName=nf.me;save();fdMeHash(nf).then(()=>{fdPollAll(true);fdPushAttach(nf)});toast("You're in the "+nf.unit+" FEED")}
-setInterval(()=>{if(S.me&&!document.hidden)mpFetch()},60000);
-setInterval(()=>{if(!document.hidden&&S.roster.some(m=>m.pk)&&isLeaderPhone()&&canEdit())mpPublish()},30*60000);
+every(60000,()=>{if(S.me)mpFetch()},"mypage");
+every(30*60000,()=>{if(S.roster.some(m=>m.pk)&&isLeaderPhone()&&canEdit())mpPublish()},"mypage-pub");
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.me)mpFetch()});
 const daysTo=iso=>{const d=parseD(iso);return d?Math.round((d-today0())/86400000):null};
 function renderMe(){const M=S.me;let h="";
@@ -2316,7 +2322,7 @@ async function syncPull(quiet){const Y=S.sync;if(!Y||!Y.on||syncBusy)return fals
     if(changed){if(!quiet){const y=window.scrollY;const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){render();window.scrollTo(0,y)}toast("Synced from your other phone")}if(sig(syncObj())!==Y.last)syncSchedule()}}
   catch(e){Y.err=String(e.message||e).slice(0,90);rawSave()}finally{syncBusy=false}return changed}
 function rawSave(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.write(t);else localStorage.setItem(KEY,t)}catch(e){}}
-setInterval(()=>{if(S.sync&&S.sync.on&&!document.hidden)syncPull()},60000);
+every(60000,()=>{if(S.sync&&S.sync.on)syncPull()},"sync");
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.sync&&S.sync.on)syncPull()});
 async function syncRestore(code){const K=await codeKeys(code);const rows=await SB.rpc("backup_get",{p_id:K.id,p_key:K.wk});const r=rows&&rows[0];if(!r)throw new Error("No backup found for that code.");
   const R=await openBlob(K,r.ct);return {R,ver:+r.ver,at:Date.parse(r.updated_at)||Date.now()}}
@@ -2585,7 +2591,7 @@ async function bcPoll(){const b=bcActive();if(!b||bcBusy)return;bcBusy=true;
       save();renderTabs();if(view==="send")rerenderSend();else if(view==="board"){const y=window.scrollY;render();window.scrollTo(0,y)}
       if(pr)toast(pr+" problem"+(pr>1?"s":"")+" reported");else if(n)toast(n+" got it")}
   }catch(e){b.err=String(e.message||e).slice(0,80);save()}finally{bcBusy=false}}
-setInterval(()=>{if(!document.hidden&&bcActive())bcPoll()},8000);
+every(8000,()=>{if(bcActive())bcPoll()},"send");
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&bcActive())bcPoll()});
 function rerenderSend(){const a=document.activeElement&&document.activeElement.id;if(a==="bcMsg"||a==="bcMe")return;const y=window.scrollY;renderSend();window.scrollTo(0,y)}
 function bcMissText(b){const A=b.ack||{};const miss=sorted(bcPoolOf(b).filter(m=>!A[m.id]));const pr=sorted(bcPoolOf(b).filter(m=>A[m.id]&&A[m.id].c===2));const st=bcStats(b);
@@ -2673,7 +2679,7 @@ async function fdPollAll(full){if(fdBusy||!S.feeds.length)return;fdBusy=true;let
     else if(view==="feed"||view==="today"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;view==="feed"?renderFeed():renderToday();window.scrollTo(0,y)}}
     if(fresh&&view!=="feed"&&view!=="today"){toast(fresh===1?"New in FEED":fresh+" new in FEED");try{navigator.vibrate&&navigator.vibrate([60,40,60])}catch(e){}}}
   finally{fdBusy=false}}
-setInterval(()=>{if(S.feeds.length&&!document.hidden)fdPollAll(false)},30000);
+every(30000,()=>{if(S.feeds.length&&view!=="feed")fdPollAll(false)},"feed");
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.feeds.length)fdPollAll(false)});
 function fdPool(p){const to=p&&p.to;if(!to||to.k==="all")return S.roster;if(to.k==="secs")return S.roster.filter(m=>m.sec==="ATT"?to.att:to.s.includes(m.sec));if(to.k==="one")return S.roster.filter(m=>m.id===to.mid);return S.roster}
 async function fdPushAttach(f){if(!S.pushOn||f.lk)return;try{const sub=await pushSub(false);if(!sub)return;await SB.rpc("feed_sub",{p_feed:f.id,p_member_key:f.mk,p_sub:sub.toJSON()});f.push=true;save()}catch(e){}}
@@ -2773,8 +2779,8 @@ function fdCard(f,p,pinned,isNew){const mine=(f.mine||{})[p.id];const by=p.by||f
   return h+`</article>`}
 let fdProbOpen=null,fdSlDraft={txt:"",to:"all",urg:false};
 function fdPillShow(){const b=$("#fdPill");if(!b)return;b.hidden=!(fdPend>0&&view==="feed");if(!b.hidden)b.textContent="↑ "+fdPend+" new post"+(fdPend>1?"s":"")}
-setInterval(()=>{document.querySelectorAll("[data-ago]").forEach(el=>{const t=+el.dataset.ago;if(t)el.textContent=ago(t)})},30000);
-setInterval(()=>{if(view==="feed"&&S.feeds.length&&!document.hidden)fdPollAll(false)},10000);
+every(30000,()=>{document.querySelectorAll("[data-ago]").forEach(el=>{const t=+el.dataset.ago;if(t)el.textContent=ago(t)})},"ago");
+every(10000,()=>{if(view==="feed"&&S.feeds.length)fdPollAll(false)},"feed-open");
 window.addEventListener("scroll",()=>{if(view==="feed"&&fdPend&&window.scrollY<120){fdPend=0;const y=window.scrollY;renderFeed();window.scrollTo(0,y)}},{passive:true});
 
 /* ---------- recall roster ---------- */
@@ -2913,7 +2919,7 @@ async function livePoll(){const L=S.rc.live;if(!S.rc.open||!L||liveBusy)return;l
       save();if(view==="recall"){const y=window.scrollY;const a=document.activeElement&&document.activeElement.id;if(!(a&&/^(ciIn|ciMe|rq|phIn)$/.test(a))){renderRecall();window.scrollTo(0,y)}}renderTabs();
       if(help){toast("⚠ "+help+" NEED HELP");try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}}else if(n)toast(n+" checked in");if(un)toast(un+" check-in"+(un>1?"s":"")+" didn't match a name")}
   }catch(e){L.err=String(e.message||e).slice(0,80)}finally{liveBusy=false}}
-setInterval(()=>{if(S.rc.open&&S.rc.live&&!document.hidden)livePoll()},6000);
+every(6000,()=>{if(S.rc.open&&S.rc.live)livePoll()},"recall");
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.rc.open&&S.rc.live)livePoll()});
 function liveClose(){const L=S.rc.live;if(L&&L.ok&&S.rc.rid)SB.rpc("close_recall",{p_recall:S.rc.rid,p_read_key:L.key}).catch(()=>{})}
 function ciLink(){const q=new URLSearchParams();q.set("ci",ciRid());q.set("u",unitName());if(S.myPh)q.set("to",S.myPh);if(S.rc.live)q.set("l","1");return PUB()+"#"+q.toString()}
@@ -3083,6 +3089,18 @@ const buzz=()=>{try{navigator.vibrate&&navigator.vibrate(8)}catch(e){}};
 const RM=()=>window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 function statusSelect(id,cur){return `<button class="pill" data-pick="s" data-pid="${id}" style="--pc:var(${SVAR[cur]})"><span class="dot"></span><span>${esc(SHORT[cur]||cur)}</span></button>`}
 function dutySelect(id,cur){const k=cur==="Light Duty"?" ld":cur==="LIMDU"?" lim":"";return `<button class="pill dp${k}" data-pick="d" data-pid="${id}"><span>${esc(cur)}</span></button>`}
+/* Fast path: after a status/duty change on a section page, swap in only the changed row and the counts
+   (no full-screen rebuild, so scroll position, focus and animations stay put). */
+function patchRow(m){try{const code=view.toUpperCase();if(m.sec!==code||!(code==="ATT"||SECTIONS.some(x=>x[0]===code)))return false;
+  const main=$("#main");const sel=`.m [data-pick="s"][data-pid="${CSS.escape(m.id)}"]`;const old=main.querySelector(sel);if(!old)return false;
+  const tmp=document.createElement("div");const realMain=main;
+  realMain.id="main-live";tmp.id="main";document.body.appendChild(tmp);tmp.hidden=true;
+  try{renderSection(code)}finally{tmp.remove();realMain.id="main"}
+  const nRow=tmp.querySelector(sel);if(!nRow)return false;
+  old.closest(".m").replaceWith(nRow.closest(".m"));
+  for(const c of [".sechead",".chips"]){const a=realMain.querySelector(c),b=tmp.querySelector(c);if(a&&b)a.replaceWith(b)}
+  const sync=[...realMain.querySelectorAll(".sync")],nsync=[...tmp.querySelectorAll(".sync")];if(sync.length===nsync.length)sync.forEach((x,i)=>x.replaceWith(nsync[i]));
+  renderTabs();return true}catch(e){return false}}
 let sheetCtx=null;
 function openSheet(kind,id){const m=S.roster.find(x=>x.id===id);if(!m)return;sheetCtx={kind,id};
   $("#sheetT").innerHTML=`${kind==="s"?"Status":"Duty status"}<small>${esc(m.rank+" "+m.name)}</small>`;
@@ -3113,7 +3131,7 @@ document.addEventListener("click",e=>{
   const pk=e.target.closest("[data-pick]");if(pk){e.stopImmediatePropagation();openSheet(pk.dataset.pick,pk.dataset.pid);return}
   if(e.target.closest("[data-sclose]")){e.stopImmediatePropagation();closeSheet();return}
   const so=e.target.closest("[data-sopt]");if(so&&sheetCtx){e.stopImmediatePropagation();const m=S.roster.find(x=>x.id===sheetCtx.id);
-    if(m){if(sheetCtx.kind==="s")m.status=so.dataset.sopt;else m.duty=so.dataset.sopt;save();buzz();const y=window.scrollY;closeSheet();render();window.scrollTo(0,y)}return}
+    if(m){if(sheetCtx.kind==="s")m.status=so.dataset.sopt;else m.duty=so.dataset.sopt;save();buzz();const y=window.scrollY;closeSheet();if(!patchRow(m)){render();window.scrollTo(0,y)}}return}
   if(e.target.closest(".mrow,[data-r],[data-ws],[data-evtog]"))buzz();
 },true);
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetCtx)closeSheet()});
@@ -3528,15 +3546,15 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#onb").hidden)c
 const STORE_URL={ios:"",android:""};
 function storeLink(){const ua=navigator.userAgent;return /iPhone|iPad|iPod/.test(ua)?STORE_URL.ios:/Android/.test(ua)?STORE_URL.android:(STORE_URL.ios||STORE_URL.android)}
 function feedbackHref(){const ua=navigator.userAgent;const dev=/iPhone/.test(ua)?"iPhone":/iPad/.test(ua)?"iPad":/Android/.test(ua)?"Android":"Computer";
-  const body="What happened or what would you like?\n\n\n---\nPlease don't include names or phone numbers from your roster.\nApp: MusterBoard v"+APP_VER+" ("+APP_BUILD+")\nVersion: "+MODE().name+"\nDevice: "+dev+"\nInstalled: "+(matchMedia("(display-mode: standalone)").matches||navigator.standalone?"home screen":"browser")+"\nPIN lock: "+(window.VAULT&&VAULT.on()?"on":"off");
-  return "mailto:"+SUPPORT_EMAIL+"?subject="+encodeURIComponent("MusterBoard feedback (v"+APP_VER+")")+"&body="+encodeURIComponent(body)}
+  const body="What happened or what would you like?\n\n\n---\nPlease don't include names or phone numbers from your roster.\nApp: Accounted For v"+APP_VER+" ("+APP_BUILD+")\nVersion: "+MODE().name+"\nDevice: "+dev+"\nInstalled: "+(matchMedia("(display-mode: standalone)").matches||navigator.standalone?"home screen":"browser")+"\nPIN lock: "+(window.VAULT&&VAULT.on()?"on":"off");
+  return "mailto:"+SUPPORT_EMAIL+"?subject="+encodeURIComponent("Accounted For feedback (v"+APP_VER+")")+"&body="+encodeURIComponent(body)}
 /* ---------- about ---------- */
 const TSIZES=[["1","Normal"],["1.15","Large"],["1.3","Extra large"]];
 function applyTS(){const z=+(S.ts||1);document.documentElement.style.zoom=z===1?"":String(z);document.documentElement.classList.toggle("ts-big",z>1)}
 function displayHTML(){return `<h2>Display</h2><div class="panel"><label for="tsSel">Text size</label><select id="tsSel">${TSIZES.map(([v,t])=>`<option value="${v}"${String(S.ts||1)===v?" selected":""}>${t}</option>`).join("")}</select>
   <p class="note">Makes everything in the app bigger, including buttons. Use Large or Extra large if the default is hard to read.</p></div>`}
 document.addEventListener("change",e=>{if(e.target.id==="tsSel"){S.ts=+e.target.value;save();applyTS();toast("Text size saved")}});
-function aboutHTML(){return `<h2>About</h2><div class="panel" data-noxl><div><b>MusterBoard</b> · ${esc(MODE().name)} version · v${APP_VER} (${APP_BUILD})</div>
+function aboutHTML(){return `<h2>About</h2><div class="panel" data-noxl><div><b>Accounted For</b> · ${esc(MODE().name)} version · v${APP_VER} (${APP_BUILD})</div>
   <p class="note">Your data stays on this phone. No accounts, no analytics, no ads. ${DISCLAIMER}</p>
   <div class="row2"><a class="btn alt" href="privacy.html">Privacy policy</a><a class="btn alt" href="support.html">Support</a></div>
   <div class="row2"><a class="btn" href="${esc(feedbackHref())}">Send feedback</a>${storeLink()?`<a class="btn alt" href="${esc(storeLink())}" target="_blank" rel="noopener">Rate this app ★</a>`:`<button class="btn alt" data-onb="how">How it works</button>`}</div>
@@ -3586,7 +3604,7 @@ function nativeHTML(){if(!(window.MBN&&MBN.on))return"";const r=MBN.reminder.get
     ${r.t?`<p class="note">🔔 Every day at ${esc(r.t)}. <button class="btn alt" id="natRemOff" style="display:inline-block;width:auto;min-height:0;padding:4px 10px">Turn off</button></p>`:`<p class="note">This phone reminds you to take the numbers at the same time every day. Works with no signal.</p>`}</div>`}
 document.addEventListener("click",async e=>{if(!(window.MBN&&MBN.on))return;const id=e.target.id;
   if(id==="natRemSet"){const t=($("#natRem")||{}).value;if(!/^\d\d:\d\d$/.test(t||""))return toast("Pick a time first.");
-    const ok=await MBN.reminder.set(t,"Time to take the "+unitName()+" numbers.");toast(ok?"Reminder set for "+t+" daily.":"Allow notifications for MusterBoard in Settings.");tabRedraw();return}
+    const ok=await MBN.reminder.set(t,"Time to take the "+unitName()+" numbers.");toast(ok?"Reminder set for "+t+" daily.":"Allow notifications for Accounted For in Settings.");tabRedraw();return}
   if(id==="natRemOff"){await MBN.reminder.set(null);toast("Reminder off.");tabRedraw();return}});
 document.addEventListener("change",async e=>{if(e.target.id!=="secFace"||!(window.MBN&&MBN.on))return;const V=window.VAULT,box=e.target;
   if(!box.checked){try{await MBN.Bio.remove()}catch(x){}V.set({face:false});toast("Face ID unlock off.");return}
@@ -3619,8 +3637,8 @@ if(firstPick)setTimeout(()=>openModeSheet(true),350);
 if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",ev=>{if(ev.data&&ev.data.type==="updated"){if(/(^|[#&])(join|me|feed|ci|sync|coj|cov)=/.test(H0)&&Date.now()-T0<30000){location.replace(location.pathname+H0);return}const el=$("#toast");el.innerHTML='New version ready. <button id="updNow" style="margin-left:8px;border:0;border-radius:99px;padding:6px 12px;font-weight:800;background:var(--brass);color:#111">Reload</button>';el.hidden=false;clearTimeout(toast.t)}});
 document.addEventListener("click",e=>{if(e.target.id==="updNow")location.reload()});
 if("serviceWorker" in navigator&&document.querySelector("link[rel=manifest]")&&(location.protocol==="https:"||location.hostname==="localhost")){navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(()=>{const o=document.getElementById("offStat");if(o&&navigator.serviceWorker.controller)o.textContent="Ready: this app opens and works with no signal. Text reports once you have service."}).catch(()=>{})}
-setInterval(()=>{if(view==="recall"&&S.rc.open){const c=document.querySelector(".mbar .ct small");if(c)c.textContent="contacted · "+Math.round((Date.now()-S.rc.start)/60000)+" min"}},20000);
+every(20000,()=>{if(view==="recall"&&S.rc.open){const c=document.querySelector(".mbar .ct small");if(c)c.textContent="contacted · "+Math.round((Date.now()-S.rc.start)/60000)+" min"}},"recall-clock");
 window.addEventListener("hashchange",()=>{{const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("join")){joinPrompt(q);return}if(q.get("feed")){fdJoinPrompt(q);return}if(q.get("sync")){syncJoinPrompt(q.get("sync"),q.get("r"),q.get("w"));return}if(q.get("me")){mePrompt(q);return}if(q.get("coj")||q.get("cov")){coJoinPrompt(q,q.get("coj")?"coj":"cov");return}}const h=(location.hash||"").slice(1).toLowerCase();if((["recall","rollup","board","muster","alerts","live","send","feed","today","me","log","cal","ask","people","tools","duty","ready","events","act","co","data","sys","text","trends","armory","pt","w6","att"].includes(h)||SECTIONS.some(x=>x[0].toLowerCase()===h))&&h!==view){view=h;armed=null;render();window.scrollTo(0,0);if(h==="feed")fdPollAll(true)}});
-setInterval(()=>{const d=$("#dtg");if(d)d.textContent="AS OF "+dtg()},30000);
+every(30000,()=>{const d=$("#dtg");if(d)d.textContent="AS OF "+dtg()},"clock");
 </script>
 </body></html>

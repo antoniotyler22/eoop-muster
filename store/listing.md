@@ -1,6 +1,6 @@
 # Store listing (copy and paste)
 
-**App name:** MusterBoard: Team Accountability
+**App name:** Accounted For: Team Roster & Muster
 **Subtitle (App Store, 30 chars):** Numbers, muster and the word
 **Short description (Google Play, 80 chars):** Accountability, muster, recall and the word for military units, crews and teams.
 
@@ -8,7 +8,7 @@
 
 Know who's here, who's not, and who got the word, from your phone.
 
-MusterBoard (shown as EOP Numbers, Shift Numbers, Crew Numbers, Staff Numbers or Team Numbers) is built by a leader who ran 103 people and needed the numbers at his fingertips.
+Accounted For (shown as EOP Numbers, Shift Numbers, Crew Numbers, Staff Numbers or Team Numbers) is built by a leader who ran 103 people and needed the numbers at his fingertips.
 
 ACCOUNTABILITY
 • Live board: on hand, present and strength by section, updated with a tap

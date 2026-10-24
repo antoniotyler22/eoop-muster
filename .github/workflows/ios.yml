@@ -1,4 +1,4 @@
-# Builds the MusterBoard iPhone app in the cloud (no Mac needed), signs it and uploads it to App Store Connect (TestFlight).
+# Builds the Accounted For iPhone app in the cloud (no Mac needed), signs it and uploads it to App Store Connect (TestFlight).
 # Run it from GitHub: Actions → "iPhone build" → Run workflow.
 # Needs these repository secrets (Settings → Secrets and variables → Actions):
 #   APPLE_TEAM_ID    10-character Team ID (developer.apple.com → Membership details)

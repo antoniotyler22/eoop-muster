@@ -74,7 +74,7 @@ public class BiometricPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "remove", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "has", returnType: CAPPluginReturnPromise)
     ]
-    private let service = "com.antoniotyler.musterboard.pin"
+    private let service = "com.antoniotyler.accountedfor.pin"
     private let account = "unlock"
 
     @objc func available(_ call: CAPPluginCall) {
@@ -109,7 +109,7 @@ public class BiometricPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func load(_ call: CAPPluginCall) {
-        let reason = call.getString("reason") ?? "Unlock MusterBoard"
+        let reason = call.getString("reason") ?? "Unlock Accounted For"
         DispatchQueue.global(qos: .userInitiated).async {
             let ctx = LAContext()
             ctx.localizedFallbackTitle = "Use PIN"

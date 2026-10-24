@@ -1,4 +1,4 @@
-/* MusterBoard native layer. Does nothing in a normal browser.
+/* Accounted For native layer. Does nothing in a normal browser.
    Inside the iPhone app it maps the web features the app already uses onto native iOS:
    haptics, share sheet, file saving, local notifications, Face ID, outside links. */
 (function () {
@@ -87,7 +87,7 @@
   var reg = {
     showNotification: function (title, o) {
       o = o || {};
-      return LN.schedule({ notifications: [{ id: (nid++ % 100000) + 1000, title: String(title || "MusterBoard"), body: String(o.body || ""), extra: o.data || {} }] }).catch(function () {});
+      return LN.schedule({ notifications: [{ id: (nid++ % 100000) + 1000, title: String(title || "Accounted For"), body: String(o.body || ""), extra: o.data || {} }] }).catch(function () {});
     },
     getNotifications: async function () { return []; }
   };
