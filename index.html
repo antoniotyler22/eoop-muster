@@ -930,6 +930,8 @@ function renderData(){
     ${S.level==="co"?coRosterHTML():""}<label for="file">${S.level==="co"?"Or load a MOL detail list (.csv) or backup":"Load MOL detail list (.csv) or a backup from this app"}</label>
     <input type="file" id="file" accept=".csv,text/csv">
     <p class="note">Loading replaces the current roster. EDIPI and sex columns are skipped and never stored.</p>
+    <button class="btn alt" data-addm="" style="width:100%">+ Add Marines</button>
+    <label for="fileAdd">Add more Marines from a file (keeps everyone already here)</label><input type="file" id="fileAdd" accept=".csv,.xlsx,.xls,.numbers,text/csv"><div class="note" id="fileAddOut"></div>
     <button class="btn" data-xl="all">⬇ Export everything to Excel</button>
     <p class="note">Roster, readiness, trends, duty, attendance and feed confirmations, one sheet each. It includes names and phone numbers: handle it like any personnel file.</p>
     <button class="btn alt" id="exp" hidden>Export backup (.csv)</button>
@@ -1390,13 +1392,52 @@ async function refreshAll(quiet){if(refBusy)return;refBusy=true;const b=$("#hRef
   const y=window.scrollY;const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){render();window.scrollTo(0,y)}
   const errs=[S.board&&S.board.err,S.link&&(S.link.perr||S.link.err),S.me&&S.me.err,S.sync&&S.sync.err,...S.feeds.map(f=>f.err)].filter(Boolean);
   if(!quiet)toast(errs.length?"Updated, with a problem: "+String(errs[0]).slice(0,70):"Up to date · "+String(new Date().getHours()).padStart(2,"0")+String(new Date().getMinutes()).padStart(2,"0"))}
+/* ---------- ADD MARINES: one at a time, a pasted list, or more from a file ---------- */
+function addParse(line){const raw=String(line||"").trim();if(!raw)return null;const parts=raw.split(/[,\t;]+/).map(x=>x.trim()).filter(Boolean);let rank="",sec="",sub="",phone="";const name=[];
+  const words0=parts[0].split(/\s+/);if(RANKS.includes(words0[0].toUpperCase())){rank=words0[0].toUpperCase();parts[0]=words0.slice(1).join(" ")}
+  const codes=SECTIONS.map(x=>x[0]);
+  for(const p0 of parts){const p=p0.toUpperCase();const d=p.replace(/\D/g,"");if(d.length===10||(d.length===11&&d[0]==="1")){phone=d.slice(-10);continue}
+    if(!sec&&(codes.includes(p)||p==="ATT")){sec=p;continue}if(!sec&&S.level==="co"&&codes.includes(plCode(p))){sec=plCode(p);continue}
+    if(S.level==="co"&&sec&&!sub&&/^[A-Z]{2,4}$/.test(p)&&name.length){sub=subCode(p);continue}if(p)name.push(p)}
+  const nm=name.join(", ").replace(/\s+/g," ").trim();if(!nm)return null;return {rank,name:nm,sec,sub,phone}}
+function addMarine(o,defSec){const sec=o.sec||defSec||SECTIONS[0][0];const rec={id:"a"+Date.now().toString(36)+rndId(3),rank:o.rank||(MODE().rankDef||"LCPL"),name:o.name.toUpperCase().slice(0,60),sec,status:o.status||"On Hand",duty:"Full Duty",detail:"Added in app",loc:"",start:"",end:""};
+  if(o.sub)rec.sub=o.sub;if(o.phone)rec.phone=o.phone;if(S.source==="sample"){S.roster=[];S.source="mol";S.loadedAt=new Date().toLocaleString([], {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}
+  if(S.roster.some(m=>fullK(m)===fullK(rec)&&m.sec===rec.sec))return null;S.roster.push(rec);return rec}
+function addSheet(sec){sheetCtx={kind:"addm"};const co=S.level==="co";const subs=[...new Set(S.roster.map(m=>m.sub).filter(Boolean))];const def=sec||(SECTIONS.some(x=>x[0]===String(view).toUpperCase())?String(view).toUpperCase():SECTIONS[0][0]);
+  $("#sheetT").innerHTML=`Add Marines<small>Add one at a time, or paste a list.</small>`;
+  $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl>
+    <label for="amSec">${co?"Platoon":"Section"}</label><select id="amSec" class="wsel">${SECTIONS.map(([k,n])=>`<option value="${k}"${k===def?" selected":""}>${esc(k+" · "+n)}</option>`).join("")}<option value="ATT">ATT · Attached</option></select>
+    ${co?`<label for="amSub">Section in the platoon</label><input type="text" id="amSub" list="amSubs" maxlength="6" placeholder="HE" autocapitalize="characters" style="text-transform:uppercase"><datalist id="amSubs">${subs.map(x=>`<option value="${esc(x)}">`).join("")}</datalist>`:""}
+    <div class="row2"><select id="amRank" class="wsel" aria-label="Rank">${RANKS.map(r=>`<option${r===(MODE().rankDef||"LCPL")?" selected":""}>${r}</option>`).join("")}</select><input type="tel" id="amPh" placeholder="Phone (optional)" inputmode="tel"></div>
+    <input type="text" id="amName" placeholder="LAST, FIRST M." autocapitalize="characters" style="text-transform:uppercase" autocomplete="off">
+    <button class="btn" id="amAdd">Add</button><div class="note" id="amOut"></div>
+    <details style="margin-top:10px"><summary><b>Paste a list</b></summary><p class="note">One Marine per line: rank, name${co?", platoon, section":", section"}, phone. Only the name is required.<br>e.g. <i>SGT SMITH, JOHN A., ${esc(SECTIONS[co?1:0]?SECTIONS[co?1:0][0]:"HQ")}${co?", HE":""}, 808-555-0100</i></p>
+      <textarea id="amList" style="min-height:120px" placeholder="LCPL DOE, JANE\nCPL ROE, RICHARD, ${esc((SECTIONS[1]||SECTIONS[0])[0])}"></textarea><button class="btn alt" id="amListAdd">Add list</button></details>
+    <button class="btn alt" id="amDone">Done</button></div>`;
+  const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")));setTimeout(()=>{const i=$("#amName");if(i)i.focus()},300)}
+async function mergeFile(f){const text=await fileToCSV(f);let list;
+  if(S.level==="co"){const P=companyParse(text);list=P.roster;for(const [k,n] of P.secs)if(!SECTIONS.some(x=>x[0]===k)&&SECTIONS.length<10)SECTIONS.push([k,n]);S.secs=SECTIONS.map(x=>x.slice())}
+  else list=importCSV(text).roster;
+  const have=new Set(S.roster.map(fullK));let n=0;if(S.source==="sample"){S.roster=[];S.source="mol"}
+  for(const m of list){if(have.has(fullK(m)))continue;m.id="a"+Date.now().toString(36)+rndId(3);S.roster.push(m);have.add(fullK(m));n++}save();return n}
+document.addEventListener("click",e=>{const t=e.target;
+  if(t.closest("[data-addm]")){if(!canEdit())return denyMsg();addSheet(t.closest("[data-addm]").dataset.addm||"");return}
+  if(t.id==="amAdd"){const name=($("#amName").value||"").trim();if(!name){toast("Enter a name.");return}const ph=normPh($("#amPh").value||"");
+    const r=addMarine({rank:$("#amRank").value,name,sec:$("#amSec").value,sub:$("#amSub")?subCode($("#amSub").value):"",phone:ph});save();
+    $("#amName").value="";$("#amPh").value="";$("#amName").focus();const o=$("#amOut");if(o)o.innerHTML=r?`✓ Added <b>${esc(r.rank+" "+r.name)}</b> to ${esc(r.sec)}. Add another or tap Done.`:"Already on the roster.";return}
+  if(t.id==="amDone"){closeSheet();render();return}
+  if(t.id==="amListAdd"){const lines=($("#amList").value||"").split(/\n+/);let n=0,skip=0;const def=$("#amSec").value;for(const l of lines){const o=addParse(l);if(!o)continue;const r=addMarine(o,def);if(r)n++;else skip++}save();$("#amList").value="";
+    const o=$("#amOut");if(o)o.innerHTML=`✓ Added <b>${n}</b>${skip?` · ${skip} already on the roster`:""}.`;toast(n+" added");return}});
+document.addEventListener("change",e=>{if(e.target.id!=="coFileAdd"&&e.target.id!=="fileAdd")return;const f=e.target.files[0];if(!f)return;const o=$("#"+(e.target.id==="coFileAdd"?"coFOut":"fileAddOut"));
+  mergeFile(f).then(n=>{toast(n+" new Marines added");if(o)o.textContent=n+" new Marines added. Everyone already here was kept.";if(S.board)rpPublish(true);render()}).catch(err=>{if(o)o.textContent=String(err.message||err)});e.target.value=""});
+
 /* ---------- COMPANY ROSTER: drop one file, build the whole company board ---------- */
 function plCode(v){const U=String(v||"").toUpperCase().trim();if(!U)return"";if(/^(HQ|HQS|HEADQUARTERS|CO HQ|COMPANY HQ|HQ PLT|HQ PLATOON)$/.test(U))return"HQ";
   const n=(U.match(/^(\d)\s*(?:ST|ND|RD|TH)?\s*(?:PLT|PLATOON)?$/)||U.match(/(\d)\s*(?:ST|ND|RD|TH)?\s*(?:PLT|PLATOON)/)||U.match(/(?:PLT|PLATOON)\s*(\d)/)||[])[1];if(n)return n+"PLT";
   return U.replace(/[^A-Z0-9]/g,"").slice(0,6)||""}
 function plName(c,raw){if(c==="HQ")return"Company HQ";const n=(c.match(/^(\d)PLT$/)||[])[1];if(n)return n+(["","st","nd","rd"][+n]||"th")+" Platoon";return String(raw||c).slice(0,30)}
-function subCode(v){const U=String(v||"").toUpperCase().trim();const m={HEADQUARTERS:"HQ",HQ:"HQ","HEAVY EQUIPMENT":"HE",HE:"HE",EE:"HE","COMBAT ENGINEER":"CE",CE:"CE",ORDNANCE:"ORD",ORD:"ORD",UTILITIES:"UT",UT:"UT"};return m[U]||U.replace(/[^A-Z0-9]/g,"").slice(0,6)}
-async function fileToCSV(f){if(/\.xlsx?$/i.test(f.name)){const X=await loadXLSX();const wb=X.read(await f.arrayBuffer(),{type:"array"});return X.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]])}return await f.text()}
+function subCode(v){const U=String(v||"").toUpperCase().trim().replace(/^EE$/,"HE");const m={HEADQUARTERS:"HQ",HQ:"HQ","HEAVY EQUIPMENT":"HE",HE:"HE",EE:"HE","COMBAT ENGINEER":"CE",CE:"CE",ORDNANCE:"ORD",ORD:"ORD",UTILITIES:"UT",UT:"UT"};return m[U]||U.replace(/[^A-Z0-9]/g,"").slice(0,6)}
+async function fileToCSV(f){if(/\.numbers$/i.test(f.name))throw new Error("Numbers files can't be opened here. In Numbers: File → Export To → Excel (or CSV), then load that file.");if(/\.xlsx?$/i.test(f.name)){const X=await loadXLSX();const wb=X.read(await f.arrayBuffer(),{type:"array"});return X.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]])}return await f.text()}
 function companyParse(text){const rows=parseCSV(text).filter(r=>r.some(x=>x));const hi=rows.findIndex(r=>r.some(x=>/^(name|last name|full name|rank)$/i.test(x.trim())));
   if(hi<0)throw new Error("Couldn't find a header row with Name or Rank.");const H=rows[hi].map(x=>x.toLowerCase().trim());const col=(...ns)=>{for(const n of ns){const i=H.indexOf(n);if(i>=0)return i}return -1};
   const cR=col("rank","grade","rank/grade"),cN=col("name","full name","marine","member"),cL=col("last name","last"),cF=col("first name","first"),cP=col("platoon","plt","plt."),cS=col("section","sec","shop","work section"),cU=col("unit","ruc/unit","organization","org"),
@@ -1404,7 +1445,9 @@ function companyParse(text){const rows=parseCSV(text).filter(r=>r.some(x=>x));co
   if(cN<0&&cL<0)throw new Error("The file needs a Name column (or Last name / First name).");
   const out=[];const plRaw={};let n=0;
   for(const r of rows.slice(hi+1)){const name=cN>=0?r[cN]:((r[cL]||"")+(r[cF]?", "+r[cF]:""));if(!name||!name.trim())continue;
-    let pc="",sub="";if(cP>=0){pc=plCode(r[cP]);plRaw[pc]=plRaw[pc]||r[cP]}else if(cU>=0){const m=mapCo(r[cU]);const mm=String(r[cU]||"").toUpperCase().match(/(\d)\s*(?:ST|ND|RD|TH)?\s*(?:PLT|PLATOON)|(?:PLT|PLATOON)\s*(\d)/);pc=mm?(mm[1]||mm[2])+"PLT":/HQ/.test(String(r[cU]).toUpperCase())?"HQ":"";sub=m.sub}
+    let pc="",sub="";const segs=cU>=0?String(r[cU]||"").toUpperCase().split("-").map(x=>x.trim()).filter(Boolean):[];
+    if(cP<0&&segs.length>=3&&/^\d{4,5}$/.test(segs[0])){pc=segs[2].replace(/[^A-Z0-9]/g,"").slice(0,6);plRaw[pc]=plRaw[pc]||pc;sub=segs[3]?subCode(segs[3]):""}
+    else if(cP>=0){pc=plCode(r[cP]);plRaw[pc]=plRaw[pc]||r[cP]}else if(cU>=0){const m=mapCo(r[cU]);const mm=String(r[cU]||"").toUpperCase().match(/(\d)\s*(?:ST|ND|RD|TH)?\s*(?:PLT|PLATOON)|(?:PLT|PLATOON)\s*(\d)/);pc=mm?(mm[1]||mm[2])+"PLT":/HQ/.test(String(r[cU]).toUpperCase())?"HQ":"";sub=m.sub}
     if(cS>=0)sub=subCode(r[cS]);if(!pc)pc="HQ";
     const st=cSt>=0?mapStatus(r[cSt]):"On Hand";
     out.push({id:"m"+(++n),rank:(cR>=0?r[cR]:"").toUpperCase().slice(0,10)||"",name:name.toUpperCase().trim().slice(0,60),sec:pc,sub:sub||undefined,status:st,detail:cSt>=0?(r[cSt]||""):"",loc:cLo>=0?(r[cLo]||""):"",start:cB>=0?fmtD(r[cB]):"",end:cE>=0?fmtD(r[cE]):"",phone:cPh>=0?normPh(r[cPh]||""):""})}
@@ -1422,9 +1465,11 @@ function coRosterHTML(){const co=S.level==="co"&&S.source!=="sample";
   return `<div class="panel" style="border-color:var(--brass)"><b>${co?"Company roster loaded":"Build the company board from a roster"}</b>
     ${co?`<div class="note">${S.roster.length} people · ${SECTIONS.map(([k])=>`<b>${esc(k)}</b> ${S.roster.filter(m=>m.sec===k).length}`).join(" · ")}</div>
       <div class="row2"><button class="btn" data-go="live">Send platoon OIC links</button><button class="btn alt" data-go="board">See the company</button></div>
-      <p class="note">Load an updated file any time to refresh it.</p>`:`<p class="note">Drop in the company roster (Excel or CSV). Each platoon becomes a tab, each platoon OIC gets a link, and the whole company shows here live.</p>
+      <button class="btn alt" data-addm="" style="width:100%">+ Add Marines</button>
+      <label for="coFileAdd">Add more Marines from a file (keeps everyone already here)</label><input type="file" id="coFileAdd" accept=".csv,.xlsx,.xls,.numbers,text/csv">
+      <p class="note">Or load an updated full roster below to replace it.</p>`:`<p class="note">Drop in the company roster (Excel or CSV). Each platoon becomes a tab, each platoon OIC gets a link, and the whole company shows here live.</p>
       <p class="note">Columns it reads: <b>Name</b> (or Last / First), <b>Rank</b>, <b>Platoon</b>, <b>Section</b>, Phone, Status. No Platoon column? It reads the Unit column (e.g. "1ST PLT-HE").</p>`}
-    <label for="coFile">${co?"Load an updated company roster":"Company roster file"}</label><input type="file" id="coFile" accept=".csv,.xlsx,.xls,text/csv"><div class="note" id="coFOut"></div></div>`}
+    <label for="coFile">${co?"Load an updated company roster":"Company roster file"}</label><input type="file" id="coFile" accept=".csv,.xlsx,.xls,.numbers,text/csv"><div class="note" id="coFOut"></div></div>`}
 document.addEventListener("change",e=>{if(e.target.id!=="coFile")return;const f=e.target.files[0];if(!f)return;const o=$("#coFOut");if(o)o.textContent="Reading "+f.name+"…";
   companyLoad(f).then(P=>{toast(P.roster.length+" people loaded into "+P.secs.length+" platoons");if(S.board){rpPublish(true)}renderCo();window.scrollTo(0,0)}).catch(err=>{if(o)o.textContent=String(err.message||err)});e.target.value=""});
 
@@ -1767,7 +1812,7 @@ function renderBoard(){const {c,T,A}=counts();const P=pct(T["On Hand"],T.total);
   h+=`<tr class="sum"><td>Present on deck</td>${SECTIONS.map(([k])=>`<td>${present(c[k])}</td>`).join("")}<td>${present(T)}</td></tr><tr class="sum"><td>% On hand</td>${SECTIONS.map(([k])=>`<td>${pct(c[k]["On Hand"],c[k].total)}%</td>`).join("")}<td>${P}%</td></tr></tbody></table></div>
     <div class="note">Present on deck = On Hand + Appt On Base + Co Duties.${A.total?` Attached (not on strength): ${A.total}, ${A["On Hand"]} on hand. Total accounted for ${T.total+A.total}.`:""}</div><div class="row2"><button class="btn alt" data-go="text">Send the numbers</button><button class="btn alt" data-go="trends">Trends</button></div></details>`;
   $("#main").innerHTML=h}
-function renderPeople(){const {c,A}=counts();let h=banner();
+function renderPeople(){const {c,A}=counts();let h=banner()+(canEdit()&&isLeaderPhone()?`<button class="btn alt" data-addm="" style="width:100%;margin-top:10px">+ Add Marines</button>`:"");
   h+=`<div style="margin-top:12px"><input class="search" id="gq" type="search" placeholder="Find anyone: name, rank or section" autocomplete="off" style="margin:0"><div id="gqr" class="alist" style="margin-top:6px"></div></div>`;
   h+=`<div class="sech"><h2>Sections</h2><span class="note" style="margin:0">${S.roster.filter(m=>m.sec!=="ATT").length} people</span></div><div class="tgrid">`;
   h+=SECTIONS.map(([k,n])=>{const o=c[k];const p=pct(o["On Hand"],o.total);const away=o.total-present(o);const r=S.board&&S.board.last[k];
