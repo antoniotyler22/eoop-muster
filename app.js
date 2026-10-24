@@ -63,7 +63,12 @@ setInterval(()=>{if(!document.hidden)runDue(false)},2000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)runDue(true)});
 const APP_VER=window.AV||"3.5.0";const APP_BUILD="2026-10-25";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
-const MODE_ORDER=["military","police","jobs","hr","civilian"];
+/* Custom: a version people name themselves (5K, field trip, class, shift…). Starts from Civilian; labels come from S.customV. */
+MODES.custom=Object.assign(JSON.parse(JSON.stringify(MODES.civilian)),{name:"Custom",desc:"Name it yourself: 5K, field trip, class, shift, anything",title:"Accounted For"});
+Object.defineProperty(MODES.custom,"v",{configurable:true,enumerable:true,get(){const b=JSON.parse(JSON.stringify(MODES.civilian.v));let c={};try{c=(typeof S==="object"&&S&&S.customV)||{}}catch(e){}
+  for(const k of ["p","ps","here","aob","aoff","cod","op","tad","lv","mus","rec","attPl","eo"])if(c[k])b[k]=c[k];
+  if(c.aob)b.aobS=c.aob;if(c.aoff)b.aoffS=c.aoff;if(c.cod)b.codS=c.cod;if(c.op)b.opS=c.op;if(c.tad)b.tadS=c.tad;if(c.attPl){b.attC=c.attPl;b.attP=c.attPl.toLowerCase();b.att1=c.attPl.toLowerCase().replace(/s$/,"")}return b}});
+const MODE_ORDER=["military","police","jobs","hr","civilian","custom"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
 const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 /* Build the label map for the current version. Military = no map (app text as written). */
@@ -1219,7 +1224,7 @@ const AK_EX={military:["How many days of leave can I carry over at the end of th
  police:["What are OSHA rules for bloodborne pathogen exposure on duty?","What does FLSA say about overtime for officers?"],
  jobs:["When is fall protection required on a job site?","How often do forklift operators need re-evaluation?"],
  hr:["What does FMLA cover and who qualifies?","How long must I keep I-9 forms?"],
- civilian:["What should be in a group emergency kit?","How do I plan a safe outdoor event in heat?"]};
+ civilian:["What should be in a group emergency kit?","How do I plan a safe outdoor event in heat?"]};AK_EX.custom=AK_EX.civilian;
 function akPII(q){if(/\b\d{3}-\d{2}-\d{4}\b/.test(q))return "That looks like a Social Security number.";if(/\b\d{9,10}\b/.test(q))return "That looks like an ID number (SSN or EDIPI).";
   if((q.match(PH_RE)||[]).length)return "That looks like a phone number.";if(/@[a-z0-9.-]+\.[a-z]{2,}/i.test(q))return "That looks like an email address.";
   if(S.source!=="sample"){const U=" "+q.toUpperCase().replace(/[^A-Z]/g," ")+" ";for(const m of S.roster){const l=lastOf(m);if(l.length>=4&&U.includes(" "+l+" ")&&!["SMITH","JONES","BROWN"].includes(l)&&!/^(LEAVE|DUTY|ORDER|RANGE|MARINE)$/.test(l))return "It includes a name from your roster ("+l+")."}}return ""}
@@ -1525,7 +1530,7 @@ function ntState(nt){if(!nt)return null;if(nt.err)return {ok:0,msg:"Couldn't rea
   return {ok:0,msg:"Unexpected answer ("+nt.s+")."}}
 async function scCopy(file){try{const r=await fetch("supabase/setup/"+file+".sql",{cache:"no-cache"});if(!r.ok)throw 0;const t=await r.text();await navigator.clipboard.writeText(t);toast("Copied "+file+". Paste it in SQL Editor and Run.")}catch(e){toast("Copy blocked. Open the file in GitHub: supabase/setup/"+file+".sql")}}
 async function scCopyNotify(){try{const r=await fetch("supabase/functions/notify/index.ts",{cache:"no-cache"});const t=await r.text();await navigator.clipboard.writeText(t);toast("notify code copied. Paste it in Edge Functions → notify → Code, then Deploy.")}catch(e){toast("Copy blocked here.")}}
-function renderSys(){let h=`<h2>System check</h2><div class="panel"><p class="note">Tests every piece of your server setup in a few seconds. It doesn't change or read any of your data.</p><button class="btn" id="scGo"${scBusy?" disabled":""}>${scBusy?"Checking…":"Run system check"}</button></div>`;
+function renderSys(){let h=`<h2>System check</h2><div class="panel"><p class="note">Tests every piece of your Supabase server setup in a few seconds. It doesn't change or read any of your data.</p><button class="btn" id="scGo"${scBusy?" disabled":""}>${scBusy?"Checking…":"Run system check"}</button></div>`;
   if(scRes&&!scBusy){const bad=SC.filter(g=>!scRes.g[g.k].ok);const nt=ntState(scRes.nt);
     h+=`<div class="panel" style="border-color:var(${bad.length||!nt.ok?"--warn":"--s-onhand"})"><b style="font-size:18px;color:var(${bad.length||!nt.ok?"--warn":"--s-onhand"})">${bad.length||!nt.ok?"⚠ "+(bad.length+(nt.ok?0:1))+" thing"+(bad.length+(nt.ok?0:1)>1?"s":"")+" to fix":"✅ Everything is set up"}</b><div class="note">Checked ${ago(scRes.at)}</div></div>`;
     h+=`<div class="alist">${SC.map(g=>{const r=scRes.g[g.k];return `<div class="rrow" style="--sc:var(${r.ok?"--s-onhand":"--warn"})"><div class="rtop"><div class="who"><b>${r.ok?"✅":"❌"} ${esc(g.n)}</b>${r.ok?"":`<div class="ph">${r.net?"Couldn't reach the server. Check signal and run again.":r.perm.length?"Permissions missing ("+r.perm.join(", ")+"). Run the last part again.":"Missing: "+r.miss.join(", ")}</div>`}</div></div>
@@ -1799,7 +1804,7 @@ const READY_DEF={
  police:[["Evaluation",12],["Firearms qual",6],["Use of force training",12],["CPR / First aid",24],["Physical",12],["Driver's license",48],["Annual training",12]],
  jobs:[["Safety orientation",0],["OSHA 10/30",60],["First aid / CPR",24],["Forklift cert",36],["Driver's license",48],["Drug test",12],["Performance review",12]],
  hr:[["Performance review",12],["Compliance training",12],["Harassment training",12],["Certification",24],["Benefits enrollment",12],["Onboarding paperwork",0]],
- civilian:[["Waiver",12],["Background check",24],["CPR / First aid",24],["Training",12],["Dues",12]]};
+ civilian:[["Waiver",12],["Background check",24],["CPR / First aid",24],["Training",12],["Dues",12]]};READY_DEF.custom=READY_DEF.civilian;
 function readyItems(){const k=MODES[S.mode]?S.mode:"military";if(!Array.isArray(S.ready[k]))S.ready[k]=READY_DEF[k].map(([n,mo])=>({n,mo}));return S.ready[k]}
 const isoToday=()=>dkey();
 function addMonths(iso,mo){const [y,m,d]=iso.split("-").map(Number);const t=new Date(y,m-1+mo,d);return dkey(t)}

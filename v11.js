@@ -345,7 +345,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="v11WL
   g.insertAdjacentHTML("beforeend",`<button id="v11SignInTool"><span class="ic">${svg("key")}</span><span><b>Sign in / welcome</b><small>Username, invite link, get the app</small></span></button><button id="v11ShareApp"><span class="ic">${svg("send")}</span><span><b>Share the app</b><small>iPhone + web links</small></span></button>`)}}
 if(typeof WS_GLOBAL==="object"&&Array.isArray(WS_GLOBAL))WS_GLOBAL.push("welcomed");
 /* first open: show it (also if the version sheet already opened before this file loaded) */
-if(!S.mode&&!S.welcomed&&!/(^|[#&])(join|me|feed|ci|sync|coj|cov|bc|qr)=/.test(location.hash||"")){setTimeout(()=>{const sh=$("#sheet");if(sheetCtx&&sheetCtx.kind==="mode")closeSheet();showWelcome()},sh0())}
+if(!S.mode&&!S.welcomed&&!/(^|[#&])(join|me|feed|ci|sync|coj|cov|bc|qr|pg)=/.test(location.hash||"")){setTimeout(()=>{const sh=$("#sheet");if(sheetCtx&&sheetCtx.kind==="mode")closeSheet();showWelcome()},sh0())}
 function sh0(){return 380}
 if(S.mode&&!S.welcomed){S.welcomed=1;save()}
 

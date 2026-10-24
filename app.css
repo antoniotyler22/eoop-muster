@@ -442,3 +442,15 @@ body.v11wide .wrap,body.v11wide .top-in{max-width:1180px}
 .v11w-in input:not([type=checkbox]){width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);font:inherit;color:var(--ink);box-sizing:border-box}
 body.v11w-open{overflow:hidden}
 .v11w-in .tog{display:flex;gap:8px;align-items:flex-start}.v11w-in .tog input{width:20px;height:20px;flex:0 0 20px;margin-top:2px}
+/* 1.2: messages, pages, AI switch */
+body.v12noai [data-go="ask"],body.v12noai [data-tab="ask"]{display:none!important}
+.v12chat{display:flex;flex-direction:column;gap:8px;max-height:58vh;overflow:auto;padding:10px 2px;margin-top:8px}
+.v12b{max-width:82%;align-self:flex-start;background:var(--surface-solid);border:1px solid var(--line);border-radius:18px 18px 18px 6px;padding:8px 12px;display:flex;flex-direction:column;gap:4px;word-wrap:break-word}
+.v12b.me{align-self:flex-end;background:var(--ink);color:var(--bg);border-color:transparent;border-radius:18px 18px 6px 18px}
+.v12bt{font-size:11px;opacity:.65}
+.v12img{display:block;width:100%;max-height:520px;object-fit:cover;border-radius:14px;margin:4px 0}
+.v12comp textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);font:inherit;color:var(--ink)}
+.v12cms{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:8px}
+.v12cm{font-size:14px;line-height:1.35}
+.v12tabs button{flex:1}
+.v12comp textarea{min-height:70px!important;height:auto}
