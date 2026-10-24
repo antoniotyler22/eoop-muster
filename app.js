@@ -263,6 +263,42 @@ const h0=(location.hash||"").slice(1).toLowerCase();
 if(["board","hq","he","ce","ord","ut","att","pt","w6","text","data","muster","alerts","recall","events","armory","rollup","live","send","feed","trends","ready","duty","cal","log","me","sys","today","ask","people","tools","co","act"].includes(h0)||(Array.isArray(S.secs)&&S.secs.some(x=>String(x[0]).toLowerCase()===h0))) view=h0;
 
 const $=s=>document.querySelector(s);
+
+/* ---------- Accounted For Pro (iPhone app: Apple subscription; members always free) ---------- */
+const PRO_IDS=["com.antoniotyler.accountedfor.pro.yearly","com.antoniotyler.accountedfor.pro.monthly"];
+const PRO_GATE_WEB=false; /* web + Android stay unlocked until web billing exists */
+const PRO_FEAT={co:"Company roll-up",rollup:"Roll up units",recall:"Recall drills",muster:"QR formation muster",trends:"Trends",w6:"6W incident reports",logins:"Member logins",xl:"Excel export"};
+let proProducts=null,proBusy=false,proMsg="";
+function proOK(){const N=window.MBN;if(!N||!N.on)return !PRO_GATE_WEB;if(S&&S.role==="view")return true;const p=N.pro||{};return !!p.active&&(!p.exp||p.exp>Date.now()-3*864e5)}
+function proList(){return `<ul class="pro-list"><li>Company roll-up: platoons and sections feed one company page</li><li>Member logins: username and password instead of links</li><li>Recall drills with live Good / Delayed / Need help</li><li>QR formation muster</li><li>Excel export, trends and 6W incident reports</li></ul>`}
+function proWallHTML(k){return `<div class="panel pro-wall"><span class="pro-badge">PRO</span><h2 style="margin:0">${PRO_FEAT[k]||"Accounted For Pro"}</h2><p class="note">Part of <b>Accounted For Pro</b>, for the person running the team. Members and section leaders always use the app free.</p>${proList()}<button class="btn" data-pro-open="${k}">See Pro</button></div>`}
+function proPer(p){const n=p.periodCount||1;return n>1?`${n} ${p.period}s`:p.period}
+function proPageHTML(){const N=window.MBN||{};let h=`<div class="panel pro-wall"><span class="pro-badge">PRO</span><h2 style="margin:0">Accounted For Pro</h2>`;
+  if(!N.on){return h+`<p class="note">Pro is available in the iPhone app. Everything is unlocked here for now.</p></div>`}
+  if(proOK()&&N.pro&&N.pro.active){const e=N.pro.exp?new Date(N.pro.exp).toLocaleDateString():"";return h+`<p><b style="color:var(--s-onhand)">● Pro is on.</b>${e?` Renews or ends ${esc(e)}.`:""}</p>${proList()}<button class="btn alt" data-pro-manage="1">Manage subscription</button></div>`}
+  h+=`<p class="note">For the person running the team. Members and section leaders stay free.</p>${proList()}`;
+  if(!proProducts)h+=`<p class="note">Loading prices from the App Store…</p>`;
+  else if(!proProducts.length)h+=`<p class="note">Pro isn't available yet. Try again later.</p>`;
+  else{const ps=PRO_IDS.map(id=>proProducts.find(p=>p.id===id)).filter(Boolean);
+    for(const p of ps){const yr=p.period==="year";const mo=ps.find(x=>x.period==="month");const save=yr&&mo&&p.amount&&mo.amount?Math.round((1-p.amount/(mo.amount*12))*100):0;
+      h+=`<button class="btn${yr?"":" alt"} pro-plan" data-pro-buy="${esc(p.id)}"${proBusy?" disabled":""}><span>${p.trial&&p.introDays?`${p.introDays} days free, then `:""}${esc(p.price)} / ${esc(proPer(p))}</span>${save>0?`<small> · save ${save}%</small>`:""}</button>`}}
+  if(proMsg)h+=`<p class="note" style="color:var(--warn)">${esc(proMsg)}</p>`;
+  h+=`<button class="btn alt" data-pro-restore="1"${proBusy?" disabled":""}>Restore purchases</button>`;
+  h+=`<p class="note pro-legal">Payment is charged to your Apple ID. The subscription renews automatically unless canceled at least 24 hours before the end of the current period; your account is charged for renewal within 24 hours before the period ends. Manage or cancel any time in Settings → your name → Subscriptions. <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank">Terms of Use</a> · <a href="privacy.html" target="_blank">Privacy Policy</a></p></div>`;
+  return h}
+function openPro(k){proMsg="";$("#main").innerHTML=proPageHTML();window.scrollTo(0,0);const N=window.MBN;
+  if(N&&N.on&&N.Pro&&!proProducts)N.Pro.products({ids:PRO_IDS}).then(r=>{proProducts=(r&&r.products)||[];if($(".pro-wall"))$("#main").innerHTML=proPageHTML()}).catch(e=>{proProducts=[];proMsg=String(e&&e.message||e);if($(".pro-wall"))$("#main").innerHTML=proPageHTML()})}
+window.__proChanged=()=>{try{render()}catch(e){}};
+document.addEventListener("click",async e=>{const t=e.target.closest("[data-pro-open],[data-pro-buy],[data-pro-restore],[data-pro-manage]");if(!t)return;e.preventDefault();const N=window.MBN||{};
+  if(t.dataset.proOpen){openPro(t.dataset.proOpen);return}
+  if(t.dataset.proManage){N.Pro&&N.Pro.manage();return}
+  if(!N.Pro||proBusy)return;proBusy=true;proMsg="";$("#main").innerHTML=proPageHTML();
+  try{const r=t.dataset.proBuy?await N.Pro.buy({id:t.dataset.proBuy}):await N.Pro.restore();N.setPro&&N.setPro(r);
+    if(r&&r.result==="pending")proMsg="Waiting for approval (Ask to Buy). Pro turns on when it's approved.";
+    else if(t.dataset.proRestore&&!(r&&r.active))proMsg="No active Pro subscription found on this Apple ID.";
+    else if(r&&r.active){try{navigator.vibrate&&navigator.vibrate(20)}catch(_){}}}
+  catch(err){proMsg=String(err&&err.message||err)}
+  proBusy=false;if(N.pro&&N.pro.active&&!proMsg){render()}else $("#main").innerHTML=proPageHTML()});
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2200)}
 
@@ -2532,7 +2568,8 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetCtx)closeSheet
 document.addEventListener("dragleave",e=>{const d=$("#rcDrop");if(d&&!e.relatedTarget)d.classList.remove("over")});
 document.addEventListener("drop",e=>{if(view!=="recall"&&view!=="data")return;const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;e.preventDefault();const d=$("#rcDrop");if(d)d.classList.remove("over");rcLoadFile(f,view==="recall"?"#rcOutR":"#rcOut")});
 function render(){renderTabs();if(view!=="feed"){fdPend=0;fdPillShow()}
-  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="rollup")renderRollup();else if(view==="live")renderLive();else if(view==="act")renderAct();else if(view==="co")renderCo();else if(view==="send")renderSend();else if(view==="feed")renderFeed();else if(view==="trends")renderTrends();else if(view==="ready")renderReady();else if(view==="duty")renderDuty();else if(view==="p")renderPerson();else if(view==="cal")renderCal();else if(view==="log")renderLog();else if(view==="me")renderMe();else if(view==="sys")renderSys();else if(view==="today")renderToday();else if(view==="ask")renderAsk();else if(view==="people")renderPeople();else if(view==="tools")renderTools();else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
+  if(PRO_FEAT[view]&&!proOK()){$("#main").innerHTML=banner()+proWallHTML(view);animateView();return}
+  if(view==="board")renderBoard();else if(view==="pt")renderPT();else if(view==="w6")renderW();else if(view==="muster")renderMuster();else if(view==="alerts")renderAlerts();else if(view==="recall")renderRecall();else if(view==="events")renderEvents();else if(view==="armory")renderArmory();else if(view==="rollup")renderRollup();else if(view==="live")renderLive();else if(view==="act")renderAct();else if(view==="co")renderCo();else if(view==="send")renderSend();else if(view==="feed")renderFeed();else if(view==="trends")renderTrends();else if(view==="ready")renderReady();else if(view==="duty")renderDuty();else if(view==="p")renderPerson();else if(view==="cal")renderCal();else if(view==="log")renderLog();else if(view==="me")renderMe();else if(view==="sys")renderSys();else if(view==="today")renderToday();else if(view==="ask")renderAsk();else if(view==="people")renderPeople();else if(view==="tools"){renderTools();if(window.MBN&&MBN.on)$("#main").insertAdjacentHTML("beforeend",`<div class="panel"><b>Accounted For Pro</b><p class="note">${proOK()?"Pro is on.":"Company roll-up, logins, recall, QR muster, Excel."}</p><button class="btn alt" data-pro-open="tools">${proOK()?"Pro and subscription":"See Pro"}</button></div>`)}else if(view==="text")renderText();else if(view==="data")renderData();else renderSection(view.toUpperCase());animateView();animateNums()}
 
 /* ---------- CSV import ---------- */
 function parseCSV(text){const rows=[];let row=[],f="",q=false;
@@ -2634,7 +2671,7 @@ document.addEventListener("click",e=>{
       o.innerHTML=`Found a backup from ${ago(x.at)} with <b>${n}</b> people. <button class="btn warn" id="syApply" style="width:100%;margin-top:6px">Replace this phone's data with it</button>`;window.__syx={code,x}}).catch(err=>{o.textContent=err.message});return}
   if(e.target.id==="syApply"&&window.__syx){applyRestore(window.__syx.code,window.__syx.x,"oic");return}
   if(e.target.id==="syJoin"&&sheetCtx&&sheetCtx.kind==="sync"){const code=sheetCtx.code,rr=sheetCtx.r,ww=sheetCtx.w;const o=$("#syJOut");o.textContent="Unlocking…";syncRestore(code).then(x=>applyRestore(code,x,rr,ww)).catch(err=>{o.textContent=err.message});return}
-  const xl=e.target.closest("[data-xl]");if(xl){exportXL(xl.dataset.xl);return}
+  const xl=e.target.closest("[data-xl]");if(xl){if(!proOK()){openPro("xl");return}exportXL(xl.dataset.xl);return}
   const csec=e.target.closest("[data-csec]");if(csec){calSec=csec.dataset.csec;renderCal();return}
   const cmo=e.target.closest("[data-cmo]");if(cmo){const [Y,M]=calM;const d=new Date(Y,M+(+cmo.dataset.cmo),1);calM=[d.getFullYear(),d.getMonth()];renderCal();return}
   const cday=e.target.closest("[data-cday]");if(cday){calDay=cday.dataset.cday;calAdd=false;const y=window.scrollY;renderCal();window.scrollTo(0,y);return}
@@ -3088,6 +3125,7 @@ function lgText(L){return unitName()+" · Accounted For login\nUsername: "+L.use
 let lgForm=null,lgArm=null,lgLast=null,lgMsg="";
 function renderLogins(){let h=`<h2>Logins</h2>`;
   if(!isOwner()){$("#main").innerHTML=h+`<div class="panel"><p class="note">Got a username and password? Sign in to open your page.</p><button class="btn" id="lgSignOpen">Sign in</button></div>`;return}
+  if(!proOK()){$("#main").innerHTML=h+proWallHTML("logins");return}
   const D=lgDests();
   if(!lgForm||!D.some(x=>x.id===lgForm.dest)){const d=D[0];lgForm={dest:d?d.id:"",user:d?lgUser(d.base):"",pw:lgPw(),ed:false}}
   const last=lgLast&&(S.logins||[]).find(x=>x.uid===lgLast);

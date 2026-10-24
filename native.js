@@ -19,6 +19,20 @@
     set: function (k, v) { try { v == null ? localStorage.removeItem(KP + "-" + k) : localStorage.setItem(KP + "-" + k, v); } catch (e) {} }
   };
 
+  /* ---- Accounted For Pro: subscription status from Apple, cached for offline starts ---- */
+  var Pro = P("ProStore"); N.Pro = Pro;
+  N.pro = { active: store.get("pro") === "1", exp: +store.get("proexp") || 0 };
+  N.setPro = function (st) {
+    if (!st) return;
+    var was = N.pro.active;
+    N.pro = { active: !!st.active, exp: st.expires || 0 };
+    store.set("pro", st.active ? "1" : null);
+    store.set("proexp", st.expires ? String(st.expires) : null);
+    if (was !== N.pro.active && typeof window.__proChanged === "function") window.__proChanged();
+  };
+  try { Pro.status().then(N.setPro).catch(function () {}); Pro.addListener("change", N.setPro); } catch (e) {}
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) Pro.status().then(N.setPro).catch(function () {}); });
+
   /* ---- haptics: navigator.vibrate(ms | pattern) ---- */
   navigator.vibrate = function (p) {
     try {
