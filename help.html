@@ -32,6 +32,16 @@ h1{font-size:28px;font-weight:800;margin:0}h2{font-size:19px;font-weight:800;mar
 <li>Formation: MUSTER → Show QR, people check themselves in.</li>
 <li>During the day: section leaders update; you send numbers from TEXT.</li>
 <li>Weekly: READY for due-outs, DUTY for the roster, TRENDS for the brief, ⬇ Excel for the admin shop.</li></ul></div>
+<div class="card"><h2>New in 1.3</h2><ul>
+<li><b>Green dots</b> show what's new. Tap the item and its dot goes away.</li>
+<li><b>Missed check-in alerts</b>: on a recall, set a deadline. You get one alert with how many haven't checked in, even with the app closed.</li>
+<li><b>Rally point</b>: people can confirm they made it. Only their distance is sent, never where they are.</li>
+<li><b>PDF headcount report</b> (Tools → PDF report), <b>import any roster</b> from Excel or CSV, and <b>calendar export</b> for Google, Outlook or Apple Calendar.</li>
+<li><b>Slack, Teams or Discord</b> (Tools → Integrations): post the numbers to a channel.</li>
+<li><b>Group logins</b>: make logins for a rank, a section or a few people at once. People set their own password and can log out.</li>
+<li><b>Clear things off</b>: due-outs get Done, Got it or Delete; alerts get Back ✓, Departed or Hide; calendar items get Done, Hide or ✕.</li>
+<li><b>Made a mistake?</b> "Hidden and cleared" at the bottom of Alerts, Readiness and Calendar lets you Unhide, Undo or Delete. Took someone off the numbers by mistake? Data → Fix a wrong list → Undo.</li>
+</ul></div>
 <div class="card"><h2>New in 1.2</h2><ul>
 <li><b>Move people between sections</b>: on a person's card pick a new section, or People → Move people between sections to move many at once.</li>
 <li><b>6W in your format</b>: BLUF, Who, What, When, Where, Why, WAWDAI, FPC Status, Domicile, EAS. Email it or text it. "Edit the format" adds, removes, renames or reorders lines.</li>
@@ -52,5 +62,5 @@ h1{font-size:28px;font-weight:800;margin:0}h2{font-size:19px;font-weight:800;mar
 <li>In the app: <b>DATA → System check → Run</b>. For anything with ❌, tap <b>Copy part 1</b>, paste in Supabase → SQL Editor → Run, then the next part.</li>
 <li>For push alerts: Edge Functions → create <b>notify</b>, paste the code from System check, add the VAPID_PUBLIC and VAPID_PRIVATE secrets, and turn off Enforce JWT verification.</li>
 <li>Run the three Server protection parts once.</li><li>Updating to 1.1: run <b>16_v11</b> from System check, and redeploy <b>notify</b> so reported posts buzz your phone.</li><li>Updating to 1.2: run <b>17_social</b> from System check (messages and pages).</li></ol></div>
-<div class="card"><h2>Privacy in one line</h2><p>Your roster stays on your phone. What goes to the server is encrypted or scrambled, so the server can't read names, posts or your data. <a href="privacy.html">Full privacy policy</a> · <a href="support.html">Support</a> · <a href="./">Open the app</a></p></div>
+<div class="card"><h2>Privacy in one line</h2><p>Your roster stays on your phone. What goes to the server is encrypted or scrambled, so the server can't read names, posts or your data (the optional server hub is the one exception, and it's marked). Use it on your own phone, and don't enter SSNs, DoD ID numbers (EDIPI), or classified or CUI information. <a href="privacy.html">Full privacy policy</a> · <a href="support.html">Support</a> · <a href="./">Open the app</a></p></div>
 </main></body></html>
