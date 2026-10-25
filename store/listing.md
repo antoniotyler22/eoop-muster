@@ -47,6 +47,7 @@ PRIVATE BY DESIGN
 • Anything shared is encrypted first; the optional server hub is the one exception and is clearly marked
 • No ads, no tracking, no sign-up needed
 • Works offline
+• Made for personal phones: don't enter SSNs, DoD ID numbers or classified/CUI information
 
 Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.
 
