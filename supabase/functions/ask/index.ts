@@ -3,7 +3,7 @@
 // optional AI_MODEL (default claude-sonnet-5-5), AI_DAILY_CAP (default 150), AI_PER_DEVICE (default 20),
 // AI_ADMIN_KEY (lets the OIC's phone turn Ask on/off, choose who can use it and set limits),
 // AI_REQUIRE_PRO (default 1: only Pro teams, the admin and allow-listed FEEDs; set 0 to let anyone ask), AI_PER_TEAM (default 100/day per Pro team),
-// AI_SERVER_CAP (default 5000/day across everyone). Needs SQL part 20 for Pro.
+// AI_SERVER_CAP (default 5000/day across everyone), AI_PER_TEST_TEAM (default 10/day for TestFlight/Sandbox purchases). Needs SQL part 20 for Pro.
 // Question text is never stored. Only daily counters are kept (ai_usage table).
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -32,14 +32,23 @@ const TOPIC: Record<string, string> = {
   civilian: "group and volunteer organization, safety and emergency preparedness",
 };
 
+// Where to verify, and who to send legal / medical / crisis questions to, for each version of the app.
+const RULES: Record<string, string> = {
+  military: `- Orders and rates change. If a source might be outdated or you are not sure, say so and tell them where to verify (the current order on the official site, their admin shop, S-1, IPAC, or chain of command).
+- Legal questions: give general information and point them to legal assistance or the JAG office. Medical: point to medical or the corpsman. If anyone mentions thoughts of suicide or crisis, give the Veterans/Military Crisis Line (dial 988 then press 1, or text 838255) and urge them to reach out now.`,
+  civilian: `- Rules and rates change and differ by state and employer. If a source might be outdated or you are not sure, say so and tell them where to verify (the official site, their supervisor, HR, or their organization's written policy).
+- Legal questions: give general information and suggest an attorney or their HR or legal department. Medical: suggest a doctor, or 911 for an emergency. If anyone mentions thoughts of suicide or crisis, give the 988 Suicide & Crisis Lifeline (call or text 988) and urge them to reach out now.`,
+};
+
+DOMAINS.custom = DOMAINS.civilian; TOPIC.custom = "team organization, workplace and event safety, and emergency preparedness";
+
 function system(mode: string) {
-  return `You are "Ask" inside Accounted For, an accountability app used by small-unit leaders and their people. Answer questions about ${TOPIC[mode] ?? TOPIC.military}.
+  return `You are "Ask" inside Accounted For, an accountability app used by team leaders and their people. Answer questions about ${TOPIC[mode] ?? TOPIC.military}.
 Rules:
 - Search official sources before answering anything about a specific rule, order, standard, number or date. Name the order or document and paragraph only when a source you found shows it. Never invent order numbers, paragraph numbers, scores or dollar amounts.
-- Orders and rates change. If a source might be outdated or you are not sure, say so and tell them where to verify (the current order on the official site, their admin shop, S-1, IPAC, or chain of command).
-- Legal questions: give general information and point them to legal assistance or the JAG office. Medical: point to medical or the corpsman. If anyone mentions thoughts of suicide or crisis, give the Veterans/Military Crisis Line (dial 988 then press 1, or text 838255) and urge them to reach out now.
-- Never ask for or repeat personal information. Do not help with anything classified, OPSEC-sensitive, or that would bypass rules.
-- This is not official guidance. Do not claim to speak for any command.
+${RULES[mode] ?? RULES.civilian}
+- Never ask for or repeat personal information. Do not help with anything classified, security-sensitive, or that would bypass rules.
+- This is not official guidance. Do not claim to speak for any command, agency or employer.
 Style: the reader is on a phone. Lead with the direct answer in 1-2 sentences, then short bullets with the key details. Plain text only: no tables, no headings, at most light **bold**. Keep it under 220 words unless they ask for more.`;
 }
 
@@ -140,7 +149,11 @@ Deno.serve(async (req) => {
   try {
     // Check the phone's own limit first, so one phone hitting its limit doesn't use up the team's.
     if ((await bump("d:" + dev)) > per) return json({ error: "You've reached today's question limit on this phone. Try again tomorrow." }, 429);
-    if (ent) { if ((await bump("p:" + await sha(ent))) > teamCap) return json({ error: "Your team has reached today's question limit. Try again tomorrow." }, 429); }
+    // Test purchases (TestFlight / Sandbox, Stripe test mode) are free to make, so they get a small daily limit.
+    let cap1 = teamCap;
+    if (ent) { const { data: pe } = await db.from("pro_ents").select("env").eq("id", ent).maybeSingle();
+      if (pe && pe.env && pe.env !== "Production" && pe.env !== "live") cap1 = Number(Deno.env.get("AI_PER_TEST_TEAM") ?? 10); }
+    if (ent) { if ((await bump("p:" + await sha(ent))) > cap1) return json({ error: "Your team has reached today's question limit. Try again tomorrow." }, 429); }
     else if ((await bump("all")) > houseCap) return json({ error: "Today's question limit for your unit has been reached. Try again tomorrow." }, 429);
     if ((await bump("server")) > serverCap) return json({ error: "Ask is very busy today. Try again tomorrow." }, 429);
   } catch {
