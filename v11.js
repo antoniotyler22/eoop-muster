@@ -241,6 +241,7 @@ if(typeof SYNC_SKIP==="object"&&Array.isArray(SYNC_SKIP))SYNC_SKIP.push("loads")
 const snap=()=>({roster:JSON.parse(JSON.stringify(S.roster)),source:S.source,loadedAt:S.loadedAt||""});
 function logLoad(kind,label){const e={id:"L"+Date.now().toString(36)+rndId(3),t:Date.now(),kind,label:String(label||"").slice(0,60),before:snap(),n0:S.roster.length,ph0:S.roster.filter(m=>m.phone).length};
   S.loads.unshift(e);S.loads=S.loads.slice(0,5);save();setTimeout(()=>{e.n1=S.roster.length;e.ph1=S.roster.filter(m=>m.phone).length;save();if(view==="data")redraw(tabRedraw)},3500)}
+window.logLoad=logLoad;
 /* snapshot right before the app reads a file or adds people */
 document.addEventListener("change",e=>{const t=e.target;if(!t||t.type!=="file"||!t.files||!t.files[0])return;const nm=t.files[0].name;
   if(t.id==="file")logLoad("Loaded roster",nm);else if(t.id==="fileAdd"||t.id==="coFileAdd")logLoad("Added from file",nm);else if(t.id==="rcFile"||t.id==="rcFileR")logLoad("Phone numbers",nm)},true);
