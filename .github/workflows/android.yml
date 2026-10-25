@@ -1,0 +1,59 @@
+# Builds the signed Android App Bundle (.aab) for Google Play. Run it from GitHub: Actions → "Android build" → Run workflow.
+# Needs these repository secrets (Settings → Secrets and variables → Actions):
+#   ANDROID_KEYSTORE_B64       the upload keystore file, base64 (make one once: see store/README.md)
+#   ANDROID_KEYSTORE_PASSWORD  its password
+#   ANDROID_KEY_ALIAS          the key's alias (e.g. upload)
+#   ANDROID_KEY_PASSWORD       the key's password
+# Optional, to upload straight to Play's internal testing track:
+#   PLAY_SERVICE_ACCOUNT_JSON  a Google Cloud service account with access in Play Console → Users and permissions
+name: Android build
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version shown in Google Play (e.g. 1.3.0)"
+        required: true
+        default: "1.3.0"
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      PLAY_ON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - run: npm ci && npm test && npm run build:web && npx cap sync android
+      - name: Check secrets
+        env:
+          K: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          P: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          A: ${{ secrets.ANDROID_KEY_ALIAS }}
+          W: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: for v in K P A W; do if [ -z "${!v}" ]; then echo "::error::Missing an Android signing secret (see the top of this file)"; exit 1; fi; done
+      - name: Build signed bundle
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/upload.jks"
+          chmod +x gradlew
+          ./gradlew bundleRelease --no-daemon -q -PversionCode=${{ github.run_number }} -PversionName=${{ github.event.inputs.version }}
+          rm -f "$RUNNER_TEMP/upload.jks"
+      - uses: actions/upload-artifact@v4
+        with: { name: accounted-for-aab, path: android/app/build/outputs/bundle/release/*.aab, retention-days: 30 }
+      - name: Upload to Play (internal testing)
+        if: env.PLAY_ON == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.antoniotyler.accountedfor
+          releaseFiles: android/app/build/outputs/bundle/release/*.aab
+          track: internal
+          status: draft

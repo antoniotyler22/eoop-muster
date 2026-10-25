@@ -1,6 +1,6 @@
 // Supabase Edge Function "notify": push alerts to the leader's phone.
 //  {recall}: after a live recall check-in.  {board}: after a section leader's live update.  {feed, lk, urg}: after a Feed post.
-//  {alert, feed, mk}: a member's request or problem report, to the OIC.
+//  {alert, feed, mk}: a member's request or problem report, to the OIC.  {escalate:1}: missed check-in deadlines (pg_cron, part 22).
 // Payloads carry no names. Turn OFF "Enforce JWT verification" (the function validates input itself).
 // Secrets: VAPID_PUBLIC, VAPID_PRIVATE (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are built in).
 // iPhone app (optional): APNS_KEY (the .p8 file contents), APNS_KEY_ID, APNS_TEAM_ID, APNS_TOPIC (bundle id; default com.antoniotyler.accountedfor).
@@ -131,11 +131,36 @@ async function alertOic(id: string, mk: string, kind: string) {
   return out(r === "ok" ? "sent" : "push failed");
 }
 
+// {escalate:1}: every minute from pg_cron (setup part 22). Recalls whose deadline just passed with people still
+// missing get one alert to the leader's phone. Counts only; the server never has names.
+async function escalate() {
+  const { data, error } = await db.rpc("esc_due");
+  if (error) return out("no escalations table");
+  let sent = 0;
+  // deno-lint-ignore no-explicit-any
+  for (const r of (data ?? []) as any[]) {
+    if (!r.push_sub) continue;
+    const answered = (r.good ?? 0) + (r.delayed ?? 0) + (r.help ?? 0);
+    const missing = Math.max(0, (r.expected ?? 0) - answered);
+    if (!missing && !r.help) continue;
+    const payload = {
+      title: missing ? `⏰ ${missing} not checked in` : "⚠ Deadline passed: someone needs help",
+      body: `${answered} of ${r.expected} answered by the deadline` + (r.help ? ` · ${r.help} need help` : "") + (r.delayed ? ` · ${r.delayed} delayed` : "") + ". Open the recall.",
+      help: true, open: "recall",
+    };
+    const res = await pushAny(r.push_sub, payload, true, 3600);
+    if (res === "gone") await db.from("recalls").update({ push_sub: null }).eq("id", r.recall_id);
+    if (res === "ok") sent++;
+  }
+  return out("escalated " + sent);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return out("ok");
   if (req.method !== "POST") return out("method", 405);
-  let body: { recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown } = {};
+  let body: { recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown } = {};
   try { body = await req.json(); } catch { return out("bad", 400); }
+  if (body.escalate === 1) return escalate();
   if ((body.alert === "req" || body.alert === "prob" || body.alert === "rep") && typeof body.feed === "string" && /^[a-z0-9]{10,20}$/.test(body.feed) && typeof body.mk === "string" && /^[a-z0-9]{24,40}$/.test(body.mk))
     return alertOic(body.feed, body.mk, body.alert);
   if (typeof body.recall === "string" && /^[a-z0-9]{8,16}$/.test(body.recall)) return recall(body.recall);

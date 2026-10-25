@@ -2325,7 +2325,7 @@ function rndId(n){const a=crypto.getRandomValues(new Uint8Array(n));return [...a
 let liveBusy=false,liveIdx=null;
 async function liveCreate(){const L=S.rc.live;if(!L||L.ok||!S.rc.open)return;try{await SB.rpc("create_recall",{p_id:S.rc.rid,p_read_key:L.key});L.ok=true;L.err="";save();pushAttach()}catch(e){L.err=String(e.message||e).slice(0,80);save()}}
 /* push alerts to this phone when someone checks in (works with the phone locked) */
-const pushOK=()=>NATIVE||("serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window);
+const pushOK=()=>NATIVE?!!NP("PushNotifications"):("serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window);
 const isIOS=()=>/iPhone|iPad|iPod/.test(navigator.userAgent);
 const standalone=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
 function b64u(s){const p="=".repeat((4-s.length%4)%4);const b=atob((s+p).replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from(b,c=>c.charCodeAt(0))}
@@ -3006,7 +3006,7 @@ function secHTML0(){const V=window.VAULT;
   const c=V.cfg||{};const opt=(v,t)=>`<option value="${v}"${+c.auto===v?" selected":""}>${t}</option>`;
   return `<h2>Security</h2><div class="panel"><div><b>🔒 PIN lock is on.</b> <span class="note">Roster data on this phone is encrypted (AES-256).</span></div>
     <label for="secAuto">Lock again after leaving the app</label><select id="secAuto">${opt(0,"Right away")}${opt(1,"1 minute")}${opt(5,"5 minutes")}${opt(15,"15 minutes")}${opt(60,"1 hour")}${opt(-1,"Only when I tap Lock now")}</select>
-    ${window.MBN&&MBN.on?`<label class="tog"><input type="checkbox" id="secFace"${c.face?" checked":""}> Unlock with Face ID</label>`:""}
+    ${window.MBN&&MBN.on&&MBN.platform!=="android"?`<label class="tog"><input type="checkbox" id="secFace"${c.face?" checked":""}> Unlock with Face ID</label>`:""}
     <label class="tog"><input type="checkbox" id="secWipe"${c.wipe?" checked":""}> Erase all data after 10 wrong PINs</label>
     <button class="btn alt" id="secLock">Lock now</button>
     <details><summary>Change PIN or turn off lock</summary>

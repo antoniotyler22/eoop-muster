@@ -25,7 +25,7 @@
   N.setPro = function (st) {
     if (!st) return;
     var was = N.pro.active;
-    N.pro = { active: !!st.active, exp: st.expires || 0 };
+    N.pro = { active: !!st.active, exp: st.expires || 0, jws: st.jws || "" };
     store.set("pro", st.active ? "1" : null);
     store.set("proexp", st.expires ? String(st.expires) : null);
     if (was !== N.pro.active && typeof window.__proChanged === "function") window.__proChanged();

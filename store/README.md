@@ -9,13 +9,22 @@ Everything here is ready except the parts that need your own accounts.
 
 ## Recommended order: Android first
 
-### 1. Google Play (no Mac needed)
+### 1. Google Play (no Mac needed: GitHub builds it)
+The Android app lives in `android/` and wraps this same web app (Capacitor), like the iPhone app.
 1. Create a Google Play Console developer account (one-time $25 fee) at play.google.com/console.
-2. Go to **pwabuilder.com**, enter `https://antoniotyler22.github.io/eoop-muster/`, and choose **Package for stores → Android**. Download the package (an .aab file plus `assetlinks.json` and a signing key: **keep the key and its password safe; you need them for every update**).
-3. **Digital Asset Links** (removes the browser bar so it looks like a real app): the file must live at `https://antoniotyler22.github.io/.well-known/assetlinks.json`, which is the root of your GitHub Pages domain, not the app folder. Create a repo named `antoniotyler22.github.io`, add the file at `.well-known/assetlinks.json`, and add an empty file named `.nojekyll`. (Ask me and I'll set this up.)
-4. In Play Console, create the app, paste `listing.md`, upload `screenshots/`, answer Data safety from `privacy-labels.md`, and upload the .aab to **Closed testing**.
-5. **New personal accounts must run a closed test with at least 12 testers, opted in for 14 days in a row, before you can publish.** Your section leaders and SNCOs make a good test group.
-6. Apply for production access, then publish.
+2. **Make an upload key once** (on any computer with Java, or ask me to walk you through it):
+   `keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000`
+   Keep `upload.jks` and both passwords safe; every update needs them.
+3. GitHub → this repo → Settings → Secrets and variables → Actions → add:
+   `ANDROID_KEYSTORE_B64` (run `base64 -i upload.jks` and paste the output), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`upload`), `ANDROID_KEY_PASSWORD`.
+4. GitHub → Actions → **Android build** → Run workflow (version 1.3.0). Download the `.aab` from the run's artifacts.
+   Optional: add `PLAY_SERVICE_ACCOUNT_JSON` and later runs upload straight to Play's internal testing track.
+5. In Play Console, create the app (package `com.antoniotyler.accountedfor`), paste `listing.md`, upload `screenshots/`, answer Data safety from `privacy-labels.md`, and upload the .aab to **Closed testing**.
+6. **New personal accounts must run a closed test with at least 12 testers, opted in for 14 days in a row, before you can publish.**
+7. **App links** (check-in links open the app): Play Console → Setup → App signing → copy the SHA-256 fingerprint, put it in `store/root-site/.well-known/assetlinks.json`, and publish `store/root-site/` as the repo `antoniotyler22.github.io`.
+8. Apply for production access, then publish.
+
+Android notes for 1.3: Pro features stay unlocked on Android (Google requires Play Billing for subscriptions sold in Play apps; that's a later version). Push alerts need Firebase and are off on Android for now; local reminders work.
 
 ### 2. Apple App Store (no Mac needed: GitHub builds it)
 The iPhone app lives in `ios/` and wraps this same web app, with native Face ID unlock, push alerts (Apple push), haptics, the iOS share sheet, a daily muster reminder and universal links. GitHub's Mac computers build, sign and upload it.
@@ -43,8 +52,11 @@ The iPhone app lives in `ios/` and wraps this same web app, with native Face ID 
 **E. Submit**
 1. App Store Connect → the app → iOS app 1.0: paste `listing.md`, upload iPhone 6.9" screenshots, answer App Privacy from `privacy-labels.md`, age rating 4+, category Productivity.
 2. Pick the TestFlight build, then **Submit for Review**. Export compliance is already answered in the app (standard encryption only).
-3. **Review notes to paste:** "Accounted For is a native accountability app: roster and status board stored encrypted on the device, Face ID unlock, Apple push alerts for check-ins and section updates, QR formation check-in, daily muster reminder, and offline use. No account or login: sample data loads on first open so every screen can be reviewed. Tap the title to switch versions (Military, Police, Jobs, HR, Civilian)."
+3. **Review notes to paste:** "Accounted For is a native accountability app for teams: a roster and status board stored encrypted on the device, Face ID unlock, Apple push alerts for check-ins, missed check-in deadlines and section updates, QR formation check-in, PDF headcount reports, a daily muster reminder, and offline use. No sign-up is needed: sample data loads on first open so every screen can be reviewed (tap the title to switch versions: Military, Police, Jobs, HR, Civilian). Optional member logins: a team leader can give each person a username and password that opens their own page; reviewers don't need one. Optional social features (Feed, messages, invite-only pages) include Report, Hide and Block, a Terms agreement, and a leader review queue; Delete my account is in Tools → Data and settings → Security. Accounted For Pro (auto-renewing subscription, 7-day free trial) unlocks leader tools; members always use the app free. Location is requested only if the user sets or confirms a rally point."
 4. Review usually takes 1–3 days. If Apple asks questions, answer in Resolution Center; don't resubmit blindly.
+
+## 1.3 server setup
+See `store/setup-1.3.md` (SQL parts 20–22, four new Edge Functions, App Store Server Notifications, optional Stripe and Twilio).
 
 ## Before you submit
 - Run **DATA → System check** and make sure everything is ✅.

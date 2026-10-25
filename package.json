@@ -4,10 +4,14 @@
   "private": true,
   "description": "Accounted For (EOP Numbers) native shell",
   "scripts": {
-    "build:web": "node native/build-web.js",
-    "sync:ios": "npm run build:web && npx cap sync ios"
+    "bundle": "node tools/bundle.mjs",
+    "test": "node tools/bundle.mjs --check && node tools/build-hub.mjs --check && node --test tests/*.test.mjs",
+    "build:web": "npm run bundle && node native/build-web.js",
+    "sync:ios": "npm run build:web && npx cap sync ios",
+    "sync:android": "npm run build:web && npx cap sync android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.3",
     "@capacitor/app": "^8.1.2",
     "@capacitor/browser": "^8.0.5",
     "@capacitor/core": "^8.5.3",
@@ -21,6 +25,7 @@
   "devDependencies": {
     "@capacitor/cli": "^8.5.3",
     "acorn": "^8.19.0",
-    "acorn-walk": "^8.3.5"
+    "acorn-walk": "^8.3.5",
+    "jsdom": "^26.1.0"
   }
 }

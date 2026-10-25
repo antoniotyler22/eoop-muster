@@ -166,14 +166,18 @@ public class ProStorePlugin: CAPPlugin, CAPBridgedPlugin {
 
     static func currentStatus() async -> [String: Any]? {
         var best: Transaction?
+        var bestJWS: String?
         for await result in Transaction.currentEntitlements {
             guard case .verified(let t) = result, t.revocationDate == nil, t.productType == .autoRenewable else { continue }
             if let e = t.expirationDate, e < Date() { continue }
-            if best == nil || (t.expirationDate ?? .distantFuture) > (best!.expirationDate ?? .distantFuture) { best = t }
+            if best == nil || (t.expirationDate ?? .distantFuture) > (best!.expirationDate ?? .distantFuture) { best = t; bestJWS = result.jwsRepresentation }
         }
         guard let t = best else { return ["active": false] }
         var r: [String: Any] = ["active": true, "productId": t.productID]
         if let e = t.expirationDate { r["expires"] = Int(e.timeIntervalSince1970 * 1000) }
+        // Apple's signed copy of the transaction: the app sends it to the server, which checks Apple's signature
+        // and records the subscription, so server features (Ask, server hub) know this team has Pro.
+        if let j = bestJWS { r["jws"] = j }
         return r
     }
 

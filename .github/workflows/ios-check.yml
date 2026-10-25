@@ -3,7 +3,9 @@ name: iPhone app build check
 on:
   push:
     branches: [main]
-    paths: ["ios/**", "native.js", "index.html", "package*.json", "capacitor.config.json", ".github/workflows/ios-*.yml"]
+    paths: ["ios/**", "native.js", "index.html", "app.bundle.js", "package*.json", "capacitor.config.json", ".github/workflows/ios-*.yml"]
+  pull_request:
+    paths: ["ios/**", "native.js", "index.html", "app.bundle.js", "package*.json", "capacitor.config.json", ".github/workflows/ios-*.yml"]
   workflow_dispatch:
 jobs:
   compile:

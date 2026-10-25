@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Accounted For</string>
+    <string name="title_activity_main">Accounted For</string>
+    <string name="package_name">com.antoniotyler.accountedfor</string>
+    <string name="custom_url_scheme">com.antoniotyler.accountedfor</string>
+</resources>
