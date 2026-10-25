@@ -4551,8 +4551,8 @@ document.addEventListener("change",e=>{if(e.target.id==="intAuto"){S.integ=Objec
 /* ---------- text everyone from the server (Pro) ---------- */
 async function smsAll(){const pool=recallPool().filter(m=>m.phone&&!(S.rc.ci||{})[m.id]);if(!pool.length){toast("No one left to text.");return}
   const tok=typeof proTok==="function"?proTok():"";if(!tok){toast("Texting from the server is part of Pro.");return}
-  const text=`${unitName()} recall: tap to check in. ${ciLink()}`;
-  try{const r=await post("sms",{pro:tok,to:pool.map(m=>m.phone),text});S.rc.smsAt=Date.now();S.rc.sent=S.rc.sent||{};pool.forEach(m=>S.rc.sent[m.id]=1);save();toast(`Texted ${r.sent} of ${pool.length}`+(r.failed?` · ${r.failed} failed`:""));render()}
+  const L=S.rc.live||{};if(!L.ok||!L.key){toast("Turn on live check-ins first.");return}
+  try{const r=await post("sms",{pro:tok,to:pool.map(m=>m.phone),recall:ciRid(),key:L.key,link:ciLink()});S.rc.smsAt=Date.now();S.rc.sent=S.rc.sent||{};pool.forEach(m=>S.rc.sent[m.id]=1);save();toast(`Texted ${r.sent} of ${pool.length}`+(r.failed?` · ${r.failed} failed`:""));render()}
   catch(e){toast(String(e.message||e).slice(0,90))}}
 const _rr=renderRecall;
 renderRecall=function(){_rr.apply(this,arguments);if(!S.rc.open||!S.rc.live||!S.smsSrv)return;const at=$("#main .rp-panel")||$("#main .mbar");
