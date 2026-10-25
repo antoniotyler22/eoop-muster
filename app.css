@@ -454,3 +454,5 @@ body.v12noai [data-go="ask"],body.v12noai [data-tab="ask"]{display:none!importan
 .v12cm{font-size:14px;line-height:1.35}
 .v12tabs button{flex:1}
 .v12comp textarea{min-height:70px!important;height:auto}
+/* sheets (version picker etc.) never taller than the screen; scroll inside */
+.sheet-panel{max-height:calc(100dvh - env(safe-area-inset-top,0px) - 24px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}

@@ -94,9 +94,9 @@ try{applyLists()}catch(e){}
 
 /* ================= 7. ASK (AI): optional Pro feature ================= */
 if(typeof PRO_FEAT==="object")PRO_FEAT.ask="Ask (AI)";
-const aiOn=()=>!!S.aiOn;
-function aiHTML(){return `<h2>AI</h2><div class="panel"><label class="tog"><input type="checkbox" id="v12Ai"${aiOn()?" checked":""}> Turn on <b>Ask</b>: an AI helper that answers questions from official sources (Pro)</label>
-  <p class="note">Off by default. Questions go to the AI service (Anthropic) through your Supabase server. Not official guidance.</p></div>`}
+const aiOn=()=>S.aiOn===true||(S.aiOn!==false&&proOK());
+function aiHTML(){return `<h2>AI</h2><div class="panel"><label class="tog"><input type="checkbox" id="v12Ai"${aiOn()?" checked":""}> <b>Ask</b>: an AI helper that answers questions from official sources (Pro)</label>
+  <p class="note">On automatically with Pro. Turn it off here if you don't want it. Questions go to the AI service (Anthropic) through your Supabase server. Not official guidance.</p></div>`}
 function aiPaint(){document.body.classList.toggle("v12noai",!aiOn())}
 {const _tl=tabsList;tabsList=function(){let L=_tl.apply(this,arguments);if(!aiOn())L=L.filter(x=>x[0]!=="ask");if(typeof memberMode==="function"&&memberMode()&&!L.some(x=>x[0]==="pages")&&L.length<5)L.push(["pages","Pages","feed"]);return L}}
 {const _to=tabOf;tabOf=function(v){if(["pages","pg"].includes(v))return memberMode()?"pages":"tools";if(v==="dm"||v==="dms")return memberMode()?"me":"tools";if(v==="mepv")return "people";if(v==="w6")return memberMode()?"today":"tools";return _to.apply(this,arguments)}}
@@ -220,7 +220,7 @@ function meTabs(cur){const un=dmUnreadMine();return `<div class="evts v12tabs" s
 /* ================= render hook ================= */
 {const _r=render;render=function(){if(view==="w6"&&(!PRO_FEAT.w6||proOK())){renderTabs();renderW6();return}
   if(["mepv","dms","dm","pages","pg"].includes(view)){renderTabs();({mepv:renderMePv,dms:renderDmList,dm:renderDm,pages:renderPages,pg:renderPg})[view]();if(typeof animateView==="function")animateView();return}
-  if(view==="ask"&&!aiOn()){renderTabs();$("#main").innerHTML=`<div class="panel" style="margin-top:14px"><b>Ask (AI) is off</b><p class="note">Ask is an optional AI helper for Pro. Turn it on in Data and settings → AI.</p>${leader()?`<button class="btn" data-go="data">Open settings</button>`:""}</div>`;return}
+  if(view==="ask"&&!aiOn()){renderTabs();$("#main").innerHTML=`<div class="panel" style="margin-top:14px"><b>Ask (AI) is off</b><p class="note">Ask is an AI helper that comes with Pro. It's on automatically with Pro, or turn it back on in Data and settings → AI.</p>${leader()?`<button class="btn" data-go="data">Open settings</button>`:""}</div>`;return}
   return _r.apply(this,arguments)}}
 {const _rt=renderTools;renderTools=function(){_rt.apply(this,arguments);const g=$("#main .tgrid");if(!g)return;const un=dmUnreadLeader();
   g.insertAdjacentHTML("beforeend",`<button data-go="dms" class="${un?"hot":""}"><span class="ic">${svg("feed")}</span><span><b>Messages</b><small>${un?un+" new":"Private chat with your people"}</small></span></button><button data-go="pages"><span class="ic">${svg("people")}</span><span><b>Pages</b><small>Your page and group pages</small></span></button>`)}}
@@ -312,6 +312,7 @@ if(typeof HELP==="object"){HELP.dms=["Messages","Private chat with each person."
   HELP.pages=["Pages","Your page and group pages.",["+ My page: your own page, like a small Instagram. + Group page: people post questions and advice.","Invite people with the link. Only people you invite can see it.","Tap ⋯ on a post to report, block or delete."]];
   HELP.w6=["6W","Incident report in your format.",["Fill the lines, then Email it or Text it.","Edit the format to add, remove, rename or reorder lines. Your format stays on this phone."]]}
 window.__v12={w6T,myDm,pgFetch,pgLink,dmPollLeader,dmPollMember,pgJoin,mpDigest:m=>mpDigest(m)};
+{const _rtb=renderTabs;renderTabs=function(){_rtb.apply(this,arguments);aiPaint()}}
 aiPaint();
 render();
 })();
