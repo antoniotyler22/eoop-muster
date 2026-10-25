@@ -168,7 +168,7 @@ function secAcks(sec){const f=mainFeed();if(!f)return[];const ids=new Set(S.rost
 let rpT=null,rpBusy=false,hubBusy=false,rpullBusy=false;
 const mainFeed=()=>S.feeds.find(f=>f.lk&&f.main)||S.feeds.find(f=>f.lk)||null;
 const RPF=["id","rank","name","sec","status","duty","phone","detail","loc","start","end","parent","due","sub"];
-function sanDue(o){const r={};if(!o||typeof o!=="object")return r;for(const [k,v] of Object.entries(o).slice(0,40)){if(!v||typeof v!=="object")continue;r[String(k).slice(0,40)]={due:String(v.due||"").slice(0,10),done:String(v.done||"").slice(0,10)}}return r}
+function sanDue(o){const r={};if(!o||typeof o!=="object")return r;for(const [k,v] of Object.entries(o).slice(0,40)){if(!v||typeof v!=="object")continue;r[String(k).slice(0,40)]={due:String(v.due||"").slice(0,10),done:String(v.done||"").slice(0,10)};if(v.ack)r[String(k).slice(0,40)].ack=String(v.ack).slice(0,10)}return r}
 function coFeedDown(){const L=S.link;if(!L||!L.whole)return null;const f=S.feeds.find(x=>x.hub&&!x.lk);return f?{id:f.id,mk:f.mk,ek:f.ek,unit:f.unit,sec:L.sec}:null}
 async function rpPublish(force){const B=S.board;if(!B||!B.sk||rpBusy||S.role==="view")return;rpBusy=true;
   try{const f=mainFeed();const feed=f&&f.pk?{id:f.id,mk:f.mk,ek:f.ek,pk:f.pk,unit:f.unit}:null;B.rsig=B.rsig||{};let n=0;
