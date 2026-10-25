@@ -11,3 +11,4 @@
 - Crash reports (no personal data; can be turned off) so problems get fixed faster.
 - Green dots show what's new. Tap an item and its dot goes away.
 - Clear things off: mark a due-out Done, Got it (acknowledge) or delete it; mark someone Back from leave or Departed; mark calendar items Done or hide them.
+- Made a mistake? "Hidden and cleared" on Alerts, Readiness and Calendar lets you unhide, undo Back or Done, or delete it.
