@@ -191,3 +191,59 @@ test("green dots mark what's new, and each goes away once it's opened", async ()
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("clearing things off: due-outs, leave alerts, departed people and the calendar", async () => {
+  const a = await openApp();
+  try {
+    const w = a.w;
+    // due-outs: one overdue item for two people
+    w.eval(`S.source="mol";const it=readyItems()[0].n;S.roster.slice(0,2).forEach(m=>{m.due=m.due||{};m.due[it]={due:"2020-01-01",done:""}});save()`);
+    const it = w.eval("readyItems()[0].n");
+    const over = () => w.eval(`readySum().over`);
+    const before = over();
+    assert.ok(before >= 2);
+    w.eval(`view="ready";render()`);
+    const m0 = w.eval("S.roster[0].id"), m1 = w.eval("S.roster[1].id");
+    a.$(`[data-dueack="${m0}"]`).click();
+    assert.equal(over(), before - 1, "acknowledged item drops off the overdue count");
+    assert.match(w.eval(`dueState(S.roster[0],readyItems()[0]).txt`), /Acknowledged/);
+    a.$(`[data-duedel="${m1}"]`).click();
+    a.$(`[data-duedel="${m1}"]`).click();
+    assert.equal(w.eval(`!!(S.roster[1].due||{})[${JSON.stringify(it)}]`), false, "deleted after two taps");
+    assert.equal(over(), before - 2);
+    // a new due date brings it back
+    w.eval(`S.roster[0].due[readyItems()[0].n].due="2020-02-01";save()`);
+    assert.equal(over(), before - 1);
+
+    // leave: past the end date → Back ✓ sets On Hand and the rest of the leave comes off the calendar
+    w.eval(`const m=S.roster[2];m.status="Leave";m.start="01 JAN 20";m.end="05 JAN 20";m.cal=[{id:"cL",d:dkey(new Date(Date.now()-3*864e5)),end:dkey(new Date(Date.now()+5*864e5)),ty:"LEAVE",ti:"Leave"}];save();view="alerts";render()`);
+    const m2 = w.eval("S.roster[2].id");
+    assert.ok(w.eval("alerts().over.some(a=>a.m.id===S.roster[2].id)"));
+    a.$(`[data-alback="${m2}"]`).click();
+    assert.equal(w.eval("S.roster[2].status"), "On Hand");
+    assert.ok(!w.eval("alerts().over.some(a=>a.m.id===S.roster[2].id)"), "falls off overdue");
+    assert.ok(w.eval("S.roster[2].cal[0].end < dkey()"), "rest of the leave trimmed off the calendar");
+
+    // departing: hide, then take off the numbers (with undo kept)
+    w.eval(`const m=S.roster[3];m.edd=fmtD(dkey(new Date(Date.now()+10*864e5)));save();view="alerts";render()`);
+    const m3 = w.eval("S.roster[3].id"), n0 = w.eval("S.roster.length");
+    a.$(`[data-algone="${m3}"]`).click();
+    a.$(`[data-algone="${m3}"]`).click();
+    assert.equal(w.eval("S.roster.length"), n0 - 1, "departed person removed");
+    assert.equal(w.eval("S.loads[0].kind"), "Departed", "undo entry kept");
+
+    // calendar: own entry done → drops off; automatic entry hidden → drops off
+    const day = w.eval("dkey()");
+    w.eval(`S.roster[4].cal=[{id:"cA",d:dkey(),ty:"APPT",ti:"Dental"}];S.roster[4].edd=fmtD(dkey());save();calDay=dkey();calSec="ALL";view="cal";render()`);
+    const count = (ti) => w.eval(`calEntries(dkey(),dkey(),"ALL").filter(e=>e.ti===${JSON.stringify(ti)}&&e.m&&e.m.id===S.roster[4].id).length`);
+    assert.equal(count("Dental"), 1);
+    a.$("[data-cxdone]").click();
+    assert.equal(count("Dental"), 0, "done entry drops off");
+    assert.equal(count("EDD"), 1);
+    w.eval(`view="cal";render()`);
+    const hb = [...a.w.document.querySelectorAll("[data-cxhide]")].find((b) => b.closest(".rrow").textContent.includes("EDD"));
+    hb.click();
+    assert.equal(count("EDD"), 0, "hidden automatic entry drops off");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
