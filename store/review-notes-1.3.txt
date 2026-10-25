@@ -1,0 +1,35 @@
+PURPOSE AND AUDIENCE
+Accounted For is a team accountability and emergency headcount app for leaders of small groups: schools, job-site crews, event staff, small businesses, police and fire crews, volunteer groups and military units. The leader sees who is present, absent or on leave by section, runs muster and emergency check-ins, passes the word with read confirmations, and sends the numbers up the chain.
+
+ACCESS / LOGIN
+No sign-up is needed to review. Sample data loads on first open so every screen can be reviewed. Tap the title to switch versions (Military, Police, Jobs, HR, Civilian, Custom). Optional member logins: a team leader makes a username and password for each person, or for a group at once (Tools > Logins, Pro); each person can then change their own password and log out (header person icon). Users cannot self-register, and reviewers don't need a login.
+
+NEW IN 1.3 (green dot beside each new item)
+- Missed check-in alerts: on a recall, set a deadline; the leader gets one push alert with the count still missing.
+- Rally point: optional; the check-in page asks for location only when the person taps "I'm at the rally point". Only the distance is sent; location never leaves the phone.
+- PDF headcount report (Tools > PDF report), Excel/CSV roster import, calendar export (.ics).
+- Integrations (Tools > Integrations): post the numbers to a Slack, Teams or Discord webhook the user pastes.
+- Group logins; people set and change their own password; sign-in screen when the app opens; Log out.
+- Crash reports with no personal data (Data and settings, can be turned off).
+
+MAIN FEATURES
+- Board: live headcount by section; tap a person to change status.
+- Emergency muster (Home, free) and recall drills (Good / Delayed / Need help); QR formation check-in.
+- Feed: posts from the leader and section leaders they appoint, with "Got it" confirmations.
+- Messages (Tools > Messages): private leader-to-member chat. Pages (Tools > Pages): invite-only team pages.
+- Dashboard, calendar, requests, due-outs, 6W reports, text and Excel reports.
+- Ask (AI): optional Pro feature; answers from public official sources; labeled not official guidance.
+
+ACCOUNTS AND DELETION
+Any user can delete their account in the app: Tools > Data and settings > Security > Delete my account. It deletes their sign-in on the server and every feed, login, link, page and backup they created, then erases the phone.
+
+USER CONTENT (Guideline 1.2)
+Feed and Pages are private to invited people; no public content. Users must agree to the Terms of Use (zero tolerance for objectionable content) before joining, signing in or posting. Every post has a ... menu: Report (hidden at once and sent to the leader, or for Pages emailed to the developer), Hide, and Block. Leaders review reports in Feed > Reported posts and can remove the post and cut off the poster within 24 hours. Terms: https://antoniotyler22.github.io/eoop-muster/terms.html
+
+IN-APP PURCHASE
+Accounted For Pro, auto-renewable, 7-day free trial: Pro Monthly (US $4.99) and Pro Yearly (US $39.99). Open Tools > See Pro or tap any Pro feature. The paywall shows each plan's title, length and price, Restore purchases, auto-renew terms, Terms of Use (Apple standard EULA) and Privacy Policy. After purchase the app sends Apple's signed transaction to our server, which verifies it with Apple and turns on server features (Ask, server hub) for that team. Sandbox purchases work for review.
+
+EXTERNAL SERVICES
+Supabase (database and server functions), Apple Push Notification service, StoreKit and App Store Server Notifications, Anthropic Claude API (Ask only), Slack/Teams/Discord webhooks (only if the user adds one), GitHub Pages (support and privacy pages).
+
+Screen recording on a physical iPhone is attached.
