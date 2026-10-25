@@ -82,7 +82,8 @@ const secret = () => env("PRO_SECRET") || SRK;
 async function save(row: any) {
   const tok = await teamToken(row.id, secret());
   await rest("pro_ents?on_conflict=id", { method: "POST", body: JSON.stringify({ ...row, tok_hash: await sha256hex(tok), updated_at: new Date().toISOString() }), headers: { Prefer: "resolution=merge-duplicates,return=minimal" } });
-  const active = !row.revoked && (!row.expires_at || Date.parse(row.expires_at) > Date.now() - 864e5);
+  const live = row.env !== "test";
+  const active = !row.revoked && (row.expires_at ? Date.parse(row.expires_at) > Date.now() - (live ? 864e5 : 0) : live);
   return { tok, active, exp: row.expires_at ? Date.parse(row.expires_at) : 0 };
 }
 export function backOK(u: unknown, allowed: string[]) {
@@ -140,7 +141,8 @@ export async function handle(req: Request): Promise<Response> {
   } catch (e) {
     const t = String((e as Error).message || e);
     if (/pro_ents|schema cache|does not exist/i.test(t)) return json({ error: "Pro isn't set up on the server yet. Run SQL part 20." }, 503);
-    return json({ error: t.slice(0, 200) }, 500);
+    console.error("billing:", t);
+    return json({ error: "Something went wrong on the server. Try again in a minute." }, 500);
   }
 }
 
