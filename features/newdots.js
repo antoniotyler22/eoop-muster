@@ -16,6 +16,9 @@ const NEW=[
   ["sms",    "button[data-sms-all]",                "[data-sms-all]"],
   ["crash",  "label:has(#crashTog)",                "#crashTog"],
   ["acct",   "#v13Hdr",                             "#v13Hdr"],
+  ["dueclr", "#dueAckAll, .alist .rrow:first-child .dueacts [data-dueack]", "[data-dueack],[data-duedel],#dueAckAll"],
+  ["alclr",  ".alist .arow:first-child .dueacts > :first-child", "[data-alback],[data-algone],[data-alhide]"],
+  ["calclr", ".alist .rrow:first-child .dueacts > :first-child:not([data-dueack])", "[data-cxdone],[data-cxdue],[data-cxback],[data-cxhide]"],
 ];
 const LIFE=45*864e5;
 const seen=()=>{S.newSeen=S.newSeen||{};return S.newSeen};
