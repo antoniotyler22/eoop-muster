@@ -247,3 +247,47 @@ test("clearing things off: due-outs, leave alerts, departed people and the calen
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("mistakes can be undone: unhide, undo Back, undo Done, and delete at the source", async () => {
+  const a = await openApp();
+  try {
+    const w = a.w;
+    w.eval(`S.source="mol";const m=S.roster[2];m.status="Leave";m.start="01 JAN 20";m.end="05 JAN 20";m.cal=[{id:"cL",d:"2019-12-30",end:dkey(new Date(Date.now()+5*864e5)),ty:"LEAVE",ti:"Leave"}];S.roster[3].edd=fmtD(dkey(new Date(Date.now()+10*864e5)));save();view="alerts";render()`);
+    const id2 = w.eval("S.roster[2].id"), id3 = w.eval("S.roster[3].id");
+    const inOver = () => w.eval(`alerts().over.some(a=>a.m.id===${JSON.stringify(id2)})`);
+    // hide → unhide
+    a.$(`[data-alhide^="${id2}|over"]`).click();
+    assert.equal(inOver(), false);
+    w.eval(`view="alerts";render()`);
+    a.$(`[data-unhide^="al:${id2}"]`).click();
+    assert.equal(inOver(), true, "unhidden alert is back");
+    // Back ✓ → Undo restores status, dates and calendar
+    a.$(`[data-alback="${id2}"]`).click();
+    assert.equal(w.eval("S.roster[2].status"), "On Hand");
+    a.$("[data-unback]").click();
+    assert.equal(w.eval("S.roster[2].status"), "Leave");
+    assert.equal(w.eval("S.roster[2].end"), "05 JAN 20");
+    assert.ok(w.eval("S.roster[2].cal[0].end > dkey()"), "calendar restored");
+    // hidden departing alert → Delete date removes the EDD for good
+    a.$(`[data-alhide^="${id3}|dep"]`).click();
+    w.eval(`view="alerts";render()`);
+    a.$(`[data-hdel^="al:${id3}"]`).click(); a.$(`[data-hdel^="al:${id3}"]`).click();
+    assert.equal(w.eval("S.roster[3].edd"), undefined);
+
+    // readiness: acknowledged → Unhide
+    w.eval(`const it=readyItems()[0].n;S.roster[0].due={};S.roster[0].due[it]={due:"2020-01-01",done:"",ack:"2020-01-01"};save();view="ready";render()`);
+    assert.equal(w.eval("dueState(S.roster[0],readyItems()[0]).st"), "ack");
+    a.$("[data-unack]").click();
+    assert.equal(w.eval("dueState(S.roster[0],readyItems()[0]).st"), "over");
+
+    // calendar: done → Undo; automatic EDD added by mistake → ✕ deletes it at the source
+    w.eval(`S.roster[4].cal=[{id:"cA",d:dkey(),ty:"APPT",ti:"Dental",done:1}];S.roster[4].edd=fmtD(dkey());save();calDay=dkey();calSec="ALL";view="cal";render()`);
+    a.$("[data-undone]").click();
+    assert.equal(w.eval("!!S.roster[4].cal[0].done"), false);
+    w.eval(`view="cal";render()`);
+    const del = () => [...w.document.querySelectorAll("[data-cxdel]")].find((b) => b.closest(".rrow").textContent.includes("EDD"));
+    del().click(); del().click();
+    assert.equal(w.eval("S.roster[4].edd"), undefined, "EDD deleted at the source");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
