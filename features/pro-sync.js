@@ -33,7 +33,9 @@ async function syncApple(force){const N=window.MBN;if(!isIOS()||!N.pro||!N.pro.a
   catch(e){S.proSrv=Object.assign({},S.proSrv||{},{err:String(e.message||e).slice(0,140),at:Date.now()});save()}
   finally{syncing=false}}
 /* Leader: let members of each FEED this phone runs use Ask under this Pro. */
-async function linkFeeds(){const tok=getTok();if(!tok||!Array.isArray(S.feeds))return;S.proLinked=S.proLinked||{};let n=0;
+async function linkFeeds(){const tok=getTok();if(!tok||!Array.isArray(S.feeds))return;
+  const tk=tok.slice(0,12);if(S.proLinkedTok!==tk){S.proLinked={};S.proLinkedTok=tk} /* new subscription: link every FEED again */
+  S.proLinked=S.proLinked||{};let n=0;
   for(const f of S.feeds.filter(f=>f.lk&&f.id&&!S.proLinked[f.id])){try{await SB.rpc("pro_link_feed",{p_tok:tok,p_feed:f.id,p_lk:f.lk});S.proLinked[f.id]=Date.now();n++}catch(e){}}
   if(n)save()}
 /* Any device holding a token (web, or a Pro code typed in): refresh its status now and then. */

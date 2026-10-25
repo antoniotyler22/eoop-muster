@@ -8,6 +8,7 @@
 //                            https://<project>.supabase.co/functions/v1/billing  with events
 //                            customer.subscription.created, customer.subscription.updated, customer.subscription.deleted
 //   PRO_SECRET               same value as the "pro" function (team tokens must match)
+//   STRIPE_PORTAL_LOGIN_URL  Stripe → Settings → Billing → Customer portal → "Login link" (https://billing.stripe.com/p/login/...)
 // Optional: STRIPE_TRIAL_DAYS (default 7), APP_URLS (comma list of pages allowed as return links;
 //           default https://antoniotyler22.github.io/eoop-muster/).
 // Then set webBilling:true in index.html.
@@ -37,7 +38,8 @@ export async function stripeSigOK(raw: string, header: string, secret: string, n
   if (!t || !sigs.length || !secret || Math.abs(now / 1000 - t) > 300) return false;
   const k = await crypto.subtle.importKey("raw", te.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const want = hex(new Uint8Array(await crypto.subtle.sign("HMAC", k, te.encode(t + "." + raw))));
-  return sigs.some((s) => s.length === want.length && [...s].every((c, i) => c === want[i]));
+  const same = (a: string, b: string) => { if (a.length !== b.length) return false; let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i); return d === 0; };
+  return sigs.some((s) => same(s, want));
 }
 
 /** Turns a Stripe subscription object into a pro_ents row. */
@@ -54,6 +56,7 @@ export function stripeRow(sub: any) {
     revoked: sub.status === "incomplete_expired" || sub.status === "unpaid",
     env: sub.livemode === false ? "test" : "live",
     cust: typeof sub.customer === "string" ? sub.customer.slice(0, 80) : sub.customer && sub.customer.id ? String(sub.customer.id).slice(0, 80) : null,
+    signed_at: new Date().toISOString(), // always read fresh from Stripe, so the latest read wins
   };
 }
 
@@ -88,8 +91,14 @@ async function save(row: any) {
 }
 export function backOK(u: unknown, allowed: string[]) {
   if (typeof u !== "string") return null;
-  try { const x = new URL(u); const base = x.origin + x.pathname; return allowed.includes(base) ? base : null; } catch { return null; }
+  try { const x = new URL(u); const base = x.origin + x.pathname.replace(/index\.html$/, ""); return allowed.includes(base) ? base : null; } catch { return null; }
 }
+/** Only subscriptions to the Pro prices count (the Stripe account might sell other things). */
+export function isProSub(sub: any, prices: string[]) {
+  const items = (sub && sub.items && sub.items.data) || [];
+  return items.some((it: any) => it && it.price && prices.includes(it.price.id));
+}
+const proPrices = () => [env("STRIPE_PRICE_MONTHLY"), env("STRIPE_PRICE_YEARLY")].filter(Boolean);
 
 export async function handle(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -101,7 +110,12 @@ export async function handle(req: Request): Promise<Response> {
     if (sigH) {
       if (!(await stripeSigOK(raw, sigH, env("STRIPE_WEBHOOK_SECRET")))) return json({ error: "bad signature" }, 400);
       const ev = JSON.parse(raw);
-      if (/^customer\.subscription\./.test(ev.type)) { const row = stripeRow(ev.data && ev.data.object); if (row) await save(row); }
+      const id = ev && ev.data && ev.data.object && ev.data.object.id;
+      if (/^customer\.subscription\./.test(ev.type) && typeof id === "string" && /^sub_[A-Za-z0-9]+$/.test(id)) {
+        // Events can arrive out of order: read the subscription as it is now instead of trusting the event.
+        const sub = await stripe("subscriptions/" + id);
+        if (isProSub(sub, proPrices())) { const row = stripeRow(sub); if (row) await save(row); }
+      }
       return json({ ok: 1 });
     }
     let b: any = {};
@@ -126,16 +140,18 @@ export async function handle(req: Request): Promise<Response> {
       if (typeof b.session !== "string" || !/^cs_[A-Za-z0-9_]{10,200}$/.test(b.session)) return json({ error: "bad request" }, 400);
       const s = await stripe("checkout/sessions/" + b.session + "?expand[]=subscription");
       if (s.status !== "complete" || !s.subscription) return json({ error: "Payment isn't complete yet." }, 409);
-      const row = stripeRow(typeof s.subscription === "string" ? await stripe("subscriptions/" + s.subscription) : s.subscription);
+      const sub = typeof s.subscription === "string" ? await stripe("subscriptions/" + s.subscription) : s.subscription;
+      if (!isProSub(sub, proPrices())) return json({ error: "That isn't a Pro subscription." }, 400);
+      const row = stripeRow(sub);
       if (!row) return json({ error: "No subscription found." }, 404);
       return json(await save(row));
     }
     if (b.op === "portal") {
-      const rows = await rest("pro_ents?select=cust&source=eq.stripe&tok_hash=eq." + (await sha256hex(String(b.tok || ""))));
-      const cust = rows && rows[0] && rows[0].cust;
-      if (!cust) return json({ error: "No web subscription for this Pro code." }, 404);
-      const p = await stripe("billing_portal/sessions", { customer: cust, return_url: (backOK(b.back, allowed) ?? allowed[0]) + "#tools" });
-      return json({ url: p.url });
+      // Managing billing shows the payer's email and card, so it goes through Stripe's own sign-in (an emailed code),
+      // not the Pro code (which leaders share with other devices).
+      const login = env("STRIPE_PORTAL_LOGIN_URL");
+      if (!login || !/^https:\/\/billing\.stripe\.com\//.test(login)) return json({ error: "Manage subscription isn't set up yet. Email Antoniotyler22@gmail.com." }, 503);
+      return json({ url: login });
     }
     return json({ error: "bad request" }, 400);
   } catch (e) {

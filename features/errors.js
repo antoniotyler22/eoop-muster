@@ -6,7 +6,12 @@
 const sent=new Set();let n=0;
 const plat=()=>window.MBN&&MBN.on?String(MBN.platform||"app"):"web";
 const dev=()=>{try{let d=localStorage.getItem("af-dev");if(!d){d=rndId(24);localStorage.setItem("af-dev",d)}return d}catch(e){return "nostore"}};
-function clean(t,max){return String(t||"").replace(/"[^"\n]{0,400}"|'[^'\n]{0,400}'|`[^`]{0,400}`/g,'"…"').replace(/https?:\/\/[^\s)]+\/([^/\s)?#]+)(\?[^\s):]*)?/g,"$1").slice(0,max)}
+function clean(t,max){return String(t||"")
+  .replace(/"[^"\n]{0,400}"|'[^'\n]{0,400}'|`[^`]{0,400}`/g,'"…"')
+  .replace(/[#?][^\s):]*/g,"")                                   /* link details (unit, recall, numbers) */
+  .replace(/https?:\/\/[^\s)]*\/([^/\s):]+)/g,"$1")              /* keep only the file name */
+  .replace(/\b\d{7,}\b|\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}/g,"[number]")
+  .slice(0,max)}
 function report(kind,msg,stack){
   try{if(S&&S.crashOff)return}catch(e){}
   if(!window.SB||!SB.rpc||n>=5)return;

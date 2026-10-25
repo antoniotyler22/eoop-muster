@@ -8,13 +8,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
-import { verifyAppleJWS, appleRow, teamToken, APPLE_ROOT_G3_SHA256 } from "../supabase/functions/pro/index.ts";
+import { verifyAppleJWS, appleRow, teamToken, mergeRow, APPLE_ROOT_G3_SHA256 } from "../supabase/functions/pro/index.ts";
 
 const ossl = (...a) => execFileSync("openssl", a, { stdio: "pipe" });
-function makeChain({ leafOid = true } = {}) {
+function makeChain({ leafOid = true, midOid = true } = {}) {
   const d = fs.mkdtempSync(path.join(os.tmpdir(), "af-ca-"));
   const p = (f) => path.join(d, f);
-  fs.writeFileSync(p("mid.ext"), "basicConstraints=critical,CA:true\nkeyUsage=critical,keyCertSign,cRLSign\n1.2.840.113635.100.6.2.1=ASN1:NULL\n");
+  fs.writeFileSync(p("mid.ext"), "basicConstraints=critical,CA:true\nkeyUsage=critical,keyCertSign,cRLSign\n" + (midOid ? "1.2.840.113635.100.6.2.1=ASN1:NULL\n" : ""));
   fs.writeFileSync(p("leaf.ext"), "basicConstraints=critical,CA:false\nkeyUsage=critical,digitalSignature\n" + (leafOid ? "1.2.840.113635.100.6.11.1=ASN1:NULL\n" : ""));
   ossl("ecparam", "-name", "secp384r1", "-genkey", "-noout", "-out", p("root.key"));
   ossl("req", "-new", "-x509", "-key", p("root.key"), "-sha384", "-days", "3650", "-subj", "/CN=Test Root CA - G3/O=Test", "-out", p("root.pem"));
@@ -25,8 +25,9 @@ function makeChain({ leafOid = true } = {}) {
   ossl("req", "-new", "-key", p("leaf.key"), "-subj", "/CN=Test StoreKit Signing/O=Test", "-out", p("leaf.csr"));
   ossl("x509", "-req", "-in", p("leaf.csr"), "-CA", p("mid.pem"), "-CAkey", p("mid.key"), "-CAcreateserial", "-sha256", "-days", "1000", "-extfile", p("leaf.ext"), "-out", p("leaf.pem"));
   const der = (f) => new crypto.X509Certificate(fs.readFileSync(p(f))).raw;
-  const out = { x5c: ["leaf.pem", "mid.pem", "root.pem"].map((f) => der(f).toString("base64")), leafKey: crypto.createPrivateKey(fs.readFileSync(p("leaf.key"))),
+  const out = { der, x5c: ["leaf.pem", "mid.pem", "root.pem"].map((f) => der(f).toString("base64")), leafKey: crypto.createPrivateKey(fs.readFileSync(p("leaf.key"))),
     rootSha256: crypto.createHash("sha256").update(der("root.pem")).digest("hex") };
+  out.raw = ["leaf.pem", "mid.pem", "root.pem"].map((f) => der(f));
   fs.rmSync(d, { recursive: true, force: true });
   return out;
 }
@@ -86,4 +87,26 @@ test("wrong app or non-Pro product doesn't count", () => {
 test("team token is stable per subscription and secret-dependent", async () => {
   const a = await teamToken("apple:1", "s1"), b = await teamToken("apple:1", "s1"), c = await teamToken("apple:1", "s2");
   assert.equal(a, b); assert.notEqual(a, c); assert.match(a, /^[0-9a-f]{64}$/);
+});
+
+test("REVIEW FIX: Apple markers stuck on after the certificate don't count (forgery attempt)", async () => {
+  const bare = makeChain({ leafOid: false, midOid: false });
+  const tail = (h) => Buffer.from("060a" + h, "hex");
+  const forged = { ...bare, x5c: [Buffer.concat([bare.raw[0], tail("2a864886f76364060b01")]), Buffer.concat([bare.raw[1], tail("2a864886f76364060201")]), bare.raw[2]].map((b) => b.toString("base64")) };
+  await assert.rejects(verifyAppleJWS(sign(forged, TX), { rootSha256: bare.rootSha256 }), /trailing|App Store/);
+  await assert.rejects(verifyAppleJWS(sign(bare, TX), { rootSha256: bare.rootSha256 }), /App Store certificate/);
+});
+
+test("REVIEW FIX: a refund sticks; resending an old purchase or a late older message can't undo it", () => {
+  const day = 864e5, now = Date.now();
+  const stored = { revoked: true, expires_at: new Date(now + 300 * day).toISOString(), signed_at: new Date(now - day).toISOString(), product: "p" };
+  const replay = { revoked: false, expires_at: new Date(now + 300 * day).toISOString(), signed_at: new Date(now - 30 * day).toISOString(), product: "p" };
+  assert.equal(mergeRow(stored, replay).revoked, true, "older message ignored");
+  const sameTime = { ...replay, signed_at: stored.signed_at };
+  assert.equal(mergeRow(stored, sameTime).revoked, true, "not newer, stays revoked");
+  const resub = { revoked: false, expires_at: new Date(now + 30 * day).toISOString(), signed_at: new Date(now).toISOString(), product: "p" };
+  assert.equal(mergeRow(stored, resub).revoked, false, "a genuinely newer purchase restores Pro");
+  const active = { revoked: false, expires_at: new Date(now + 300 * day).toISOString(), signed_at: new Date(now - day).toISOString() };
+  const olderRenewal = { revoked: false, expires_at: new Date(now + 30 * day).toISOString(), signed_at: new Date(now - 60 * day).toISOString() };
+  assert.equal(mergeRow(active, olderRenewal).expires_at, active.expires_at, "end date never rolls back");
 });

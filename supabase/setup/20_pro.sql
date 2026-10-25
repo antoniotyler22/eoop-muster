@@ -15,6 +15,7 @@ create table if not exists public.pro_ents (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+alter table public.pro_ents add column if not exists signed_at timestamptz;   -- when Apple/Stripe produced the latest message we used
 alter table public.pro_ents enable row level security;
 revoke all on public.pro_ents from anon, authenticated;
 

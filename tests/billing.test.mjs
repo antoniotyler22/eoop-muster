@@ -2,7 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
-import { stripeSigOK, stripeRow, backOK, teamToken as billTok } from "../supabase/functions/billing/index.ts";
+import { stripeSigOK, stripeRow, backOK, isProSub, teamToken as billTok } from "../supabase/functions/billing/index.ts";
 import { teamToken as proTok } from "../supabase/functions/pro/index.ts";
 
 const sig = (body, secret, t = Math.floor(Date.now() / 1000)) => `t=${t},v1=${crypto.createHmac("sha256", secret).update(t + "." + body).digest("hex")}`;
@@ -37,4 +37,10 @@ test("return links only go back to the app", () => {
 
 test("Stripe and Apple make team tokens the same way", async () => {
   assert.equal(await billTok("stripe:sub_1", "s"), await proTok("stripe:sub_1", "s"));
+});
+
+test("REVIEW FIX: only Pro prices count; index.html return links work", () => {
+  assert.equal(isProSub({ items: { data: [{ price: { id: "price_other" } }] } }, ["price_m", "price_y"]), false);
+  assert.equal(isProSub({ items: { data: [{ price: { id: "price_y" } }] } }, ["price_m", "price_y"]), true);
+  assert.equal(backOK("https://antoniotyler22.github.io/eoop-muster/index.html#x", ["https://antoniotyler22.github.io/eoop-muster/"]), "https://antoniotyler22.github.io/eoop-muster/");
 });

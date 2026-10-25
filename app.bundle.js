@@ -4099,7 +4099,12 @@ hdrPaint();render();
 const sent=new Set();let n=0;
 const plat=()=>window.MBN&&MBN.on?String(MBN.platform||"app"):"web";
 const dev=()=>{try{let d=localStorage.getItem("af-dev");if(!d){d=rndId(24);localStorage.setItem("af-dev",d)}return d}catch(e){return "nostore"}};
-function clean(t,max){return String(t||"").replace(/"[^"\n]{0,400}"|'[^'\n]{0,400}'|`[^`]{0,400}`/g,'"…"').replace(/https?:\/\/[^\s)]+\/([^/\s)?#]+)(\?[^\s):]*)?/g,"$1").slice(0,max)}
+function clean(t,max){return String(t||"")
+  .replace(/"[^"\n]{0,400}"|'[^'\n]{0,400}'|`[^`]{0,400}`/g,'"…"')
+  .replace(/[#?][^\s):]*/g,"")                                   /* link details (unit, recall, numbers) */
+  .replace(/https?:\/\/[^\s)]*\/([^/\s):]+)/g,"$1")              /* keep only the file name */
+  .replace(/\b\d{7,}\b|\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}/g,"[number]")
+  .slice(0,max)}
 function report(kind,msg,stack){
   try{if(S&&S.crashOff)return}catch(e){}
   if(!window.SB||!SB.rpc||n>=5)return;
@@ -4157,7 +4162,9 @@ async function syncApple(force){const N=window.MBN;if(!isIOS()||!N.pro||!N.pro.a
   catch(e){S.proSrv=Object.assign({},S.proSrv||{},{err:String(e.message||e).slice(0,140),at:Date.now()});save()}
   finally{syncing=false}}
 /* Leader: let members of each FEED this phone runs use Ask under this Pro. */
-async function linkFeeds(){const tok=getTok();if(!tok||!Array.isArray(S.feeds))return;S.proLinked=S.proLinked||{};let n=0;
+async function linkFeeds(){const tok=getTok();if(!tok||!Array.isArray(S.feeds))return;
+  const tk=tok.slice(0,12);if(S.proLinkedTok!==tk){S.proLinked={};S.proLinkedTok=tk} /* new subscription: link every FEED again */
+  S.proLinked=S.proLinked||{};let n=0;
   for(const f of S.feeds.filter(f=>f.lk&&f.id&&!S.proLinked[f.id])){try{await SB.rpc("pro_link_feed",{p_tok:tok,p_feed:f.id,p_lk:f.lk});S.proLinked[f.id]=Date.now();n++}catch(e){}}
   if(n)save()}
 /* Any device holding a token (web, or a Pro code typed in): refresh its status now and then. */
@@ -4486,7 +4493,7 @@ document.addEventListener("click",async e=>{
       Google Calendar, Outlook and Apple Calendar import.
    3. Text everyone the check-in link from the server (Pro, "sms" Edge Function + Twilio) instead of one by one. */
 (()=>{
-const HOOK=/^https:\/\/(hooks\.slack\.com\/services\/|[a-z0-9-]+\.webhook\.office\.com\/|[a-z0-9-]+\.logic\.azure\.com(:443)?\/workflows\/|prod-[0-9]+\.[a-z0-9-]+\.logic\.azure\.com(:443)?\/|discord(app)?\.com\/api\/webhooks\/)/i;
+const HOOK=/^https:\/\/(hooks\.slack\.com\/services\/|[a-z0-9.-]+\.environment\.api\.powerplatform\.com(:443)?\/powerautomate\/|[a-z0-9-]+\.webhook\.office\.com\/|[a-z0-9-]+\.logic\.azure\.com(:443)?\/workflows\/|prod-[0-9]+\.[a-z0-9-]+\.logic\.azure\.com(:443)?\/|discord(app)?\.com\/api\/webhooks\/)/i;
 const kind=u=>/slack/i.test(u)?"Slack":/discord/i.test(u)?"Discord":"Teams";
 const fn=n=>SB.url+"/functions/v1/"+n;
 async function post(name,b){const r=await fetch(fn(name),{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify(b)});
@@ -4512,7 +4519,7 @@ function ics(){const from=dkey(),to=dkey(new Date(Date.now()+183*864e5));const e
     const uid=(e.id||[e.d,e.ty,e.ti,who].join("|")).replace(/[^\w|.-]/g,"")+"-"+(n++)+"@accountedfor";
     L.push("BEGIN:VEVENT","UID:"+uid,"DTSTAMP:"+stamp);
     const tm=String(e.tm||"").replace(":","");
-    if(/^\d{4}$/.test(tm)&&(!e.end||e.end===e.d)){const st=d8(e.d)+"T"+tm+"00";const h=(+tm.slice(0,2)+1)%24;L.push("DTSTART:"+st,"DTEND:"+d8(e.d)+"T"+String(h).padStart(2,"0")+tm.slice(2)+"00")}
+    if(/^\d{4}$/.test(tm)&&(!e.end||e.end===e.d)){const st=d8(e.d)+"T"+tm+"00";const h=+tm.slice(0,2)+1;const endD=h>=24?nextDay(e.d):e.d;L.push("DTSTART:"+st,"DTEND:"+d8(endD)+"T"+String(h%24).padStart(2,"0")+tm.slice(2)+"00")}
     else L.push("DTSTART;VALUE=DATE:"+d8(e.d),"DTEND;VALUE=DATE:"+d8(nextDay(e.end||e.d)));
     L.push("SUMMARY:"+esc_(sum.slice(0,200)));if(e.no)L.push("DESCRIPTION:"+esc_(String(e.no).slice(0,500)));if(e.grp)L.push("CATEGORIES:"+esc_(e.grp));
     L.push("END:VEVENT")}

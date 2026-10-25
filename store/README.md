@@ -18,7 +18,7 @@ The Android app lives in `android/` and wraps this same web app (Capacitor), lik
 3. GitHub → this repo → Settings → Secrets and variables → Actions → add:
    `ANDROID_KEYSTORE_B64` (run `base64 -i upload.jks` and paste the output), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`upload`), `ANDROID_KEY_PASSWORD`.
 4. GitHub → Actions → **Android build** → Run workflow (version 1.3.0). Download the `.aab` from the run's artifacts.
-   Optional: add `PLAY_SERVICE_ACCOUNT_JSON` and later runs upload straight to Play's internal testing track.
+   Optional: add `PLAY_SERVICE_ACCOUNT_JSON` and later runs upload straight to Play's internal testing track (Play requires the very first .aab to be uploaded by hand).
 5. In Play Console, create the app (package `com.antoniotyler.accountedfor`), paste `listing.md`, upload `screenshots/`, answer Data safety from `privacy-labels.md`, and upload the .aab to **Closed testing**.
 6. **New personal accounts must run a closed test with at least 12 testers, opted in for 14 days in a row, before you can publish.**
 7. **App links** (check-in links open the app): Play Console → Setup → App signing → copy the SHA-256 fingerprint, put it in `store/root-site/.well-known/assetlinks.json`, and publish `store/root-site/` as the repo `antoniotyler22.github.io`.

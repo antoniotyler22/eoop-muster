@@ -17,12 +17,14 @@ create index if not exists client_errors_dev_idx on public.client_errors(dev, cr
 create index if not exists client_errors_msg_idx on public.client_errors(msg, ver);
 alter table public.client_errors enable row level security;
 revoke all on public.client_errors from anon, authenticated;
+revoke all on sequence public.client_errors_id_seq from anon, authenticated;
 
 create or replace function public.err_scrub(t text) returns text language sql immutable as $$
-  select regexp_replace(regexp_replace(regexp_replace(coalesce(t, ''),
+  select regexp_replace(regexp_replace(regexp_replace(regexp_replace(coalesce(t, ''),
     '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', '[email]', 'g'),
     '\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}', '[number]', 'g'),
-    '\b\d{7,}\b', '[number]', 'g')
+    '\y\d{3}-\d{2}-\d{4}\y', '[number]', 'g'),
+    '\y\d{7,}\y', '[number]', 'g')
 $$;
 
 create or replace function public.err_report(p_kind text, p_msg text, p_stack text, p_ver text, p_plat text, p_dev text)
@@ -33,6 +35,8 @@ declare d text := left(encode(sha256(convert_to(coalesce(p_dev, ''), 'UTF8')), '
 begin
   if m = '' then return; end if;
   if (select count(*) from public.client_errors e where e.dev = d and e.created_at > now() - interval '1 day') >= 30 then return; end if;
+  -- Ceiling for the whole server, since anyone can make up phone IDs.
+  if (select count(*) from public.client_errors e where e.created_at > now() - interval '1 day') >= 5000 then return; end if;
   delete from public.client_errors e where e.created_at < now() - interval '30 days';
   -- Same error again from the same phone today: count it instead of storing it twice.
   update public.client_errors e set n = e.n + 1, last_at = now()

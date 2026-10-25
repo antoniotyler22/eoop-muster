@@ -6,7 +6,7 @@
       Google Calendar, Outlook and Apple Calendar import.
    3. Text everyone the check-in link from the server (Pro, "sms" Edge Function + Twilio) instead of one by one. */
 (()=>{
-const HOOK=/^https:\/\/(hooks\.slack\.com\/services\/|[a-z0-9-]+\.webhook\.office\.com\/|[a-z0-9-]+\.logic\.azure\.com(:443)?\/workflows\/|prod-[0-9]+\.[a-z0-9-]+\.logic\.azure\.com(:443)?\/|discord(app)?\.com\/api\/webhooks\/)/i;
+const HOOK=/^https:\/\/(hooks\.slack\.com\/services\/|[a-z0-9.-]+\.environment\.api\.powerplatform\.com(:443)?\/powerautomate\/|[a-z0-9-]+\.webhook\.office\.com\/|[a-z0-9-]+\.logic\.azure\.com(:443)?\/workflows\/|prod-[0-9]+\.[a-z0-9-]+\.logic\.azure\.com(:443)?\/|discord(app)?\.com\/api\/webhooks\/)/i;
 const kind=u=>/slack/i.test(u)?"Slack":/discord/i.test(u)?"Discord":"Teams";
 const fn=n=>SB.url+"/functions/v1/"+n;
 async function post(name,b){const r=await fetch(fn(name),{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify(b)});
@@ -32,7 +32,7 @@ function ics(){const from=dkey(),to=dkey(new Date(Date.now()+183*864e5));const e
     const uid=(e.id||[e.d,e.ty,e.ti,who].join("|")).replace(/[^\w|.-]/g,"")+"-"+(n++)+"@accountedfor";
     L.push("BEGIN:VEVENT","UID:"+uid,"DTSTAMP:"+stamp);
     const tm=String(e.tm||"").replace(":","");
-    if(/^\d{4}$/.test(tm)&&(!e.end||e.end===e.d)){const st=d8(e.d)+"T"+tm+"00";const h=(+tm.slice(0,2)+1)%24;L.push("DTSTART:"+st,"DTEND:"+d8(e.d)+"T"+String(h).padStart(2,"0")+tm.slice(2)+"00")}
+    if(/^\d{4}$/.test(tm)&&(!e.end||e.end===e.d)){const st=d8(e.d)+"T"+tm+"00";const h=+tm.slice(0,2)+1;const endD=h>=24?nextDay(e.d):e.d;L.push("DTSTART:"+st,"DTEND:"+d8(endD)+"T"+String(h%24).padStart(2,"0")+tm.slice(2)+"00")}
     else L.push("DTSTART;VALUE=DATE:"+d8(e.d),"DTEND;VALUE=DATE:"+d8(nextDay(e.end||e.d)));
     L.push("SUMMARY:"+esc_(sum.slice(0,200)));if(e.no)L.push("DESCRIPTION:"+esc_(String(e.no).slice(0,500)));if(e.grp)L.push("CATEGORIES:"+esc_(e.grp));
     L.push("END:VEVENT")}

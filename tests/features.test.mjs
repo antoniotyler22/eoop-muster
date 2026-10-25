@@ -128,6 +128,10 @@ test("integrations: Slack link validated, numbers posted through the relay, cale
     assert.match(ics.text, /^BEGIN:VCALENDAR\r\n/);
     assert.match(ics.text, /SUMMARY:Range day/);
     assert.ok(ics.text.split("\r\n").every((l) => l.length <= 75), "lines folded");
+    a.w.eval(`S.roster[0].cal=[{id:"c1",d:dkey(new Date(Date.now()+864e5)),tm:"2330",ty:"APPT",ti:"Late duty"}];save()`);
+    const late = a.w.icsExport().text.split("BEGIN:VEVENT").find((v) => /Late duty/.test(v));
+    const st = late.match(/DTSTART:(\d{8})T(\d{4})/), en = late.match(/DTEND:(\d{8})T(\d{4})/);
+    assert.ok(en[1] > st[1] && en[2] === "0030", "11:30 pm event ends 12:30 am the next day");
     a.w.eval(`view="tools";render()`);
     assert.ok(a.$("[data-go='integ']"));
     assert.deepEqual(a.errors, []);
@@ -164,8 +168,11 @@ test("crash reports: errors are sent scrubbed, at most 5, and can be turned off"
     assert.ok(!c[1].p_msg.includes("SMITH"), "quoted text removed");
     assert.match(c[1].p_stack, /app\.bundle\.js/);
     assert.ok(!c[1].p_stack.includes("github.io"));
+    a.w.__crashReport("error", "Bad link https://antoniotyler22.github.io/eoop-muster/#ci=abc&u=1ST%20PLT&to=8085551234 failed", "");
+    const last = calls.filter((x) => x[0] === "err_report").at(-1)[1].p_msg;
+    assert.ok(!/1ST|8085551234|ci=/.test(last), "link details stripped: " + last);
     for (let i = 0; i < 10; i++) a.w.__crashReport("error", "boom " + i, "");
-    assert.equal(calls.filter((x) => x[0] === "err_report").length, 5);
+    assert.equal(calls.filter((x) => x[0] === "err_report").length, 5, "at most 5 per session");
     a.w.eval(`view="data";render()`);
     assert.ok(a.$("#crashTog"));
   } finally { await a.close(); }

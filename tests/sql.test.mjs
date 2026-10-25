@@ -86,9 +86,10 @@ test("crash reports: stored without personal data, rate limited", { skip }, () =
   const call = (msg) => anon(`select public.err_report('app', ${q(msg)}, 'at render (app.bundle.js:10:5)', '4.1.0', 'ios', ${q("d".repeat(24))})`);
   call("TypeError: x is undefined");
   call("Failed for SGT JONES 808-555-1234 jones@example.com");
+  call("SSN 123456789 and 123-45-6789 and id 12345678 here");
   const rows = pg.psql(`select msg from public.client_errors order by id`).split("\n");
   assert.ok(rows.some((r) => /TypeError/.test(r)));
-  assert.ok(!rows.join(" ").match(/555-1234|example\.com/), "phone numbers and emails are scrubbed");
+  assert.ok(!rows.join(" ").match(/555-1234|example\.com|123456789|123-45-6789|12345678/), "phone numbers, emails and ID numbers are scrubbed");
   for (let i = 0; i < 60; i++) call("spam " + i);
   assert.ok(Number(pg.psql(`select count(*) from public.client_errors where dev = ${q(sha("d".repeat(24)).slice(0, 24))}`)) <= 30, "per-device daily limit");
 });
