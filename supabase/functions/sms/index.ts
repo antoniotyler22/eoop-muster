@@ -26,19 +26,49 @@ export function cleanNumbers(list: unknown): string[] {
   }
   return [...out];
 }
-/** The text must be a check-in message that links to the app (stops the function being used to send anything else). */
-export function textOK(t: unknown, appUrls: string[]): string | null {
-  if (typeof t !== "string") return null;
-  const s = t.replace(/\s+/g, " ").trim();
-  if (s.length < 10 || s.length > 320) return null;
-  const links = s.match(/https?:\/\/\S+/g) ?? [];
-  if (links.length !== 1 || !appUrls.some((u) => links[0].startsWith(u + "#"))) return null;
-  return s;
+/** The server writes the text itself; the app only supplies its check-in link, which is checked and rebuilt here
+ *  (only the app's own address and the check-in fields, nothing else), so the function can't be used to send other messages. */
+export function buildText(link: unknown, recall: string, appUrls: string[]): string | null {
+  if (typeof link !== "string" || link.length > 400) return null;
+  const at = link.indexOf("#");
+  if (at < 0) return null;
+  const base = link.slice(0, at);
+  if (!appUrls.includes(base)) return null;
+  const q = new URLSearchParams(link.slice(at + 1));
+  const out = new URLSearchParams();
+  for (const [k] of q) if (!["ci", "u", "to", "l", "g"].includes(k)) return null;
+  const ci = q.get("ci") ?? "";
+  if (ci !== recall || !/^[a-z0-9]{8,16}$/.test(ci)) return null;
+  out.set("ci", ci);
+  const u = (q.get("u") ?? "").replace(/\s+/g, " ").trim();
+  if (!/^[A-Za-z0-9 .,\/'&()#-]{1,30}$/.test(u)) return null;
+  out.set("u", u);
+  const to = q.get("to");
+  if (to != null) { if (!/^\+?[0-9]{7,15}$/.test(to)) return null; out.set("to", to); }
+  const l = q.get("l");
+  if (l != null) { if (l !== "1") return null; out.set("l", "1"); }
+  const g = q.get("g");
+  if (g != null) { if (!/^-?[0-9]{1,3}\.[0-9]{1,6},-?[0-9]{1,3}\.[0-9]{1,6},[0-9]{1,5}$/.test(g)) return null; out.set("g", g); }
+  return `${u} recall: tap to check in. ${base}#${out.toString()}`;
 }
 
-async function rpc(fn: string, args: unknown) {
+function hdrs() {
   const h: Record<string, string> = { apikey: SRK, "Content-Type": "application/json" };
   if (SRK.startsWith("eyJ")) h.Authorization = "Bearer " + SRK;
+  return h;
+}
+const sha256hex = async (t: string) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t))), (x) => x.toString(16).padStart(2, "0")).join("");
+/** The caller must hold the recall's read key (only the leader's phone has it), and the recall must still be open. */
+async function recallOK(id: unknown, key: unknown) {
+  if (typeof id !== "string" || !/^[a-z0-9]{8,16}$/.test(id) || typeof key !== "string" || key.length < 16 || key.length > 200) return false;
+  const r = await fetch(URL0 + "/rest/v1/recalls?select=read_key_hash,expires_at&id=eq." + encodeURIComponent(id), { headers: hdrs() });
+  if (!r.ok) return false;
+  const rows = await r.json();
+  const row = rows && rows[0];
+  return !!row && row.read_key_hash === await sha256hex(key) && Date.parse(row.expires_at) > Date.now();
+}
+async function rpc(fn: string, args: unknown) {
+  const h = hdrs();
   const r = await fetch(URL0 + "/rest/v1/rpc/" + fn, { method: "POST", headers: h, body: JSON.stringify(args) });
   const t = await r.text();
   if (!r.ok) throw new Error(t.slice(0, 200));
@@ -59,8 +89,9 @@ export async function handle(req: Request): Promise<Response> {
   if (!ent) return json({ error: "Texting from the server is part of Accounted For Pro.", pro: true }, 402);
   const to = cleanNumbers(b.to);
   const apps = env("APP_URLS", "https://antoniotyler22.github.io/eoop-muster/").split(",").map((s) => s.trim()).filter(Boolean);
-  const text = textOK(b.text, apps);
   if (!to.length) return json({ error: "No valid US phone numbers." }, 400);
+  if (!(await recallOK(b.recall, b.key))) return json({ error: "Start a live recall on this phone first." }, 403);
+  const text = buildText(b.link, b.recall, apps);
   if (!text) return json({ error: "Only check-in links can be texted from here." }, 400);
   // Daily cap per Pro team (counts texts, not requests).
   const cap = Number(env("SMS_PER_TEAM", "300"));
