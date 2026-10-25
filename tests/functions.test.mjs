@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { hookKind, hookBody } from "../supabase/functions/relay/index.ts";
-import { cleanNumbers, textOK } from "../supabase/functions/sms/index.ts";
+import { cleanNumbers, buildText } from "../supabase/functions/sms/index.ts";
 
 test("relay accepts only Slack, Teams and Discord webhooks", () => {
   assert.equal(hookKind("https://hooks.slack.com/services/T1/B2/abc"), "slack");
@@ -27,11 +27,15 @@ test("server texting: valid US numbers only, deduplicated, capped", () => {
   assert.deepEqual(cleanNumbers("8085550100"), []);
 });
 
-test("server texting: only a check-in link to the app can be sent", () => {
+test("server texting: the server writes the text; only the app's own check-in link gets through", () => {
   const app = ["https://antoniotyler22.github.io/eoop-muster/"];
-  assert.ok(textOK("1ST PLT recall: tap to check in. https://antoniotyler22.github.io/eoop-muster/#ci=abc&u=1ST", app));
-  assert.equal(textOK("Win a prize https://evil.example/#x", app), null);
-  assert.equal(textOK("two links https://antoniotyler22.github.io/eoop-muster/#a https://antoniotyler22.github.io/eoop-muster/#b", app), null);
-  assert.equal(textOK("no link at all here", app), null);
-  assert.equal(textOK("x".repeat(400) + " https://antoniotyler22.github.io/eoop-muster/#a", app), null);
+  const base = app[0] + "#";
+  assert.equal(buildText(base + "ci=abc12345&u=1ST+PLT&l=1", "abc12345", app), "1ST PLT recall: tap to check in. " + base + "ci=abc12345&u=1ST+PLT&l=1");
+  assert.ok(buildText(base + "ci=abc12345&u=1ST&to=8085550100&g=21.4500,-157.7600,100", "abc12345", app));
+  assert.equal(buildText("https://evil.example/#ci=abc12345&u=X", "abc12345", app), null);
+  assert.equal(buildText(base + "ci=abc12345&u=X&msg=win+a+prize", "abc12345", app), null);
+  assert.equal(buildText(base + "ci=zzz99999&u=X", "abc12345", app), null);
+  assert.equal(buildText(base + "ci=abc12345&u=" + "A".repeat(40), "abc12345", app), null);
+  assert.equal(buildText(base + "ci=abc12345&u=Free+%24%24%24+http%3A%2F%2Fx.co", "abc12345", app), null);
+  assert.equal(buildText(base + "ci=abc12345&u=X&to=call-me", "abc12345", app), null);
 });

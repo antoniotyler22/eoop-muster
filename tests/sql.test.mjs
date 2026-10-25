@@ -66,6 +66,22 @@ test("Pro: token check, FEED linking needs both keys, members covered only while
   assert.equal(asServer(`select public.pro_ent_for(${q(tok)}, null, null)`), "apple:42", "one day of grace for billing retries");
 });
 
+test("Pro: test purchases get no grace period; one subscription covers at most 5 Feeds", { skip }, () => {
+  const asServer = (sql) => pg.psql(`set role service_role; ${sql}`);
+  const tok = "s".repeat(64);
+  pg.psql(`insert into public.pro_ents(id, source, product, expires_at, env, tok_hash) values ('apple:77','apple','pro.monthly', now() - interval '2 hours', 'Sandbox', ${q(sha(tok))})`);
+  assert.equal(asServer(`select coalesce(public.pro_ent_for(${q(tok)}, null, null),'none')`), "none", "sandbox: no grace");
+  pg.psql(`update public.pro_ents set expires_at = null where id = 'apple:77'`);
+  assert.equal(asServer(`select coalesce(public.pro_ent_for(${q(tok)}, null, null),'none')`), "none", "sandbox: no end date never counts");
+  pg.psql(`update public.pro_ents set expires_at = now() + interval '5 minutes' where id = 'apple:77'`);
+  assert.equal(asServer(`select public.pro_ent_for(${q(tok)}, null, null)`), "apple:77", "sandbox counts while it lasts");
+  const lk = (i) => "leader-key-cap-" + i + "-0123456789ab";
+  for (let i = 0; i < 6; i++) pg.psql(`insert into public.feeds(id, member_key_hash, leader_key_hash) values ('capfeed00${i}', ${q(sha("m" + i))}, ${q(sha(lk(i)))})`);
+  for (let i = 0; i < 5; i++) assert.equal(anon(`select public.pro_link_feed(${q(tok)}, 'capfeed00${i}', ${q(lk(i))})`), "t");
+  assert.equal(anon(`select public.pro_link_feed(${q(tok)}, 'capfeed000', ${q(lk(0))})`), "t", "re-linking one already covered is fine");
+  assert.throws(() => anon(`select public.pro_link_feed(${q(tok)}, 'capfeed005', ${q(lk(5))})`), /up to 5 Feeds/);
+});
+
 test("crash reports: stored without personal data, rate limited", { skip }, () => {
   const call = (msg) => anon(`select public.err_report('app', ${q(msg)}, 'at render (app.bundle.js:10:5)', '4.1.0', 'ios', ${q("d".repeat(24))})`);
   call("TypeError: x is undefined");
