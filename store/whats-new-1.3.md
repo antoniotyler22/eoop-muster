@@ -9,3 +9,4 @@
 - Group logins: people can set their own password and stay signed in.
 - Pro is now checked with Apple on the server, so Ask and the server hub work for your whole team.
 - Crash reports (no personal data; can be turned off) so problems get fixed faster.
+- Green dots show what's new. Tap an item and its dot goes away.
