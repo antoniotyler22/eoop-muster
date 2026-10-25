@@ -20,6 +20,7 @@ export const SOURCES = [
   "features/report.js",
   "features/geo.js",
   "features/integrations.js",
+  "features/newdots.js",
 ];
 
 export function build() {

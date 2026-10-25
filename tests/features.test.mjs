@@ -177,3 +177,24 @@ test("crash reports: errors are sent scrubbed, at most 5, and can be turned off"
     assert.ok(a.$("#crashTog"));
   } finally { await a.close(); }
 });
+
+test("green dots mark what's new, and each goes away once it's opened", async () => {
+  const a = await openApp();
+  try {
+    a.w.eval(`view="tools";render()`);
+    a.w.__newDots.paint();
+    const dot = () => a.$(".tgrid [data-go='integ'] .newdot");
+    assert.ok(dot(), "Integrations has a green dot");
+    assert.ok(a.$(".tgrid [data-pdf-report] .newdot"), "PDF report has a green dot");
+    a.$(".tgrid [data-go='integ']").click();
+    assert.equal(a.w.eval("S.newSeen.integ"), 1, "remembered as seen");
+    a.w.eval(`view="tools";render()`);
+    a.w.__newDots.paint();
+    assert.equal(dot(), null, "no dot after it was opened");
+    assert.ok(a.$(".tgrid [data-pdf-report] .newdot"), "others still marked");
+    a.w.eval(`S.newFrom=Date.now()-46*864e5;view="tools";render()`);
+    a.w.__newDots.paint();
+    assert.equal(a.$(".newdot"), null, "all dots retire after 45 days");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
