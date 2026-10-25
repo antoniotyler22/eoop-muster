@@ -54,14 +54,16 @@ grant execute on function public.esc_set(text, text, timestamptz, int) to anon;
 revoke all on function public.esc_due() from public, anon, authenticated;
 grant execute on function public.esc_due() to service_role;
 
--- Every minute: ask the notify function to send any due alerts.
+-- Every minute: ask the notify function to send any due alerts. The function may be deployed as "notify" or "Notify";
+-- both names are called and the one that doesn't exist just answers 404.
 select cron.unschedule(jobid) from cron.job where jobname = 'accounted-for-escalate';
 select cron.schedule('accounted-for-escalate', '* * * * *', $job$
   select net.http_post(
-    url := 'https://vdhxhvklwbimjpoomnui.supabase.co/functions/v1/notify',
+    url := 'https://vdhxhvklwbimjpoomnui.supabase.co/functions/v1/' || n,
     headers := jsonb_build_object('Content-Type', 'application/json'),
     body := '{"escalate":1}'::jsonb,
-    timeout_milliseconds := 20000);
+    timeout_milliseconds := 20000)
+  from unnest(array['notify', 'Notify']) as n;
 $job$);
 
 notify pgrst, 'reload schema';
