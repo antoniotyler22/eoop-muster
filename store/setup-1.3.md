@@ -31,7 +31,8 @@ With the Supabase CLI instead: `supabase functions deploy pro --no-verify-jwt` (
 ## 3. Secrets (Edge Functions → Secrets)
 - `PRO_SECRET`: any long random text (40+ characters). **Set it once and never change it**: changing it changes every team's Pro code.
 - Already there: `ANTHROPIC_API_KEY`, `VAPID_*`, `APNS_*`, `AI_ADMIN_KEY`.
-- Optional limits: `AI_PER_TEAM` (100 questions per Pro team per day), `AI_SERVER_CAP` (5000 per day across everyone).
+- Optional limits: `AI_PER_TEAM` (100 questions per Pro team per day), `AI_PER_TEST_TEAM` (10 per day for TestFlight/Sandbox purchases, which are free), `AI_SERVER_CAP` (5000 per day across everyone).
+- One Pro subscription covers up to 5 Feeds. Test purchases (TestFlight, Sandbox, Stripe test mode) count only until they end, with no grace day.
 - `AI_REQUIRE_PRO=0` or `HUB_REQUIRE_PRO=0` turn the Pro checks off (not recommended).
 
 ## 4. App Store Server Notifications (so renewals, cancellations and refunds reach the server)
@@ -49,7 +50,7 @@ App Store Connect → the app → **App Information** → App Store Server Notif
 ## 6. Optional: text everyone from the server (Twilio)
 1. Twilio account, a US number, and **A2P 10DLC registration** (required by US carriers; takes a few days).
 2. Secrets: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM` (+1… number) or `TWILIO_MESSAGING_SERVICE_SID`. Optional `SMS_PER_TEAM` (default 300 texts per team per day).
-3. The "Text the check-in link to everyone" button shows up on recalls for Pro teams once the function answers.
+3. The "Text the check-in link to everyone" button shows up on live recalls for Pro teams once the function answers. The server writes the text itself ("<unit> recall: tap to check in. <link>") and only for a live recall the phone started, so the number can't be used for anything else.
 
 ## 7. Before submitting 1.3
 - Run `npm test` (or check the Tests action on GitHub is green).
