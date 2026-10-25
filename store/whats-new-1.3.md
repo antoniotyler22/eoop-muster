@@ -10,3 +10,4 @@
 - Pro is now checked with Apple on the server, so Ask and the server hub work for your whole team.
 - Crash reports (no personal data; can be turned off) so problems get fixed faster.
 - Green dots show what's new. Tap an item and its dot goes away.
+- Clear things off: mark a due-out Done, Got it (acknowledge) or delete it; mark someone Back from leave or Departed; mark calendar items Done or hide them.
