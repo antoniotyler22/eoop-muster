@@ -111,14 +111,14 @@ async function runOne(job: any) {
 async function runAll() {
   const t0 = Date.now();
   let jobs: any[];
-  try { jobs = await rest("hub_jobs?select=id,ct,seen_at,ver,ent_id,pro_ents(revoked,expires_at)&order=ran_at.asc.nullsfirst"); }
+  try { jobs = await rest("hub_jobs?select=id,ct,seen_at,ver,ent_id,pro_ents(revoked,expires_at,env)&order=ran_at.asc.nullsfirst"); }
   catch { jobs = await rest("hub_jobs?select=id,ct,seen_at,ver&order=ran_at.asc.nullsfirst"); } // SQL part 20 not run yet
   const out = { ran: 0, phone: 0, saved: 0, errors: 0, paused: 0 };
   for (const j of jobs || []) {
     if (Date.now() - t0 > BUDGET_MS) break;
     // Boards turned on with Pro pause when that subscription ends (older boards with no subscription keep running).
     const pe = j.ent_id ? j.pro_ents : null;
-    if (j.ent_id && (!pe || pe.revoked || (pe.expires_at && Date.parse(pe.expires_at) < Date.now() - 864e5))) {
+    if (j.ent_id && (!pe || pe.revoked || (pe.expires_at && Date.parse(pe.expires_at) < Date.now() - (!pe.env || pe.env === "Production" || pe.env === "live" ? 864e5 : 0)))) {
       out.paused++;
       await rest("hub_jobs?id=eq." + encodeURIComponent(j.id), { method: "PATCH", body: JSON.stringify({ ran_at: new Date().toISOString(), err: "Pro ended, so the server hub is paused. Renew Pro to restart it." }), headers: { Prefer: "return=minimal" } }).catch(() => {});
       continue;
