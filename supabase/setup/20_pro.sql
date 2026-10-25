@@ -34,10 +34,16 @@ do $$ begin
   end if;
 end $$;
 
--- Active = not refunded/revoked, and not past its end date (one day of grace for billing retries).
+-- Active = not refunded/revoked, and not past its end date. Real purchases get one day of grace for billing retries;
+-- test purchases (Apple Sandbox/TestFlight/Xcode, Stripe test mode) are free to make, so they get none.
+create or replace function public.pro_is_live(r public.pro_ents)
+returns boolean language sql immutable as $$
+  select coalesce(r.env, 'Production') in ('Production', 'live')
+$$;
 create or replace function public.pro_is_active(r public.pro_ents)
 returns boolean language sql stable as $$
-  select not r.revoked and (r.expires_at is null or r.expires_at > now() - interval '1 day')
+  select coalesce(not r.revoked and (r.expires_at is null and public.pro_is_live(r)
+    or r.expires_at > now() - case when public.pro_is_live(r) then interval '1 day' else interval '0' end), false)
 $$;
 
 -- The app asks "is my team token still Pro?" Only someone holding the token learns anything.
@@ -58,6 +64,9 @@ begin
   select e.id into eid from public.pro_ents e
     where e.tok_hash = encode(sha256(convert_to(coalesce(p_tok, ''), 'UTF8')), 'hex') and public.pro_is_active(e);
   if eid is null then raise exception 'not pro'; end if;
+  -- One subscription covers up to 5 FEEDs (a leader's own team plus a few sections); more needs another subscription.
+  if (select count(*) from public.pro_feeds pf where pf.ent_id = eid and pf.feed_id <> p_feed) >= 5 then
+    raise exception 'Pro covers up to 5 Feeds'; end if;
   if not exists (select 1 from public.feeds f where f.id = p_feed
       and f.leader_key_hash = encode(sha256(convert_to(coalesce(p_lk, ''), 'UTF8')), 'hex')) then raise exception 'not allowed'; end if;
   insert into public.pro_feeds(feed_id, ent_id) values (p_feed, eid)
@@ -85,6 +94,7 @@ begin
 end $$;
 
 revoke all on function public.pro_is_active(public.pro_ents) from public, anon, authenticated;
+revoke all on function public.pro_is_live(public.pro_ents) from public, anon, authenticated;
 -- Usage counter that adds several at once (server texting counts each text). Server only.
 create or replace function public.usage_add(p_k text, p_n int)
 returns int language plpgsql security definer set search_path = public as $$
