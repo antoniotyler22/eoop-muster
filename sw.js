@@ -1,7 +1,7 @@
 // Offline cache. The app opens from the phone instantly; a newer version is fetched in the background.
 // Everything the app uses is served from this site: no outside fonts, scripts or trackers.
-const CACHE = "eop-numbers-v76";
-const CORE = ["./", "./index.html", "./app.js", "./v11.js", "./v12.js", "./hub.js", "./terms.html", "./app.css", "./native.js", "./privacy.html", "./support.html", "./help.html", "./manifest.webmanifest",
+const CACHE = "eop-numbers-v77";
+const CORE = ["./", "./index.html", "./app.js", "./v11.js", "./v12.js", "./hub.js", "./v13.js", "./terms.html", "./app.css", "./native.js", "./privacy.html", "./support.html", "./help.html", "./manifest.webmanifest",
   "./icon-180.png", "./icon-192.png", "./icon-512.png",
   "./fonts/pjs-400.woff2", "./fonts/pjs-500.woff2", "./fonts/pjs-600.woff2", "./fonts/pjs-700.woff2", "./fonts/pjs-800.woff2"];
 const LIBS = ["./lib/qrcode.js", "./lib/xlsx.full.min.js", "./lib/pdf.min.js", "./lib/pdf.worker.min.js", "./lib/mammoth.browser.min.js"];
