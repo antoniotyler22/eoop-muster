@@ -86,12 +86,13 @@ const V=window.VAULT={key:null,cfg:getCfg(),ok:!!(window.crypto&&crypto.subtle),
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.hidden){hiddenAt=Date.now();return}
   const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
-window.AV="4.0.0";
-function startApp(){const s=document.createElement("script");s.src="app.js?v="+window.AV;s.onload=()=>{const x=document.createElement("script");x.src="v11.js?v="+window.AV;x.onload=()=>{const y=document.createElement("script");y.src="v12.js?v="+window.AV;y.onload=()=>{const z=document.createElement("script");z.src="hub.js?v="+window.AV;z.onload=()=>{const w=document.createElement("script");w.src="v13.js?v="+window.AV;document.body.appendChild(w)};document.body.appendChild(z)};document.body.appendChild(y)};document.body.appendChild(x)};s.onerror=()=>{document.body.insertAdjacentHTML("beforeend",'<p style="padding:24px;font:16px system-ui">Couldn\'t load the app. Connect once, then reopen.</p>')};document.body.appendChild(s)}
+window.AV="4.1.0";
+function startApp(){const s=document.createElement("script");s.src="app.bundle.js?v="+window.AV;s.onerror=()=>{document.body.insertAdjacentHTML("beforeend",'<p style="padding:24px;font:16px system-ui">Couldn\'t load the app. Connect once, then reopen.</p>')};document.body.appendChild(s)}
 /* live check-ins: Supabase relay. Stores no names: only salted hashes of the words a person types, a code and a short note. */
 const NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
 const PUB=()=>!NATIVE&&/^https?:$/.test(location.protocol)?location.origin+location.pathname:"https://antoniotyler22.github.io/eoop-muster/";
-const NP=n=>{try{return NATIVE&&window.Capacitor.registerPlugin?window.Capacitor.registerPlugin(n):null}catch(e){return null}};
+/* Android: push alerts need Firebase (google-services.json + FCM in the notify function); until then the Android app skips push. */
+const NP=n=>{try{if(n==="PushNotifications"&&NATIVE&&window.Capacitor.getPlatform&&window.Capacitor.getPlatform()==="android"&&!window.AF_ANDROID_PUSH)return null;return NATIVE&&window.Capacitor.registerPlugin?window.Capacitor.registerPlugin(n):null}catch(e){return null}};
 if(NATIVE){const shim={permission:(()=>{try{return localStorage.getItem("eop-nperm")||"default"}catch(e){return"default"}})(),requestPermission:async()=>nativePushPerm(true)};try{Object.defineProperty(window,"Notification",{value:shim,configurable:true,writable:true})}catch(e){window.Notification=shim}}
 async function nativePushPerm(ask){const P=NP("PushNotifications");if(!P){window.__pushWhy="noplugin";return"denied"}let st=await P.checkPermissions();if(st.receive==="prompt"&&ask)st=await P.requestPermissions();const v=st.receive==="granted"?"granted":st.receive==="denied"?"denied":"default";window.__pushWhy=v==="granted"?"":v;window.Notification.permission=v;try{localStorage.setItem("eop-nperm",v)}catch(e){}return v}
 let apnsTok=null,apnsWait=[];
@@ -108,7 +109,9 @@ if(NATIVE)setTimeout(()=>{const P=NP("PushNotifications"),A=NP("App");
 Object.assign(window,{NATIVE,PUB,NP,nativeSub,nativePushPerm});
 const SB=window.SB={url:"https://vdhxhvklwbimjpoomnui.supabase.co",key:"sb_publishable_e1VOssMquS5UkOnwEWTrfA_fPwZqorM",
   vapid:"BGWkOoK35r0UiMWL6bYX1uwz9L_8qXwQvp4Qc_4Bv_8Ddy3c-iKPpU_ynvIxt116eKBQvlFvtBobyHKB910S3q4",
-  nfn:"notify",afn:"ask",async findAsk(){for(const n of ["ask","Ask"]){try{const r=await fetch(this.url+"/functions/v1/"+n,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify({ping:1})});if(r.status!==404){this.afn=n;return n}}catch(e){}}return this.afn},async findNotify(){for(const n of ["notify","Notify"]){try{const r=await fetch(this.url+"/functions/v1/"+n,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:"{}"});if(r.status!==404){this.nfn=n;try{localStorage.setItem("eop-nfn",n)}catch(e){}return n}}catch(e){}}return this.nfn},
+  nfn:"notify",afn:"ask",
+  /* Web billing (Stripe): set to true once the "billing" Edge Function and its Stripe secrets are in place. Until then Pro features stay unlocked on the web. */
+  webBilling:false,async findAsk(){for(const n of ["ask","Ask"]){try{const r=await fetch(this.url+"/functions/v1/"+n,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify({ping:1})});if(r.status!==404){this.afn=n;return n}}catch(e){}}return this.afn},async findNotify(){for(const n of ["notify","Notify"]){try{const r=await fetch(this.url+"/functions/v1/"+n,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:"{}"});if(r.status!==404){this.nfn=n;try{localStorage.setItem("eop-nfn",n)}catch(e){}return n}}catch(e){}}return this.nfn},
   notify(rid,body){try{fetch(this.url+"/functions/v1/"+this.nfn,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify(body||{recall:rid}),keepalive:true}).catch(()=>{})}catch(e){}},
   async rpc(fn,args){const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),12000);
     try{const r=await fetch(this.url+"/rest/v1/rpc/"+fn,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify(args),signal:ac.signal});
@@ -131,6 +134,16 @@ function ciPage(q){const esc=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<"
     <p class="note" id="ciMsg">${live?"Tap once. Your leader sees it right away.":to?"Opens a text to your leader. Hit Send.":"Opens a text. Pick your leader as the recipient and hit Send."}</p>
     <p class="note">${live?"Your name is scrambled before it leaves this phone; the server never stores it. No signal? It opens a text instead.":"Nothing is sent until you hit Send in Messages."} Your name is remembered on this phone only.</p></div>`;
   document.body.appendChild(m);document.querySelectorAll(".top,#helpBtn").forEach(x=>x.hidden=true);
+  /* rally point (#g=lat,lon,radius): adds "AT RP" or the distance to the note. The location itself never leaves this phone. */
+  {const g=(q.get("g")||"").split(",").map(Number);if(g.length===3&&g.every(Number.isFinite)&&Math.abs(g[0])<=90&&Math.abs(g[1])<=180&&g[2]>0&&navigator.geolocation){
+    const b=document.createElement("button");b.className="btn alt";b.type="button";b.textContent="📍 I'm at the rally point (check my location)";b.style.minHeight="48px";
+    document.getElementById("ciE").before(b);
+    b.addEventListener("click",()=>{b.disabled=true;b.textContent="Checking location…";
+      navigator.geolocation.getCurrentPosition(p=>{const R=6371000,r=x=>x*Math.PI/180,dl=r(p.coords.latitude-g[0]),dn=r(p.coords.longitude-g[1]);
+        const a=Math.sin(dl/2)**2+Math.cos(r(g[0]))*Math.cos(r(p.coords.latitude))*Math.sin(dn/2)**2;const d=2*R*Math.asin(Math.sqrt(a));
+        const at=d<=g[2]+Math.min(p.coords.accuracy||0,100);const t=at?"AT RP":(d<1000?Math.round(d/10)*10+" M":(d/1000).toFixed(1)+" KM")+" FROM RP";
+        const e=document.getElementById("ciE");e.value=(t+(e.value&&!/RP$/.test(e.value)?" "+e.value:"")).slice(0,40);b.textContent=at?"✓ You're at the rally point":"📍 "+t+": not at the rally point yet";b.disabled=false},
+        ()=>{b.disabled=false;b.textContent="Location is off. Tap Good when you're there."},{enableHighAccuracy:true,timeout:15000,maximumAge:20000})})}}
   m.addEventListener("click",e=>{const b=e.target.closest("[data-c]");if(!b)return;const n=document.getElementById("ciN").value.toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim();
     if(!n){document.getElementById("ciMsg").textContent="Enter your rank and last name first.";document.getElementById("ciN").focus();return}
     try{localStorage.setItem(KM,n)}catch(err){}const c=+b.dataset.c;const eta=document.getElementById("ciE").value.replace(/[|#]/g," ").replace(/\s+/g," ").trim();

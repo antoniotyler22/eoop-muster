@@ -1,0 +1,25 @@
+# Builds the Android app (debug, unsigned) on every change, so build problems show up before a Play upload.
+name: Android app build check
+on:
+  push:
+    branches: [main]
+    paths: ["android/**", "native.js", "index.html", "app.bundle.js", "package*.json", "capacitor.config.json", ".github/workflows/android-*.yml"]
+  pull_request:
+    paths: ["android/**", "native.js", "index.html", "app.bundle.js", "package*.json", "capacitor.config.json", ".github/workflows/android-*.yml"]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - run: npm ci && npm run build:web && npx cap sync android
+      - name: Build debug APK
+        working-directory: android
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon -q
+      - uses: actions/upload-artifact@v4
+        with: { name: accounted-for-debug-apk, path: android/app/build/outputs/apk/debug/*.apk, retention-days: 7 }

@@ -256,10 +256,19 @@ async function runOne(job: any) {
 
 async function runAll() {
   const t0 = Date.now();
-  const jobs = await rest("hub_jobs?select=id,ct,seen_at,ver&order=ran_at.asc.nullsfirst");
-  const out = { ran: 0, phone: 0, saved: 0, errors: 0 };
+  let jobs: any[];
+  try { jobs = await rest("hub_jobs?select=id,ct,seen_at,ver,ent_id,pro_ents(revoked,expires_at)&order=ran_at.asc.nullsfirst"); }
+  catch { jobs = await rest("hub_jobs?select=id,ct,seen_at,ver&order=ran_at.asc.nullsfirst"); } // SQL part 20 not run yet
+  const out = { ran: 0, phone: 0, saved: 0, errors: 0, paused: 0 };
   for (const j of jobs || []) {
     if (Date.now() - t0 > BUDGET_MS) break;
+    // Boards turned on with Pro pause when that subscription ends (older boards with no subscription keep running).
+    const pe = j.ent_id ? j.pro_ents : null;
+    if (j.ent_id && (!pe || pe.revoked || (pe.expires_at && Date.parse(pe.expires_at) < Date.now() - 864e5))) {
+      out.paused++;
+      await rest("hub_jobs?id=eq." + encodeURIComponent(j.id), { method: "PATCH", body: JSON.stringify({ ran_at: new Date().toISOString(), err: "Pro ended, so the server hub is paused. Renew Pro to restart it." }), headers: { Prefer: "return=minimal" } }).catch(() => {});
+      continue;
+    }
     if (j.seen_at && Date.now() - Date.parse(j.seen_at) < PHONE_MS) { out.phone++; continue; }
     let res: any;
     try { res = await runOne(j); } catch (e) { res = { err: String(e.message || e).slice(0, 200) }; }
@@ -289,7 +298,16 @@ Deno.serve(async (req) => {
       const K = await C.codeKeys(code);
       const v = await SB.rpc("backup_ver", { p_id: K.id, p_key: K.wk });
       if (v == null) return json({ error: "No backup for this board yet. Tap Back up now first." }, 404);
-      await rest("hub_jobs?on_conflict=id", { method: "POST", body: JSON.stringify({ id: K.id, ct: await seal(code), seen_at: new Date().toISOString(), err: null }), headers: { Prefer: "resolution=merge-duplicates,return=minimal" } });
+      // The server hub runs every minute on our servers, so it's a Pro feature (HUB_REQUIRE_PRO=0 turns the check off).
+      let ent: string | null = null;
+      if (typeof body.pro === "string" && body.pro) {
+        try { ent = await SB.rpc("pro_ent_for", { p_tok: body.pro, p_feed: null, p_mk: null }); } catch { ent = null; }
+      }
+      if (!ent && (Deno.env.get("HUB_REQUIRE_PRO") ?? "1") !== "0") return json({ error: "The server hub is part of Accounted For Pro.", pro: true }, 402);
+      const rec: any = { id: K.id, ct: await seal(code), seen_at: new Date().toISOString(), err: null };
+      if (ent) rec.ent_id = ent;
+      const put = (r: any) => rest("hub_jobs?on_conflict=id", { method: "POST", body: JSON.stringify(r), headers: { Prefer: "resolution=merge-duplicates,return=minimal" } });
+      try { await put(rec); } catch (e) { if (!rec.ent_id || !/ent_id/.test(String(e.message || e))) throw e; delete rec.ent_id; await put(rec); }
       return json({ ok: 1 });
     }
     if (body.op === "run") {

@@ -76,5 +76,7 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Used only when you set or confirm a rally point. Your location never leaves your phone.</string>
 </dict>
 </plist>

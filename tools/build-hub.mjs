@@ -25,5 +25,11 @@ core = core.replace(P1, "lvBusy=true;");
 const tpl = fs.readFileSync(root + "supabase/functions/hub/template.ts", "utf8");
 if (!tpl.includes("/*__CORE__*/")) throw new Error("template marker missing");
 const out = tpl.replace("/*__CORE__*/", () => core);
-fs.writeFileSync(root + "supabase/functions/hub/index.ts", out);
-console.log("hub/index.ts written:", stmts.size, "pieces from app.js,", out.length, "chars");
+const dest = root + "supabase/functions/hub/index.ts";
+if (process.argv.includes("--check")) {
+  if (!fs.existsSync(dest) || fs.readFileSync(dest, "utf8") !== out) { console.error("supabase/functions/hub/index.ts is out of date. Run: node tools/build-hub.mjs"); process.exit(1); }
+  console.log("hub/index.ts is up to date");
+} else {
+  fs.writeFileSync(dest, out);
+  console.log("hub/index.ts written:", stmts.size, "pieces from app.js,", out.length, "chars");
+}

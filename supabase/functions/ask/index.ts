@@ -1,7 +1,9 @@
 // Supabase Edge Function "ask": answers questions with Claude, searching official sources only.
 // Turn OFF "Enforce JWT verification". Secrets: ANTHROPIC_API_KEY (required),
 // optional AI_MODEL (default claude-sonnet-5-5), AI_DAILY_CAP (default 150), AI_PER_DEVICE (default 20),
-// AI_ADMIN_KEY (lets the OIC's phone turn Ask on/off, choose who can use it and set limits).
+// AI_ADMIN_KEY (lets the OIC's phone turn Ask on/off, choose who can use it and set limits),
+// AI_REQUIRE_PRO (default 1: only Pro teams, the admin and allow-listed FEEDs; set 0 to let anyone ask), AI_PER_TEAM (default 100/day per Pro team),
+// AI_SERVER_CAP (default 5000/day across everyone). Needs SQL part 20 for Pro.
 // Question text is never stored. Only daily counters are kept (ai_usage table).
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -31,7 +33,7 @@ const TOPIC: Record<string, string> = {
 };
 
 function system(mode: string) {
-  return `You are "Ask" inside EOP Numbers, an accountability app used by small-unit leaders and their people. Answer questions about ${TOPIC[mode] ?? TOPIC.military}.
+  return `You are "Ask" inside Accounted For, an accountability app used by small-unit leaders and their people. Answer questions about ${TOPIC[mode] ?? TOPIC.military}.
 Rules:
 - Search official sources before answering anything about a specific rule, order, standard, number or date. Name the order or document and paragraph only when a source you found shows it. Never invent order numbers, paragraph numbers, scores or dollar amounts.
 - Orders and rates change. If a source might be outdated or you are not sure, say so and tell them where to verify (the current order on the official site, their admin shop, S-1, IPAC, or chain of command).
@@ -96,16 +98,27 @@ Deno.serve(async (req) => {
     return json({ cfg, defaults: { cap: Number(Deno.env.get("AI_DAILY_CAP") ?? 150), per: Number(Deno.env.get("AI_PER_DEVICE") ?? 20) }, usage: use ?? [] });
   }
 
-  if (!cfg.on) return json({ error: "Ask is turned off by your leader.", off: true }, 403);
-  if (cfg.who === "leaders" && !isAdmin) return json({ error: "Ask is set to leaders only.", off: true }, 403);
-  if (cfg.who === "feed" && !isAdmin) {
-    const fid = typeof body.feed === "string" ? body.feed : "", mk = typeof body.mk === "string" ? body.mk : "";
-    let ok = false;
-    if ((cfg.feeds ?? []).includes(fid) && mk.length >= 24) {
-      const { data } = await db.from("feeds").select("member_key_hash").eq("id", fid).maybeSingle();
-      ok = !!data && data.member_key_hash === await hex(mk);
-    }
-    if (!ok) return json({ error: "Ask is only for people in your unit's FEED. Join it with the link your leader sent.", off: true }, 403);
+  if (!cfg.on) return json({ error: "Ask is turned off on the server.", off: true }, 403);
+
+  // Who is allowed: a Pro team (the leader's team token, or a member of a FEED the leader linked to Pro),
+  // the server owner (AI_ADMIN_KEY), or a FEED the server owner allow-listed in the OIC controls.
+  const fid = typeof body.feed === "string" ? body.feed : "", mk = typeof body.mk === "string" ? body.mk : "";
+  const tok = typeof body.pro === "string" ? body.pro : "";
+  let ent = "";
+  if (!isAdmin && (tok || (fid && mk))) {
+    const r = await db.rpc("pro_ent_for", { p_tok: tok || null, p_feed: fid || null, p_mk: mk || null });
+    if (!r.error && typeof r.data === "string") ent = r.data;
+  }
+  let house = false;
+  if (!isAdmin && !ent && cfg.who === "feed" && (cfg.feeds ?? []).includes(fid) && mk.length >= 24) {
+    const { data } = await db.from("feeds").select("member_key_hash").eq("id", fid).maybeSingle();
+    house = !!data && data.member_key_hash === await hex(mk);
+  }
+  const requirePro = (Deno.env.get("AI_REQUIRE_PRO") ?? "1") !== "0";
+  if (!isAdmin && !ent && !house) {
+    if (requirePro) return json({ error: "Ask is part of Accounted For Pro. The person running your team can turn it on with Pro.", pro: true, off: true }, 402);
+    if (cfg.who === "leaders") return json({ error: "Ask is set to leaders only.", off: true }, 403);
+    if (cfg.who === "feed") return json({ error: "Ask is only for people in your unit's FEED. Join it with the link your leader sent.", off: true }, 403);
   }
   if (!key) return json({ error: "Ask isn't set up yet (no API key on the server)." }, 503);
 
@@ -113,19 +126,26 @@ Deno.serve(async (req) => {
   if (q.length < 3) return json({ error: "Type a question." }, 400);
   const mode = typeof body.mode === "string" && DOMAINS[body.mode] ? body.mode : "military";
 
-  // Daily caps: whole server and each device (by a one-way hash of its network address).
-  const cap = cfg.cap ?? Number(Deno.env.get("AI_DAILY_CAP") ?? 150), per = cfg.per ?? Number(Deno.env.get("AI_PER_DEVICE") ?? 20);
+  // Daily caps. Each phone has its own limit; each Pro team has its own; non-Pro traffic shares the old server cap;
+  // and a server-wide ceiling protects the AI bill no matter what.
+  const per = cfg.per ?? Number(Deno.env.get("AI_PER_DEVICE") ?? 20);
+  const teamCap = Number(Deno.env.get("AI_PER_TEAM") ?? 100);
+  const houseCap = cfg.cap ?? Number(Deno.env.get("AI_DAILY_CAP") ?? 150);
+  const serverCap = Number(Deno.env.get("AI_SERVER_CAP") ?? 5000);
   // Per phone: the app's own random phone ID (falls back to network address). A whole unit on base Wi-Fi shares one address.
   const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
   const devId = typeof body.dev === "string" && /^[a-z0-9]{16,40}$/.test(body.dev) ? body.dev : "ip:" + ip;
   const dev = await sha(devId + "|" + (Deno.env.get("SUPABASE_URL") ?? ""));
-  // Check the phone's own limit first, so one phone hitting its limit doesn't use up the unit's.
-  const mine = await db.rpc("ai_bump", { p_k: "d:" + dev });
-  if (mine.error) return json({ error: "Ask isn't set up yet (usage table missing). Leader: run SQL part 10." }, 503);
-  if ((mine.data as number) > per) return json({ error: "You've reached today's question limit on this phone. Try again tomorrow." }, 429);
-  const all = await db.rpc("ai_bump", { p_k: "all" });
-  if (all.error) return json({ error: "Ask isn't set up yet (usage table missing). Leader: run SQL part 10." }, 503);
-  if ((all.data as number) > cap) return json({ error: "Today's question limit for your unit has been reached. Try again tomorrow." }, 429);
+  const bump = async (k: string) => { const r = await db.rpc("ai_bump", { p_k: k }); if (r.error) throw new Error("setup"); return r.data as number; };
+  try {
+    // Check the phone's own limit first, so one phone hitting its limit doesn't use up the team's.
+    if ((await bump("d:" + dev)) > per) return json({ error: "You've reached today's question limit on this phone. Try again tomorrow." }, 429);
+    if (ent) { if ((await bump("p:" + await sha(ent))) > teamCap) return json({ error: "Your team has reached today's question limit. Try again tomorrow." }, 429); }
+    else if ((await bump("all")) > houseCap) return json({ error: "Today's question limit for your unit has been reached. Try again tomorrow." }, 429);
+    if ((await bump("server")) > serverCap) return json({ error: "Ask is very busy today. Try again tomorrow." }, 429);
+  } catch {
+    return json({ error: "Ask isn't set up yet (usage table missing). Leader: run SQL part 10." }, 503);
+  }
 
   const messages: { role: string; content: unknown }[] = [];
   if (Array.isArray(body.hist)) {
