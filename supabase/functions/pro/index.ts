@@ -179,7 +179,8 @@ export async function saveRow(row: any, secret: string) {
   const r = { ...row, tok_hash: await sha256hex(tok), updated_at: new Date().toISOString() };
   if (old && old.expires_at && r.expires_at && Date.parse(old.expires_at) > Date.parse(r.expires_at) && !r.revoked) r.expires_at = old.expires_at;
   await rest("pro_ents?on_conflict=id", { method: "POST", body: JSON.stringify(r), headers: { Prefer: "resolution=merge-duplicates,return=minimal" } });
-  const active = !r.revoked && (!r.expires_at || Date.parse(r.expires_at) > Date.now() - 864e5);
+  const live = !r.env || r.env === "Production" || r.env === "live";
+  const active = !r.revoked && (r.expires_at ? Date.parse(r.expires_at) > Date.now() - (live ? 864e5 : 0) : live);
   return { tok, active, exp: r.expires_at ? Date.parse(r.expires_at) : 0 };
 }
 
@@ -231,7 +232,8 @@ export async function handle(req: Request): Promise<Response> {
     const t = String((e as Error).message || e);
     if (/pro_ents|pro_check|schema cache|does not exist/i.test(t)) return json({ error: "Pro isn't set up on the server yet. Run SQL part 20." }, 503);
     if (/JWS|certificate|signature|Apple|DER/i.test(t)) return json({ error: "That purchase couldn't be verified with Apple." }, 400);
-    return json({ error: t.slice(0, 200) }, 500);
+    console.error("pro:", t);
+    return json({ error: "Something went wrong on the server. Try again in a minute." }, 500);
   }
 }
 
