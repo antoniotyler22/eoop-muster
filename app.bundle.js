@@ -4891,7 +4891,7 @@ function leaderSteps(){return [
   {s:'#main [data-go="invite"]',opt:1,t:"Invite",b:"Send a link that connects someone to your team with a role, or a link so they can start their own team. Send it to any phone number or email. They don't have to be on your roster."},
   {s:'#main [data-go="logins"]',opt:1,t:"Logins",b:"Give someone a username and password instead of a link, and pick their role: member, section leader, viewer, editor and more."},
   {s:"#main #v11Em, #main .tgrid",opt:1,t:"Everything else",b:"Messages, Pages, reports, PDF, call tree and more live here in Tools. Scroll down any time to explore."},
-  {s:"#hHelp",t:"Help on every screen",b:"The <b>?</b> explains whatever screen you're on."},
+  {s:"#hHelp",t:"Help on every screen",b:"Confused anywhere? Tap <b>?</b>. It explains the screen you're on and can <b>walk you through it</b> step by step, or replay this whole tour."},
   {s:"#hSet",t:"Settings",b:"PIN lock, text size, your data and backups."},
   {s:tab("home"),tap:1,t:"Back home",b:"Tap <b>Home</b> to finish."},
   {t:"You're all set",b:"That's the whole app. Replay this tour any time from <b>Tools → Take the tour</b>.",end:1}]}
@@ -4906,6 +4906,7 @@ function memberSteps(){return [
   {s:tab("feed"),tap:1,opt:1,t:"Feed",b:"Tap <b>Feed</b>. Word from your leader shows up here. Tap <b>Got it</b> on each post so they know you saw it."},
   {s:tab("log"),tap:1,opt:1,t:"My log",b:"Tap <b>My log</b>. Write down what you did today. It stays on your phone."},
   {s:"#v13Hdr",opt:1,t:"Your account button",b:"This person button opens your account any time."},
+  {s:"#helpBtn",opt:1,t:"Stuck? Tap ?",b:"Tap <b>?</b> on any screen to have it walk you through that screen, or replay this tour."},
   {t:"You're all set",b:"Replay this tour any time from <b>Tools → Take the tour</b>.",end:1}]}
 function sectionSteps(){return [
   {t:"Welcome",b:"Here's how you run your section. When a button lights up and says <b>Tap it</b>, tap it. When you finish, you're in."},
@@ -4916,6 +4917,7 @@ function sectionSteps(){return [
   {s:tab("feed"),tap:1,opt:1,t:"Feed",b:"Tap <b>Feed</b>. Post to your people and see who tapped Got it."},
   {s:tab("tools"),tap:1,opt:1,t:"Tools",b:"Tap <b>Tools</b>. Check-ins, reports and messages are here."},
   {s:"#v13Hdr",opt:1,t:"Your account",b:"Change your password or log out here."},
+  {s:"#helpBtn",opt:1,t:"Stuck? Tap ?",b:"Tap <b>?</b> on any screen to have it walk you through that screen, or replay this tour."},
   {s:tab("home"),tap:1,opt:1,t:"Back home",b:"Tap <b>Home</b> to finish."},
   {t:"You're all set",b:"Replay this tour any time from <b>Tools → Take the tour</b>.",end:1}]}
 function kindNow(){if(typeof memberMode==="function"&&memberMode())return "member";if(S.link&&!S.board&&S.source==="sample")return "section";return "leader"}
@@ -4939,22 +4941,40 @@ function place(){if(!T.on)return;const w=ui(),el=T.el;const vw=innerWidth,vh=inn
 function loop(){cancelAnimationFrame(T.raf);const f=()=>{place();if(T.on)T.raf=requestAnimationFrame(f)};T.raf=requestAnimationFrame(f)}
 async function show(i){const w=ui();if(i<0)i=0;if(i>=T.steps.length){finish();return}T.i=i;const st=T.steps[i];
   if(st.go&&typeof view!=="undefined"&&view!==st.go&&!(typeof memberMode==="function"&&memberMode())){view=st.go;render();window.scrollTo(0,0)}
-  let el=null;if(st.s){for(let k=0;k<12&&!el;k++){el=find(st.s);if(!el)await new Promise(r=>setTimeout(r,120))}
+  let el=null;if(st.s){for(let k=0;k<(st.opt&&!st.tap?3:12)&&!el;k++){el=find(st.s);if(!el)await new Promise(r=>setTimeout(r,120))}
     if(!el&&st.opt){return show(i+(T.back?-1:1))}
     if(el){el.scrollIntoView({block:"center",behavior:"instant"});await new Promise(r=>setTimeout(r,60))}}
   T.back=false;T.el=el;const n=T.steps.length;
   w.querySelector(".tr-k").textContent=st.end?"Done":`Step ${i+1} of ${n}`;w.querySelector(".tr-t").textContent=st.t;
   w.querySelector(".tr-b").innerHTML=typeof st.b==="function"?st.b(el):st.b;
   const tapNow=!!(st.tap&&el);w.querySelector(".tr-tap").hidden=!tapNow;
-  const nx=w.querySelector('[data-tr="next"]');nx.hidden=tapNow;nx.textContent=st.end?"Start using the app":i===0?"Let's go":"Next";
+  const nx=w.querySelector('[data-tr="next"]');nx.hidden=tapNow;nx.textContent=st.end?(T.screen?"Got it":"Start using the app"):i===0&&!T.screen?"Let's go":"Next";
   w.querySelector('[data-tr="back"]').hidden=!i||!!st.end;w.querySelector('[data-tr="exit"]').hidden=!!st.end;
   w.classList.toggle("tr-tapping",tapNow);w.hidden=false;document.body.classList.add("tour-open");place();loop();
   setTimeout(()=>{const b=tapNow?el:nx;if(b&&b.focus)b.focus({preventScroll:true})},60)}
-function start(kind){if(T.on)return;try{if(typeof closeSheet==="function")closeSheet()}catch(e){}const o=document.getElementById("onb");if(o&&!o.hidden){o.hidden=true;o.innerHTML="";document.body.classList.remove("onb-open")}
-  T.kind=kind||kindNow();T.steps=T.kind==="member"?memberSteps():T.kind==="section"?sectionSteps():leaderSteps();T.on=true;T.back=false;show(0)}
-function finish(){T.on=false;cancelAnimationFrame(T.raf);const w=ui();w.hidden=true;document.body.classList.remove("tour-open");S.onb=true;S.tour=Object.assign({},S.tour,{[T.kind]:Date.now()});save();
+function start(kind,custom){if(T.on)return;try{if(typeof closeSheet==="function")closeSheet()}catch(e){}const o=document.getElementById("onb");if(o&&!o.hidden){o.hidden=true;o.innerHTML="";document.body.classList.remove("onb-open")}
+  T.kind=kind||kindNow();T.screen=!!custom;T.steps=custom||(T.kind==="member"?memberSteps():T.kind==="section"?sectionSteps():leaderSteps());T.on=true;T.back=false;show(0)}
+function finish(){T.on=false;cancelAnimationFrame(T.raf);const w=ui();w.hidden=true;document.body.classList.remove("tour-open");if(T.screen){T.screen=false;toast("Tap ? any time to see this again.");return}S.onb=true;S.tour=Object.assign({},S.tour,{[T.kind]:Date.now()});save();
   if(typeof render==="function"){if(!(typeof memberMode==="function"&&memberMode())&&T.kind==="leader"){view="board"}render();window.scrollTo(0,0)}toast("You're in. The app is live.")}
 window.startTour=start;
+
+/* ---------- "Walk me through this screen": the steps for wherever you are ---------- */
+function screenSteps(){const v=typeof view==="string"?view:"board";const k=kindNow();
+  const from=(list,titles)=>titles.map(t=>list.find(x=>x.t===t)).filter(Boolean).map(x=>Object.assign({},x,{tap:0,go:0}));
+  const Ld=leaderSteps(),Mb=memberSteps();let st=[];
+  if(k==="member"){st=v==="me"?from(Mb,["Your status","Countdowns","Your calendar","Your account"]):v==="feed"?[{t:"Feed",b:"Word from your leader shows up here. Tap <b>Got it</b> on each post so they know you saw it."}]:v==="log"?[{t:"My log",b:"Write down what you did today. It stays on your phone."}]:[]}
+  else if(v==="board"||v==="today")st=from(Ld,["Your app name","Your numbers","Sections","Quick actions","Emergency check-in","Help on every screen","Settings"]);
+  else if(v==="text")st=from(Ld,["Your report"]);
+  else if(v==="people"||v==="live"||v==="pt")st=from(Ld,["Sections and people","Load your roster","Live sections"]);
+  else if(typeof secViews==="function"&&secViews().includes(v))st=[{s:"#main .card, #main .panel",opt:1,t:"Your section",b:"Everyone in this section. Tap a person's status to change it; the numbers at the top update right away."}];
+  else if(v==="feed"||v==="send")st=from(Ld,["Pass the word"]);
+  else if(["cal","duty","ready","events"].includes(v))st=from(Ld,["Plan tabs"]);
+  else if(v==="tools")st=from(Ld,["Dashboard","Invite","Logins","Everything else","Help on every screen","Settings"]);
+  else if(v==="invite")st=[{s:"#invRole",opt:1,t:"Pick a role",b:"Member, section leader, viewer, editor and more. Roles you haven't set up yet are greyed out."},{s:"#invLink",opt:1,t:"Make a link",b:"Makes a private link that opens their page for that role. Their updates come to you."},{s:".invsend",opt:1,t:"Send it anywhere",b:"Type any phone number or email and tap Text it or Email it. They don't have to be on your roster, and nothing is saved."},{s:"#main .panel:last-child",opt:1,t:"Their own team",b:"For another leader. This link sets up a brand-new team on their phone. Nothing connects back to you."}];
+  else if(v==="logins")st=[{s:"#v13Grp",opt:1,t:"Logins for a group",b:"Pick a role, then ranks, sections or people, and make everyone's login at once."},{s:"#lgRole",opt:1,t:"One login",b:"Pick a role and who it's for. They get a username and password instead of a link."},{s:"#main .alist",opt:1,t:"Given out",b:"Everyone you've given a login to. Reset a password or remove a login here."}];
+  if(!st.length){const H=typeof helpFor==="function"?helpFor(v):null;st=[{t:H?H[0]:"This screen",b:H?esc(H[1])+(H[2]&&H[2].length?"<ul style=\"margin:6px 0 0;padding-left:18px\">"+H[2].map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>":""):"Tap around. Nothing changes until you save."}]}
+  st.push({t:"That's this screen",b:"Still stuck? Take the full tour, or tap <b>?</b> on any screen to walk through it again.",end:1});return st}
+window.startScreenTour=()=>start(kindNow(),screenSteps());
 
 /* taps: inside the lit-up spot go through to the app; tap steps move on by themselves */
 document.addEventListener("click",e=>{if(!T.on)return;const b=e.target.closest("[data-tr]");
@@ -4965,11 +4985,16 @@ document.addEventListener("click",e=>{if(!T.on)return;const b=e.target.closest("
 document.addEventListener("keydown",e=>{if(!T.on)return;if(e.key==="Escape"){e.preventDefault();e.stopImmediatePropagation()}},true);
 
 /* when it runs */
-if(typeof showOnb==="function"){const _so=showOnb;showOnb=function(i){if(!i&&!T.on){start("leader");return}return _so.apply(this,arguments)}}
+if(typeof showOnb==="function"){const _so=showOnb;showOnb=function(i){if(!i&&!T.on){start(S.onb?kindNow():"leader");return}return _so.apply(this,arguments)}}
 /* after someone signs in: once the "set your own password" sheet is closed */
 function afterSignIn(n){n=n||0;const sh=document.getElementById("sheet");if(sh&&!sh.hidden&&n<300){setTimeout(()=>afterSignIn(n+1),700);return}
   const k=kindNow();if(S.tour&&S.tour[k])return;setTimeout(()=>start(k),400)}
 if(typeof window.lgAfterSignIn==="function"){const _a=window.lgAfterSignIn;window.lgAfterSignIn=function(n){const r=_a.apply(this,arguments);if(!n)setTimeout(()=>afterSignIn(0),1500);return r}}
+/* the ? help sheet on every screen: walk through this screen, or the full tour */
+if(typeof openHelp==="function"){const _oh=openHelp;openHelp=function(){_oh.apply(this,arguments);const b=document.querySelector('#sheetOpts [data-onb="how"]');if(!b)return;
+  b.insertAdjacentHTML("beforebegin",`<button class="btn" data-trscreen="1">👆 Walk me through this screen</button><button class="btn alt" data-trfull="1">Take the full tour</button>`);b.remove()}}
+document.addEventListener("click",e=>{if(e.target.closest("[data-trscreen]")){e.stopImmediatePropagation();try{closeSheet()}catch(err){}setTimeout(()=>start(kindNow(),screenSteps()),350);return}
+  if(e.target.closest("[data-trfull]")){e.stopImmediatePropagation();try{closeSheet()}catch(err){}setTimeout(()=>start(kindNow()),350)}},true);
 /* Tools → Take the tour */
 if(typeof renderTools==="function"){const _rt=renderTools;renderTools=function(){_rt.apply(this,arguments);const g=[...document.querySelectorAll("#main .tgrid")].pop();if(!g)return;
   g.insertAdjacentHTML("afterbegin",`<button id="trStart"><span class="ic">${svg("help")}</span><span><b>Take the tour</b><small>Walk through every part</small></span></button>`)}}
