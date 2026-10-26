@@ -334,7 +334,7 @@ function hideWelcome(){const w=$("#v11Welcome");if(w)w.hidden=true;document.body
 window.showWelcome=showWelcome;
 {const _ms2=openModeSheet;openModeSheet=function(first){if(first&&!S.welcomed&&!$("#v11Welcome:not([hidden])")){showWelcome();return}return _ms2.apply(this,arguments)}}
 {const _ls=lgSignSheet;lgSignSheet=function(){if(!S.mode||!S.welcomed){showWelcome();setTimeout(()=>{const i=$("#lgSU");if(i)i.focus({preventScroll:true})},200);return}return _ls.apply(this,arguments)}}
-{const _si2=lgSignIn;lgSignIn=async function(){const r=await _si2.apply(this,arguments);if(!$("#lgSOut")||/Opening/.test(($("#lgSOut")||{}).textContent||"")){S.welcomed=1;save();hideWelcome()}return r}}
+{const _si2=lgSignIn;lgSignIn=async function(from){const r=await _si2.apply(this,arguments);if(S.lgSelf&&S.lgUnlocked&&Date.now()-S.lgUnlocked<20000){S.welcomed=1;save();hideWelcome()}return r}}
 document.addEventListener("click",e=>{const t=e.target;
   if(t.id==="v11WLead"){S.welcomed=1;save();hideWelcome();openModeSheet(true);return}
   if(t.id==="v11WClose"){S.welcomed=1;save();hideWelcome();return}

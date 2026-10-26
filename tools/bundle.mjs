@@ -22,6 +22,8 @@ export const SOURCES = [
   "features/integrations.js",
   "features/cleanup.js",
   "features/newdots.js",
+  "features/invite.js",
+  "features/tour.js",
 ];
 
 export function build() {

@@ -21,20 +21,22 @@ async function lgStates(){const Ls=(S.logins||[]);if(!Ls.length||!S.lgOwner)retu
 setTimeout(lgStates,4000);every(5*60000,lgStates,"v13-login-states");
 
 /* ---------- leader side: make logins for a group ---------- */
-let gSel=new Set(),gRanks=new Set(),gSecs=new Set(),gQ="",gBusy=false,gOut=[],gMsg="";
+let gSel=new Set(),gRanks=new Set(),gSecs=new Set(),gQ="",gBusy=false,gOut=[],gMsg="",gRole="member";
+const gSecOK=()=>!!S.board;const gDest=m=>gRole==="secl"?"sec:"+m.sec:"me:"+m.id;const gCan=m=>gRole!=="secl"||SECTIONS.some(x=>x[0]===m.sec);
 function gPeople(){return S.roster.filter(m=>gSel.has(m.id)||gRanks.has(String(m.rank).toUpperCase())||gSecs.has(m.sec))}
-const hasLogin=m=>(S.logins||[]).some(L=>L.dest==="me:"+m.id);
+const hasLogin=m=>(S.logins||[]).some(L=>gRole==="secl"?L.dest==="sec:"+m.sec&&L.mid===m.id:L.dest==="me:"+m.id);
 function groupHTML(){if(S.source==="sample")return `<div class="panel"><b>Logins for a group</b><p class="note">Load your real roster in DATA first. Logins open each person's own My page.</p></div>`;
   const ranks=[...new Set(S.roster.map(m=>String(m.rank).toUpperCase()))].sort((a,b)=>rankIdx(a)-rankIdx(b));
   const cnt=r=>S.roster.filter(m=>String(m.rank).toUpperCase()===r).length;
-  const sel=gPeople();const nNew=sel.filter(m=>!hasLogin(m)).length;const q=gQ.toLowerCase();
+  if(gRole==="secl"&&!gSecOK())gRole="member";const sel=gPeople();const nNew=sel.filter(m=>!hasLogin(m)&&gCan(m)).length;const nBad=sel.filter(m=>!gCan(m)).length;const q=gQ.toLowerCase();
   const list=sorted(S.roster).filter(m=>!q||(m.rank+" "+m.name+" "+m.sec).toLowerCase().includes(q));
-  let h=`<div class="panel" id="v13Grp"><b>Make logins for a group</b><p class="note">Pick ranks, sections or people (mix them). Each person gets their own username and a temporary password that opens their My page. They can change the password after they sign in.</p>
+  let h=`<div class="panel" id="v13Grp"><b>Make logins for a group</b><p class="note">Pick ranks, sections or people (mix them). Each person gets their own username and a temporary password. They can change the password after they sign in.</p>
+    <div class="note" style="margin:0">Role for everyone you pick</div><div class="evts"><button data-v13role="member" aria-pressed="${gRole==="member"}">Member · their own page</button><button data-v13role="secl" aria-pressed="${gRole==="secl"}"${gSecOK()?"":" disabled"}>Section leader · their section</button></div>${gSecOK()?"":`<p class="note" style="margin:0">Section leader logins need <b>Live sections</b> turned on (Tools).</p>`}
     <div class="note" style="margin:0">Ranks</div><div class="evts">${ranks.map(r=>`<button data-v13r="${esc(r)}" aria-pressed="${gRanks.has(r)}">${esc(rk(r))} · ${cnt(r)}</button>`).join("")}</div>
     <div class="note" style="margin:0">Sections</div><div class="evts">${SECTIONS.map(s=>s[0]).concat("ATT").map(k=>`<button data-v13s="${esc(k)}" aria-pressed="${gSecs.has(k)}">${esc(k)}</button>`).join("")}</div>
     <details${gSel.size?" open":""}><summary class="note">Pick people one by one (${gSel.size} picked)</summary><input class="search" id="v13Q" type="search" placeholder="Find people" value="${esc(gQ)}">
       <div class="alist" style="max-height:280px;overflow:auto">${list.slice(0,400).map(m=>`<label class="tog" style="padding:6px 2px;border-bottom:1px solid var(--line)"><input type="checkbox" data-v13p="${m.id}"${gSel.has(m.id)?" checked":""}> <span><b>${esc(m.rank)}</b> ${esc(m.name)} <span class="note">· ${esc(m.sec)}${hasLogin(m)?" · has a login":""}</span></span></label>`).join("")}</div></details>
-    <div class="note"><b>${sel.length}</b> selected${sel.length-nNew?` · ${sel.length-nNew} already have a login (skipped)`:""}</div>
+    <div class="note"><b>${sel.length}</b> selected${sel.length-nNew-nBad?` · ${sel.length-nNew-nBad} already have this login (skipped)`:""}${nBad?` · ${nBad} not in a section (skipped)`:""}</div>
     <div class="row2"><button class="btn" id="v13Make"${nNew&&!gBusy?"":" disabled"}>${gBusy?"Making…":"Make "+nNew+" login"+(nNew===1?"":"s")}</button><button class="btn alt" id="v13Clear">Clear</button></div>
     <div class="note" role="status">${esc(gMsg)}</div>`;
   if(gOut.length){const Ls=gOut.map(uid=>(S.logins||[]).find(L=>L.uid===uid)).filter(Boolean);
@@ -48,12 +50,12 @@ function groupHTML(){if(S.source==="sample")return `<div class="panel"><b>Logins
   m.querySelectorAll("[data-lgarm]").forEach(b=>{const L=(S.logins||[]).find(x=>x.uid===b.dataset.lgarm);if(!L)return;const row=b.closest(".rrow");const ph=row&&row.querySelector(".ph");
     if(ph)ph.insertAdjacentHTML("beforeend",(L.used?" · signed in "+ago(L.used):" · not used yet")+(L.self?` · <b>set their own password</b>`:""));
     b.insertAdjacentHTML("beforebegin",`<button class="btn alt" data-v13reset="${L.uid}">${armed==="v13reset"+L.uid?"Tap again: new temporary password":"Reset password"}</button>`)})}}
-async function makeGroup(){const people=gPeople().filter(m=>!hasLogin(m));if(!people.length)return;gBusy=true;gOut=[];gMsg="";redraw(renderLogins);let n=0,bad=0;
-  for(const m of people){let tries=0;while(tries<3){tries++;try{const L=await lgCreate("me:"+m.id,lgUser(String(m.name||"").split(",")[0]),lgPw());gOut.push(L.uid);n++;break}
+async function makeGroup(){const people=gPeople().filter(m=>!hasLogin(m)&&gCan(m));if(!people.length)return;gBusy=true;gOut=[];gMsg="";redraw(renderLogins);let n=0,bad=0;
+  for(const m of people){let tries=0;while(tries<3){tries++;try{const L=await lgCreate(gDest(m),lgUser(String(m.name||"").split(",")[0]),lgPw(),gRole==="secl"?{label:m.rank+" "+m.name+" · "+m.sec+" section leader",mid:m.id}:{mid:m.id});gOut.push(L.uid);n++;break}
       catch(e){const t=String(e&&e.message||e);if(/taken/.test(t))continue;bad++;gMsg=lgErr(e);break}}
     gMsg="Made "+n+" of "+people.length+"…";const s=$("#v13Grp .note[role=status]");if(s)s.textContent=gMsg}
   gBusy=false;gMsg="Made "+n+" login"+(n===1?"":"s")+(bad?" · "+bad+" failed: "+gMsg:"")+".";gSel=new Set();gRanks=new Set();gSecs=new Set();
-  if(n)actAdd("🔑","Made "+n+" logins for a group.","live");save();redraw(renderLogins);const g=$("#v13Grp");if(g)g.scrollIntoView({block:"start"})}
+  if(n)actAdd("🔑","Made "+n+" "+(gRole==="secl"?"section leader":"member")+" logins for a group.","live");save();redraw(renderLogins);const g=$("#v13Grp");if(g)g.scrollIntoView({block:"start"})}
 
 /* ---------- person side: stay signed in, change password, log out ---------- */
 S.lgAsk=S.lgAsk!==false;  /* ask for the password each time the app opens (default on) */
@@ -89,8 +91,9 @@ function acctHTML(){if(!signedIn())return"";const L=S.lgSelf;return `<div class=
   <label class="tog"><input type="checkbox" id="v13AskT2"${S.lgAsk?" checked":""}> Ask for my password every time the app opens</label>
   <button class="btn warn" id="v13Out3">${armed==="v13out"?"Tap again: log out and clear this phone":"Log out"}</button></div>`}
 let chg=false;
-async function changePw(){const o=$("#v13ChgOut"),b=$("#v13Chg");const old=$("#v13Old").value,n1=$("#v13New").value,n2=$("#v13New2").value;
-  if(lgNormP(n1).length<8){o.textContent="New password: at least 8 characters.";return}if(lgNormP(n1)!==lgNormP(n2)){o.textContent="The new passwords don't match.";return}
+/* the change-password fields can be on screen twice (account panel + the sheet): read the set next to the button that was tapped */
+async function changePw(box){box=box||document;const q=s=>box.querySelector(s);const o=q("#v13ChgOut"),b=q("#v13Chg");const old=(q("#v13Old")||{}).value||"",n1=(q("#v13New")||{}).value||"",n2=(q("#v13New2")||{}).value||"";
+  if(!old.trim()){o.textContent="Enter your current password.";return}if(lgNormP(n1).length<8){o.textContent="New password: at least 8 characters.";return}if(lgNormP(n1)!==lgNormP(n2)){o.textContent="The new passwords don't match.";return}
   b.disabled=true;o.textContent="Saving…";
   try{const L=S.lgSelf;const Ko=await lgKeys(L.user,old);if(Ko.uid!==L.uid){o.textContent="Current password is wrong.";return}
     const r=await SB.rpc("login_get",{p_uid:Ko.uid,p_vf:Ko.vf});const row=Array.isArray(r)?r[0]:r;if(!row||!row.ct){o.textContent=row&&row.wait>0?"Too many tries. Wait "+Math.ceil(row.wait/60)+" min.":"Current password is wrong.";return}
@@ -103,7 +106,7 @@ async function changePw(){const o=$("#v13ChgOut"),b=$("#v13Chg");const old=$("#v
 /* right after the first sign-in: offer to set their own password */
 window.lgAfterSignIn=function(n){if(!signedIn())return;n=n||0;const sh=$("#sheet");if(sh&&!sh.hidden&&n<60){setTimeout(()=>window.lgAfterSignIn(n+1),1000);return}sheetCtx={kind:"v13pw"};
   $("#sheetT").innerHTML=`You're signed in<small>Set your own password now, or keep the one you were given.</small>`;
-  $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><input type="hidden" id="v13Old" value="">
+  $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl>${window.__v13pw?`<input type="hidden" id="v13Old" value="">`:`<label for="v13Old">Password you just signed in with</label><input type="password" id="v13Old" autocomplete="current-password" autocapitalize="none">`}
     <label for="v13New">New password (8 or more characters)</label><input type="password" id="v13New" autocomplete="new-password" autocapitalize="none">
     <label for="v13New2">New password again</label><input type="password" id="v13New2" autocomplete="new-password" autocapitalize="none">
     <button class="btn" id="v13Chg">Save my password</button><button class="btn alt" data-sclose="1">Keep the one I was given</button><div class="note" id="v13ChgOut" role="status"></div>
@@ -123,6 +126,7 @@ function hdrPaint(){const hic=document.querySelector(".hic");if(!hic)return;let 
 document.addEventListener("click",e=>{const t=e.target;let b;
   if((b=t.closest("[data-v13r]"))){const r=b.dataset.v13r;gRanks.has(r)?gRanks.delete(r):gRanks.add(r);gOut=[];redraw(renderLogins);return}
   if((b=t.closest("[data-v13s]"))){const k=b.dataset.v13s;gSecs.has(k)?gSecs.delete(k):gSecs.add(k);gOut=[];redraw(renderLogins);return}
+  if((b=t.closest("[data-v13role]"))){if(b.disabled)return;gRole=b.dataset.v13role;gOut=[];gMsg="";redraw(renderLogins);return}
   if(t.id==="v13Clear"){gSel=new Set();gRanks=new Set();gSecs=new Set();gOut=[];gMsg="";redraw(renderLogins);return}
   if(t.id==="v13Make"){makeGroup();return}
   if(t.id==="v13Done"){gOut=[];gMsg="";redraw(renderLogins);return}
@@ -131,12 +135,15 @@ document.addEventListener("click",e=>{const t=e.target;let b;
   if((b=t.closest("[data-v13reset]"))){const uid=b.dataset.v13reset;if(armed!=="v13reset"+uid){armed="v13reset"+uid;redraw(renderLogins);return}armed=null;const L=(S.logins||[]).find(x=>x.uid===uid);if(!L)return;b.disabled=true;
     (async()=>{L.pw=lgPw();L.force=1;const h=await lgHash(L.dest,true);await lgPut(L,h||L.h);L.h=h||L.h;delete L.self;save();toast("New temporary password. Text it to them.");gOut=[L.uid];redraw(renderLogins)})().catch(err=>{toast("Couldn't reset: "+lgErr(err));redraw(renderLogins)});return}
   if(t.id==="v13Go"){unlock();return}
-  if(t.id==="v13Chg"){if(window.__v13tmp&&!$("#v13Old").value){/* first-time: prove with the password they just used */const pw=window.__v13pw;if(pw)$("#v13Old").value=pw}changePw();return}
+  if(t.id==="v13Chg"){const box=t.closest("#v13Acct,#sheetOpts")||document;const oi=box.querySelector("#v13Old");
+    if(oi&&!oi.value&&oi.type==="hidden"){/* first-time: prove with the password they just used */const pw=window.__v13pw||"";if(pw)oi.value=pw}changePw(box);return}
   if(t.id==="v13Out2"||t.id==="v13Out3"){if(armed!=="v13out"){armed="v13out";t.textContent="Tap again: log out and clear this phone";setTimeout(()=>{if(armed==="v13out"){armed=null;if(t.isConnected)t.textContent="Log out"}},5000);return}armed=null;logOut();return}
   if(t.closest("#v13Hdr")){view=memberMode()?"me":"tools";if(!S.me&&memberMode())view="today";chg=false;render();setTimeout(()=>{const a=$("#v13Acct");if(a)a.scrollIntoView({block:"center",behavior:"smooth"})},80);return}
 },false);
 /* remember the password typed at sign-in for the "set your own password" sheet right after (memory only, never saved) */
-document.addEventListener("click",e=>{if(e.target.id==="lgGo"){const p=$("#lgSP");window.__v13pw=p?p.value:""}},true);
+const v13keep=el=>{const p=lgScope(el).querySelector("#lgSP");window.__v13pw=p?p.value:""};
+document.addEventListener("click",e=>{const g=e.target.closest&&e.target.closest("#lgGo");if(g)v13keep(g)},true);
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="lgSP")v13keep(e.target)},true);
 document.addEventListener("change",e=>{const t=e.target;
   if(t.matches&&t.matches("[data-v13p]")){t.checked?gSel.add(t.dataset.v13p):gSel.delete(t.dataset.v13p);gOut=[];const y=window.scrollY;const open=true;renderLogins();window.scrollTo(0,y);return}
   if(t.id==="v13AskT"||t.id==="v13AskT2"){S.lgAsk=t.checked;save();toast(t.checked?"The app will ask for your password when it opens":"You'll stay signed in until you log out");return}});
