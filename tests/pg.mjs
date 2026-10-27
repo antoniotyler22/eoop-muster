@@ -23,6 +23,12 @@ create table net.calls(id bigserial primary key, url text, body jsonb);
 create function net.http_post(url text, body jsonb default '{}', params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds int default 5000) returns bigint
   language sql as $$ insert into net.calls(url, body) values(url, body) returning id $$;
 create extension if not exists pgcrypto;
+-- Supabase Auth stand-ins: auth.users, auth.uid() and auth.jwt() read the request's JWT claims.
+create schema if not exists auth;
+create table auth.users(id uuid primary key default gen_random_uuid(), email text, phone text);
+create function auth.uid() returns uuid language sql stable as $$ select nullif(nullif(current_setting('request.jwt.claims', true),'')::jsonb->>'sub','')::uuid $$;
+create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims', true),''),'{}')::jsonb $$;
+grant usage on schema auth to anon, authenticated, service_role;
 -- Supabase opens new tables and functions to the API roles by default; each setup part must close them again.
 grant usage on schema public to anon, authenticated, service_role;
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
