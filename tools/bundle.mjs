@@ -35,6 +35,7 @@ export const SOURCES = [
   "features/teams.js",
   "features/visitors.js",
   "features/contacts.js",
+  "features/people-delete.js",
 ];
 
 export function build() {

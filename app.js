@@ -899,7 +899,7 @@ function addParse(line){const raw=String(line||"").trim();if(!raw)return null;co
   const nm=name.join(", ").replace(/\s+/g," ").trim();if(!nm)return null;return {rank,name:nm,sec,sub,phone}}
 function addMarine(o,defSec){const sec=o.sec||defSec||SECTIONS[0][0];const rec={id:"a"+Date.now().toString(36)+rndId(3),rank:o.rank||(MODE().rankDef||"LCPL"),name:o.name.toUpperCase().slice(0,60),sec,status:o.status||"On Hand",duty:"Full Duty",detail:"Added in app",loc:"",start:"",end:""};
   if(o.sub)rec.sub=o.sub;if(o.phone)rec.phone=o.phone;if(S.source==="sample"){S.roster=[];S.source="mol";S.loadedAt=new Date().toLocaleString([], {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}
-  if(S.roster.some(m=>fullK(m)===fullK(rec)&&m.sec===rec.sec))return null;S.roster.push(rec);return rec}
+  if(S.roster.some(m=>fullK(m)===fullK(rec)))return null;S.roster.push(rec);return rec}
 function addSheet(sec){sheetCtx={kind:"addm"};const co=S.level==="co";const subs=[...new Set(S.roster.map(m=>m.sub).filter(Boolean))];const def=sec||(SECTIONS.some(x=>x[0]===String(view).toUpperCase())?String(view).toUpperCase():SECTIONS[0][0]);
   $("#sheetT").innerHTML=`Add Marines<small>Add one at a time, or paste a list.</small>`;
   $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl>
@@ -921,7 +921,7 @@ document.addEventListener("click",e=>{const t=e.target;
   if(t.closest("[data-addm]")){if(!canEdit())return denyMsg();addSheet(t.closest("[data-addm]").dataset.addm||"");return}
   if(t.id==="amAdd"){const name=($("#amName").value||"").trim();if(!name){toast("Enter a name.");return}const ph=normPh($("#amPh").value||"");
     const r=addMarine({rank:$("#amRank").value,name,sec:$("#amSec").value,sub:$("#amSub")?subCode($("#amSub").value):"",phone:ph});save();
-    $("#amName").value="";$("#amPh").value="";$("#amName").focus();const o=$("#amOut");if(o)o.innerHTML=r?`✓ Added <b>${esc(r.rank+" "+r.name)}</b> to ${esc(r.sec)}. Add another or tap Done.`:"Already on the roster.";return}
+    $("#amName").value="";$("#amPh").value="";$("#amName").focus();const o=$("#amOut");if(o)o.innerHTML=r?`✓ Added <b>${esc(r.rank+" "+r.name)}</b> to ${esc(r.sec)}. Add another or tap Done.`:(()=>{const x=S.roster.find(m=>fullK(m)===fullK({name}));return x?`Already on the roster: <b>${esc(x.rank+" "+x.name)}</b> in ${esc(x.sec)}. Not added twice.`:"Already on the roster."})();return}
   if(t.id==="amDone"){closeSheet();render();return}
   if(t.id==="amListAdd"){const lines=($("#amList").value||"").split(/\n+/);let n=0,skip=0;const def=$("#amSec").value;for(const l of lines){const o=addParse(l);if(!o)continue;const r=addMarine(o,def);if(r)n++;else skip++}save();$("#amList").value="";
     const o=$("#amOut");if(o)o.innerHTML=`✓ Added <b>${n}</b>${skip?` · ${skip} already on the roster`:""}.`;toast(n+" added");return}});
@@ -1553,12 +1553,15 @@ function mpDigest(m){const t=dkey();const to=dkey(new Date(Date.now()+60*8640000
   const hf=mainFeed();const feed=hf?{id:hf.id,mk:hf.mk,ek:hf.ek,unit:hf.unit,secs:SECTIONS.map(x=>x[0])}:null;const cf=coFeedDown();const cofeed=cf?Object.assign({},cf,{mid:m.uid||""}):null;
   return {v:1,mid:m.id,feed,cofeed,reqs,pod,unit:unitName(),rank:m.rank,name:m.name,sec:m.sec,secName:((SECTIONS.find(x=>x[0]===m.sec)||[])[1]||m.sec),status:m.status,statusShort:SHORT[m.status]||m.status,duty:dutyOf(m),since:sn||0,start:isoOf(m.start),end:isoOf(m.end),edd:isoOf(m.edd),eas:isoOf(m.eas),duties:duties.sort((a,b)=>a.d.localeCompare(b.d)),due,cal,owe}}
 function mpSchedule(){if(!S.roster.some(m=>m.pk))return;clearTimeout(mpT);mpT=setTimeout(mpPublish,5000)}
-async function mpPublish(force){if(mpBusy){clearTimeout(mpT);mpT=setTimeout(()=>mpPublish(force),4000);return 0}mpBusy=true;let n=0;
-  try{for(const m of S.roster.filter(m=>m.pk)){const d=mpDigest(m);const sg=sigF(d);if(!force&&sg===m.pkSig&&Date.now()-(m.pkAt||0)<12*3600000)continue;d.at=Date.now();
-      const K=await mpKeys(m.pk);const ct=await sealObj(K,d);await SB.rpc("put_page",{p_id:K.id,p_wk:K.wk,p_ct:ct});m.pkSig=sg;m.pkAt=Date.now();n++}
-    if(n||S.mpErr){S.mpErr="";rawSave()}}
-  catch(e){S.mpErr=String(e.message||e).slice(0,80);rawSave()}finally{mpBusy=false}return n}
-async function mpTurnOn(m){if(!m.pk){m.pk=rndId(28);m.pkSig="";save()}await mpPublish();return mpLink(m)}
+async function mpPutOne(m){const d=mpDigest(m);const sg=sigF(d);d.at=Date.now();const K=await mpKeys(m.pk);const ct=await sealObj(K,d);await SB.rpc("put_page",{p_id:K.id,p_wk:K.wk,p_ct:ct});m.pkSig=sg;m.pkAt=Date.now()}
+async function mpPublish(force){if(mpBusy){clearTimeout(mpT);mpT=setTimeout(()=>mpPublish(force),4000);return 0}mpBusy=true;let n=0,err="";
+  try{for(const m of S.roster.filter(m=>m.pk)){try{const d=mpDigest(m);const sg=sigF(d);if(!force&&sg===m.pkSig&&Date.now()-(m.pkAt||0)<12*3600000)continue;await mpPutOne(m);n++}catch(e){err=String(e.message||e).slice(0,80)}}
+    if(n||S.mpErr||err){S.mpErr=err;rawSave()}}
+  finally{mpBusy=false}return n}
+/* the link only goes out once their page is really on the server, so it never opens to "not published yet" */
+async function mpTurnOn(m){if(!m.pk){m.pk=rndId(28);m.pkSig="";save()}
+  for(let i=0;i<3;i++){try{await mpPutOne(m);S.mpErr="";rawSave();return mpLink(m)}catch(e){S.mpErr=String(e.message||e).slice(0,80);rawSave();if(i<2)await new Promise(r=>setTimeout(r,800*(i+1)))}}
+  throw new Error("Couldn't publish their page: "+S.mpErr)}
 async function mpFetch(){const M=S.me;if(!M)return;try{const K=await mpKeys(M.pk);const rows=await SB.rpc("get_page",{p_id:K.id});const r=rows&&rows[0];
   if(!r){M.err="Your leader hasn't published your page yet.";rawSave();return}const t=Date.parse(r.updated_at)||0;if(M.t===t&&M.d){M.err="";return}
   M.d=await openBlob(K,r.ct);M.t=t;M.err="";rawSave();mpJoinFeed(M.d);if(view==="me"||view==="today"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;view==="me"?renderMe():renderToday();window.scrollTo(0,y)}}}catch(e){const t=String(e.message||e);M.err=/could not find|schema cache|404/i.test(t)?"Your unit's server isn't set up for My page yet. Tell your leader: setup part 07.":/fetch|network/i.test(t)?"No signal. Pull down or tap Refresh to try again.":t.slice(0,80);rawSave();if(view==="me")renderMe()}}
@@ -1604,8 +1607,14 @@ function renderMe(){const M=S.me;let h="";
 function mePrompt(q){const pk=(q.get("me")||"").replace(/[^a-z0-9]/g,"").slice(0,40);const unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24);try{history.replaceState(null,"",location.pathname)}catch(e){}
   if(pk.length<20)return toast("That My page link is incomplete.");
   const own=S.roster.find(m=>m.pk===pk);
+  if(!own&&mpEmptyLeader()){S.leaderMode=false;S.source="sample";S.roster=sampleRoster();delete S.role}
+  if(!own&&isLeaderPhone()&&!(S.link&&!S.board)&&mpAskOpen(unit)){S.me={pk,unit,d:null,t:0};S.onb=true;S.welcomed=1;save();mpHideWelcome();view="me";render();window.scrollTo(0,0);mpFetch();return}
   if(own||(isLeaderPhone()&&!(S.link&&!S.board))){S.leaderMode=true;save();if(own){openCard(own.id);toast("That's "+own.rank+" "+lastOf(own)+"'s My page link. You're on your leader phone, so here's their card.")}else{view="board";render();window.scrollTo(0,0);toast("You're on your leader phone, so you stay on the main page.")}return}
-  S.me={pk,unit,d:null,t:0};S.onb=true;if(!S.mode)S.mode="military";save();view="me";render();window.scrollTo(0,0);mpFetch()}
+  S.me={pk,unit,d:null,t:0};S.onb=true;S.welcomed=1;if(!S.mode)S.mode="military";save();mpHideWelcome();view="me";render();window.scrollTo(0,0);mpFetch()}
+/* a phone that tapped "start a team" but never added anyone, made a board, feed or access link */
+function mpEmptyLeader(){return !S.roster.length&&!S.board&&!S.link&&!(S.feeds||[]).some(f=>f.lk)&&!(S.sync&&S.sync.on)&&!S.coBoard&&!S.role}
+function mpAskOpen(unit){try{return window.confirm("This phone runs its own team. Open your My page"+(unit?" from "+unit:"")+" here anyway?\n\nYour team stays on this phone.")}catch(e){return false}}
+function mpHideWelcome(){const w=document.getElementById("v11Welcome");if(w){w.hidden=true;document.body.classList.remove("v11w-open")}}
 
 /* ---------- CALENDAR: per person, whole board, sections ---------- */
 const CAL_TYPES=[["APPT","Appointment","--s-aob"],["LEAVE","Leave","--s-leave"],["TAD","TAD / travel","--s-tad"],["TRNG","Training","--s-op"],["DUTY","Duty","--s-duty"],["DUE","Due-out","--warn"],["EVENT","Event","--brass"],["OTHER","Other","--muted"]];
@@ -1945,7 +1954,7 @@ function renderPerson(){const m=S.roster.find(x=>x.id===pid);if(!m){view=pBack||
   {const up=calEntries(dkey(),dkey(new Date(Date.now()+90*86400000)),"ALL").filter(e=>e.m&&e.m.id===m.id);h+=`<h2 style="display:flex;justify-content:space-between;align-items:center">Calendar <button class="chip" id="pcIcs" style="cursor:pointer">Add to phone calendar</button></h2>`+(up.length?`<div class="alist">${up.slice(0,12).map(e=>calRow(e,true)).join("")}</div>`:`<p class="note">Nothing in the next 90 days.</p>`)+calForm(m)}
   // my page
   h+=pSec("My page",m.pk?`<div class="note">${m.pkAt&&!S.mpErr?"<b style='color:var(--s-onhand)'>● Sent to their page "+ago(m.pkAt)+"</b>":S.mpErr?"<b style='color:var(--warn)'>✕ Not reaching their page: "+esc(S.mpErr)+"</b> Open Tools → System check and run part 07 (My page).":"Publishing…"} · ${esc(m.rank+" "+lastOf(m))} sees their status, duty, due-outs and calendar.</div>
-    <div class="row2">${m.phone?`<a class="btn" href="${esc("sms:+1"+m.phone+"?&body="+encodeURIComponent(unitName()+": your private My page (status, duty, due-outs, calendar) and the unit Feed. Keep this link to yourself: "+mpLink(m)+" · iPhone: open in Safari, then Share → Add to Home Screen so alerts work."))}">Text their link</a>`:`<button class="btn alt" data-pedit="ph">Add phone first</button>`}<button class="btn alt" data-mpcopy="${m.id}">Copy link</button></div>
+    <div class="row2">${m.phone?`<a class="btn" href="${esc("sms:"+smsNum(m.phone)+"?&body="+encodeURIComponent(unitName()+": your private My page (status, duty, due-outs, calendar) and the unit Feed. Keep this link to yourself: "+mpLink(m)+" · iPhone: open in Safari, then Share → Add to Home Screen so alerts work."))}">Text their link</a>`:`<button class="btn alt" data-pedit="ph">Add phone first</button>`}<button class="btn alt" data-mpcopy="${m.id}">Copy link</button></div>
     <button class="btn warn" data-mpoff="${m.id}">${armed==="mpoff"+m.id?"Tap again: turn off and delete their page":"Turn off My page"}</button>`
     :`<p class="note">Give ${esc(m.rank+" "+lastOf(m))} a private page on their phone with their status, next duty, due-outs and calendar. It updates by itself as you change things here.</p><button class="btn" data-mpon="${m.id}">Turn on My page</button>`);
   // gear
@@ -2219,6 +2228,7 @@ window.addEventListener("scroll",()=>{if(view==="feed"&&fdPend&&window.scrollY<1
 
 /* ---------- recall roster ---------- */
 function digits(p){return String(p||"").replace(/\D/g,"")}
+function smsNum(p){const d=digits(p);return d.length===10?"+1"+d:d.length===11&&d[0]==="1"?"+"+d:d}
 function normPh(p){let d=digits(p);if(d.length===11&&d[0]==="1")d=d.slice(1);return d.length===10?d:""}
 function fmtPh(d){return d&&d.length===10?"("+d.slice(0,3)+") "+d.slice(3,6)+"-"+d.slice(6):d||""}
 const telHref=d=>"tel:+1"+d;
@@ -2700,7 +2710,7 @@ document.addEventListener("click",e=>{
   const lgd=e.target.closest("[data-lgdel]");if(lgd){const id=lgd.dataset.lgdel;if(armed==="lg"+id){S.log=S.log.filter(z=>z.id!==id);armed=null;logEdit=null;save()}else armed="lg"+id;const y=window.scrollY;renderLog();window.scrollTo(0,y);return}
   if(e.target.id==="lgCopy"){const t=logText(logList());try{navigator.clipboard.writeText(t).then(()=>toast("Copied as bullets"),()=>toast("Copy blocked here."))}catch(err){toast("Copy blocked here.")}return}
   if(e.target.id==="lgShare"){const t=logText(logList());if(navigator.share)navigator.share({title:"My log",text:t}).catch(()=>{});else shareFile(t,"My_log.txt","text/plain");return}
-  const mpo=e.target.closest("[data-mpon]");if(mpo){const m=S.roster.find(x=>x.id===mpo.dataset.mpon);mpo.disabled=true;mpo.textContent="Publishing…";mpTurnOn(m).then(()=>{const y=window.scrollY;renderPerson();window.scrollTo(0,y);toast(S.mpErr&&!m.pkAt?"Couldn't publish: "+S.mpErr:"My page is on. Text them the link.")});return}
+  const mpo=e.target.closest("[data-mpon]");if(mpo){const m=S.roster.find(x=>x.id===mpo.dataset.mpon);mpo.disabled=true;mpo.textContent="Publishing…";mpTurnOn(m).then(()=>toast("My page is on. Text them the link."),e=>toast(String(e&&e.message||e).slice(0,90)+" Check signal and tap again.")).finally(()=>{const y=window.scrollY;renderPerson();window.scrollTo(0,y)});return}
   const mpc=e.target.closest("[data-mpcopy]");if(mpc){const m=S.roster.find(x=>x.id===mpc.dataset.mpcopy);const u=mpLink(m);try{navigator.clipboard.writeText(u).then(()=>toast("Link copied"),()=>toast(u))}catch(err){toast(u)}return}
   const mpf=e.target.closest("[data-mpoff]");if(mpf){const m=S.roster.find(x=>x.id===mpf.dataset.mpoff);if(armed==="mpoff"+m.id){armed=null;const pk=m.pk;delete m.pk;delete m.pkSig;delete m.pkAt;delete m.pkSent;save();mpKeys(pk).then(K=>SB.rpc("delete_page",{p_id:K.id,p_wk:K.wk})).catch(()=>{});toast("My page turned off")}else armed="mpoff"+m.id;const y=window.scrollY;renderPerson();window.scrollTo(0,y);return}
   const mps=e.target.closest("[data-mpsent]");if(mps){const m=S.roster.find(x=>x.id===mps.dataset.mpsent);if(m){m.pkSent=Date.now();save()}setTimeout(()=>{if(view==="data")tabRedraw()},500);return}
