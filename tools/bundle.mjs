@@ -37,6 +37,7 @@ export const SOURCES = [
   "features/contacts.js",
   "features/people-delete.js",
   "features/keep-deleted.js",
+  "features/feed-coleaders.js",
 ];
 
 export function build() {
