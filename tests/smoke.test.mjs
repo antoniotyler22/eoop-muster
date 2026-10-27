@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { openApp, sleep, waitFor } from "./harness.mjs";
 
 const VIEWS = ["board", "att", "pt", "w6", "text", "data", "muster", "alerts", "recall", "events", "armory", "rollup",
-  "live", "send", "feed", "trends", "ready", "duty", "cal", "log", "me", "sys", "today", "ask", "people", "tools", "co", "act"];
+  "live", "send", "feed", "trends", "ready", "duty", "cal", "log", "me", "sys", "today", "ask", "people", "tools", "co", "act", "access", "checkins", "support", "invite"];
 
 test("app opens on the board with sample people and no script errors", async () => {
   const a = await openApp();

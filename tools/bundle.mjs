@@ -23,6 +23,7 @@ export const SOURCES = [
   "features/cleanup.js",
   "features/newdots.js",
   "features/invite.js",
+  "features/team.js",
   "features/tour.js",
 ];
 
