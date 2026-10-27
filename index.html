@@ -86,7 +86,19 @@ const V=window.VAULT={key:null,cfg:getCfg(),ok:!!(window.crypto&&crypto.subtle),
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.hidden){hiddenAt=Date.now();return}
   const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
-window.AV="4.7.2";
+window.AV="4.7.3";
+/* self-update: an installed web app resumes without reloading, so check the live version on open, on every return, and every 10 min */
+(()=>{const NAT=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());if(NAT||!/^https?:$/.test(location.protocol))return;
+  let busy=false,last=0;const typing=()=>{const a=document.activeElement;return a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)};
+  async function check(){if(busy||Date.now()-last<20000)return;busy=true;last=Date.now();
+    try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const v=String((await r.json()).v||"");if(!v||v===window.AV)return;
+      let tried="";try{tried=sessionStorage.getItem("eop-upd")||""}catch(e){}if(tried===v)return;try{sessionStorage.setItem("eop-upd",v)}catch(e){}
+      if(typing()){busy=false;last=0;setTimeout(check,15000);return}
+      try{const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}catch(e){}
+      try{const g=await navigator.serviceWorker.getRegistration();if(g)await g.update()}catch(e){}
+      location.reload()}catch(e){}finally{busy=false}}
+  window.afCheckUpdate=check;setTimeout(check,1500);setInterval(check,10*60000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)check()});window.addEventListener("pageshow",e=>{if(e.persisted)check()});window.addEventListener("online",check)})();
 function startApp(){const s=document.createElement("script");s.src="app.bundle.js?v="+window.AV;s.onerror=()=>{document.body.insertAdjacentHTML("beforeend",'<p style="padding:24px;font:16px system-ui">Couldn\'t load the app. Connect once, then reopen.</p>')};document.body.appendChild(s)}
 /* live check-ins: Supabase relay. Stores no names: only salted hashes of the words a person types, a code and a short note. */
 const NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());

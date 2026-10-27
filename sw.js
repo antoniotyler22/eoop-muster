@@ -1,6 +1,6 @@
 // Offline cache. The app opens from the phone instantly; a newer version is fetched in the background.
 // Everything the app uses is served from this site: no outside fonts, scripts or trackers.
-const CACHE = "eop-numbers-v83";
+const CACHE = "eop-numbers-v84";
 const CORE = ["./", "./index.html", "./app.bundle.js", "./terms.html", "./app.css", "./native.js", "./privacy.html", "./support.html", "./help.html", "./manifest.webmanifest",
   "./icon-180.png", "./icon-192.png", "./icon-512.png",
   "./fonts/pjs-400.woff2", "./fonts/pjs-500.woff2", "./fonts/pjs-600.woff2", "./fonts/pjs-700.woff2", "./fonts/pjs-800.woff2"];
@@ -17,6 +17,7 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
+  if (url.pathname.endsWith("/version.json")) return; // always straight from the network: it's how the app learns a new version is live
   const isPage = url.pathname.endsWith("/") || url.pathname.endsWith("/index.html");
   const isStatic = /\/(lib|fonts)\//.test(url.pathname) || /\.(png|woff2)$/.test(url.pathname);
   if (isPage) {

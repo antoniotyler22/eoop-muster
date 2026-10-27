@@ -54,12 +54,17 @@ export function build() {
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname)) {
   const out = build();
   const file = path.join(root, "app.bundle.js");
+  // version.json tells installed web apps a newer version is live (index.html checks it on open and on return)
+  const av = (fs.readFileSync(path.join(root, "index.html"), "utf8").match(/window\.AV="([^"]+)"/) || [])[1];
+  const vfile = path.join(root, "version.json"), vjson = JSON.stringify({ v: av }) + "\n";
   if (process.argv.includes("--check")) {
+    if (!av || (fs.existsSync(vfile) ? fs.readFileSync(vfile, "utf8") : "") !== vjson) { console.error("version.json is out of date. Run: npm run bundle"); process.exit(1); }
     const cur = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
     if (cur !== out) { console.error("app.bundle.js is out of date. Run: npm run bundle"); process.exit(1); }
     console.log("app.bundle.js is up to date");
   } else {
     fs.writeFileSync(file, out);
+    fs.writeFileSync(vfile, vjson);
     console.log("app.bundle.js written (" + Math.round(out.length / 1024) + " KB from " + SOURCES.length + " files)");
   }
 }
