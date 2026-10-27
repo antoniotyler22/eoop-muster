@@ -129,7 +129,9 @@ test("integrations: Slack link validated, numbers posted through the relay, cale
     assert.match(ics.text, /SUMMARY:Range day/);
     assert.ok(ics.text.split("\r\n").every((l) => l.length <= 75), "lines folded");
     a.w.eval(`view="tools";render()`);
-    assert.ok(a.$("[data-go='integ']"));
+    assert.ok(a.$("[data-sgrp='settings']"), "Settings group in Tools");
+    a.w.openToolGroup("settings");
+    assert.ok(a.$("#sheetOpts [data-go='integ']"), "Integrations inside Settings");
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
@@ -175,17 +177,22 @@ test("green dots mark what's new, and each goes away once it's opened", async ()
   const a = await openApp();
   try {
     a.w.eval(`view="tools";render()`);
+    assert.ok(a.$("[data-sgrp='settings'] .newdot"), "Settings group shows a green dot");
+    a.w.openToolGroup("settings");
     a.w.__newDots.paint();
-    const dot = () => a.$(".tgrid [data-go='integ'] .newdot");
+    const dot = () => a.$("#sheetOpts [data-go='integ'] .newdot");
     assert.ok(dot(), "Integrations has a green dot");
-    assert.ok(a.$(".tgrid [data-pdf-report] .newdot"), "PDF report has a green dot");
-    a.$(".tgrid [data-go='integ']").click();
+    a.$("#sheetOpts [data-go='integ']").click();
     assert.equal(a.w.eval("S.newSeen.integ"), 1, "remembered as seen");
     a.w.eval(`view="tools";render()`);
+    a.w.openToolGroup("settings");
     a.w.__newDots.paint();
     assert.equal(dot(), null, "no dot after it was opened");
-    assert.ok(a.$(".tgrid [data-pdf-report] .newdot"), "others still marked");
+    a.w.openToolGroup("reports");
+    a.w.__newDots.paint();
+    assert.ok(a.$("#sheetOpts [data-pdf-report] .newdot"), "others still marked");
     a.w.eval(`S.newFrom=Date.now()-46*864e5;view="tools";render()`);
+    a.w.eval("closeSheet()");await sleep(300);a.w.eval(`document.getElementById("sheetOpts").innerHTML=""`);
     a.w.__newDots.paint();
     assert.equal(a.$(".newdot"), null, "all dots retire after 45 days");
     assert.deepEqual(a.errors, []);
