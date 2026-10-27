@@ -36,6 +36,7 @@ export const SOURCES = [
   "features/visitors.js",
   "features/contacts.js",
   "features/people-delete.js",
+  "features/keep-deleted.js",
 ];
 
 export function build() {
