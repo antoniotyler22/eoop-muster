@@ -1,4 +1,5 @@
 // Supabase Edge Function "ask": answers questions with Claude, searching official sources only.
+// Also answers app support questions ({support: 1}): see Support mode below.
 // Turn OFF "Enforce JWT verification". Secrets: ANTHROPIC_API_KEY (required),
 // optional AI_MODEL (default claude-sonnet-5-5), AI_DAILY_CAP (default 150), AI_PER_DEVICE (default 20),
 // AI_ADMIN_KEY (lets the OIC's phone turn Ask on/off, choose who can use it and set limits),
@@ -68,6 +69,77 @@ async function sha(s: string) {
   return Array.from(d).map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 24);
 }
 
+// ---------- Support mode ({support: 1}): customer service for the app itself. Free for everyone, no web search,
+// its own per-phone and daily limits (AI_SUPPORT_PER_DEVICE default 15, AI_SUPPORT_CAP default 1000; AI_SUPPORT=0 turns it off).
+const APP_GUIDE = `Accounted For ("Accounted For – Team Check-In") is a headcount and check-in app for any team: military units, police, job sites, HR, schools, clubs, events.
+Versions: one app with labels for Military, Police, Jobs, HR and Civilian; switch in the mode menu. Same people, new labels.
+Board: total strength, on hand and present, a tile per section with when it was last updated. Tap a section, then the status or duty pill to change someone. Picking anything but On Hand asks From, To and Location.
+Statuses: On Hand, Appointment on Base, Appointment off Base, Company Duties, Operation, TAD, Leave. Duty: Full Duty, Light Duty, LIMDU.
+DATA: load the roster from any spreadsheet (Excel/CSV), backups, access links, System check (tests the server setup).
+TEXT: builds the accountability report to text. PDF headcount report on the Send screen.
+Tools: Muster (formation and QR check-in), Recall (call/text tree with missed check-in alerts), Emergency muster (one tap), Alerts, Calendar, Duty roster, Readiness/due-outs, Trends, 6W incident reports, Company roll-up, Live sections, Invite, Logins, Check-ins, People with access, Help & support.
+Feed: one unit Feed. Leaders post the word; people tap Got it or report a problem; leaders see who confirmed. Members can report, hide or block posts. Requests (leave, liberty, appointments) come in through the Feed for approval.
+My page: each person gets a private link (or a login) to their own page: status, duty, due-outs, calendar, Plan of the Day, Feed, messages. From My page they tap Check in: pick a status or Other (write it in); anything but On Hand asks From date, To date and Location. The leader confirms it and the roster updates; the person sees Confirmed or Not confirmed. Members get an alert with Confirm when their page changes.
+Check-ins (leader): Tools → Check-ins. Confirm puts it on the roster, Not right sends a note back. Optional auto-confirm for people on the roster. Activity lists everything that happens on the team; each item has Confirm, and there is Confirm all.
+Invite (Tools → Invite): 1) Connect them to your team: pick a role (Member, Section leader, Viewer, Editor, Co-leader, Company command, Platoon reporting, Feed only), Make a link, then text or email it to any phone number or email; they don't have to be on the roster. 2) Let them start their own team: sends the app; nothing connects back. Anyone can also open the app and start their own team.
+Logins (Tools → Logins, Pro): username and password instead of a link, with a role. Remove a login to cut it off.
+People with access (Tools): everyone who can open the team, on the roster or not, plus open links; cut people off from there.
+Live sections: section leaders update their section from their own link; the OIC sees it live. Hub mode keeps one device as an always-on hub.
+Offline: changes and Got its made without signal are saved and send by themselves when back online.
+Pro: free download; Pro is $4.99/month or $39.99/year with a 7-day free trial, for the team leader. Restore purchases on the Pro screen. Cancel on iPhone: Settings → your name → Subscriptions. Deleting the account doesn't cancel an App Store subscription.
+Privacy: names and posts are encrypted on the phone; the server stores scrambled data. Delete account and data from the account panel on My page or DATA.
+Push alerts: on iPhone web, Share → Add to Home Screen first, then allow alerts. In the app, allow notifications when asked.
+Common fixes: leader not seeing updates → pull to refresh, check signal, make sure the link is the newest one (old links stop after a reset); "not set up on the server" → leader runs DATA → System check and the parts it lists; check-in button missing → My page must be connected to the leader's Feed (ask for a new link).
+Help guide: the ? on any screen. A person reads every email at Antoniotyler22@gmail.com.`;
+
+function supportSystem(mode: string, leader: boolean) {
+  return `You are the customer support assistant inside Accounted For, a team accountability app. You help ${leader ? "a team leader" : "a team member"} use the app (version: ${mode}).
+Only answer questions about using Accounted For, the account, Pro and troubleshooting. For anything else, say you can only help with the app and suggest the Ask feature for other questions.
+Use the guide below. If the guide doesn't cover it, say you're not sure and suggest emailing a person at Antoniotyler22@gmail.com. Never make up buttons, screens, prices or policies. Never ask for passwords, login codes or personal details. You can't see their data or make changes for them.
+Style: they're on a phone. Give the steps in order (Tools → Invite → …), short and plain. Plain text, at most light **bold**, under 150 words.
+GUIDE:
+${APP_GUIDE}`;
+}
+
+// deno-lint-ignore no-explicit-any
+async function support(body: any, req: Request, key: string): Promise<Response> {
+  if ((Deno.env.get("AI_SUPPORT") ?? "1") === "0") return json({ error: "Support chat is off. Email Antoniotyler22@gmail.com.", off: true }, 403);
+  if (!key) return json({ error: "Support chat isn't set up yet." }, 503);
+  const q = typeof body.q === "string" ? body.q.trim().slice(0, 800) : "";
+  if (q.length < 3) return json({ error: "Type a question." }, 400);
+  const mode = typeof body.mode === "string" && DOMAINS[body.mode] ? body.mode : "military";
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+  const devId = typeof body.dev === "string" && /^[a-z0-9]{16,40}$/.test(body.dev) ? body.dev : "ip:" + ip;
+  const dev = await sha(devId + "|" + (Deno.env.get("SUPABASE_URL") ?? ""));
+  const bump = async (k: string) => { const r = await db.rpc("ai_bump", { p_k: k }); if (r.error) throw new Error("setup"); return r.data as number; };
+  try {
+    if ((await bump("s:" + dev)) > Number(Deno.env.get("AI_SUPPORT_PER_DEVICE") ?? 15)) return json({ error: "You've reached today's support chat limit on this phone. Email a person instead." }, 429);
+    if ((await bump("support")) > Number(Deno.env.get("AI_SUPPORT_CAP") ?? 1000)) return json({ error: "Support chat is very busy today. Email a person instead." }, 429);
+    if ((await bump("server")) > Number(Deno.env.get("AI_SERVER_CAP") ?? 5000)) return json({ error: "Support chat is very busy today. Email a person instead." }, 429);
+  } catch {
+    return json({ error: "Support chat isn't set up yet (usage table missing)." }, 503);
+  }
+  const messages: { role: string; content: string }[] = [];
+  if (Array.isArray(body.hist)) for (const h of body.hist.slice(-3)) {
+    if (h && typeof h.q === "string" && typeof h.a === "string") messages.push({ role: "user", content: h.q.slice(0, 800) }, { role: "assistant", content: h.a.slice(0, 1500) });
+  }
+  messages.push({ role: "user", content: q });
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model: Deno.env.get("AI_SUPPORT_MODEL") || Deno.env.get("AI_MODEL") || "claude-sonnet-5-5", max_tokens: 700, system: supportSystem(mode, body.leader === true), messages }),
+    });
+    const out = await r.json();
+    if (!r.ok) return json({ error: r.status === 429 || r.status === 529 ? "Support chat is busy. Try again in a minute." : "Support chat had a problem. Email a person instead." }, 503);
+    // deno-lint-ignore no-explicit-any
+    const answer = (out.content ?? []).filter((b: any) => b.type === "text").map((b: any) => b.text).join("").trim();
+    return json({ answer: answer || "I'm not sure. Email a person at Antoniotyler22@gmail.com.", support: true });
+  } catch {
+    return json({ error: "Couldn't reach support chat. Try again." }, 502);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "method" }, 405);
@@ -106,6 +178,9 @@ Deno.serve(async (req) => {
     const { data: use } = await db.from("ai_usage").select("day,n").eq("k", "all").gte("day", since).order("day");
     return json({ cfg, defaults: { cap: Number(Deno.env.get("AI_DAILY_CAP") ?? 150), per: Number(Deno.env.get("AI_PER_DEVICE") ?? 20) }, usage: use ?? [] });
   }
+
+  // Customer support for the app itself: free for everyone, separate limits, no web search.
+  if (body.support) return support(body, req, key);
 
   if (!cfg.on) return json({ error: "Ask is turned off on the server.", off: true }, 403);
 

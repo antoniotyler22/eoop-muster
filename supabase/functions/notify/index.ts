@@ -112,7 +112,7 @@ async function feed(id: string, lk: string, urg: boolean) {
   return out("sent " + ((subs?.length ?? 0) - dead.length));
 }
 
-// {alert: "req"|"prob"|"rep", feed, mk}: a member sent a request or reported a problem; buzz the OIC (at most every 15 s).
+// {alert: "req"|"prob"|"rep"|"ck", feed, mk}: a member sent a request, a check-in or reported a problem; buzz the OIC (at most every 15 s).
 async function alertOic(id: string, mk: string, kind: string) {
   const { data: f } = await db.from("feeds").select("*").eq("id", id).maybeSingle();
   if (!f || !f.leader_sub) return out("no sub");
@@ -121,12 +121,14 @@ async function alertOic(id: string, mk: string, kind: string) {
   if (hex !== f.member_key_hash) return out("not allowed", 403);
   if (f.leader_push_at && Date.now() - new Date(f.leader_push_at).getTime() < 15000) return out("throttled");
   await db.from("feeds").update({ leader_push_at: new Date().toISOString() }).eq("id", id);
-  const payload = kind === "rep"
+  const payload = kind === "ck"
+    ? { title: "📍 New check-in", body: "Someone checked in from their phone. Open Check-ins to confirm.", help: false, open: "checkins" }
+    : kind === "rep"
     ? { title: "⚑ Post reported", body: "A member reported a Feed post. Review it within 24 hours: open Feed.", help: true, open: "feed" }
     : kind === "prob"
     ? { title: "⚠ Problem reported", body: "Someone flagged a problem with a Feed post. Open Feed to see who.", help: true, open: "feed" }
     : { title: "📨 New request", body: "Someone sent a leave, liberty or appointment request. Open Feed to approve.", help: false, open: "feed" };
-  const r = await pushAny(f.leader_sub, payload, kind !== "req", 86400);
+  const r = await pushAny(f.leader_sub, payload, kind !== "req" && kind !== "ck", 86400);
   if (r === "gone") await db.from("feeds").update({ leader_sub: null }).eq("id", id);
   return out(r === "ok" ? "sent" : "push failed");
 }
@@ -161,7 +163,7 @@ Deno.serve(async (req) => {
   let body: { recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown } = {};
   try { body = await req.json(); } catch { return out("bad", 400); }
   if (body.escalate === 1) return escalate();
-  if ((body.alert === "req" || body.alert === "prob" || body.alert === "rep") && typeof body.feed === "string" && /^[a-z0-9]{10,20}$/.test(body.feed) && typeof body.mk === "string" && /^[a-z0-9]{24,40}$/.test(body.mk))
+  if ((body.alert === "req" || body.alert === "prob" || body.alert === "rep" || body.alert === "ck") && typeof body.feed === "string" && /^[a-z0-9]{10,20}$/.test(body.feed) && typeof body.mk === "string" && /^[a-z0-9]{24,40}$/.test(body.mk))
     return alertOic(body.feed, body.mk, body.alert);
   if (typeof body.recall === "string" && /^[a-z0-9]{8,16}$/.test(body.recall)) return recall(body.recall);
   if (typeof body.board === "string" && /^[a-z0-9]{10,20}$/.test(body.board)) return board(body.board);

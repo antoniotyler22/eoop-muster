@@ -28,7 +28,14 @@ function leaderSteps(){return [
   {s:'#main [data-go="dash"]',opt:1,t:"Dashboard",b:"Everything on one screen: present, requests, reports, overdue items and who's logged in."},
   {s:'#main [data-go="invite"]',opt:1,t:"Invite",b:"Send a link that connects someone to your team with a role, or a link so they can start their own team. Send it to any phone number or email. They don't have to be on your roster."},
   {s:'#main [data-go="logins"]',opt:1,t:"Logins",b:"Give someone a username and password instead of a link, and pick their role: member, section leader, viewer, editor and more."},
-  {s:"#main #v11Em, #main .tgrid",opt:1,t:"Everything else",b:"Messages, Pages, reports, PDF, call tree and more live here in Tools. Scroll down any time to explore."},
+  {s:'#main [data-go="checkins"]',opt:1,t:"Check-ins",b:"Your people check in from their phone. You get an alert, tap <b>Confirm</b> and their line on the roster updates with dates and location. <b>Not right</b> sends a note back. Everything in <b>Activity</b> has Confirm too."},
+  {s:'#main [data-go="access"]',opt:1,t:"People with access",b:"Everyone who can open your team, on your roster or not: My pages, logins, invites and open links. Cut anyone off from here."},
+  {s:'#main [data-go="support"]',opt:1,t:"Help & support",b:"Ask any question about the app and get an answer right away, or email a person."},
+  {pre:tourPv,go:"mepv",s:"#main .card.hero",opt:1,t:"What your people see: My page",b:"This is an example My page, built from your roster. Each person gets a private link or login to their own page: their status, countdowns, duty, due-outs and calendar."},
+  {pre:tourPv,go:"mepv",s:"#ckCard",opt:1,t:"Their Check in button",b:"They tap <b>Check in</b>, pick a status or <b>Other</b> and write it in. Anything but On Hand asks <b>From</b>, <b>To</b> and <b>Location</b>. It comes to you to confirm."},
+  {pre:tourPv,go:"mepv",s:"#meUpd",opt:1,t:"Their updates",b:"When you change their status or answer a check-in, they get an alert here and tap <b>Confirm</b>."},
+  {pre:tourPv,go:"mepv",s:'#main a[href="#start"]',opt:1,t:"Their own team",b:"Anyone can start their own team from here. Nothing connects back to you."},
+  {go:"tools",s:"#main #v11Em, #main .tgrid",opt:1,t:"Everything else",b:"Messages, Pages, reports, PDF, call tree and more live here in Tools. Scroll down any time to explore."},
   {s:"#hHelp",t:"Help on every screen",b:"Confused anywhere? Tap <b>?</b>. It explains the screen you're on and can <b>walk you through it</b> step by step, or replay this whole tour."},
   {s:"#hSet",t:"Settings",b:"PIN lock, text size, your data and backups."},
   {s:tab("home"),tap:1,t:"Back home",b:"Tap <b>Home</b> to finish."},
@@ -38,9 +45,13 @@ function memberSteps(){return [
   {s:tab("today"),tap:1,opt:1,t:"Today",b:"Tap <b>Today</b>. It shows what's happening for you today."},
   {s:tab("me"),tap:1,opt:1,t:"My page",b:"Tap <b>My page</b>."},
   {s:"#main .card.hero",opt:1,t:"Your status",b:"Your status as your leader has it. It updates by itself. Something wrong? Tell your section leader."},
+  {s:"#meUpd",opt:1,t:"Updates",b:"When your leader changes your status or answers your check-in, it shows here. Tap <b>Confirm</b> so they know you saw it."},
+  {s:"#ckCard",opt:1,t:"Check in",b:"Tap <b>Check in</b> to tell your leader where you are. Pick your status, or <b>Other</b> and write it in. Anything but On Hand asks <b>From</b>, <b>To</b> and <b>Location</b>. Your leader confirms it and you'll see <b>✓ Confirmed</b> here."},
   {s:"#main .tgrid",opt:1,t:"Countdowns",b:"Days until your next duty, leave, due-outs and more."},
   {s:"#meIcs",opt:1,t:"Your calendar",b:"Puts your duty, appointments and events on your phone's calendar."},
   {s:"#v13Acct",opt:1,t:"Your account",b:"Change your password, choose whether the app asks for it each time it opens, or log out."},
+  {s:'#main a[href="#start"]',opt:1,t:"Start your own team",b:"Run a squad, crew, club or job of your own? Start your own team here. Nothing connects back to this one."},
+  {s:'#main [data-go="support"]',opt:1,t:"Help & support",b:"Ask any question about the app and get an answer right away, or email a person."},
   {s:tab("feed"),tap:1,opt:1,t:"Feed",b:"Tap <b>Feed</b>. Word from your leader shows up here. Tap <b>Got it</b> on each post so they know you saw it."},
   {s:tab("log"),tap:1,opt:1,t:"My log",b:"Tap <b>My log</b>. Write down what you did today. It stays on your phone."},
   {s:"#v13Hdr",opt:1,t:"Your account button",b:"This person button opens your account any time."},
@@ -50,7 +61,7 @@ function sectionSteps(){return [
   {t:"Welcome",b:"Here's how you run your section. When a button lights up and says <b>Tap it</b>, tap it. When you finish, you're in."},
   {s:"#main .card.hero",opt:1,t:"Your numbers",b:"Your section's count. Your leader sees it the moment you change anything."},
   {s:tab("people"),tap:1,opt:1,t:"People",b:"Tap <b>People</b>."},
-  {s:"#main .pcard",opt:1,t:"Your people",b:"Open your section and tap a person's status to change it. It goes to your leader automatically."},
+  {s:"#main .pcard",opt:1,t:"Your people",b:"Open your section and tap a person's status to change it. Anything but On Hand asks <b>From</b>, <b>To</b> and <b>Location</b>. It goes to your leader automatically, and the section shows when it was last updated."},
   {s:tab("plan"),tap:1,opt:1,t:"Plan",b:"Tap <b>Plan</b>. Add appointments, leave and duty for your people. They roll up to your leader's calendar."},
   {s:tab("feed"),tap:1,opt:1,t:"Feed",b:"Tap <b>Feed</b>. Post to your people and see who tapped Got it."},
   {s:tab("tools"),tap:1,opt:1,t:"Tools",b:"Tap <b>Tools</b>. Check-ins, reports and messages are here."},
@@ -58,6 +69,7 @@ function sectionSteps(){return [
   {s:"#helpBtn",opt:1,t:"Stuck? Tap ?",b:"Tap <b>?</b> on any screen to have it walk you through that screen, or replay this tour."},
   {s:tab("home"),tap:1,opt:1,t:"Back home",b:"Tap <b>Home</b> to finish."},
   {t:"You're all set",b:"Replay this tour any time from <b>Tools → Take the tour</b>.",end:1}]}
+function tourPv(){if(!window.setPv)return;const m=S.roster.find(x=>x.id===window.getPv())||S.roster.find(x=>x.sec!=="ATT")||S.roster[0];if(m)window.setPv(m.id)}
 function kindNow(){if(typeof memberMode==="function"&&memberMode())return "member";if(S.link&&!S.board&&S.source==="sample")return "section";return "leader"}
 
 /* ---------- engine ---------- */
@@ -77,7 +89,7 @@ function place(){if(!T.on)return;const w=ui(),el=T.el;const vw=innerWidth,vh=inn
   ring.style.cssText=`display:block;left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px`;
   const ch=card.offsetHeight,below=r.y+r.h+12,above=r.y-12-ch;card.style.top=(below+ch<vh-8?below:above>8?above:Math.max(8,vh-ch-8))+"px"}
 function loop(){cancelAnimationFrame(T.raf);const f=()=>{place();if(T.on)T.raf=requestAnimationFrame(f)};T.raf=requestAnimationFrame(f)}
-async function show(i){const w=ui();if(i<0)i=0;if(i>=T.steps.length){finish();return}T.i=i;const st=T.steps[i];
+async function show(i){const w=ui();if(i<0)i=0;if(i>=T.steps.length){finish();return}T.i=i;const st=T.steps[i];if(st.pre)try{st.pre()}catch(e){}
   if(st.go&&typeof view!=="undefined"&&view!==st.go&&!(typeof memberMode==="function"&&memberMode())){view=st.go;render();window.scrollTo(0,0)}
   let el=null;if(st.s){for(let k=0;k<(st.opt&&!st.tap?3:12)&&!el;k++){el=find(st.s);if(!el)await new Promise(r=>setTimeout(r,120))}
     if(!el&&st.opt){return show(i+(T.back?-1:1))}
@@ -100,15 +112,20 @@ window.startTour=start;
 function screenSteps(){const v=typeof view==="string"?view:"board";const k=kindNow();
   const from=(list,titles)=>titles.map(t=>list.find(x=>x.t===t)).filter(Boolean).map(x=>Object.assign({},x,{tap:0,go:0}));
   const Ld=leaderSteps(),Mb=memberSteps();let st=[];
-  if(k==="member"){st=v==="me"?from(Mb,["Your status","Countdowns","Your calendar","Your account"]):v==="feed"?[{t:"Feed",b:"Word from your leader shows up here. Tap <b>Got it</b> on each post so they know you saw it."}]:v==="log"?[{t:"My log",b:"Write down what you did today. It stays on your phone."}]:[]}
+  if(k==="member"){st=v==="me"?from(Mb,["Updates","Your status","Check in","Countdowns","Your calendar","Your account","Start your own team","Help & support"]):v==="feed"?[{t:"Feed",b:"Word from your leader shows up here. Tap <b>Got it</b> on each post so they know you saw it."}]:v==="log"?[{t:"My log",b:"Write down what you did today. It stays on your phone."}]:[]}
   else if(v==="board"||v==="today")st=from(Ld,["Your app name","Your numbers","Sections","Quick actions","Emergency check-in","Help on every screen","Settings"]);
   else if(v==="text")st=from(Ld,["Your report"]);
   else if(v==="people"||v==="live"||v==="pt")st=from(Ld,["Sections and people","Load your roster","Live sections"]);
   else if(typeof secViews==="function"&&secViews().includes(v))st=[{s:"#main .card, #main .panel",opt:1,t:"Your section",b:"Everyone in this section. Tap a person's status to change it; the numbers at the top update right away."}];
   else if(v==="feed"||v==="send")st=from(Ld,["Pass the word"]);
   else if(["cal","duty","ready","events"].includes(v))st=from(Ld,["Plan tabs"]);
-  else if(v==="tools")st=from(Ld,["Dashboard","Invite","Logins","Everything else","Help on every screen","Settings"]);
-  else if(v==="invite")st=[{s:"#invRole",opt:1,t:"Pick a role",b:"Member, section leader, viewer, editor and more. Roles you haven't set up yet are greyed out."},{s:"#invLink",opt:1,t:"Make a link",b:"Makes a private link that opens their page for that role. Their updates come to you."},{s:".invsend",opt:1,t:"Send it anywhere",b:"Type any phone number or email and tap Text it or Email it. They don't have to be on your roster, and nothing is saved."},{s:"#main .panel:last-child",opt:1,t:"Their own team",b:"For another leader. This link sets up a brand-new team on their phone. Nothing connects back to you."}];
+  else if(v==="tools")st=from(Ld,["Dashboard","Invite","Logins","Check-ins","People with access","Help & support","Everything else","Help on every screen","Settings"]);
+  else if(v==="mepv")st=from(Ld,["What your people see: My page","Their Check in button","Their updates","Their own team"]).map(x=>Object.assign(x,{pre:0}));
+  else if(v==="checkins")st=[{s:"#ckAuto",opt:1,t:"Auto-confirm",b:"Off: you confirm each check-in before it changes the roster. On: check-ins from people on your roster go straight on. Other always waits for you."},{s:"#main .alist .rrow",opt:1,t:"A check-in",b:"Who, their status, From, To, Location and their note. Pick who it is if it didn't match your roster, change the status if you need to, then tap <b>Confirm</b> or <b>Not right</b>."},{s:'#main [data-go="mepv"], #main .panel',opt:1,t:"Where it comes from",b:"Your people tap <b>Check in</b> on their My page or in the Feed."}];
+  else if(v==="access")st=[{s:"#main .tgrid",opt:1,t:"The count",b:"How many people on your roster have access, how many aren't on your roster, and how many shared links are open."},{s:"#main .alist",opt:1,t:"Everyone, one list",b:"On your roster: My page links, logins and Feed. Not on your roster: logins, invites you sent and check-ins that didn't match. Open links: tap Manage to cut them off."}];
+  else if(v==="act")st=[{s:"[data-actok]",opt:1,t:"Confirm",b:"Everything that happens on your team lands here. Tap <b>✓ Confirm</b> once you've seen it, or <b>Confirm all</b>."}];
+  else if(v==="support")st=[{s:"#supQ",opt:1,t:"Ask",b:"Type any question about the app. The answer comes right away; check anything important."},{s:'#main a[href^="mailto:"]',opt:1,t:"A person",b:"Billing, account or a bug? Email a person."}];
+  else if(v==="invite")st=[{s:"#invRole",opt:1,t:"Pick a role",b:"Member, section leader, viewer, editor and more. Roles you haven't set up yet are greyed out."},{s:"#invLink",opt:1,t:"Make a link",b:"Makes a private link that opens their page for that role. Their updates come to you."},{s:'[data-go="mepv"]',opt:1,t:"See an example",b:"Tap <b>See an example My page</b> to see exactly what a member gets: status, Check in, updates and calendar."},{s:".invsend",opt:1,t:"Send it anywhere",b:"Type any phone number or email and tap Text it or Email it. They don't have to be on your roster, and nothing is saved."},{s:"#main .panel:last-child",opt:1,t:"Their own team",b:"For another leader. This link sets up a brand-new team on their phone. Nothing connects back to you."}];
   else if(v==="logins")st=[{s:"#v13Grp",opt:1,t:"Logins for a group",b:"Pick a role, then ranks, sections or people, and make everyone's login at once."},{s:"#lgRole",opt:1,t:"One login",b:"Pick a role and who it's for. They get a username and password instead of a link."},{s:"#main .alist",opt:1,t:"Given out",b:"Everyone you've given a login to. Reset a password or remove a login here."}];
   if(!st.length){const H=typeof helpFor==="function"?helpFor(v):null;st=[{t:H?H[0]:"This screen",b:H?esc(H[1])+(H[2]&&H[2].length?"<ul style=\"margin:6px 0 0;padding-left:18px\">"+H[2].map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>":""):"Tap around. Nothing changes until you save."}]}
   st.push({t:"That's this screen",b:"Still stuck? Take the full tour, or tap <b>?</b> on any screen to walk through it again.",end:1});return st}

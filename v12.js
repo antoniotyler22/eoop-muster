@@ -102,7 +102,7 @@ function aiPaint(){document.body.classList.toggle("v12noai",!aiOn())}
 {const _to=tabOf;tabOf=function(v){if(["pages","pg"].includes(v))return memberMode()?"pages":"tools";if(v==="dm"||v==="dms")return memberMode()?"me":"tools";if(v==="mepv")return "people";if(v==="w6")return memberMode()?"today":"tools";return _to.apply(this,arguments)}}
 
 /* ================= 4. LEADER VIEW OF A MY PAGE ================= */
-let pvId=null;
+let pvId=null;window.setPv=id=>{pvId=id};window.getPv=()=>pvId;
 function renderMePv(){const m=S.roster.find(x=>x.id===pvId);if(!m){view="people";return render()}const saved=S.me;
   try{S.me={pk:m.pk||"preview",d:Object.assign(mpDigest(m),{at:Date.now()}),t:Date.now()};renderMe()}finally{S.me=saved}
   const main=$("#main");main.querySelectorAll("#meOff,#meRe,#tdLeader,#meIcs").forEach(x=>x.remove());
