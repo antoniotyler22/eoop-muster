@@ -68,3 +68,17 @@ test("Team alerts switch shows on Feed for a phone without alerts", async () => 
     assert.ok(a.$("#taOn"), "switch shown");
   } finally { a.close(); }
 });
+
+test("a platoon change also alerts the company Feed it rolls up to", async () => {
+  const sent = [];
+  const a = await openApp({ rpc: () => null, fn: (n, b) => { sent.push(b); return { status: 200, body: "sent 1" }; } });
+  try {
+    a.w.eval(setup());
+    a.w.eval(`S.feeds.push({id:"cofeed123456",mk:"${"c".repeat(30)}",ek:"${"e".repeat(43)}",unit:"Company",posts:[],seen:0,hub2:1});save();`);
+    await sleep(20);
+    a.w.eval(`document.body.click();S.roster[0].status=S.roster[0].status==="Leave"?"On Hand":"Leave";save();`);
+    await a.w.eval(`taFlush()`); await sleep(50);
+    const ids = sent.filter((b) => b && b.team).map((b) => b.team).sort();
+    assert.deepEqual(ids, ["cofeed123456", "feedabcdef12"]);
+  } finally { a.close(); }
+});
