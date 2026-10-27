@@ -10,6 +10,13 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Plus Jakarta 
 main{max-width:720px;margin:0 auto;padding:28px 16px 60px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px 8px;margin-top:14px}
 h1{font-size:28px;font-weight:800;margin:0}h2{font-size:19px;font-weight:800;margin:0 0 6px}li{margin-bottom:8px}a{color:var(--acc);font-weight:700}.muted{color:var(--muted)}
 .backbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;border-bottom:1px solid var(--line)}.backbar a{display:inline-flex;align-items:center;min-height:44px;font-weight:800;text-decoration:none;font-size:17px}
+.phone{max-width:340px;margin:10px auto 14px;border:1px solid var(--line);border-radius:28px;padding:16px 14px;background:var(--bg);font-size:14px;line-height:1.45}
+.phone .k{font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--muted)}.phone .h{font-size:22px;font-weight:800;margin:0 0 8px}
+.phone .c{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin:8px 0}.phone .big{font-size:26px;font-weight:800;display:flex;align-items:center;gap:8px}
+.phone .dot{width:12px;height:12px;border-radius:50%;display:inline-block}.phone .chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.phone .chips span{border:1px solid var(--line);border-radius:999px;padding:3px 9px;font-size:12px;font-weight:700}
+.phone .on{background:var(--acc);color:#fff;border-color:var(--acc)!important}.phone .btnx{background:var(--acc);color:#fff;border-radius:12px;padding:10px;text-align:center;font-weight:800;margin-top:6px}
+.phone .row{display:flex;gap:8px}.phone .row div{flex:1;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12px}.phone .ok{color:var(--acc);font-weight:800}
+.phone .cd{display:grid;grid-template-columns:1fr 1fr;gap:8px}.phone .cd div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 10px}.phone .cd b{font-size:20px;display:block}
 </style></head><body><nav class="backbar"><a href="./" id="backApp">&#8592; Back to app</a></nav>
 <script>document.getElementById("backApp").addEventListener("click",function(e){e.preventDefault();try{if(window.opener&&!window.opener.closed){window.close();return}}catch(x){}if(history.length>1&&document.referrer&&new URL(document.referrer).origin===location.origin){history.back()}else{location.href="./"}});</script><main>
 <h1>Quick-start guide</h1><p class="muted">For leaders, section leaders and members. Five minutes to get running.</p>
@@ -27,6 +34,29 @@ h1{font-size:28px;font-weight:800;margin:0}h2{font-size:19px;font-weight:800;mar
 <li><b>Feed → Start a feed → Invite people</b>: one text with a join link. Post the word; people tap Got it.</li>
 <li><b>DATA → My pages → Turn on for everyone</b>, then text each person their private link. They see their own status, duty, due-outs and calendar.</li>
 <li>Everyone can use <b>MY LOG</b> to write daily accomplishments and export them for evals.</li></ol></div>
+<div class="card"><h2>What My page looks like</h2><p class="muted">Each person gets a private link or a login to their own page. Here's an example of what they see. Leaders: Invite → Member → <b>See an example My page</b> shows it with your own people.</p>
+<div class="phone" aria-label="Example My page">
+<div class="k">HQ · HEADQUARTERS · 1ST PLT</div><div class="h">Cpl Rivera</div>
+<div class="c"><div class="k">🔔 UPDATES</div><div>Your check-in was confirmed · just now</div><div class="chips"><span>✓ Confirm</span></div></div>
+<div class="c"><div class="k">MY STATUS · Updated 2 min ago</div><div class="big"><span class="dot" style="background:#3b82f6"></span>Leave</div><div class="muted">Since 26 Oct · through 30 Oct · Full duty</div></div>
+<div class="c"><div class="k">CHECK IN</div><div><b>Leave · From MON 26 Oct – To FRI 30 Oct · 📍 Maui</b> · <span class="ok">✓ Confirmed</span></div>
+<div class="chips"><span>On Hand</span><span>Appt On Base</span><span>Appt Off Base</span><span>Co Duties</span><span>Operation</span><span>TAD</span><span class="on">Leave</span><span>✎ Other</span></div>
+<div class="row"><div>From<br><b>10/26/2026</b></div><div>To<br><b>10/30/2026</b></div></div><div class="row" style="margin-top:6px"><div>Location<br><b>Maui</b></div></div><div class="btnx">Send check-in</div></div>
+<div class="cd"><div>BACK FROM LEAVE<b>4 days</b></div><div>NEXT DUTY<b>9 days</b></div></div>
+<div class="c"><div class="k">DUTY · DUE-OUTS · MY CALENDAR</div><div>THU 05 Nov · Duty NCO</div><div>Annual training · due in 12 days</div><div>WED 04 Nov · Dental appointment</div></div>
+<div class="c"><b>Run your own team?</b><div class="muted">Start your own board. Nothing connects back to this team.</div></div>
+<div class="muted" style="text-align:center">💬 Help & support</div></div>
+<ul><li><b>Check in</b>: pick a status or <b>Other</b> and write it in. Anything but On Hand asks From, To and Location. The leader taps Confirm and the roster updates.</li>
+<li><b>Updates</b>: when the leader changes their status or answers a check-in, they get an alert and tap Confirm.</li>
+<li>Only they can read their page. It's locked with the key in their private link.</li></ul></div>
+<div class="card"><h2>New in 1.4</h2><ul>
+<li><b>Check-ins</b> (Tools): people check in from My page or the Feed; you Confirm and the roster updates. Optional auto-confirm.</li>
+<li><b>Activity</b>: every update has Confirm, plus Confirm all.</li>
+<li><b>Dates and location</b>: any status but On Hand asks From, To and Location. Sections show when they were last updated.</li>
+<li><b>People with access</b> (Tools): everyone who can open your team, on your roster or not.</li>
+<li><b>Invite</b>: send a link with a role, or a link to start their own team, to any number or email.</li>
+<li><b>Help & support</b> (Tools or My page): ask anything about the app, or email a person.</li>
+<li>The <b>tour</b> (Tools → Take the tour) now walks through all of this, with an example My page.</li></ul></div>
 <div class="card"><h2>4. Daily rhythm</h2><ul>
 <li>Morning: post the Plan of the Day in Feed; check the board and ALERTS.</li>
 <li>Formation: MUSTER → Show QR, people check themselves in.</li>

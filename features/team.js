@@ -67,6 +67,13 @@ function ckFeed(){const D=S.me&&S.me.d;if(D&&D.feed&&D.feed.id){const f=S.feeds.
   if(view==="feed"){const f=fdCur();if(f&&!f.lk)return f}return S.feeds.find(x=>!x.lk)||null}
 function ckGrab(){for(const [k,id] of [["from","ckF"],["to","ckT"],["loc","ckL"],["oth","ckO"],["note","ckN"]]){const el=document.getElementById(id);if(el)ck.v[k]=el.value}}
 function ckState(x){const D=S.me&&S.me.d;const r=D&&(D.cks||[]).find(c=>c.cid===x.cid);return r?r:{state:"sent"}}
+function ckExampleHTML(){const inp="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)";const d0=dkey(),d1=dkey(new Date(Date.now()+3*86400000));
+  return `<div class="card" id="ckCard" style="gap:8px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">CHECK IN</span><span class="chip">Example</span></div>
+    <p class="note" style="margin:0">They tap <b>📍 Check in</b> and see this:</p>
+    <div class="evts">${STATUSES.concat(CK_OTHER).map(s=>`<button disabled aria-pressed="${s==="Leave"}">${s===CK_OTHER?"✎ Other":`<span class="dot" style="background:var(${SVAR[s]})"></span>${esc(SHORT[s]||s)}`}</button>`).join("")}</div>
+    <div class="row2"><div><label>From</label><input type="date" disabled value="${d0}" style="${inp}"></div><div><label>To</label><input type="date" disabled value="${d1}" style="${inp}"></div></div>
+    <label>Location</label><input type="text" disabled value="Honolulu" style="${inp}">
+    <button class="btn" disabled>Send check-in</button><p class="note" style="margin:0">You get it in Check-ins and tap Confirm. Their page then shows <b>✓ Confirmed</b>.</p></div>`}
 function ckCardHTML(){const f=ckFeed();const last=(S.myCks||[])[0];
   let h=`<div class="card" id="ckCard" style="gap:8px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">CHECK IN</span>${last?`<span class="chip">Last ${esc(ago(last.t))}</span>`:""}</div>`;
   if(last){const s=ckState(last);h+=`<div class="note" style="margin:0"><b>${esc(ckLine(last))}</b> · ${s.state==="ok"?`<span style="color:var(--s-onhand);font-weight:700">✓ Confirmed</span>`:s.state==="no"?`<span style="color:var(--warn);font-weight:700">✕ Not confirmed</span>${s.dnote?" · "+esc(s.dnote):""}`:"Sent · waiting for your leader"}</div>`}
@@ -119,7 +126,11 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-meok]");if
 
 /* My page: updates, check-in, start your own team, help */
 const startTeamHTML=()=>`<div class="panel" style="margin-top:12px"><b>Run your own team?</b><p class="note" style="margin:0">Start your own board for a squad, crew, club or job. Nothing connects back to this team.</p><a class="btn alt" href="#start" style="text-align:center">Start my own team</a></div>`;
-{const _rm=renderMe;renderMe=function(){_rm.apply(this,arguments);if(view!=="me"||!S.me||!S.me.d||String(S.me.pk)==="preview")return;const main=$("#main");
+{const _rm=renderMe;renderMe=function(){_rm.apply(this,arguments);if(!S.me||!S.me.d)return;const main=$("#main");
+  if(view==="mepv"){const hero=main.querySelector(".card.hero");if(hero)hero.insertAdjacentHTML("afterend",ckExampleHTML());
+    const ex=`<div class="sech"><h2>🔔 Updates</h2><span class="chip">Example</span></div><div class="card ny" id="meUpd"><div class="lrow"><span class="n tone-a">🔔</span><span style="flex:1;min-width:0"><span class="t" style="display:block">Your check-in was confirmed</span><span class="s" style="display:block">just now</span></span><button class="chip" disabled>✓ Confirm</button></div></div>`;
+    hero?hero.insertAdjacentHTML("beforebegin",ex):main.insertAdjacentHTML("afterbegin",ex);main.insertAdjacentHTML("beforeend",startTeamHTML().replace('href="#start"','href="#start" aria-disabled="true" onclick="return false"')+`<p class="note" style="text-align:center;margin-top:10px"><span class="chip" data-go="support">💬 Help & support</span></p>`);return}
+  if(view!=="me"||String(S.me.pk)==="preview")return;
   const hero=main.querySelector(".card.hero");if(hero)hero.insertAdjacentHTML("afterend",ckCardHTML());
   const u=meUpdHTML();if(u){const anchor=main.querySelector(".v12tabs")||main.firstElementChild;anchor?anchor.insertAdjacentHTML("afterend",u):main.insertAdjacentHTML("afterbegin",u)}
   const off=$("#meOff");const extra=startTeamHTML()+`<p class="note" style="text-align:center;margin-top:10px"><button class="chip" data-go="support" style="cursor:pointer">💬 Help & support</button></p>`;off?off.insertAdjacentHTML("beforebegin",extra):main.insertAdjacentHTML("beforeend",extra)}}
@@ -258,9 +269,15 @@ document.addEventListener("click",e=>{const t=e.target;
   const fb=t.closest("[data-supok]");if(fb){const x=(S.sup||[])[+fb.dataset.supok];if(x){x.fb="y";rawSave();renderSupport()}return}
   if(t.id==="supClear"){if(armed==="supclr"){S.sup=[];armed=null;save()}else armed="supclr";renderSupport()}});
 
+/* "See an example My page": opens the leader's preview of a real person's page */
+const pvBtn=()=>`<button class="btn alt" data-go="mepv" data-pvpick="1" style="width:100%">👁 See an example My page</button>`;
+window.addEventListener("click",e=>{if(e.target.closest&&e.target.closest("[data-pvpick]")&&window.setPv){const sel=document.getElementById("invDest");const v=sel&&/^me:/.test(sel.value)?sel.value.slice(3):"";
+  const m=S.roster.find(x=>x.id===v)||S.roster.find(x=>x.id===window.getPv())||S.roster.find(x=>x.sec!=="ATT")||S.roster[0];if(m)window.setPv(m.id)}},true);
+window.invPvBtn=pvBtn;
 /* =============== hook into the app =============== */
 const VIEWS={access:renderAccess,checkins:renderCk,support:renderSupport};
-{const _render=render;render=function(){const f=VIEWS[view];if(f){renderTabs();f();if(typeof animateView==="function")animateView();return}return _render.apply(this,arguments)}}
+{const _render=render;render=function(){const f=VIEWS[view];if(f){renderTabs();f();if(view!=="support"&&leaderHere())$("#main").insertAdjacentHTML("beforeend",`<div style="margin-top:14px">${pvBtn()}</div>`);if(typeof animateView==="function")animateView();return}
+  return _render.apply(this,arguments)}}
 {const _rt=renderTools;renderTools=function(){_rt.apply(this,arguments);const g=document.querySelector("#main .tgrid");if(!g)return;const n=ckOpen().length;
   g.insertAdjacentHTML("beforeend",`<button data-go="checkins"${n?' class="hot"':""}><span class="ic">${svg("checkin")}</span><span><b>Check-ins</b><small>${n?n+" to confirm":"From My page and the Feed"}</small></span></button>
     <button data-go="access"><span class="ic">${svg("access")}</span><span><b>People with access</b><small>On your roster or not</small></span></button>

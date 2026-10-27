@@ -158,3 +158,33 @@ test("Help & support: AI answers app questions; falls back to the help guide; a 
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("tour and examples: leaders see an example My page with Check in; members' tour covers check-in and updates", async () => {
+  const a = await memberApp(() => []);
+  try {
+    a.w.Element.prototype.scrollIntoView = function () {};
+    // jsdom has no layout: give every element a size so the tour can light it up
+    a.w.Element.prototype.getBoundingClientRect = function () { return { left: 10, top: 10, width: 100, height: 40, right: 110, bottom: 50, x: 10, y: 10 }; };
+    const titles = async () => { const out = []; for (let i = 0; i < 20; i++) { await sleep(450); const t = a.$("#tour .tr-t"); if (!t || a.$("#tour").hidden) break; out.push(t.textContent); const nx = a.$('#tour [data-tr="next"]'); if (nx.hidden) break; nx.click(); } return out; };
+    // member, on My page: walk through this screen
+    a.w.eval("startScreenTour()");
+    const m = await titles();
+    for (const t of ["Updates", "Your status", "Check in", "Start your own team", "Help & support"]) if (t !== "Updates") assert.ok(m.includes(t), "member tour has " + t + " · got " + m.join(", "));
+    // leader: Invite → Member shows the example button, which opens an example My page with Check in
+    a.w.eval(`S.me=null;S.feeds=[];S.leaderMode=true;S.source="file";view="invite";render()`);
+    const b = a.$("[data-pvpick]"); assert.ok(b, "See an example My page on Invite");
+    b.click(); await sleep(50);
+    assert.equal(a.w.eval("view"), "mepv");
+    assert.ok(a.$("#ckCard"), "example check-in card"); assert.match(a.$("#ckCard").textContent, /Other/);
+    assert.ok(a.$("#meUpd"), "example update"); assert.ok(a.$('#main a[href="#start"]'), "start your own team");
+    a.w.eval("startScreenTour()");
+    const l = await titles();
+    for (const t of ["What your people see: My page", "Their Check in button", "Their updates", "Their own team"]) assert.ok(l.includes(t), "leader example tour has " + t + " · got " + l.join(", "));
+    // the full leader tour lists the new tools and the example
+    a.w.eval(`view="tools";render()`);
+    a.w.eval("startScreenTour()");
+    const tl = await titles();
+    for (const t of ["Check-ins", "People with access", "Help & support"]) assert.ok(tl.includes(t), "tools tour has " + t);
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});

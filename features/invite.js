@@ -36,7 +36,7 @@ function renderInvite(){let h=`<h2>Invite</h2>`;
     if(!cur){h+=`<p class="note">Nothing to share yet. Load your roster in DATA, or turn on Live sections, first.</p></div>`}
     else{if(!cur.ds.some(x=>x.id===inv.dest))inv.dest=cur.ds[0].id;
       h+=`<label for="invRole">Role</label><select id="invRole" style="width:100%">${RL.map(r=>`<option value="${r.k}"${r===cur?" selected":""}${r.ds.length?"":" disabled"}>${esc(r.n)}${r.ds.length?"":" (not set up)"}</option>`).join("")}</select>
-        <p class="note" style="margin:4px 0 0">${esc(cur.d)}</p>
+        <p class="note" style="margin:4px 0 0">${esc(cur.d)}</p>${cur.k==="member"&&typeof window.invPvBtn==="function"?window.invPvBtn():""}
         ${cur.ds.length>1?`<label for="invDest">${cur.k==="member"?"Person":cur.k==="secl"?"Section":"Which one"}</label><select id="invDest" style="width:100%">${cur.ds.map(x=>`<option value="${esc(x.id)}"${x.id===inv.dest?" selected":""}>${esc(x.l)}</option>`).join("")}</select>`:""}
         <div class="row2"><button class="btn" id="invLink"${inv.busy?" disabled":""}>${inv.busy?"Making…":"Make a link"}</button><button class="btn alt" data-go="logins">Make a login instead</button></div>
         <div class="note" role="status">${esc(inv.msg)}</div>`;
