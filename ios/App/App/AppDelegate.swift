@@ -60,6 +60,7 @@ class MainViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(BiometricPlugin())
         bridge?.registerPluginInstance(ProStorePlugin())
+        bridge?.registerPluginInstance(ReviewPlugin())
     }
 }
 
@@ -246,6 +247,33 @@ public class ProStorePlugin: CAPPlugin, CAPBridgedPlugin {
             }
             if let u = URL(string: "https://apps.apple.com/account/subscriptions") { UIApplication.shared.open(u, options: [:], completionHandler: nil) }
             call.resolve()
+        }
+    }
+}
+
+
+// App Store rating prompt. The web app calls Review.request() right after a 100% check-in.
+// iOS decides whether the prompt actually shows (at most 3 times a year per person).
+@objc(ReviewPlugin)
+public class ReviewPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "ReviewPlugin"
+    public let jsName = "Review"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "request", returnType: CAPPluginReturnPromise)
+    ]
+
+    @objc func request(_ call: CAPPluginCall) {
+        Task { @MainActor in
+            let scene = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first { $0.activationState == .foregroundActive }
+            guard let scene = scene else { call.resolve(["shown": false]); return }
+            if #available(iOS 16.0, *) {
+                AppStore.requestReview(in: scene)
+            } else {
+                SKStoreReviewController.requestReview(in: scene)
+            }
+            call.resolve(["asked": true])
         }
     }
 }

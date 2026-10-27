@@ -27,6 +27,8 @@ export const SOURCES = [
   "features/feedseen.js",
   "features/tour.js",
   "features/simple.js",
+  "features/wow.js",
+  "features/es.js",
 ];
 
 export function build() {

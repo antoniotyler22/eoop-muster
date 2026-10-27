@@ -50,7 +50,7 @@ function openGroup(k){const G=GROUPS.find(x=>x.k===k);const L=STORE[k];if(!G||!L
   $("#sheetOpts").innerHTML=`<div class="tgrid" style="margin:0">${L.map(t=>t.outerHTML).join("")}</div>`;
   const sh=$("#sheet");if(typeof sheetFocus==="function")sheetFocus();sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")))}
 window.openToolGroup=openGroup;
-document.addEventListener("click",e=>{if(!e.target.closest)return;const g=e.target.closest("[data-sgrp]");if(g){e.stopImmediatePropagation();openGroup(g.dataset.sgrp);return}
+document.addEventListener("click",e=>{if(!e.target.closest)return;const g=e.target.closest("[data-sgrp]");if(g){e.stopImmediatePropagation();window.openToolGroup(g.dataset.sgrp);return}
   if(sheetCtx&&sheetCtx.kind==="sgrp"&&e.target.closest("#sheetOpts .tgrid > *"))closeSheet()},true);
 
 /* ================= 2. HOME: Invite instead of Ask; emergency on Home only ================= */
@@ -72,11 +72,27 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&typeof re
 
 /* ================= 4. WELCOME: joining or starting ================= */
 const MK=["civilian","jobs","hr","police","military","custom"];
-let wv={step:"pick",mode:""};
-function startHTML(){if(wv.step==="type")return `<div class="panel sgw-start" style="margin:0"><b>What kind of team?</b><p class="note" style="margin:0">Sets the words the app uses. You can change it later.</p>
+/* one-tap templates: a version, its groups and its status words */
+const TPL={
+  trip:{n:"Field trip",ic:"🚌",d:"Buses, groups, chaperones",m:"custom",v:{p:"Student",ps:"Students",here:"With group",aob:"Restroom",aoff:"With chaperone",cod:"Nurse",op:"On the bus",tad:"Left early",lv:"Absent",mus:"Head count",attPl:"Chaperones",eo:"TRIP"},
+    secs:[["BUSA","Bus 1"],["BUSB","Bus 2"],["GRPA","Group A"],["GRPB","Group B"]]},
+  race:{n:"5K / race",ic:"🏃",d:"Runners, corrals, finish line",m:"custom",v:{p:"Runner",ps:"Runners",here:"Finished",aob:"On course",aoff:"Medical tent",cod:"Water stop",op:"Start corral",tad:"Dropped out",lv:"No-show",mus:"Check-in",attPl:"Volunteers",eo:"RACE"},
+    secs:[["FIVE","5K"],["TEN","10K"],["KIDS","Kids run"],["WALK","Walkers"]]},
+  site:{n:"Job site",ic:"🦺",d:"Crews, trades, head count",m:"jobs"},
+  event:{n:"Event staff",ic:"🎟️",d:"Gates, security, concessions",m:"custom",v:{p:"Staff",ps:"Staff",here:"On post",aob:"On break",aoff:"Off site",cod:"Runner",op:"Setup",tad:"Training",lv:"Off today",mus:"Check-in",attPl:"Volunteers",eo:"EVENT"},
+    secs:[["GATE","Gates"],["SECU","Security"],["CONC","Concessions"],["MEDS","Medical"],["PARK","Parking"]]},
+  youth:{n:"Youth team",ic:"⚽",d:"Players, coaches, pickups",m:"custom",v:{p:"Player",ps:"Players",here:"Here",aob:"Restroom",aoff:"Picked up",cod:"Warming up",op:"In the game",tad:"Away game",lv:"Absent",mus:"Roll call",attPl:"Coaches",eo:"TEAM"},
+    secs:[["STAR","Starters"],["BNCH","Bench"],["NEWP","New players"]]},
+  fire:{n:"Office fire drill",ic:"🔥",d:"Floors, wardens, assembly point",m:"custom",v:{p:"Employee",ps:"Employees",here:"At assembly point",aob:"Still inside",aoff:"Remote today",cod:"Floor warden",op:"Off site",tad:"Traveling",lv:"PTO",mus:"Fire drill",attPl:"Visitors",eo:"OFFICE"},
+    secs:[["FLR1","Floor 1"],["FLR2","Floor 2"],["FLR3","Floor 3"],["WARD","Wardens"]]}};
+window.SG_TPL=TPL;
+let wv={step:"pick",mode:"",tpl:""};
+function startHTML(){if(wv.step==="type")return `<div class="panel sgw-start" style="margin:0"><b>Start from a template</b><p class="note" style="margin:0">One tap sets up your groups and status words.</p>
+    <div class="sgw-tpl" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${Object.entries(TPL).map(([k,t])=>`<button class="btn alt" data-sgtpl="${k}" style="text-align:left;display:block;min-height:74px"><span style="font-size:22px">${t.ic}</span> <b>${esc(t.n)}</b><br><span class="note" style="margin:0;font-size:12px">${esc(t.d)}</span></button>`).join("")}</div>
+    <b style="margin-top:6px">Or pick a type</b><p class="note" style="margin:0">Sets the words the app uses. You can change it later.</p>
     ${MK.map(k=>`<button class="btn alt" data-sgmode="${k}" style="text-align:left;display:block"><b>${esc(MODES[k].name)}</b><br><span class="note" style="margin:0">${esc(MODES[k].desc)}</span></button>`).join("")}
     <button class="btn alt" data-sgback="1">Back</button></div>`;
-  return `<div class="panel sgw-start" style="margin:0"><b>Name your team</b><p class="note" style="margin:0">${esc(MODES[wv.mode].name)}. Shows on your reports, texts and the Feed.</p>
+  return `<div class="panel sgw-start" style="margin:0"><b>Name your team</b><p class="note" style="margin:0">${esc(wv.tpl?TPL[wv.tpl].n:MODES[wv.mode].name)}. Shows on your reports, texts and the Feed.</p>
     <label for="sgName">Team name</label><input type="text" id="sgName" maxlength="40" placeholder="${esc(MODES[wv.mode].v?MODES[wv.mode].v.coEx:"1ST PLATOON")}" autocomplete="off">
     <button class="btn" id="sgGo">Go</button><button class="btn alt" data-sgback="type">Back</button></div>`}
 function shapeWelcome(){const w=$("#v11Welcome");if(!w||w.hidden)return;const inner=w.querySelector(".v11w-in");if(!inner)return;
@@ -92,10 +108,13 @@ function shapeWelcome(){const w=$("#v11Welcome");if(!w||w.hidden)return;const in
   const slot=inner.querySelector(".sgw-slot");slot.innerHTML=wv.step==="type"||wv.step==="name"?startHTML():wv.step==="join"?`<button class="btn alt" data-sgback="1">Back</button>`:"";
   if(wv.step==="join"){const b=slot.firstElementChild;const last=join[join.length-1];if(last&&b)last.after(b)}
   if(wv.step==="name")setTimeout(()=>{const i=$("#sgName");if(i)i.focus({preventScroll:true})},60)}
-new MutationObserver(()=>{const w=$("#v11Welcome");if(w&&!w.hidden&&!w.querySelector(".sgw-pick")){wv={step:"pick",mode:""};shapeWelcome()}}).observe(document.body,{childList:true,subtree:true});
+new MutationObserver(()=>{const w=$("#v11Welcome");if(w&&!w.hidden&&!w.querySelector(".sgw-pick")){wv={step:"pick",mode:"",tpl:""};shapeWelcome()}}).observe(document.body,{childList:true,subtree:true});
 function startTeam(){const k=wv.mode;const nm=(($("#sgName")||{}).value||"").trim();
   if(!nm){toast("Type your team name.");const i=$("#sgName");if(i)i.focus();return}
-  if(!setMode(k)){S.mode=k;startXL()}S.unit=(typeof cleanName==="function"?cleanName(nm):nm).toUpperCase().slice(0,40);
+  const T=wv.tpl&&TPL[wv.tpl];if(T&&T.v)S.customV=Object.assign({},T.v);
+  if(!setMode(k)){S.mode=k;startXL()}
+  if(T&&T.secs){const nw=T.secs.map(x=>x.slice());SECTIONS.splice(0,SECTIONS.length,...nw);S.secs=nw;S.secsBy=S.secsBy||{};S.secsBy[k]=nw.map(x=>x.slice());if(typeof secFix==="function")secFix();secDraft=null;startXL()}
+  S.tpl=wv.tpl||"";S.unit=(typeof cleanName==="function"?cleanName(nm):nm).toUpperCase().slice(0,40);
   S.welcomed=1;S.leaderMode=true;if(S.source==="sample"){S.roster=[];S.source="mol";S.loadedAt=""}save();
   const w=$("#v11Welcome");if(w)w.hidden=true;document.body.classList.remove("v11w-open");try{closeSheet()}catch(e){}
   view="board";render();window.scrollTo(0,0);toast("Team ready. Add your people.");
@@ -103,7 +122,8 @@ function startTeam(){const k=wv.mode;const nm=(($("#sgName")||{}).value||"").tri
 document.addEventListener("click",e=>{if(!e.target.closest)return;const t=e.target;
   if(t.closest("[data-sgjoin]")){wv.step="join";shapeWelcome();return}
   if(t.closest("[data-sgstart]")){wv.step="type";shapeWelcome();return}
-  const m=t.closest("[data-sgmode]");if(m){wv.mode=m.dataset.sgmode;wv.step="name";shapeWelcome();return}
+  const m=t.closest("[data-sgmode]");if(m){wv.mode=m.dataset.sgmode;wv.tpl="";wv.step="name";shapeWelcome();return}
+  const tp=t.closest("[data-sgtpl]");if(tp){wv.tpl=tp.dataset.sgtpl;wv.mode=TPL[wv.tpl].m;wv.step="name";shapeWelcome();return}
   const bk=t.closest("[data-sgback]");if(bk){wv.step=bk.dataset.sgback==="type"?"type":"pick";shapeWelcome();return}
   if(t.id==="sgGo"){startTeam()}});
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="sgName"){e.preventDefault();startTeam()}});
