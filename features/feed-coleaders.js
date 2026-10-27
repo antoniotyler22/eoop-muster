@@ -36,4 +36,18 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!(S.feeds
 
 /* if this phone can post but the Feed tab shows a read-only copy, point it at the one with the Post box */
 {const _rf=renderFeed;renderFeed=function(){if(canPostRole()&&S.role!=="view"&&typeof fdSel!=="undefined"){const cur=fdCur();if(cur&&!cur.lk){const alt=S.feeds.find(f=>f.lk&&f.id===cur.id)||(!fdSel?S.feeds.find(f=>f.lk):null);if(alt)fdSel=alt.id}}return _rf.apply(this,arguments)}}
+
+/* "Couldn't post: not allowed" means the server didn't accept this phone's posting key for that feed.
+   Heal it before giving up: (1) a linked co-leader/editor phone re-reads the leader's board for the current key,
+   (2) if the feed's server record expired (unused 90 days), re-register it with the same keys so members keep reading,
+   then post again. Only if both fail does the person see a plain explanation. */
+{const _rpc=SB.rpc.bind(SB);
+  async function fresh(){if(!(S.sync&&S.sync.on)||S.role==="oic")return false;try{const K=await codeKeys(S.sync.code);const rows=await _rpc("backup_get",{p_id:K.id,p_key:K.wk});const r=rows&&rows[0];if(!r)return false;const R=await openBlob(K,r.ct);mergeFeeds(R.feeds);rawSave();return true}catch(e){return false}}
+  SB.rpc=async function(fn,args){if(fn!=="feed_post")return _rpc(fn,args);
+    try{return await _rpc(fn,args)}catch(e){if(!/not allowed/i.test(String(e&&e.message||e)))throw e;
+      const f=(S.feeds||[]).find(x=>x.id===args.p_feed);
+      if(await fresh()){const g=(S.feeds||[]).find(x=>x.id===args.p_feed&&x.lk);if(g&&g.lk!==args.p_leader_key){try{return await _rpc(fn,Object.assign({},args,{p_leader_key:g.lk}))}catch(e2){}}}
+      const g=(S.feeds||[]).find(x=>x.id===args.p_feed&&x.lk)||f;
+      if(g&&g.mk&&g.lk){try{await _rpc("create_feed",{p_id:g.id,p_member_key:g.mk,p_leader_key:g.lk});return await _rpc(fn,Object.assign({},args,{p_leader_key:g.lk}))}catch(e3){}}
+      throw new Error(S.role&&S.role!=="oic"?"this phone's posting key is out of date. Ask your leader to open Accounted For once (it backs up the Feed), then tap Post again.":"the server doesn't recognize this Feed's key. Tools → System check, or start a new Feed.")}}}
 })();

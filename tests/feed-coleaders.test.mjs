@@ -28,3 +28,15 @@ test("view-only phones still don't get posting", async () => {
     assert.equal(a.w.eval(`S.feeds[0].lk||""`), "");
   } finally { a.close(); }
 });
+
+test("a rejected post re-registers an expired feed and goes through", async () => {
+  let n = 0; const calls = [];
+  const a = await openApp({ rpc: (fn) => { calls.push(fn); if (fn === "feed_post") { if (n++ === 0) throw new Error("not allowed"); return 9; } return null; } });
+  try {
+    a.w.eval(`${phone("co")}S.feeds=[${FEED}];save();view="feed";render()`);
+    await sleep(30);
+    a.$("#fdTxt").value = "test"; a.$("#fdPost").click(); await sleep(300);
+    assert.ok(calls.includes("create_feed"), "re-registered the feed");
+    assert.equal(a.w.eval(`S.feeds[0].posts[0].id`), 9, "post went through");
+  } finally { a.close(); }
+});
