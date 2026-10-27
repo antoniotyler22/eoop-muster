@@ -24,7 +24,7 @@ Deploy each from its `index.ts`, with **Enforce JWT verification turned OFF**:
 | `billing` | `supabase/functions/billing/index.ts` | Optional: Pro on the web (Stripe) |
 | `sms` | `supabase/functions/sms/index.ts` | Optional: text everyone from the server (Twilio) |
 
-**Timing:** the new `ask` and `hub` require the Pro code that only 1.3 sends. Until 1.3 is live in the App Store, set `AI_REQUIRE_PRO=0` and `HUB_REQUIRE_PRO=0`, then remove both once most people have updated (otherwise subscribers still on 1.2 lose Ask and the hub).
+**Timing:** the Pro checks in `ask` and `hub` are off by default, so nothing changes for anyone when you deploy. Turn them on later with secrets `AI_REQUIRE_PRO=1` and `HUB_REQUIRE_PRO=1`, only after (1) most iPhones run 1.3 and (2) web billing is on (step 5). Android can't buy Pro yet, so Android-only teams would lose Ask when you turn them on.
 
 With the Supabase CLI instead: `supabase functions deploy pro --no-verify-jwt` (same for each).
 
@@ -33,7 +33,8 @@ With the Supabase CLI instead: `supabase functions deploy pro --no-verify-jwt` (
 - Already there: `ANTHROPIC_API_KEY`, `VAPID_*`, `APNS_*`, `AI_ADMIN_KEY`.
 - Optional limits: `AI_PER_TEAM` (100 questions per Pro team per day), `AI_PER_TEST_TEAM` (10 per day for TestFlight/Sandbox purchases, which are free), `AI_SERVER_CAP` (5000 per day across everyone).
 - One Pro subscription covers up to 5 Feeds. Test purchases (TestFlight, Sandbox, Stripe test mode) count only until they end, with no grace day.
-- `AI_REQUIRE_PRO=0` or `HUB_REQUIRE_PRO=0` turn the Pro checks off (not recommended).
+- `AI_REQUIRE_PRO=1` / `HUB_REQUIRE_PRO=1`: turn the Pro checks on (see Timing above).
+- `APPLE_SANDBOX=0`: only real App Store purchases count. Leave it unset while Apple is reviewing (reviewers buy with Sandbox accounts).
 
 ## 4. App Store Server Notifications (so renewals, cancellations and refunds reach the server)
 App Store Connect → the app → **App Information** → App Store Server Notifications:
@@ -44,7 +45,7 @@ App Store Connect → the app → **App Information** → App Store Server Notif
 1. Stripe → Products: "Accounted For Pro" with two prices: $4.99/month and $39.99/year.
 2. Secrets: `STRIPE_SECRET_KEY`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`.
 3. Stripe → Developers → Webhooks → Add endpoint `https://vdhxhvklwbimjpoomnui.supabase.co/functions/v1/billing`, events `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`. Copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
-4. Stripe → Settings → Billing → Customer portal: turn it on (for "Manage subscription").
+4. Stripe → Settings → Billing → Customer portal: turn it on, copy its **login link** into secret `STRIPE_PORTAL_LOGIN_URL` (people sign in with an emailed code, so a shared Pro code can't open billing).
 5. In `index.html`, change `webBilling:false` to `webBilling:true`, run `npm run bundle`, commit. Pro features on the web then need a subscription (or a Pro code from the iPhone app).
 
 ## 6. Optional: text everyone from the server (Twilio)

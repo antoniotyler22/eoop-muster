@@ -40,11 +40,15 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          VERSION_NAME: ${{ github.event.inputs.version }}
+          VERSION_CODE: ${{ github.run_number }}
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          case "$VERSION_NAME" in *[!0-9.]*|"") echo "::error::Version must look like 1.3.0"; exit 1;; esac
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
           export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/upload.jks"
           chmod +x gradlew
-          ./gradlew bundleRelease --no-daemon -q -PversionCode=${{ github.run_number }} -PversionName=${{ github.event.inputs.version }}
+          ./gradlew bundleRelease --no-daemon -q -PversionCode="$((VERSION_CODE + 100))" -PversionName="$VERSION_NAME"
           rm -f "$RUNNER_TEMP/upload.jks"
       - uses: actions/upload-artifact@v4
         with: { name: accounted-for-aab, path: android/app/build/outputs/bundle/release/*.aab, retention-days: 30 }

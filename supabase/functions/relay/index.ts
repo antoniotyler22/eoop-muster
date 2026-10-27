@@ -19,6 +19,7 @@ export function hookKind(u: unknown): "slack" | "teams" | "discord" | null {
   if (h === "hooks.slack.com" && x.pathname.startsWith("/services/")) return "slack";
   if (/^[a-z0-9-]+\.webhook\.office\.com$/.test(h)) return "teams";
   if ((/^[a-z0-9-]+\.logic\.azure\.com$/.test(h) || /^prod-[0-9]+\.[a-z0-9-]+\.logic\.azure\.com$/.test(h)) && x.pathname.includes("/workflows/")) return "teams";
+  if (/^[a-z0-9-]+(\.[a-z0-9-]+)*\.environment\.api\.powerplatform\.com$/.test(h) && x.pathname.includes("/powerautomate/")) return "teams";
   if ((h === "discord.com" || h === "discordapp.com") && x.pathname.startsWith("/api/webhooks/")) return "discord";
   return null;
 }

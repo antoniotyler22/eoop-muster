@@ -8,6 +8,7 @@
 //   PRO_SECRET       long random text used to make team tokens (falls back to the service role key; set it once and keep it)
 //   APPLE_BUNDLE_ID  default com.antoniotyler.accountedfor
 //   PRO_PRODUCTS     comma list, default the yearly and monthly Pro product IDs
+//   APPLE_SANDBOX    default 1: TestFlight/App Review (Sandbox) purchases count; they expire within hours to days. 0 = Production only
 // Nothing personal is stored: only the subscription ID, product, end date and a hash of the team token.
 
 const URL0 = (globalThis as any).Deno?.env.get("SUPABASE_URL") ?? "";
@@ -68,14 +69,30 @@ function derTime(b: Uint8Array, n: DerNode): number {
   return Date.UTC(+full.slice(0, 4), +full.slice(4, 6) - 1, +full.slice(6, 8), +full.slice(8, 10), +full.slice(10, 12), +full.slice(12, 14));
 }
 
-type Cert = { der: Uint8Array; tbs: Uint8Array; sigAlg: string; sig: Uint8Array; issuer: string; subject: string; spki: Uint8Array; curve: string; notBefore: number; notAfter: number; hexAll: string };
+type Cert = { der: Uint8Array; tbs: Uint8Array; sigAlg: string; sig: Uint8Array; issuer: string; subject: string; spki: Uint8Array; curve: string; notBefore: number; notAfter: number; exts: Map<string, { critical: boolean; value: Uint8Array }> };
 export function parseCert(der: Uint8Array): Cert {
   const top = node(der, 0);
+  if (top.tag !== 0x30 || top.end !== der.length) throw new Error("bad DER: trailing bytes");
   const [tbsN, algN, sigN] = kids(der, top);
+  if (!tbsN || !algN || !sigN || sigN.tag !== 0x03) throw new Error("bad certificate");
   const t = kids(der, tbsN);
   let i = t[0].tag === 0xa0 ? 1 : 0; // optional [0] version
   const serial = t[i++]; void serial; i++; // signature algorithm inside tbs
   const issuer = t[i++], validity = t[i++], subject = t[i++], spkiN = t[i++];
+  // Extensions: only the [3] block inside the signed part counts.
+  const exts = new Map<string, { critical: boolean; value: Uint8Array }>();
+  const extBlock = t.slice(i).find((n) => n.tag === 0xa3);
+  if (extBlock) {
+    const seq = kids(der, extBlock)[0];
+    for (const e of kids(der, seq)) {
+      const f = kids(der, e);
+      if (!f.length || f[0].tag !== 0x06) throw new Error("bad extension");
+      const critical = f.length === 3 && f[1].tag === 0x01 && body(der, f[1])[0] !== 0;
+      const val = f[f.length - 1];
+      if (val.tag !== 0x04) throw new Error("bad extension");
+      exts.set(hex(body(der, f[0])), { critical, value: body(der, val) });
+    }
+  }
   const [nb, na] = kids(der, validity);
   const spkiAlg = kids(der, kids(der, spkiN)[0]);
   const bits = body(der, sigN);
@@ -85,7 +102,7 @@ export function parseCert(der: Uint8Array): Cert {
     sig: bits.subarray(1), // first byte = unused bits (0)
     issuer: hex(whole(der, issuer)), subject: hex(whole(der, subject)),
     spki: whole(der, spkiN), curve: spkiAlg[1] ? hex(body(der, spkiAlg[1])) : "",
-    notBefore: derTime(der, nb), notAfter: derTime(der, na), hexAll: hex(der),
+    notBefore: derTime(der, nb), notAfter: derTime(der, na), exts,
   };
 }
 function derSigToRaw(sig: Uint8Array, size: number): Uint8Array {
@@ -114,7 +131,16 @@ async function signedBy(child: Cert, parent: Cert): Promise<boolean> {
   const { key, size } = await keyOf(parent);
   return crypto.subtle.verify({ name: "ECDSA", hash }, key, derSigToRaw(child.sig, size), child.tbs);
 }
-const hasOid = (c: Cert, oid: string) => c.hexAll.includes("06" + (oid.length / 2).toString(16).padStart(2, "0") + oid);
+const hasExt = (c: Cert, oid: string) => c.exts.has(oid);
+const BASIC_CONSTRAINTS = "551d13"; // 2.5.29.19
+/** True when the certificate says it's a CA (basicConstraints cA = TRUE). */
+function isCA(c: Cert): boolean {
+  const e = c.exts.get(BASIC_CONSTRAINTS);
+  if (!e) return false;
+  const seq = node(e.value, 0);
+  const f = kids(e.value, seq);
+  return !!f.length && f[0].tag === 0x01 && body(e.value, f[0])[0] !== 0;
+}
 
 /** Verifies an App Store JWS (transaction, renewal info or notification) and returns its payload. Throws if not genuine. */
 export async function verifyAppleJWS(jws: string, opts: { rootSha256?: string; now?: number } = {}): Promise<any> {
@@ -128,7 +154,8 @@ export async function verifyAppleJWS(jws: string, opts: { rootSha256?: string; n
   if (certs.some((c: Cert) => now < c.notBefore || now > c.notAfter)) throw new Error("certificate expired");
   const fp = hex(new Uint8Array(await crypto.subtle.digest("SHA-256", root.der)));
   if (fp !== (opts.rootSha256 ?? APPLE_ROOT_G3_SHA256)) throw new Error("not signed by Apple");
-  if (!hasOid(leaf, OID.appleLeaf) || !hasOid(mid, OID.appleIntermediate)) throw new Error("not an App Store certificate");
+  if (!hasExt(leaf, OID.appleLeaf) || !hasExt(mid, OID.appleIntermediate)) throw new Error("not an App Store certificate");
+  if (!isCA(mid) || !isCA(root) || isCA(leaf)) throw new Error("not an App Store certificate");
   if (!(await signedBy(mid, root)) || !(await signedBy(leaf, mid))) throw new Error("certificate chain broken");
   const { key } = await keyOf(leaf);
   const ok = await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, key, b64url(parts[2]), te.encode(parts[0] + "." + parts[1]));
@@ -156,8 +183,22 @@ export function appleRow(tx: any, cfg: { bundle: string; products: string[] }) {
       id: "apple:" + otid, source: "apple", product: tx.productId,
       expires_at: tx.expiresDate ? new Date(+tx.expiresDate).toISOString() : null,
       revoked: !!tx.revocationDate, env: tx.environment ? String(tx.environment).slice(0, 20) : null,
+      signed_at: tx.signedDate ? new Date(+tx.signedDate).toISOString() : null,
     },
   };
+}
+
+/** Combines a new record with what's stored. Older messages never win: Apple and Stripe can deliver out of order,
+ *  and a refunded user could resend an old purchase. Once revoked, only a newer-signed message can clear it. */
+export function mergeRow(old: any, nw: any) {
+  if (!old) return nw;
+  const t = (x: any) => (x ? Date.parse(x) : 0);
+  if (t(old.signed_at) && t(nw.signed_at) && t(nw.signed_at) < t(old.signed_at)) return { ...nw, expires_at: old.expires_at, revoked: old.revoked, signed_at: old.signed_at, product: old.product };
+  const r = { ...nw };
+  if (old.revoked && !(t(nw.signed_at) > t(old.signed_at))) r.revoked = true;
+  if (!r.revoked && old.expires_at && r.expires_at && t(old.expires_at) > t(r.expires_at)) r.expires_at = old.expires_at;
+  if (!r.signed_at) r.signed_at = old.signed_at ?? null;
+  return r;
 }
 
 function hdrs(extra: Record<string, string> = {}) {
@@ -173,11 +214,8 @@ async function rest(path: string, init: RequestInit = {}) {
 }
 export async function saveRow(row: any, secret: string) {
   const tok = await teamToken(row.id, secret);
-  // Never let an older transaction roll the end date back (Apple can deliver notifications out of order).
-  const cur = await rest("pro_ents?select=expires_at,revoked&id=eq." + encodeURIComponent(row.id));
-  const old = cur && cur[0];
-  const r = { ...row, tok_hash: await sha256hex(tok), updated_at: new Date().toISOString() };
-  if (old && old.expires_at && r.expires_at && Date.parse(old.expires_at) > Date.parse(r.expires_at) && !r.revoked) r.expires_at = old.expires_at;
+    const cur = await rest("pro_ents?select=expires_at,revoked,signed_at,product&id=eq." + encodeURIComponent(row.id));
+  const r = { ...mergeRow(cur && cur[0], row), tok_hash: await sha256hex(tok), updated_at: new Date().toISOString() };
   await rest("pro_ents?on_conflict=id", { method: "POST", body: JSON.stringify(r), headers: { Prefer: "resolution=merge-duplicates,return=minimal" } });
   const live = !r.env || r.env === "Production" || r.env === "live";
   const active = !r.revoked && (r.expires_at ? Date.parse(r.expires_at) > Date.now() - (live ? 864e5 : 0) : live);
@@ -202,6 +240,7 @@ export async function handle(req: Request): Promise<Response> {
     }
     // App Store Server Notifications V2: { signedPayload }
     if (typeof b.signedPayload === "string") {
+      if (b.signedPayload.length > 40000) return json({ error: "bad request" }, 400);
       const n = await verifyAppleJWS(b.signedPayload);
       const d = n && n.data;
       if (!d || d.bundleId !== cfg().bundle) return json({ ok: 1, skipped: "other app" });
@@ -210,6 +249,7 @@ export async function handle(req: Request): Promise<Response> {
       const r = appleRow(tx, cfg());
       if (r.err) return json({ ok: 1, skipped: r.err });
       if (n.notificationType === "REFUND" || n.notificationType === "REVOKE") r.row!.revoked = true;
+      if (n.signedDate && (!r.row!.signed_at || +n.signedDate > Date.parse(r.row!.signed_at))) r.row!.signed_at = new Date(+n.signedDate).toISOString();
       await saveRow(r.row, secret());
       return json({ ok: 1 });
     }
@@ -219,6 +259,7 @@ export async function handle(req: Request): Promise<Response> {
       const tx = await verifyAppleJWS(b.jws);
       const r = appleRow(tx, cfg());
       if (r.err) return json({ error: r.err }, 400);
+      if (r.row!.env !== "Production" && env("APPLE_SANDBOX", "1") === "0") return json({ error: "Test purchases don't count on this server." }, 400);
       return json(await saveRow(r.row, secret()));
     }
     // Any app: { op:"status", tok }

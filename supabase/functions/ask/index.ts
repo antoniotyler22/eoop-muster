@@ -3,7 +3,7 @@
 // Turn OFF "Enforce JWT verification". Secrets: ANTHROPIC_API_KEY (required),
 // optional AI_MODEL (default claude-sonnet-5-5), AI_DAILY_CAP (default 150), AI_PER_DEVICE (default 20),
 // AI_ADMIN_KEY (lets the OIC's phone turn Ask on/off, choose who can use it and set limits),
-// AI_REQUIRE_PRO (default 1: only Pro teams, the admin and allow-listed FEEDs; set 0 to let anyone ask), AI_PER_TEAM (default 100/day per Pro team),
+// AI_REQUIRE_PRO (default off; set 1 so only Pro teams, the admin and allow-listed FEEDs can ask), AI_PER_TEAM (default 100/day per Pro team),
 // AI_SERVER_CAP (default 5000/day across everyone), AI_PER_TEST_TEAM (default 10/day for TestFlight/Sandbox purchases). Needs SQL part 20 for Pro.
 // Question text is never stored. Only daily counters are kept (ai_usage table).
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
     const { data } = await db.from("feeds").select("member_key_hash").eq("id", fid).maybeSingle();
     house = !!data && data.member_key_hash === await hex(mk);
   }
-  const requirePro = (Deno.env.get("AI_REQUIRE_PRO") ?? "1") !== "0";
+  const requirePro = Deno.env.get("AI_REQUIRE_PRO") === "1"; // off until web and Android can buy Pro and most iPhones run 1.3
   if (!isAdmin && !ent && !house) {
     if (requirePro) return json({ error: "Ask is part of Accounted For Pro. The person running your team can turn it on with Pro.", pro: true, off: true }, 402);
     if (cfg.who === "leaders") return json({ error: "Ask is set to leaders only.", off: true }, 403);

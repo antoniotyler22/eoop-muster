@@ -10,6 +10,7 @@ test("relay accepts only Slack, Teams and Discord webhooks", () => {
   assert.equal(hookKind("https://contoso.webhook.office.com/webhookb2/x"), "teams");
   assert.equal(hookKind("https://prod-12.westus.logic.azure.com:443/workflows/abc/triggers/manual/paths/invoke?sig=1"), "teams");
   assert.equal(hookKind("https://discord.com/api/webhooks/1/abc"), "discord");
+  assert.equal(hookKind("https://default1234.ab.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/x/triggers/manual/paths/invoke?sig=1"), "teams");
   for (const bad of ["http://hooks.slack.com/services/x", "https://hooks.slack.com.evil.io/services/x", "https://evil.io/hooks.slack.com/services/",
     "https://user:pw@hooks.slack.com/services/x", "https://hooks.slack.com:8443/services/x", "https://169.254.169.254/latest", "javascript:alert(1)", 42])
     assert.equal(hookKind(bad), null, String(bad));
