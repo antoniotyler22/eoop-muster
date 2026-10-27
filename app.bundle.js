@@ -6534,6 +6534,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!(S.feeds
    1) Posts: every phone on the list gets "New word in Feed", leaders included, except the phone that posted.
    2) Changes: when someone with edit rights changes people, statuses, calendar, duty, due-outs or events, the
       whole team gets "📋 Team update" (no names in the alert; at most one every 90 s, batched).
+      A platoon that rolls up to a company also alerts the company's Feed.
    3) A "Team alerts" switch on Home and Feed for any phone on the team that doesn't have alerts on yet. */
 (()=>{
 const LS="af-tsub";
@@ -6572,7 +6573,9 @@ function watch(){if(!Array.isArray(S.roster))return;const now=snap();
   base=now}
 async function flush(){if(!pend.size)return;const f=teamFeed();if(!f||!eligible()){pend.clear();return}
   const what=[...pend];pend.clear();const skip=await endpoint();
-  SB.notify(null,Object.assign({team:f.id,k:f.lk||f.mk,what},skip?{skip}:{}))}
+  SB.notify(null,Object.assign({team:f.id,k:f.lk||f.mk,what},skip?{skip}:{}));
+  /* the company this platoon rolls up to sees the same people: its Feed (CO, XO, 1stSgt, other platoons) gets it too */
+  for(const c of (S.feeds||[]).filter(x=>x.hub2&&x.mk&&x.id!==f.id).slice(0,2))SB.notify(null,Object.assign({team:c.id,k:c.lk||c.mk,what},skip?{skip}:{}))}
 window.taFlush=flush;
 {const _save=save;save=function(){const r=_save.apply(this,arguments);try{watch()}catch(e){}return r}}
 {const _raw=rawSave;rawSave=function(){const r=_raw.apply(this,arguments);try{if(base)base=snap()}catch(e){}return r}}
