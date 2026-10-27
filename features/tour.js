@@ -7,7 +7,7 @@ const lbl=el=>{const t=(el&&(el.querySelector("b")||el).innerText||"").replace(/
 const tab=k=>`#tabbar [data-tab="${k}"]`;
 
 /* ---------- steps ---------- */
-function leaderSteps(){return [
+function leaderLib(){return [
   {t:"Welcome to your walk-through",b:"This shows you every part of the app, one spot at a time. When a button lights up and says <b>Tap it</b>, tap it. Takes about 2 minutes. When you finish, the app is yours to use.",go:"board"},
   {s:"#bMode",t:"Your app name",b:"Tap the name any time to switch versions (Military, Police, Jobs, HR, Civilian or Custom) or rename your team."},
   {s:"#main .card.hero",t:"Your numbers",b:"Who's here now out of everyone you're responsible for. The bar fills as people show up. Below it is the count by status."},
@@ -40,7 +40,7 @@ function leaderSteps(){return [
   {s:"#hSet",t:"Settings",b:"PIN lock, text size, your data and backups."},
   {s:tab("home"),tap:1,t:"Back home",b:"Tap <b>Home</b> to finish."},
   {t:"You're all set",b:"That's the whole app. Replay this tour any time from <b>Tools → Take the tour</b>.",end:1}]}
-function memberSteps(){return [
+function memberLib(){return [
   {t:"Welcome",b:"Here's a quick walk-through of your app. When a button lights up and says <b>Tap it</b>, tap it. When you finish, you're in."},
   {s:tab("today"),tap:1,opt:1,t:"Today",b:"Tap <b>Today</b>. It shows what's happening for you today."},
   {s:tab("me"),tap:1,opt:1,t:"My page",b:"Tap <b>My page</b>."},
@@ -57,7 +57,7 @@ function memberSteps(){return [
   {s:"#v13Hdr",opt:1,t:"Your account button",b:"This person button opens your account any time."},
   {s:"#helpBtn",opt:1,t:"Stuck? Tap ?",b:"Tap <b>?</b> on any screen to have it walk you through that screen, or replay this tour."},
   {t:"You're all set",b:"Replay this tour any time from <b>Tools → Take the tour</b>.",end:1}]}
-function sectionSteps(){return [
+function sectionLib(){return [
   {t:"Welcome",b:"Here's how you run your section. When a button lights up and says <b>Tap it</b>, tap it. When you finish, you're in."},
   {s:"#main .card.hero",opt:1,t:"Your numbers",b:"Your section's count. Your leader sees it the moment you change anything."},
   {s:tab("people"),tap:1,opt:1,t:"People",b:"Tap <b>People</b>."},
@@ -69,6 +69,23 @@ function sectionSteps(){return [
   {s:"#helpBtn",opt:1,t:"Stuck? Tap ?",b:"Tap <b>?</b> on any screen to have it walk you through that screen, or replay this tour."},
   {s:tab("home"),tap:1,opt:1,t:"Back home",b:"Tap <b>Home</b> to finish."},
   {t:"You're all set",b:"Replay this tour any time from <b>Tools → Take the tour</b>.",end:1}]}
+
+/* the full tour is short: 5 stops for leaders, 3 for members, 4 for section leaders. The long lists above feed "Walk me through this screen". */
+function leaderSteps(){return [
+  {t:"Welcome",b:"Five quick stops. Tap <b>Next</b>, or <b>Exit</b> any time.",go:"board"},
+  {s:"#sgAdd, #main .card.hero",t:"Your headcount",b:"Who's here out of everyone. Start by adding your people: type names, paste a list, upload a file or send an invite."},
+  {s:"#main .qa",t:"Quick actions",b:"Check people in, reach everyone, share your headcount and invite people. Emergency check-in is right below."},
+  {s:tab("feed"),t:"Feed",b:"Post once. Everyone taps <b>Confirm I saw it</b>, so you see who hasn't."},
+  {s:"#hHelp",t:"Help on every screen",b:"Tap <b>?</b> to walk through the screen you're on. Everything else is in <b>Tools</b>, in 12 groups.",end:1}]}
+function memberSteps(){return [
+  {s:tab("me"),opt:1,t:"My status",b:"Your status, your updates and the <b>Check in</b> button. Tap Confirm on updates so your leader knows you saw them."},
+  {s:tab("feed"),opt:1,t:"Feed",b:"Word from your leader. Tap <b>Confirm I saw it</b> on each post."},
+  {s:tab("mecal"),opt:1,t:"Calendar",b:"Your duty, appointments and plan of the day. Tap <b>?</b> on any screen for help.",end:1}]}
+function sectionSteps(){return [
+  {s:"#main .card.hero",opt:1,t:"Your section",b:"Your section's count. Your leader sees it the moment you change anything."},
+  {s:tab("people"),opt:1,t:"People",b:"Open your section and tap a person's status to change it."},
+  {s:tab("feed"),opt:1,t:"Feed",b:"Post to your people and see who confirmed."},
+  {s:"#hHelp",opt:1,t:"Stuck? Tap ?",b:"Tap <b>?</b> on any screen to walk through it.",end:1}]}
 function tourPv(){if(!window.setPv)return;const m=S.roster.find(x=>x.id===window.getPv())||S.roster.find(x=>x.sec!=="ATT")||S.roster[0];if(m)window.setPv(m.id)}
 function kindNow(){if(typeof memberMode==="function"&&memberMode())return "member";if(S.link&&!S.board&&S.source==="sample")return "section";return "leader"}
 
@@ -111,7 +128,7 @@ window.startTour=start;
 /* ---------- "Walk me through this screen": the steps for wherever you are ---------- */
 function screenSteps(){const v=typeof view==="string"?view:"board";const k=kindNow();
   const from=(list,titles)=>titles.map(t=>list.find(x=>x.t===t)).filter(Boolean).map(x=>Object.assign({},x,{tap:0,go:0}));
-  const Ld=leaderSteps(),Mb=memberSteps();let st=[];
+  const Ld=leaderLib(),Mb=memberLib();let st=[];
   if(k==="member"){st=v==="me"?from(Mb,["Updates","Your status","Check in","Countdowns","Your calendar","Your account","Start your own team","Help & support"]):v==="feed"?[{t:"Feed",b:"Word from your leader shows up here. Tap <b>Got it</b> on each post so they know you saw it."}]:v==="log"?[{t:"My log",b:"Write down what you did today. It stays on your phone."}]:[]}
   else if(v==="board"||v==="today")st=from(Ld,["Your app name","Your numbers","Sections","Quick actions","Emergency check-in","Help on every screen","Settings"]);
   else if(v==="text")st=from(Ld,["Your report"]);
@@ -119,7 +136,11 @@ function screenSteps(){const v=typeof view==="string"?view:"board";const k=kindN
   else if(typeof secViews==="function"&&secViews().includes(v))st=[{s:"#main .card, #main .panel",opt:1,t:"Your section",b:"Everyone in this section. Tap a person's status to change it; the numbers at the top update right away."}];
   else if(v==="feed"||v==="send")st=from(Ld,["Pass the word"]);
   else if(["cal","duty","ready","events"].includes(v))st=from(Ld,["Plan tabs"]);
-  else if(v==="tools")st=from(Ld,["Dashboard","Invite","Logins","Check-ins","People with access","Help & support","Everything else","Help on every screen","Settings"]);
+  else if(v==="tools")st=[{s:'#sgGrid [data-sgrp="checkin"]',opt:1,t:"Check-ins",b:"Check people in, and confirm check-ins people send from their phones."},
+    {s:'#sgGrid [data-sgrp="people"]',opt:1,t:"People with access",b:"Invite people, give logins, and see everyone who can open your team."},
+    {s:'#sgGrid [data-sgrp="reports"]',opt:1,t:"Reports",b:"Share your headcount, a PDF, an incident report or trends."},
+    {s:'#sgGrid [data-sgrp="help"]',opt:1,t:"Help & support",b:"Ask any question about the app, read the guide or take the short tour."},
+    {s:'#sgGrid [data-sgrp="settings"]',opt:1,t:"Settings",b:"Your data, app version, connections and system check."}];
   else if(v==="mepv")st=from(Ld,["What your people see: My page","Their Check in button","Their updates","Their own team"]).map(x=>Object.assign(x,{pre:0}));
   else if(v==="checkins")st=[{s:"#ckAuto",opt:1,t:"Auto-confirm",b:"Off: you confirm each check-in before it changes the roster. On: check-ins from people on your roster go straight on. Other always waits for you."},{s:"#main .alist .rrow",opt:1,t:"A check-in",b:"Who, their status, From, To, Location and their note. Pick who it is if it didn't match your roster, change the status if you need to, then tap <b>Confirm</b> or <b>Not right</b>."},{s:'#main [data-go="mepv"], #main .panel',opt:1,t:"Where it comes from",b:"Your people tap <b>Check in</b> on their My page or in the Feed."}];
   else if(v==="access")st=[{s:"#main .tgrid",opt:1,t:"The count",b:"How many people on your roster have access, how many aren't on your roster, and how many shared links are open."},{s:"#main .alist",opt:1,t:"Everyone, one list",b:"On your roster: My page links, logins and Feed. Not on your roster: logins, invites you sent and check-ins that didn't match. Open links: tap Manage to cut them off."}];
@@ -133,7 +154,7 @@ window.startScreenTour=()=>start(kindNow(),screenSteps());
 
 /* taps: inside the lit-up spot go through to the app; tap steps move on by themselves */
 document.addEventListener("click",e=>{if(!T.on)return;const b=e.target.closest("[data-tr]");
-  if(b){e.preventDefault();e.stopImmediatePropagation();const a=b.dataset.tr;if(a==="next")show(T.i+1);else if(a==="back"){T.back=true;let j=T.i-1;while(j>0&&T.steps[j].tap)j--;show(j)}else if(a==="exit"){if(T.armed){T.armed=0;finish()}else{T.armed=1;b.textContent="Tap again to leave the tour";setTimeout(()=>{T.armed=0;if(b.isConnected)b.textContent="Exit tour"},4000)}}return}
+  if(b){e.preventDefault();e.stopImmediatePropagation();const a=b.dataset.tr;if(a==="next")show(T.i+1);else if(a==="back"){T.back=true;let j=T.i-1;while(j>0&&T.steps[j].tap)j--;show(j)}else if(a==="exit"){finish()}return}
   const st=T.steps[T.i];if(!st)return;
   if(T.el&&T.el.contains(e.target)){if(st.tap)setTimeout(()=>show(T.i+1),450);else{e.preventDefault();e.stopImmediatePropagation()}return}
   if(!e.target.closest("#tour")){e.preventDefault();e.stopImmediatePropagation()}},true);
@@ -152,7 +173,7 @@ document.addEventListener("click",e=>{if(e.target.closest("[data-trscreen]")){e.
   if(e.target.closest("[data-trfull]")){e.stopImmediatePropagation();try{closeSheet()}catch(err){}setTimeout(()=>start(kindNow()),350)}},true);
 /* Tools → Take the tour */
 if(typeof renderTools==="function"){const _rt=renderTools;renderTools=function(){_rt.apply(this,arguments);const g=[...document.querySelectorAll("#main .tgrid")].pop();if(!g)return;
-  g.insertAdjacentHTML("afterbegin",`<button id="trStart"><span class="ic">${svg("help")}</span><span><b>Take the tour</b><small>Walk through every part</small></span></button>`)}}
+  g.insertAdjacentHTML("afterbegin",`<button id="trStart"><span class="ic">${svg("help")}</span><span><b>Take the tour</b><small>5 quick stops</small></span></button>`)}}
 document.addEventListener("click",e=>{if(e.target.closest("#trStart")){e.stopImmediatePropagation();start(kindNow())}});
 if(typeof HELP==="object"&&HELP.tools&&Array.isArray(HELP.tools[2]))HELP.tools[2].push("Take the tour walks you through every part of the app, one tap at a time.");
 })();
