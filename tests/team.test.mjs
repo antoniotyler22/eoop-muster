@@ -121,7 +121,7 @@ test("people with access lists invites sent to anyone, even off the roster", asy
     a.$('.invsend [data-invgo="copy"]').click();
     a.w.eval(`view="access";render()`);
     assert.match(a.$("#main").textContent, /Copied|friend@example.com/);
-    assert.match(a.$("#main").textContent, /Own team/);
+    assert.match(a.$("#main").textContent, /start their own team/);
     assert.deepEqual(a.errors.filter((e) => !/clipboard/i.test(e)), []);
   } finally { await a.close(); }
 });
