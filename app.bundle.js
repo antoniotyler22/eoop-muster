@@ -4895,7 +4895,7 @@ function rowDet(m){if(m.status==="On Hand")return null;
 {const _rs=renderSection;renderSection=function(code){_rs.apply(this,arguments);const main=$("#main");if(!main)return;
   const hd=main.querySelector(".sechead");if(hd&&code!=="ATT")hd.insertAdjacentHTML("afterend",`<p class="note secupd" style="margin:2px 4px 6px">↻ ${esc(updTxt(secAt(code)))}</p>`);
   main.querySelectorAll(".m").forEach(row=>{const p=row.querySelector("[data-pcard]");const m=p&&S.roster.find(x=>x.id===p.dataset.pcard);if(!m)return;const t=rowDet(m);if(t==null)return;
-    let d=row.querySelector(".det");if(!t){if(d)d.remove();return}if(!d){d=document.createElement("div");d.className="det";const rm=row.querySelector(".who .rm");rm?rm.before(d):row.querySelector(".who").appendChild(d)}d.textContent=t;
+    let d=row.querySelector(".det");if(!t){if(d)d.remove();return}if(!d){d=document.createElement("div");d.className="det";const rm=row.querySelector(".who .rm");rm?rm.before(d):row.querySelector(".who").appendChild(d)}d.textContent=t;d.style.whiteSpace="normal";d.style.overflow="visible";d.style.textOverflow="clip";d.style.webkitLineClamp="unset";d.style.display="block";
     if(!m.start&&!m.end&&!m.loc&&canEdit())d.insertAdjacentHTML("beforeend",` <button class="chip" data-stdet="${esc(m.id)}" style="cursor:pointer">+ Dates, location</button>`)})}}
 {const _rb=renderBoard;renderBoard=function(){_rb.apply(this,arguments);
   for(const [k] of SECTIONS){const t=secAt(k);
@@ -4905,8 +4905,8 @@ function rowDet(m){if(m.status==="On Hand")return null;
 
 /* the details sheet: picking anything but On Hand asks From, To, Location */
 let stPend=null;
-window.addEventListener("click",e=>{const so=e.target.closest&&e.target.closest("[data-sopt]");if(!so||!sheetCtx||sheetCtx.kind!=="s")return;
-  const st=so.dataset.sopt;const m=S.roster.find(x=>x.id===sheetCtx.id);if(!m||st==="On Hand"||!STATUSES.includes(st)||S.role==="view")return;
+window.addEventListener("click",e=>{const so=e.target.closest&&e.target.closest("[data-sopt]");if(!so||!sheetCtx||(sheetCtx.kind!=="s"&&sheetCtx.kind!=="d"))return;
+  const st=so.dataset.sopt;const m=S.roster.find(x=>x.id===sheetCtx.id);if(m&&S.role!=="view"){S.secAt=S.secAt||{};S.secAt[m.sec]=Date.now()}if(sheetCtx.kind!=="s")return;if(!m||st==="On Hand"||!STATUSES.includes(st)||S.role==="view")return;
   stPend={id:m.id,st};setTimeout(()=>{const p=stPend;stPend=null;if(p)stDetSheet(p.id)},RM()?20:320)},true);
 document.addEventListener("click",e=>{const b=e.target.closest("[data-stdet]");if(b){e.stopImmediatePropagation();stDetSheet(b.dataset.stdet)}},true);
 function stDetSheet(id){const m=S.roster.find(x=>x.id===id);if(!m)return;sheetCtx={kind:"stdet",id};
@@ -4916,7 +4916,7 @@ function stDetSheet(id){const m=S.roster.find(x=>x.id===id);if(!m)return;sheetCt
     <div class="row2"><div><label for="sdF">From</label><input type="date" id="sdF" value="${esc(isoOf(m.start)||dkey())}" style="${inp}"></div><div><label for="sdT">To</label><input type="date" id="sdT" value="${esc(isoOf(m.end))}" style="${inp}"></div></div>
     <label for="sdL">Location</label><input type="text" id="sdL" maxlength="60" value="${esc(m.loc||"")}" placeholder="City, clinic, base, address">
     <label for="sdD">Detail (optional)</label><input type="text" id="sdD" maxlength="80" value="${esc(m.detail||"")}" placeholder="Reason, who they're with, phone">
-    <div class="row2"><button class="btn" id="sdSave">Save</button><button class="btn alt" data-sclose="1">Skip</button></div></div>`;
+    <div class="row2"><button class="btn" id="sdSave" style="background:var(--ink);color:var(--bg);justify-content:center;text-align:center;font-weight:800">Save</button><button class="btn alt" data-sclose="1" style="justify-content:center;text-align:center">Skip</button></div></div>`;
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")))}
 document.addEventListener("click",e=>{if(e.target.id!=="sdSave"||!sheetCtx||sheetCtx.kind!=="stdet")return;const m=S.roster.find(x=>x.id===sheetCtx.id);if(!m)return closeSheet();
   const f=$("#sdF").value,t=$("#sdT").value;if(f&&t&&t<f){toast("To can't be before From.");return}
@@ -4939,7 +4939,7 @@ function ckExampleHTML(){const inp="width:100%;padding:9px;border:1px solid var(
 function ckCardHTML(){const f=ckFeed();const last=(S.myCks||[])[0];
   let h=`<div class="card" id="ckCard" style="gap:8px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">CHECK IN</span>${last?`<span class="chip">Last ${esc(ago(last.t))}</span>`:""}</div>`;
   if(last){const s=ckState(last);h+=`<div class="note" style="margin:0"><b>${esc(ckLine(last))}</b> · ${s.state==="ok"?`<span style="color:var(--s-onhand);font-weight:700">✓ Confirmed</span>`:s.state==="no"?`<span style="color:var(--warn);font-weight:700">✕ Not confirmed</span>${s.dnote?" · "+esc(s.dnote):""}`:"Sent · waiting for your leader"}</div>`}
-  if(!f){h+=`<p class="note" style="margin:0">Check-in turns on when your page is connected to your leader's Feed. Pull down to refresh, or ask your leader for a new link.</p></div>`;return h}
+  if(!f){h+=`<p class="note" style="margin:0">Connecting to your leader… This takes a minute the first time.</p><button class="btn alt" id="meRe">↻ Try now</button></div>`;return h}
   if(!ck.open){h+=`<button class="btn" id="ckOpen" style="min-height:52px;font-size:17px">📍 Check in</button><p class="note" style="margin:0">Tell your leader where you are. They confirm it.</p></div>`;return h}
   const v=ck.v;const inp="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)";
   h+=`<div class="evts" role="radiogroup" aria-label="Your status">${STATUSES.concat(CK_OTHER).map(s=>`<button data-ckst="${esc(s)}" aria-pressed="${ck.st===s}" role="radio" aria-checked="${ck.st===s}">${s===CK_OTHER?"✎ Other":`<span class="dot" style="background:var(${SVAR[s]})"></span>${esc(SHORT[s]||s)}`}</button>`).join("")}</div>`;
@@ -4982,7 +4982,7 @@ function meUpd(txt){S.meUpd=[{id:"u"+Date.now().toString(36)+rndId(3),t:Date.now
     if(msgs.length){msgs.forEach(meUpd);rawSave();toast("🔔 "+msgs[0]);localAlert("🔔 "+(D.unit||"Your team"),msgs.join(". "),"me");if(view==="me"){const y=window.scrollY;renderMe();window.scrollTo(0,y)}}}catch(e){}
   return r}}
 function meUpdHTML(){const L=(S.meUpd||[]).filter(x=>!x.ok);if(!L.length)return"";
-  return `<div class="sech"><h2>🔔 Updates</h2><button class="chip" id="meUpdAll" style="cursor:pointer">Confirm all</button></div><div class="card ny" id="meUpd">${L.slice(0,6).map(x=>`<div class="lrow"><span class="n tone-a">🔔</span><span style="flex:1;min-width:0"><span class="t" style="display:block">${esc(x.txt)}</span><span class="s" style="display:block">${ago(x.t)}</span></span><button class="chip" data-meok="${esc(x.id)}" style="cursor:pointer">✓ Confirm</button></div>`).join("")}</div>`}
+  return `<div class="sech"><h2>🔔 Updates</h2><button class="chip" id="meUpdAll" style="cursor:pointer">Confirm all</button></div><div class="card ny" id="meUpd">${L.slice(0,6).map(x=>`<div class="lrow"><span class="n tone-a" style="flex:none">🔔</span><span style="flex:1;min-width:0"><span class="t" style="display:block">${esc(x.txt)}</span><span class="s" style="display:block">${ago(x.t)}</span></span><button class="chip" data-meok="${esc(x.id)}" style="cursor:pointer;flex:none;white-space:nowrap;width:auto;padding:6px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:700">✓ Confirm</button></div>`).join("")}</div>`}
 document.addEventListener("click",e=>{const b=e.target.closest("[data-meok]");if(b){const x=(S.meUpd||[]).find(u=>u.id===b.dataset.meok);if(x){x.ok=Date.now();rawSave();const y=window.scrollY;renderMe();window.scrollTo(0,y)}return}
   if(e.target.id==="meUpdAll"){(S.meUpd||[]).forEach(u=>{if(!u.ok)u.ok=Date.now()});rawSave();const y=window.scrollY;renderMe();window.scrollTo(0,y)}});
 
@@ -4990,7 +4990,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-meok]");if
 const startTeamHTML=()=>`<div class="panel" style="margin-top:12px"><b>Run your own team?</b><p class="note" style="margin:0">Start your own board for a squad, crew, club or job. Nothing connects back to this team.</p><a class="btn alt" href="#start" style="text-align:center">Start my own team</a></div>`;
 {const _rm=renderMe;renderMe=function(){_rm.apply(this,arguments);if(!S.me||!S.me.d)return;const main=$("#main");
   if(view==="mepv"){const hero=main.querySelector(".card.hero");if(hero)hero.insertAdjacentHTML("afterend",ckExampleHTML());
-    const ex=`<div class="sech"><h2>🔔 Updates</h2><span class="chip">Example</span></div><div class="card ny" id="meUpd"><div class="lrow"><span class="n tone-a">🔔</span><span style="flex:1;min-width:0"><span class="t" style="display:block">Your check-in was confirmed</span><span class="s" style="display:block">just now</span></span><button class="chip" disabled>✓ Confirm</button></div></div>`;
+    const ex=`<div class="sech"><h2>🔔 Updates</h2><span class="chip">Example</span></div><div class="card ny" id="meUpd"><div class="lrow"><span class="n tone-a" style="flex:none">🔔</span><span style="flex:1;min-width:0"><span class="t" style="display:block">Your check-in was confirmed</span><span class="s" style="display:block">just now</span></span><button class="chip" disabled style="flex:none;white-space:nowrap;width:auto;padding:6px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:700">✓ Confirm</button></div></div>`;
     hero?hero.insertAdjacentHTML("beforebegin",ex):main.insertAdjacentHTML("afterbegin",ex);main.insertAdjacentHTML("beforeend",startTeamHTML().replace('href="#start"','href="#start" aria-disabled="true" onclick="return false"')+`<p class="note" style="text-align:center;margin-top:10px"><span class="chip" data-go="support">💬 Help & support</span></p>`);return}
   if(view!=="me"||String(S.me.pk)==="preview")return;
   const hero=main.querySelector(".card.hero");if(hero)hero.insertAdjacentHTML("afterend",ckCardHTML());
@@ -5002,13 +5002,22 @@ const startTeamHTML=()=>`<div class="panel" style="margin-top:12px"><b>Run your 
 /* the leader's page publish carries check-in confirmations back to each member */
 {const _d=mpDigest;mpDigest=function(m){const d=_d.apply(this,arguments);d.cks=(S.cks||[]).filter(x=>x.mid===m.id).slice(0,6).map(x=>({cid:x.cid,state:x.state,dnote:x.dnote||""}));return d}}
 
+/* A My page link needs the unit Feed behind it (that's how check-ins travel). Make it the first time it's needed. */
+let fdMaking=null;
+async function ensureMemberFeed(){if(mainFeed()||S.source==="sample"||!isOwner()||S.role==="view")return;
+  if(!fdMaking)fdMaking=(async()=>{try{await fdCreate();const f=mainFeed();if(f){f.main=true;save();actAdd("💬","Started your unit Feed so My pages can check in.","feed")}}catch(e){}finally{fdMaking=null}})();
+  return fdMaking}
+window.ensureMemberFeed=ensureMemberFeed;
+{const _p=mpPublish;mpPublish=async function(){if(S.roster.some(m=>m.pk))await ensureMemberFeed();return _p.apply(this,arguments)}}
+{const _t=mpTurnOn;mpTurnOn=async function(){await ensureMemberFeed();return _t.apply(this,arguments)}}
+
 /* =============== 3. LEADER: check-ins in, Confirm puts them on the roster =============== */
 window.ckIn=function(f,o,r){S.cks=S.cks||[];const cid=String(o.cid||"").slice(0,20);if(!cid||S.cks.some(x=>x.cid===cid))return;
   const st=STATUSES.includes(o.st)?o.st:CK_OTHER;const who=String(o.me||"Someone").slice(0,30);
   let m=o.mid&&S.roster.find(x=>x.id===String(o.mid));if(!m){const mm=typeof matchMarine==="function"?matchMarine(who):null;m=Array.isArray(mm)?(mm.length===1?mm[0]:null):mm||null}
   const clean=(v,n)=>String(v||"").replace(/[<>]/g,"").slice(0,n);const date=v=>/^\d{4}-\d{2}-\d{2}$/.test(String(v||""))?String(v):"";
   const x={cid,feed:f.id,mid:m?m.id:"",who,sec:clean(o.sec,6),st,oth:clean(o.oth,80),from:date(o.from),to:date(o.to),loc:clean(o.loc,60),note:clean(o.note,120),t:Date.parse(r&&r.created_at)||+o.at||Date.now(),state:"new"};
-  S.cks.unshift(x);S.cks=S.cks.slice(0,300);S.seen=S.seen||{};S.seen[x.mid||"n:"+who.toUpperCase()]={t:x.t,who,how:"check-in"};
+  S.cks.unshift(x);S.cks=S.cks.slice(0,300);if(!(S.ckAuto&&m&&st!==CK_OTHER))ckRemind(x);S.seen=S.seen||{};S.seen[x.mid||"n:"+who.toUpperCase()]={t:x.t,who,how:"check-in"};
   if(S.ckAuto&&m&&st!==CK_OTHER){ckApply(x,st,"auto");actAdd("📍",who+" checked in: "+ckLine(x)+" · put on the roster","checkins")}
   else actAdd("📍",who+" checked in: "+ckLine(x)+(m?"":" · not matched to your roster"),"checkins");
   toast("📍 "+who+" checked in");try{navigator.vibrate&&navigator.vibrate([80,60,80])}catch(e){}
@@ -5019,8 +5028,18 @@ function ckApply(x,st,by){const m=S.roster.find(y=>y.id===x.mid);if(!m)return fa
   if(m.status==="On Hand"){delete m.start;delete m.end;delete m.loc}
   else{if(x.from)m.start=x.from;if(x.to)m.end=x.to;else if(x.from)delete m.end;if(x.loc)m.loc=x.loc}
   const det=[x.oth,x.note].filter(Boolean).join(" · ");if(det)m.detail=det.slice(0,80);
-  m.ckAt=Date.now();S.secAt=S.secAt||{};S.secAt[m.sec]=m.ckAt;x.state="ok";x.dt=Date.now();x.by=by||"";save();return true}
+  m.ckAt=Date.now();S.secAt=S.secAt||{};S.secAt[m.sec]=m.ckAt;x.state="ok";x.dt=Date.now();x.by=by||"";ckUnremind(x);save();return true}
 window.ckApply=ckApply;
+/* reminders: one alert when a check-in has waited an hour. On the iPhone app it's scheduled, so it fires even with the app closed. */
+const CK_WAIT=60*60000;
+const ckNid=cid=>{let h=0;for(const c of String(cid))h=(h*31+c.charCodeAt(0))>>>0;return 300000+h%600000};
+const LNp=()=>window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.LocalNotifications;
+function ckRemind(x){const L=LNp();if(!L||!(window.MBN&&MBN.on))return;const at=x.t+CK_WAIT;if(at<Date.now()+60000)return;
+  try{L.schedule({notifications:[{id:ckNid(x.cid),title:"📍 Check-in waiting",body:x.who+" checked in an hour ago: "+ckLine(x)+". Tap to confirm.",schedule:{at:new Date(at)},extra:{open:"checkins"}}]}).catch(()=>{})}catch(e){}}
+function ckUnremind(x){const L=LNp();if(!L)return;try{L.cancel({notifications:[{id:ckNid(x.cid)}]}).catch(()=>{})}catch(e){}}
+every(5*60000,()=>{if(!leaderHere())return;const old=ckOpen().filter(x=>!x.rem&&Date.now()-x.t>=CK_WAIT);if(!old.length)return;
+  old.forEach(x=>x.rem=Date.now());rawSave();const t=old.length===1?old[0].who+"'s check-in has waited over an hour":old.length+" check-ins have waited over an hour";
+  toast("📍 "+t);if(!(window.MBN&&MBN.on))localAlert("📍 Check-ins waiting",t+". Tap to confirm.","checkins");if(view!=="checkins")try{renderTabs()}catch(e){}},"ck-remind");
 const ckOpen=()=>(S.cks||[]).filter(x=>x.state==="new");
 function ckRow(x){const m=x.mid&&S.roster.find(y=>y.id===x.mid);const open=x.state==="new";
   let h=`<div class="rrow" style="--sc:var(${open?"--brass":x.state==="ok"?"--s-onhand":"--warn"})"><div class="who"><b>${m?`<span data-pcard="${esc(m.id)}" style="cursor:pointer;text-decoration:underline;text-decoration-color:var(--line)">${esc(m.rank+" "+m.name)}</span>`:esc(x.who)}</b>${x.sec?` <span class="chip">${esc(x.sec)}</span>`:""}
@@ -5044,12 +5063,12 @@ document.addEventListener("change",e=>{if(e.target.id==="ckAuto"){S.ckAuto=e.tar
 document.addEventListener("click",e=>{const t=e.target;
   const ok=t.closest("[data-ckok]"),no=t.closest("[data-ckno]");
   if(ok||no){if(!canEdit())return denyMsg();const x=(S.cks||[]).find(c=>c.cid===(ok||no).dataset[ok?"ckok":"ckno"]);if(!x)return;x.dnote=((document.getElementById("ckDn"+x.cid)||{}).value||"").trim().slice(0,80);
-    if(ok){const st=(document.getElementById("ckSt"+x.cid)||{}).value||x.st;if(x.mid){ckApply(x,st,S.unit||unitName());toast("✓ Confirmed · on the roster")}else{x.state="ok";x.dt=Date.now();save();toast("✓ Confirmed (not on your roster, so nothing changed)")}}
-    else{x.state="no";x.dt=Date.now();save();toast("Marked not right"+(x.mid?". They see it on My page.":""))}
+    if(ok){const st=(document.getElementById("ckSt"+x.cid)||{}).value||x.st;if(x.mid){ckApply(x,st,S.unit||unitName());toast("✓ Confirmed · on the roster")}else{x.state="ok";x.dt=Date.now();ckUnremind(x);save();toast("✓ Confirmed (not on your roster, so nothing changed)")}}
+    else{x.state="no";x.dt=Date.now();ckUnremind(x);save();toast("Marked not right"+(x.mid?". They see it on My page.":""))}
     if(typeof mpSchedule==="function")mpSchedule();const y=window.scrollY;render();window.scrollTo(0,y);return}
   if(t.id==="ckAll"){if(!canEdit())return denyMsg();let n=0;for(const x of ckOpen())if(x.mid&&x.st!==CK_OTHER&&ckApply(x,x.st,S.unit||unitName()))n++;if(typeof mpSchedule==="function")mpSchedule();renderCk();toast(n?"✓ Confirmed "+n:"Nothing matched to confirm. Pick who each one is first.")}});
 /* banner on every leader screen while check-ins wait */
-{const _b=banner;banner=function(){const n=leaderHere()&&view!=="checkins"&&view!=="act"?ckOpen().length:0;return (n?`<div class="banner" style="border-color:var(--brass)"><span>📍 <b>${n}</b> check-in${n>1?"s":""} to confirm.</span><button data-go="checkins">Confirm</button></div>`:"")+_b.apply(this,arguments)}}
+{const _b=banner;banner=function(){const n=leaderHere()&&view!=="checkins"&&view!=="act"?ckOpen().length:0;const late=n?ckOpen().filter(x=>Date.now()-x.t>=CK_WAIT).length:0;return (n?`<div class="banner" style="border-color:var(${late?"--warn":"--brass"})"><span>📍 <b>${n}</b> check-in${n>1?"s":""} to confirm${late?` · <b>${late} waiting over an hour</b>`:""}.</span><button data-go="checkins">Confirm</button></div>`:"")+_b.apply(this,arguments)}}
 
 /* Activity: every item can be confirmed */
 renderAct=function(){const A=S.act||[];const seen=S.actSeen||0;let h=banner()+`<div class="sechead" style="margin-top:12px"><h2>Activity</h2><span class="note" style="margin:0">Everything that happens on your team</span></div>`;
@@ -5087,13 +5106,15 @@ function accData(){const R=[],out=[],links=[];const Ls=S.logins||[];const seen=S
 function renderAccess(){let h=`<div class="sechead" style="margin-top:12px"><h2>People with access</h2></div>`;
   if(!isOwner()||!leaderHere()){$("#main").innerHTML=h+`<div class="panel"><p class="note">Only the phone that runs the team sees who has access.</p></div>`;return}
   const {R,out,links,un}=accData();
-  h+=`<div class="tgrid"><div class="cdt"><div class="k">ON ROSTER</div><div class="v">${R.length}</div></div><div class="cdt"><div class="k">NOT ON ROSTER</div><div class="v">${out.filter(x=>!x.own).length+un}</div></div><div class="cdt"><div class="k">OPEN LINKS</div><div class="v">${links.length}</div></div></div>`;
+  h+=`<div class="tgrid" style="grid-template-columns:repeat(3,1fr)"><div class="cdt"><div class="k">ON ROSTER</div><div class="v">${R.length}</div></div><div class="cdt"><div class="k">NOT ON ROSTER</div><div class="v">${out.filter(x=>!x.own).length+un}</div></div><div class="cdt"><div class="k">OPEN LINKS</div><div class="v">${links.length}</div></div></div>`;
   h+=`<div class="row2" style="margin-top:8px"><button class="btn" data-go="invite">Invite someone</button><button class="btn alt" data-go="logins">Logins</button></div>`;
   h+=`<div class="sech"><h2>On your roster · ${R.length}</h2></div>`+(R.length?`<div class="alist">${R.map(({m,page,logins,seen,acked})=>`<div class="rrow" style="--sc:var(${SVAR[m.status]||"--line"})"><div class="who"><b><span data-pcard="${esc(m.id)}" style="cursor:pointer;text-decoration:underline;text-decoration-color:var(--line)">${esc(m.rank+" "+m.name)}</span></b> <span class="chip">${esc(m.sec)}</span>
       <div class="ph">${[page?"My page link":"",...logins.map(L=>"Login "+L.user),acked?"In the Feed":""].filter(Boolean).map(esc).join(" · ")}</div>${seen?`<div class="ph">Last check-in ${ago(seen.t)}</div>`:""}</div></div>`).join("")}</div>`:`<div class="panel"><p class="note">No one on your roster has a link or login yet. Send My page links from Invite.</p></div>`);
-  h+=`<div class="sech"><h2>Not on your roster · ${out.length+(un?1:0)}</h2></div>`;
-  if(out.length||un)h+=`<div class="alist">${out.map(x=>`<div class="rrow" style="--sc:var(${x.own?"--line":"--brass"})"><div class="who"><b>${esc(x.n)}</b> <span class="chip">${esc(x.role)}</span><div class="ph">${esc(x.sub)}</div></div></div>`).join("")}${un?`<div class="rrow" style="--sc:var(--brass)"><div class="who"><b>${un} in the Feed</b> <span class="chip">Feed</span><div class="ph">Tapped Got it but didn't match a name on your roster. Their names are scrambled before they leave their phone.</div></div></div>`:""}</div>`;
+  const own=out.filter(x=>x.own),ext=out.filter(x=>!x.own);
+  h+=`<div class="sech"><h2>Not on your roster · ${ext.length+un}</h2></div>`;
+  if(ext.length||un)h+=`<div class="alist">${ext.map(x=>`<div class="rrow" style="--sc:var(${x.own?"--line":"--brass"})"><div class="who"><b>${esc(x.n)}</b> <span class="chip">${esc(x.role)}</span><div class="ph">${esc(x.sub)}</div></div></div>`).join("")}${un?`<div class="rrow" style="--sc:var(--brass)"><div class="who"><b>${un} in the Feed</b> <span class="chip">Feed</span><div class="ph">Tapped Got it but didn't match a name on your roster. Their names are scrambled before they leave their phone.</div></div></div>`:""}</div>`;
   else h+=`<div class="panel"><p class="note">No one yet. Logins, invites and check-ins from people who aren't on your roster show up here.</p></div>`;
+  if(own.length)h+=`<details class="panel"><summary class="note">Sent the app to start their own team · ${own.length} (no access to yours)</summary><div class="alist">${own.map(x=>`<div class="rrow" style="--sc:var(--line)"><div class="who"><b>${esc(x.n)}</b><div class="ph">${esc(x.sub)}</div></div></div>`).join("")}</div></details>`;
   h+=`<div class="sech"><h2>Open links · ${links.length}</h2></div>`+(links.length?`<div class="alist">${links.map(x=>`<div class="rrow" style="--sc:var(--line)"><div class="rtop"><div class="who"><b>${esc(x.n)}</b><div class="ph">${esc(x.sub)}</div></div><button class="chip" data-go="${esc(x.go)}" style="cursor:pointer">Manage</button></div></div>`).join("")}</div>`:`<div class="panel"><p class="note">No shared links yet.</p></div>`);
   h+=`<p class="note">To cut someone off: remove their login (Logins), turn off their My page (their card), or make new section or access links (Manage). Invites to start their own team never connect to you.</p>`;
   $("#main").innerHTML=h}
@@ -5110,11 +5131,11 @@ function fmtA(t){return esc(t).replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>").replace(/
 function renderSupport(){const H=S.sup||[];let h=`<div class="sechead" style="margin-top:12px"><h2>Help & support</h2></div>
   <div class="panel"><p class="note" style="margin:0">Ask anything about using Accounted For. An AI answers right away; it can be wrong, so check anything important. For billing, account or bug problems, a person reads every email.</p>
     <div class="row2"><a class="btn alt" href="${esc(supMail())}">Email a person</a><a class="btn alt" href="help.html">Help guide</a></div></div>`;
-  h+=`<div class="panel" data-noxl><label for="supQ">Your question</label><textarea id="supQ" rows="3" maxlength="800" placeholder="How do I…" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);font:inherit"></textarea>
+  h+=`<div class="panel" data-noxl><label for="supQ">Your question</label><textarea id="supQ" rows="3" maxlength="800" placeholder="How do I…" style="min-height:0;height:92px;resize:vertical;width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);font:inherit"></textarea>
     <button class="btn" id="supGo"${sup.busy?" disabled":""}>${sup.busy?"Thinking…":"Ask"}</button><div class="note" role="status">${esc(sup.err)}</div>
     ${H.length?"":`<div class="evts">${SUP_EX.map(q=>`<button data-supex="${esc(q)}">${esc(q)}</button>`).join("")}</div>`}</div>`;
   h+=H.map((x,i)=>`<div class="card" style="gap:6px"><div class="note" style="margin:0;font-weight:800">You · ${ago(x.t)}</div><div>${esc(x.q)}</div><div class="note" style="margin:6px 0 0;font-weight:800">${x.local?"Help guide":"Support"}</div><div style="line-height:1.5">${fmtA(x.a)}</div>
-    ${x.local?"":`<div class="row2"><button class="chip" data-supok="${i}" style="cursor:pointer"${x.fb?" disabled":""}>${x.fb==="y"?"✓ Thanks!":"👍 That helped"}</button><a class="chip" href="${esc(supMail())}">Still stuck? Email a person</a></div>`}</div>`).join("");
+    ${x.local?"":`<div class="row2"><button class="chip" data-supok="${i}" style="cursor:pointer"${x.fb?" disabled":""}>${x.fb==="y"?"✓ Thanks!":"👍 That helped"}</button><a class="chip" href="${esc(supMail())}" style="color:inherit;text-decoration:none">Still stuck? Email a person</a></div>`}</div>`).join("");
   if(H.length)h+=`<button class="btn alt" id="supClear" style="width:100%;margin-top:10px">${armed==="supclr"?"Tap again to clear":"Clear chat"}</button>`;
   $("#main").innerHTML=h}
 async function supAsk(q){q=String(q||"").trim();if(q.length<3){sup.err="Type a question.";return renderSupport()}

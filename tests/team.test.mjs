@@ -188,3 +188,21 @@ test("tour and examples: leaders see an example My page with Check in; members' 
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("first My page link starts the unit Feed; check-ins left an hour get flagged", async () => {
+  const made = [];
+  const a = await openApp({ rpc: (fn, body) => { if (fn === "create_feed") made.push(body); return fn === "put_page" ? null : []; } });
+  try {
+    a.w.eval(`S.source="file";S.leaderMode=true;S.feeds=[];save()`);
+    await a.w.eval("mpTurnOn(S.roster[0])");
+    assert.equal(made.length, 1, "Feed created once");
+    assert.ok(a.w.eval("!!mainFeed()&&mainFeed().main"));
+    assert.ok(a.w.eval("mpDigest(S.roster[0]).feed.id"), "My page carries the Feed so Check in works");
+    await a.w.eval("mpTurnOn(S.roster[1])");
+    assert.equal(made.length, 1, "not made twice");
+    const mid = a.w.eval("S.roster[0].id");
+    a.w.eval(`ckIn(mainFeed(),{k:"ck",cid:"cold1",me:"CPL OLD",mid:${JSON.stringify(mid)},st:"On Hand"},{created_at:new Date(Date.now()-2*3600000).toISOString()});view="board";render()`);
+    assert.match(a.$("#main").textContent, /waiting over an hour/);
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
