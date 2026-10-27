@@ -1,5 +1,7 @@
 // Supabase Edge Function "notify": push alerts to the leader's phone.
 //  {recall}: after a live recall check-in.  {board}: after a section leader's live update.  {feed, lk, urg}: after a Feed post.
+//  {team, k, what, skip}: something on the team changed (roster, statuses, calendar, duty). Every phone on the team's
+//    alert list gets "Team update" (at most one every 90 s per team). k is the team Feed's member or leader key.
 //  {alert, feed, mk}: a member's request or problem report, to the OIC.  {escalate:1}: missed check-in deadlines (pg_cron, part 22).
 // Payloads carry no names. Turn OFF "Enforce JWT verification" (the function validates input itself).
 // Secrets: VAPID_PUBLIC, VAPID_PRIVATE (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are built in).
@@ -89,7 +91,12 @@ async function board(id: string) {
   return send("boards", id, b.push_sub, payload, false);
 }
 
-async function feed(id: string, lk: string, urg: boolean) {
+const hexOf = async (s: string) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))).map((b) => b.toString(16).padStart(2, "0")).join("");
+// the sender's own phone doesn't need an alert for what it just did
+// deno-lint-ignore no-explicit-any
+const isSkip = (s: any, skip: string) => !!skip && (s?.endpoint === skip || (typeof s?.apns === "string" && "apns:" + s.apns === skip));
+
+async function feed(id: string, lk: string, urg: boolean, skip = "") {
   const { data: f } = await db.from("feeds").select("*").eq("id", id).maybeSingle();
   if (!f) return out("no feed");
   const dig = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(lk)));
@@ -105,11 +112,30 @@ async function feed(id: string, lk: string, urg: boolean) {
     ? { title: "⚠ URGENT: new word", body: "Open Feed to read it and tap Got it.", help: true, open: "feed" }
     : { title: "New word in Feed", body: "Open Feed to read it and tap Got it.", help: false, open: "feed" };
   const dead: number[] = [];
-  await Promise.allSettled((subs ?? []).map(async (s) => {
+  await Promise.allSettled((subs ?? []).filter((s) => !isSkip(s.sub, skip)).map(async (s) => {
     if (await pushAny(s.sub, payload, urg, 86400) === "gone") dead.push(s.id);
   }));
   if (dead.length) await db.from("feed_subs").delete().in("id", dead);
   return out("sent " + ((subs?.length ?? 0) - dead.length));
+}
+
+const WHAT: Record<string, string> = { roster: "People were added or removed", status: "Statuses changed", cal: "The calendar changed", duty: "The duty roster changed", ready: "Due-outs changed", events: "Events changed", sec: "A section sent an update" };
+async function team(id: string, k: string, what: string[], skip: string) {
+  const { data: f } = await db.from("feeds").select("*").eq("id", id).maybeSingle();
+  if (!f) return out("no feed");
+  const hex = await hexOf(k);
+  if (hex !== f.member_key_hash && hex !== f.leader_key_hash && !(f.poster_key_hash && hex === f.poster_key_hash)) return out("not allowed", 403);
+  // one alert every 90 s per team; works before setup part 24 too (then without the limit)
+  if (f.team_push_at && Date.now() - new Date(f.team_push_at).getTime() < 90000) return out("throttled");
+  if ("team_push_at" in f) await db.from("feeds").update({ team_push_at: new Date().toISOString() }).eq("id", id);
+  const lines = [...new Set(what.map((w) => WHAT[w]).filter(Boolean))].slice(0, 3);
+  const payload = { title: "📋 Team update", body: (lines.length ? lines.join(". ") : "Something changed") + ". Open the app to see.", help: false, open: "board" };
+  const { data: subs } = await db.from("feed_subs").select("id,sub").eq("feed_id", id).limit(500);
+  const dead: number[] = [];
+  const list = (subs ?? []).filter((s) => !isSkip(s.sub, skip));
+  await Promise.allSettled(list.map(async (s) => { if (await pushAny(s.sub, payload, false, 21600) === "gone") dead.push(s.id); }));
+  if (dead.length) await db.from("feed_subs").delete().in("id", dead);
+  return out("sent " + (list.length - dead.length));
 }
 
 // {alert: "req"|"prob"|"rep"|"ck", feed, mk}: a member sent a request, a check-in or reported a problem; buzz the OIC (at most every 15 s).
@@ -160,14 +186,17 @@ async function escalate() {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return out("ok");
   if (req.method !== "POST") return out("method", 405);
-  let body: { recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown } = {};
+  let body: { recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown; team?: unknown; k?: unknown; what?: unknown; skip?: unknown } = {};
   try { body = await req.json(); } catch { return out("bad", 400); }
   if (body.escalate === 1) return escalate();
+  const skip = typeof body.skip === "string" ? body.skip.slice(0, 600) : "";
+  if (typeof body.team === "string" && /^[a-z0-9]{10,20}$/.test(body.team) && typeof body.k === "string" && /^[a-z0-9]{24,40}$/.test(body.k))
+    return team(body.team, body.k, Array.isArray(body.what) ? body.what.filter((w): w is string => typeof w === "string").slice(0, 8) : [], skip);
   if ((body.alert === "req" || body.alert === "prob" || body.alert === "rep" || body.alert === "ck") && typeof body.feed === "string" && /^[a-z0-9]{10,20}$/.test(body.feed) && typeof body.mk === "string" && /^[a-z0-9]{24,40}$/.test(body.mk))
     return alertOic(body.feed, body.mk, body.alert);
   if (typeof body.recall === "string" && /^[a-z0-9]{8,16}$/.test(body.recall)) return recall(body.recall);
   if (typeof body.board === "string" && /^[a-z0-9]{10,20}$/.test(body.board)) return board(body.board);
   if (typeof body.feed === "string" && /^[a-z0-9]{10,20}$/.test(body.feed) && typeof body.lk === "string" && /^[a-z0-9]{24,40}$/.test(body.lk))
-    return feed(body.feed, body.lk, body.urg === true);
+    return feed(body.feed, body.lk, body.urg === true, skip);
   return out("bad", 400);
 });
