@@ -48,13 +48,24 @@ export async function openApp(opts = {}) {
       w.navigator.vibrate = () => true;
       if (opts.geo) Object.defineProperty(w.navigator, "geolocation", { value: { getCurrentPosition: (ok) => setTimeout(() => ok({ coords: opts.geo }), 5) }, configurable: true });
       for (const [k, v] of Object.entries(opts.storage || {})) w.localStorage.setItem(k, v);
+      // Realtime: a stand-in socket. Tests open it (ws.open()), read what was sent (ws.sent) and push messages (ws.recv(obj)).
+      const sockets = [];
+      w.__ws = sockets;
+      w.WebSocket = class FakeWS {
+        constructor(url) { this.url = url; this.readyState = 0; this.sent = []; sockets.push(this); if (opts.wsAutoOpen) setTimeout(() => this.open(), 5); }
+        open() { this.readyState = 1; this.onopen && this.onopen(); }
+        send(t) { this.sent.push(JSON.parse(t)); }
+        recv(o) { this.onmessage && this.onmessage({ data: JSON.stringify(o) }); }
+        close() { this.readyState = 3; this.onclose && this.onclose(); }
+      };
       w.fetch = async (url, init = {}) => {
         const u = String(url);
         let body = null; try { body = init.body ? JSON.parse(init.body) : null; } catch { body = init.body; }
-        calls.push({ url: u, body });
+        calls.push({ url: u, body, headers: init.headers || {} });
         const m = u.match(/\/rest\/v1\/rpc\/([a-z0-9_]+)/i);
         let out = null, status = 200;
         if (m && opts.rpc) { try { out = await opts.rpc(m[1], body); } catch (e) { status = 400; out = { message: String(e.message || e) }; } }
+        else if (/\/auth\/v1\//.test(u) && opts.auth) { try { const r = await opts.auth(u.split("/auth/v1/")[1], body, init.headers || {}); out = r && r.body !== undefined ? r.body : r; status = (r && r.status) || 200; } catch (e) { status = 400; out = { msg: String(e.message || e) }; } }
         else if (/\/functions\/v1\//.test(u) && opts.fn) { const r = await opts.fn(u.split("/functions/v1/")[1], body); out = r.body ?? r; status = r.status ?? 200; }
         const text = out == null ? "" : JSON.stringify(out);
         return { ok: status < 400, status, text: async () => text, json: async () => (text ? JSON.parse(text) : null), headers: new Map() };

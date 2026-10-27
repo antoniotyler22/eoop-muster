@@ -26,9 +26,15 @@ export const SOURCES = [
   "features/team.js",
   "features/feedseen.js",
   "features/tour.js",
+  "features/tiles17.js",
   "features/simple.js",
   "features/wow.js",
   "features/es.js",
+  "features/live.js",
+  "features/account.js",
+  "features/teams.js",
+  "features/visitors.js",
+  "features/contacts.js",
 ];
 
 export function build() {

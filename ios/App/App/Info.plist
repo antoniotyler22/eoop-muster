@@ -51,6 +51,8 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
+	<key>NSContactsUsageDescription</key>
+	<string>Pick people from your contacts to add to your team. Only the names, numbers and emails you pick are added, and they stay on your phone.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Take a photo of a roster or document to load it into Accounted For.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

@@ -107,3 +107,47 @@ test("missed check-in escalation: leader registers, server finds overdue recalls
 });
 
 test.after(() => pg && pg.stop());
+
+test("accounts: sign-in required, each person sees only their own; teams sent to an email or phone wait for them", { skip }, () => {
+  const u1 = "11111111-1111-1111-1111-111111111111", u2 = "22222222-2222-2222-2222-222222222222", u3 = "33333333-3333-3333-3333-333333333333";
+  pg.psql(`insert into auth.users(id, email, phone) values (${q(u1)}, 'lead@example.com', null), (${q(u2)}, null, '15551234567'), (${q(u3)}, 'other@example.com', null) on conflict do nothing`);
+  const as = (uid, claims, sql) => pg.psql(`set role authenticated; set "request.jwt.claims" to ${q(JSON.stringify(Object.assign({ sub: uid, role: "authenticated" }, claims)))}; ${sql}`);
+  const lead = (sql) => as(u1, { email: "Lead@Example.com" }, sql), mem = (sql) => as(u2, { phone: "15551234567" }, sql), other = (sql) => as(u3, { email: "other@example.com" }, sql);
+  assert.throws(() => anon(`select public.acct_get()`), /sign in first/, "anon can see it exists but can't use it");
+  assert.throws(() => anon(`select public.inv_send('a@b.co','team000001','T','Member','X','https://x.example/#me=abcdefghijklmnop')`), /sign in first/);
+  assert.equal(anon(`select count(*) from public.inv_mine()`), "0");
+  for (const t of ["af_account", "af_invite"]) {
+    assert.throws(() => anon(`select count(*) from public.${t}`), /permission denied/, t + " closed to anon");
+    assert.throws(() => lead(`select count(*) from public.${t}`), /permission denied/, t + " closed to signed-in users too");
+  }
+  // your teams follow you
+  lead(`select public.acct_put('[{"code":"ABCD-EFGH-JKMN-PQRS-TUVW-XYZ2","n":"HILLTOP","w":""}]'::jsonb)`);
+  assert.match(lead(`select public.acct_get()::text`), /HILLTOP/);
+  assert.equal(other(`select public.acct_get()::text`), "[]", "someone else's list is empty");
+  assert.throws(() => lead(`select public.acct_put('{"not":"a list"}'::jsonb)`), /bad input/);
+  // leader sends a team to a phone number written any way
+  const link = "https://antoniotyler22.github.io/eoop-muster/#me=abcdefghijklmnopqrst&k=zzzz";
+  lead(`select public.inv_send('(555) 123-4567', 'team000001', 'Hilltop Run Club', 'Member', 'Sam Okafor', ${q(link)})`);
+  lead(`select public.inv_send('(555) 123-4567', 'team000001', 'Hilltop Run Club', 'Member', 'Sam Okafor', ${q(link)})`);
+  assert.equal(mem(`select count(*) from public.inv_mine()`), "1", "a resend replaces the waiting one");
+  assert.equal(mem(`select link from public.inv_mine()`), link);
+  assert.equal(other(`select count(*) from public.inv_mine()`), "0", "nobody else sees it");
+  assert.equal(other(`select count(*) from public.inv_sent('team000001')`), "0", "only the sender sees what was sent");
+  const id = mem(`select id from public.inv_mine()`);
+  other(`select public.inv_cancel(${q(id)})`);
+  assert.equal(mem(`select count(*) from public.inv_mine()`), "1", "someone else can't cancel it");
+  other(`select public.inv_opened(${q(id)})`);
+  assert.equal(lead(`select opened_at is null from public.inv_sent('team000001')`), "t", "someone else can't mark it opened");
+  mem(`select public.inv_opened(${q(id)})`);
+  assert.equal(lead(`select opened_at is not null from public.inv_sent('team000001')`), "t", "leader sees it was opened");
+  assert.equal(lead(`select to_addr from public.inv_sent('team000001')`), "+15551234567");
+  // email, case-insensitive
+  lead(`select public.inv_send('OTHER@example.com', 'team000001', 'Hilltop Run Club', 'Editor', 'Whole board', ${q(link)})`);
+  assert.equal(other(`select role from public.inv_mine()`), "Editor");
+  assert.throws(() => lead(`select public.inv_send('nope', 'team000001', 'T', 'Member', 'X', ${q(link)})`), /bad address/);
+  // delete my account: sign-in, saved list and everything I sent
+  lead(`select public.acct_delete()`);
+  assert.equal(pg.psql(`select count(*) from auth.users where id = ${q(u1)}`), "0");
+  assert.equal(pg.psql(`select count(*) from public.af_invite where owner = ${q(u1)}`), "0");
+  assert.equal(pg.psql(`select count(*) from public.af_account where user_id = ${q(u1)}`), "0");
+});

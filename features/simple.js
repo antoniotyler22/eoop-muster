@@ -14,9 +14,9 @@ const leader=()=>!(typeof memberMode==="function"&&memberMode());
 
 /* ================= 1. TOOLS: 12 groups ================= */
 const GROUPS=[
-  {k:"checkin",l:"Muster",s:"Check people in, confirm check-ins",ic:"muster",keys:["muster","checkins","alerts"]},
+  {k:"checkin",l:"Muster",s:"Check people in, visitors, confirm check-ins",ic:"muster",keys:["muster","checkins","alerts","visitors"]},
   {k:"feed",l:"Feed",s:"Post, text, messages, pages",ic:"feed",keys:["feed","send","dms","pages"]},
-  {k:"people",l:"People & access",s:"Invite, logins, who has access",ic:"people",keys:["invite","access","logins","live"]},
+  {k:"people",l:"People & access",s:"Invite, logins, accounts, who has access",ic:"people",keys:["invite","access","logins","live","acct"]},
   {k:"reports",l:"Reports",s:"Headcount, PDF, incident report, trends",ic:"text",keys:["text","pdfReport","w6","trends"]},
   {k:"plan",l:"Calendar",s:"Calendar, events, duty, meetings",ic:"cal",keys:["cal","events","duty","pt"]},
   {k:"ready",l:"Readiness",s:"Who's due for what",ic:"ready",keys:["ready"]},
@@ -25,7 +25,7 @@ const GROUPS=[
   {k:"rollup",l:"Rollup",s:"Add up the teams under you",ic:"rollup",keys:["co","rollup"]},
   {k:"home",l:"My day",s:"Dashboard, today, my log",ic:"today",keys:["dash","today","log"]},
   {k:"help",l:"Help",s:"Ask a question, guide, short tour",ic:"help",keys:["support","guide","trStart","v11SignInTool","v11ShareApp","ask"]},
-  {k:"settings",l:"Settings",s:"Data, version, connections, system check",ic:"data",keys:["data","sys","modeOpen","integ"]}];
+  {k:"settings",l:"Settings",s:"Teams, data, version, connections",ic:"data",keys:["teams","data","sys","modeOpen","integ"]}];
 const tileKey=b=>{if(b.id)return b.id;if(b.dataset.go)return b.dataset.go;const d=Object.keys(b.dataset)[0];if(d)return d;
   const h=b.getAttribute&&b.getAttribute("href")||"";if(/help\.html/.test(h)||/Help guide/i.test(b.textContent))return "guide";return (b.textContent||"").trim().slice(0,20)};
 let STORE={};

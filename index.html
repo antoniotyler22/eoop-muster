@@ -86,7 +86,7 @@ const V=window.VAULT={key:null,cfg:getCfg(),ok:!!(window.crypto&&crypto.subtle),
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.hidden){hiddenAt=Date.now();return}
   const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
-window.AV="4.6.0";
+window.AV="4.7.0";
 function startApp(){const s=document.createElement("script");s.src="app.bundle.js?v="+window.AV;s.onerror=()=>{document.body.insertAdjacentHTML("beforeend",'<p style="padding:24px;font:16px system-ui">Couldn\'t load the app. Connect once, then reopen.</p>')};document.body.appendChild(s)}
 /* live check-ins: Supabase relay. Stores no names: only salted hashes of the words a person types, a code and a short note. */
 const NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
@@ -110,12 +110,20 @@ Object.assign(window,{NATIVE,PUB,NP,nativeSub,nativePushPerm});
 const SB=window.SB={url:"https://vdhxhvklwbimjpoomnui.supabase.co",key:"sb_publishable_e1VOssMquS5UkOnwEWTrfA_fPwZqorM",
   vapid:"BGWkOoK35r0UiMWL6bYX1uwz9L_8qXwQvp4Qc_4Bv_8Ddy3c-iKPpU_ynvIxt116eKBQvlFvtBobyHKB910S3q4",
   nfn:"notify",afn:"ask",
+  /* Sign in with Apple: set to true once Apple is turned on in Supabase → Authentication → Sign In / Providers (web only for now). */
+  apple:false,
   /* Web billing (Stripe): set to true once the "billing" Edge Function and its Stripe secrets are in place. Until then Pro features stay unlocked on the web. */
   webBilling:false,async findAsk(){for(const n of ["ask","Ask"]){try{const r=await fetch(this.url+"/functions/v1/"+n,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify({ping:1})});if(r.status!==404){this.afn=n;return n}}catch(e){}}return this.afn},async findNotify(){for(const n of ["notify","Notify"]){try{const r=await fetch(this.url+"/functions/v1/"+n,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:"{}"});if(r.status!==404){this.nfn=n;try{localStorage.setItem("eop-nfn",n)}catch(e){}return n}}catch(e){}}return this.nfn},
+  /* live updates: after a change, tell anyone watching that channel to look now (Realtime broadcast). Sends only a hashed channel name, never data. */
+  sid:Math.random().toString(36).slice(2,10),
+  PING:{checkin:"p_recall",close_recall:"p_recall",push_update:"p_board",push_cal:"p_board",put_roster:"p_board",feed_post:"p_feed",feed_post_sl:"p_feed",feed_ack:"p_feed",feed_req:"p_feed",feed_delete_post:"p_feed",put_unit:"p_company",drop_unit:"p_company",page_post:"p_id",page_delete_post:"p_id",put_page:"p_id",dm_send:"p_id",backup_put:"p_id"},
+  async topic(k,id){const b=await crypto.subtle.digest("SHA-256",te.encode("af|"+k+"|"+id));return "af-"+[...new Uint8Array(b)].slice(0,12).map(x=>x.toString(16).padStart(2,"0")).join("")},
+  pingTopic(t,k){try{fetch(this.url+"/realtime/v1/api/broadcast",{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify({messages:[{topic:t,event:"ping",payload:{s:this.sid,k:k||""},private:false}]}),keepalive:true}).catch(()=>{})}catch(e){}},
+  ping(fn,args){const p=this.PING[fn];const id=p&&args&&args[p];if(!id)return;this.topic(p,id).then(t=>this.pingTopic(t,p)).catch(()=>{})},
   notify(rid,body){try{fetch(this.url+"/functions/v1/"+this.nfn,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify(body||{recall:rid}),keepalive:true}).catch(()=>{})}catch(e){}},
   async rpc(fn,args){const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),12000);
     try{const r=await fetch(this.url+"/rest/v1/rpc/"+fn,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify(args),signal:ac.signal});
-      const t=await r.text();if(r.ok)SB.okAt=Date.now();else{SB.failAt=Date.now();SB.failMsg=t.slice(0,120)}if(!r.ok)throw new Error((()=>{try{return JSON.parse(t).message}catch(e){return t}})()||("HTTP "+r.status));return t?JSON.parse(t):null}finally{clearTimeout(tm)}},
+      const t=await r.text();if(r.ok){SB.okAt=Date.now();SB.ping(fn,args)}else{SB.failAt=Date.now();SB.failMsg=t.slice(0,120)}if(!r.ok)throw new Error((()=>{try{return JSON.parse(t).message}catch(e){return t}})()||("HTTP "+r.status));return t?JSON.parse(t):null}finally{clearTimeout(tm)}},
   words(n){return [...new Set(String(n||"").toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean))].slice(0,6)},
   async h(rid,w){const b=await crypto.subtle.digest("SHA-256",te.encode(rid+":"+w));return [...new Uint8Array(b)].slice(0,8).map(x=>x.toString(16).padStart(2,"0")).join("")}};
 /* check-in page for the person receiving a recall link (#ci=...). Shows nothing from this phone's roster. */
