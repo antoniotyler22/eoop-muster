@@ -116,6 +116,7 @@ const MODES={
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
 function secFix(){for(const m of S.roster){if(m.sec!=="ATT"&&!SECTIONS.some(s=>s[0]===m.sec))m.sec=SECTIONS[0][0]}}
 const DUTIES=["Full Duty","Light Duty","LIMDU"];
+const RANKS=["CWO5","CWO4","CWO3","CWO2","WO","MAJ","CAPT","1STLT","2NDLT","SGTMAJ","MGYSGT","1STSGT","MSGT","GYSGT","SSGT","SGT","CPL","LCPL","PFC","PVT"];
 const dutyOf=m=>DUTIES.includes(m.duty)?m.duty:"Full Duty";
 const SCODE={"Appointment on Base":"AOB","Appointment off Base":"AOFF","Company Duties":"DUTY","Operation":"OP","TAD":"TAD","Leave":"LV"};
 const SDEC=Object.fromEntries(Object.entries(SCODE).map(([a,b])=>[b,a]));
@@ -127,7 +128,7 @@ let lvBusy=false,lkBusy=false,lkTimer=null,lvIdx={};
 const lf=m=>tok(m).split(".").slice(1).join(".");
 const fullK=m=>String(m.name).toUpperCase().replace(/[^A-Z0-9]+/g," ").trim();
 async function livePollCal(){const B=S.board;if(!B||!B.ek)return;try{const rows=await SB.rpc("get_cal",{p_board:B.id,p_read_key:B.rk});let ch=false;
-  for(const r of rows||[]){const t=Date.parse(r.updated_at)||0;if(S.secCal[r.sec]&&S.secCal[r.sec].t>=t)continue;const o=await fdDec(B.ek,r.ct);if(!o||!Array.isArray(o.e))continue;const calCh=!S.secCal[r.sec]||sigF(S.secCal[r.sec].e)!==sigF(o.e.slice(0,2000));if(S.secCal[r.sec]&&calCh)actAdd("🗓",r.sec+" section calendar updated","cal");S.secCal[r.sec]={t,e:o.e.slice(0,2000)};ch=true;
+  for(const r of rows||[]){const t=Date.parse(r.updated_at)||0;if(S.secCal[r.sec]&&S.secCal[r.sec].t>=t)continue;const o=await fdDec(B.ek,r.ct);if(!o||!Array.isArray(o.e))continue;try{if(whoCalApply(r.sec,o))ch=true}catch(e){}const calCh=!S.secCal[r.sec]||sigF(S.secCal[r.sec].e)!==sigF(o.e.slice(0,2000));if(S.secCal[r.sec]&&calCh)actAdd("🗓",r.sec+" section calendar updated","cal");S.secCal[r.sec]={t,e:o.e.slice(0,2000)};ch=true;
     if(Array.isArray(o.d)){const ms=S.roster.filter(m=>m.sec===r.sec);const by={};ms.forEach(m=>(by[fullK(m)]=by[fullK(m)]||[]).push(m));const who=[];
       const dueWho=[];for(const x of o.d.slice(0,600)){const byId=x.id?ms.find(m=>m.id===String(x.id)):null;const hit=byId?[byId]:by[String(x.nk)];if(!hit||hit.length!==1)continue;const m=hit[0];let c=false;if(x.sb&&/^[A-Z0-9]{1,6}$/.test(x.sb)&&m.sub!==x.sb){m.sub=x.sb;c=true}
         if(x.du&&typeof x.du==="object"){const nd=sanDue(x.du);if(JSON.stringify(nd)!==JSON.stringify(sanDue(m.due||{}))){const chg=Object.keys(nd).filter(k=>JSON.stringify(nd[k])!==JSON.stringify((m.due||{})[k]));m.due=nd;dueWho.push(m.rank+" "+lastOf(m)+(chg.length?" ("+chg.slice(0,2).join(", ")+")":""))}}
@@ -135,6 +136,23 @@ async function livePollCal(){const B=S.board;if(!B||!B.ek)return;try{const rows=
       if(dueWho.length)actAdd("✅",r.sec+" leader updated due-outs: "+dueWho.slice(0,6).join(", ")+(dueWho.length>6?" +"+(dueWho.length-6)+" more":""),"ready");
       if(who.length)actAdd("📝",r.sec+" leader updated dates/details: "+who.slice(0,6).join(", ")+(who.length>6?" +"+(who.length-6)+" more":""),r.sec.toLowerCase())}}
   if(ch){save();if(view==="cal"||view==="board"||view==="p"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"&&a!=="SELECT"){const y=window.scrollY;render();window.scrollTo(0,y)}}}}catch(e){}}
+function chgTrim(){const old=Date.now()-120*86400000;S.chg=(S.chg||[]).filter(e=>e&&e.t>old).sort((a,b)=>b.t-a.t).slice(0,1500)}
+function chgMerge(list,how){S.chg=S.chg||[];const have=new Set(S.chg.map(e=>e.id));let n=0;
+  for(const e of list||[]){if(!e||!e.id||have.has(String(e.id))||!(+e.t))continue;const c={id:String(e.id).slice(0,16),t:+e.t,by:String(e.by||"").slice(0,40),bid:String(e.bid||"").slice(0,40),src:String(how||e.src||"").slice(0,50),mid:String(e.mid||"").slice(0,40),who:String(e.who||"").slice(0,70),f:String(e.f||"").slice(0,20),a:String(e.a==null?"":e.a).slice(0,80),b:String(e.b==null?"":e.b).slice(0,80)};S.chg.push(c);have.add(c.id);n++}
+  if(n)chgTrim();return n}
+function whoAddFrom(x,sec,by,how){const up=v=>String(v||"").toUpperCase().replace(/[|#<>]/g," ").replace(/\s+/g," ").trim();
+  const rank=RANKS.includes(up(x.rank))?up(x.rank):(MODE().rankDef||"LCPL"),name=up(x.name).replace(/[^A-Z0-9 ,.'-]/g,"").slice(0,60);if(!/^[A-Z' .-]+, ?[A-Z]/.test(name))return null;
+  const ex=S.roster.find(m=>fullK(m)===fullK({name}));if(ex)return {m:ex,dup:true};
+  const o={rank,name,sec:/^[A-Z0-9]{1,6}$/.test(sec||"")?sec:SECTIONS[0][0]};const ph=String(x.phone||"").replace(/\D/g,"");if(ph.length===10)o.phone=ph;if(/^[A-Z0-9]{1,6}$/.test(x.sub||"")&&S.level==="co")o.sub=x.sub;
+  const rec=addMarine(o,o.sec);if(!rec)return null;rec.detail="Added themselves ("+how+")";
+  S.chg=S.chg||[];S.chg.unshift({id:rndId(10),t:Date.now(),by:String(by||"").slice(0,40),bid:"",src:how,mid:rec.id,who:rec.rank+" "+rec.name,f:"added",a:"",b:"added themselves"});chgTrim();
+  actAdd("➕",(by||rec.rank+" "+lastOf(rec))+" added themselves to the roster ("+how+")","people");return {m:rec}}
+function whoCalApply(sec,o){let ch=false;const how=sec+" section leader link";S.seen=S.seen||{};const nmU=v=>String(v||"").toUpperCase().replace(/[^A-Z0-9 .'-]/g," ").replace(/\s+/g," ").trim().slice(0,40);
+  for(const x of (Array.isArray(o.a)?o.a:[]).slice(0,5)){const r=whoAddFrom(S.level==="co"?Object.assign({},x,{sub:x.sec}):x,sec,o.by&&nmU(o.by.n),how);if(r&&!r.dup)ch=true}
+  if(o.by&&o.by.n){const n=nmU(o.by.n),id=String(o.by.id||"");const pm=o.by.pend?S.roster.find(m=>fullK(m)===String(o.by.pend)):null;const k=pm?pm.id:S.roster.some(m=>m.id===id)?id:"n:"+n;const was=S.seen[k];
+    if(!was||was.how!==how||Date.now()-was.t>3600000){if(!was||was.how!==how)actAdd("👤",n+" is on the app ("+how+")","people");S.seen[k]={t:Date.now(),who:n,how};ch=true}}
+  if(Array.isArray(o.c)&&o.c.length&&chgMerge(o.c.slice(0,300),how))ch=true;
+  return ch}
 async function livePollBoard(){const B=S.board;if(!B||lvBusy)return;lvBusy=true;
   try{const rows=await SB.rpc("get_board_updates",{p_board:B.id,p_read_key:B.rk,p_after:B.after||0});B.err="";
     if(rows&&rows.length){const latest={};for(const r of rows){B.after=Math.max(B.after||0,+r.id);latest[r.sec]=r}
@@ -155,6 +173,9 @@ async function livePollBoard(){const B=S.board;if(!B||lvBusy)return;lvBusy=true;
       toast("Live: "+msgs.join(" · "));try{navigator.vibrate&&navigator.vibrate(30)}catch(e){}}
   }catch(e){B.err=String(e.message||e).slice(0,80)}finally{lvBusy=false}}
 function actAdd(ic,txt,go){S.act=S.act||[];S.act.unshift({t:Date.now(),ic,txt:String(txt).slice(0,220),go:go||""});if(S.act.length>300)S.act.length=300}
+function addMarine(o,defSec){const sec=o.sec||defSec||SECTIONS[0][0];const rec={id:"a"+Date.now().toString(36)+rndId(3),rank:o.rank||(MODE().rankDef||"LCPL"),name:o.name.toUpperCase().slice(0,60),sec,status:o.status||"On Hand",duty:"Full Duty",detail:"Added in app",loc:"",start:"",end:""};
+  if(o.sub)rec.sub=o.sub;if(o.phone)rec.phone=o.phone;if(S.source==="sample"){S.roster=[];S.source="mol";S.loadedAt=new Date().toLocaleString([], {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}
+  if(S.roster.some(m=>fullK(m)===fullK(rec)))return null;S.roster.push(rec);return rec}
 let coBusy=false,coPT=null,coPushBusy=false,coOpen=null,coNew=false;
 function coPayload(){const R=S.coRep;const ms=S.roster.map(m=>{const o={rank:m.rank,sec:m.sec,status:m.status,duty:dutyOf(m)};if(R.names!==false){o.name=m.name;if(m.start)o.start=m.start;if(m.end)o.end=m.end;if(m.loc)o.loc=m.loc;if(m.detail)o.detail=String(m.detail).slice(0,60)}return o});
   return {v:1,name:R.name||unitName(),secs:SECTIONS.map(x=>x.slice()),ms}}
@@ -181,7 +202,7 @@ async function rpPublish(force){const B=S.board;if(!B||!B.sk||rpBusy||S.role==="
   catch(e){const t=String(e.message||e);B.rerr=/could not find|schema cache|404/i.test(t)?"Server needs setup part 11a.":t.slice(0,80);rawSave()}
   finally{rpBusy=false}}
 const sigF=v=>fnv(JSON.stringify(v||[]));
-const SYNC_SKIP=["sync","pushOn","link","ts","onb","role","me","ask","askSt","dev","hubMode","ws","wsCur","pendLink"];
+const SYNC_SKIP=["sync","pushOn","link","ts","onb","role","me","who","ask","askSt","dev","hubMode","ws","wsCur","pendLink"];
 const fnv=str=>{let h=0x811c9dc5;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)}return (h>>>0).toString(36)+str.length.toString(36)};
 const sig=v=>fnv(JSON.stringify(v===undefined?null:v));
 const normCode=c=>String(c||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
@@ -211,6 +232,7 @@ async function fdKey(ek){return fdKeys[ek]=fdKeys[ek]||await crypto.subtle.impor
 async function fdEnc(ek,o){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},await fdKey(ek),new TextEncoder().encode(JSON.stringify(o))));const a=new Uint8Array(12+ct.length);a.set(iv);a.set(ct,12);return b64e(a)}
 async function fdDec(ek,s){try{const a=b64d(s);return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:a.slice(0,12)},await fdKey(ek),a.slice(12))))}catch(e){return null}}
 function lastOf(m){return (m.name.split(",")[0]||"").trim().toUpperCase()}
+function rndId(n){const a=crypto.getRandomValues(new Uint8Array(n));return [...a].map(x=>"abcdefghijklmnopqrstuvwxyz0123456789"[x%36]).join("")}
   const DEF0 = DEF_SECS.map((s) => s.slice());
   function load(R: any) {
     S = Object.assign({ roster: [], source: "sample" }, R);
@@ -298,13 +320,12 @@ Deno.serve(async (req) => {
       const K = await C.codeKeys(code);
       const v = await SB.rpc("backup_ver", { p_id: K.id, p_key: K.wk });
       if (v == null) return json({ error: "No backup for this board yet. Tap Back up now first." }, 404);
-      // The server hub runs every minute on our servers, so it's a Pro feature. HUB_REQUIRE_PRO=1 turns the check on (off by default
-      // until every platform can buy Pro and most iPhones run 1.3).
+      // The server hub runs every minute on our servers, so it's a Pro feature (HUB_REQUIRE_PRO=0 turns the check off).
       let ent: string | null = null;
       if (typeof body.pro === "string" && body.pro) {
         try { ent = await SB.rpc("pro_ent_for", { p_tok: body.pro, p_feed: null, p_mk: null }); } catch { ent = null; }
       }
-      if (!ent && Deno.env.get("HUB_REQUIRE_PRO") === "1") return json({ error: "The server hub is part of Accounted For Pro.", pro: true }, 402);
+      if (!ent && (Deno.env.get("HUB_REQUIRE_PRO") ?? "1") !== "0") return json({ error: "The server hub is part of Accounted For Pro.", pro: true }, 402);
       const rec: any = { id: K.id, ct: await seal(code), seen_at: new Date().toISOString(), err: null };
       if (ent) rec.ent_id = ent;
       const put = (r: any) => rest("hub_jobs?on_conflict=id", { method: "POST", body: JSON.stringify(r), headers: { Prefer: "resolution=merge-duplicates,return=minimal" } });

@@ -152,13 +152,12 @@ Deno.serve(async (req) => {
       const K = await C.codeKeys(code);
       const v = await SB.rpc("backup_ver", { p_id: K.id, p_key: K.wk });
       if (v == null) return json({ error: "No backup for this board yet. Tap Back up now first." }, 404);
-      // The server hub runs every minute on our servers, so it's a Pro feature. HUB_REQUIRE_PRO=1 turns the check on (off by default
-      // until every platform can buy Pro and most iPhones run 1.3).
+      // The server hub runs every minute on our servers, so it's a Pro feature (HUB_REQUIRE_PRO=0 turns the check off).
       let ent: string | null = null;
       if (typeof body.pro === "string" && body.pro) {
         try { ent = await SB.rpc("pro_ent_for", { p_tok: body.pro, p_feed: null, p_mk: null }); } catch { ent = null; }
       }
-      if (!ent && Deno.env.get("HUB_REQUIRE_PRO") === "1") return json({ error: "The server hub is part of Accounted For Pro.", pro: true }, 402);
+      if (!ent && (Deno.env.get("HUB_REQUIRE_PRO") ?? "1") !== "0") return json({ error: "The server hub is part of Accounted For Pro.", pro: true }, 402);
       const rec: any = { id: K.id, ct: await seal(code), seen_at: new Date().toISOString(), err: null };
       if (ent) rec.ent_id = ent;
       const put = (r: any) => rest("hub_jobs?on_conflict=id", { method: "POST", body: JSON.stringify(r), headers: { Prefer: "resolution=merge-duplicates,return=minimal" } });
