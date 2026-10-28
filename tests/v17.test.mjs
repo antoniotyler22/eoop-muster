@@ -94,7 +94,7 @@ test("visitors: sign in and out; they show in an emergency check-in and the shar
     a.$("#vsName").value = "Jordan Lee"; a.$("#vsHost").value = "Front office";
     a.$("#vsIn").click();
     assert.match(a.$("#main").textContent, /1 on site/);
-    assert.match(a.w.eval(`reportText()`), /VISITORS ON SITE: 1 \(Jordan Lee\)/);
+    assert.match(a.w.eval(`reportText()`), /VISITORS\/CONTRACTORS ON SITE: 1 \(1 visitor\)[^\n]*\nJordan Lee \(visitor\)/);
     a.w.eval(`view="board";render()`);
     a.$("#v11Em").click(); a.$("#v11Em").click();
     await sleep(80);

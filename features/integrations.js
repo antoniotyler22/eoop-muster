@@ -69,14 +69,24 @@ document.addEventListener("click",e=>{const t=e.target;
 document.addEventListener("change",e=>{if(e.target.id==="intAuto"){S.integ=Object.assign({},S.integ||{},{auto:e.target.checked});save()}});
 
 /* ---------- text everyone from the server (Pro) ---------- */
-async function smsAll(){const pool=recallPool().filter(m=>m.phone&&!(S.rc.ci||{})[m.id]);if(!pool.length){toast("No one left to text.");return}
+/* Each person goes with the scrambled name their reply checks in as (the same hashes the live check-in matches on),
+   so with the "sms-in" webhook set up they can just reply 1, 2 or 3. Visitors on site with a number are texted too. */
+async function replyWords(m){const rid=S.rc.rid;const last=SB.words(lastOf(m)),first=SB.words((m.name.split(",")[1]||"").trim().split(/\s+/)[0]||"");
+  const w=await Promise.all(last.slice(0,3).map(x=>SB.h(rid,x)));const rk=String(m.rank||"").toUpperCase().replace(/[^A-Z0-9]/g,"");if(rk)w.push(await SB.h(rid,rk));if(first[0])w.push(await SB.h(rid,first[0]));
+  w.push(await SB.h(rid,"ID:"+m.id));return w.slice(-6)}
+window.replyWords=replyWords;
+async function smsAll(){const pool=recallPool().filter(m=>m.phone&&!(S.rc.ci||{})[m.id]);
+  const vis=(typeof visitorsToText==="function"?visitorsToText():[]);
+  if(!pool.length&&!vis.length){toast("No one left to text.");return}
   const tok=typeof proTok==="function"?proTok():"";if(!tok){toast("Texting from the server is part of Pro.");return}
   const L=S.rc.live||{};if(!L.ok||!L.key){toast("Turn on live check-ins first.");return}
-  try{const r=await post("sms",{pro:tok,to:pool.map(m=>m.phone),recall:ciRid(),key:L.key,link:ciLink()});S.rc.smsAt=Date.now();S.rc.sent=S.rc.sent||{};pool.forEach(m=>S.rc.sent[m.id]=1);save();toast(`Texted ${r.sent} of ${pool.length}`+(r.failed?` · ${r.failed} failed`:""));render()}
+  try{const ppl=[];for(const m of pool)ppl.push({to:m.phone,w:await replyWords(m)});for(const v of vis)ppl.push({to:v.ph,w:[await SB.h(S.rc.rid,"VIS:"+v.id)]});
+    const r=await post("sms",{pro:tok,to:ppl.map(p=>p.to),ppl,recall:ciRid(),key:L.key,link:ciLink()});S.rc.smsAt=Date.now();S.rc.smsReply=!!r.reply;S.rc.sent=S.rc.sent||{};pool.forEach(m=>S.rc.sent[m.id]=1);save();
+    const total=pool.length+vis.length;toast(`Texted ${r.sent} of ${total}`+(r.failed?` · ${r.failed} failed`:"")+(r.reply?" · replies check people in":""));render()}
   catch(e){toast(String(e.message||e).slice(0,90))}}
 const _rr=renderRecall;
 renderRecall=function(){_rr.apply(this,arguments);if(!S.rc.open||!S.rc.live||!S.smsSrv)return;const at=$("#main .rp-panel")||$("#main .mbar");
-  if(at)at.insertAdjacentHTML("afterend",`<div class="panel"><button class="btn" data-sms-all>📨 Text the check-in link to everyone not checked in</button><p class="note">Sent from the server (Pro). Numbers are passed to the text service for delivery and not kept.${S.rc.smsAt?" Last sent "+esc(ago(S.rc.smsAt))+".":""}</p></div>`)};
+  if(at)at.insertAdjacentHTML("afterend",`<div class="panel"><button class="btn" data-sms-all>📨 Text the check-in link to everyone not checked in</button><p class="note">Sent from the server (Pro). Numbers are passed to the text service for delivery and not kept.${S.rc.smsAt?" Last sent "+esc(ago(S.rc.smsAt))+".":""}${S.rc.smsReply?" <b>No app or data needed:</b> anyone texted can just reply 1 = OK, 2 = delayed, 3 = need help, and it counts them here.":""}</p></div>`)};
 document.addEventListener("click",e=>{if(e.target.closest("[data-sms-all]")){e.preventDefault();const b=e.target.closest("[data-sms-all]");b.disabled=true;smsAll().finally(()=>{b.disabled=false})}});
 /* Show the server-texting button only once the sms function answers (it needs Twilio set up). */
 setTimeout(()=>{if(!(typeof proTok==="function"&&proTok()))return;fetch(fn("sms"),{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:'{"ping":1}'}).then(r=>r.ok?r.json():null).then(j=>{const on=!!(j&&j.ready);if(on!==!!S.smsSrv){S.smsSrv=on;save()}}).catch(()=>{})},4000);

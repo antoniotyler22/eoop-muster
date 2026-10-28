@@ -44,6 +44,9 @@ export const SOURCES = [
   "features/send-out.js",
   "features/co-command.js",
   "features/adoption.js",
+  "features/drills.js",
+  "features/family.js",
+  "features/roster-import.js",
 ];
 
 export function build() {

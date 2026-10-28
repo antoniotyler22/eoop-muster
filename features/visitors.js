@@ -11,25 +11,40 @@ window.visitorsOnSite=()=>onSite().length;
 const hm=t=>new Date(t).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
 const day=t=>new Date(t).toLocaleDateString([],{weekday:"short",month:"short",day:"numeric"});
 function prune(){const cut=Date.now()-KEEP_DAYS*864e5;const L=vlist();const keep=L.filter(v=>!v.out||v.out>cut).slice(0,MAX);if(keep.length!==L.length){S.vis=keep;save()}}
-let vv={msg:"",armed:"",kiosk:false,last:""};
+let vv={msg:"",armed:"",kiosk:false,last:"",ty:"Visitor"};
+/* Who's on site besides the team: visitors, contractors, vendors and deliveries all count in an emergency. */
+const TYPES=[["Visitor","🪪"],["Contractor","🦺"],["Vendor","📦"],["Delivery","🚚"]];
+const tyOf=v=>TYPES.some(t=>t[0]===v.ty)?v.ty:"Visitor";const icOf=v=>(TYPES.find(t=>t[0]===tyOf(v))||TYPES[0])[1];
+function byType(L){const o={};for(const v of L){const k=tyOf(v);o[k]=(o[k]||0)+1}return TYPES.map(t=>t[0]).filter(k=>o[k]).map(k=>o[k]+" "+(o[k]>1?k.toLowerCase()+"s":k.toLowerCase())).join(", ")}
+window.visitorsByType=()=>byType(onSite());
+/* For the server text: visitors on site with a number who aren't accounted for yet. */
+window.visitorsToText=()=>S.rc&&S.rc.open?onSite().filter(v=>v.ph&&v.ok!==S.rc.rid&&/^\d{10}$/.test(String(v.ph).replace(/\D/g,"").slice(-10))).map(v=>({id:v.id,ph:String(v.ph)})):[];
+/* A live check-in made for a visitor (their reply to the server text): mark them accounted for. */
+let vHash={rid:"",m:new Map()};
+window.ciVisitorHit=async(set,code,note)=>{const rc=S.rc;if(!rc||!rc.rid)return false;const on=onSite();if(!on.length)return false;
+  if(vHash.rid!==rc.rid){vHash={rid:rc.rid,m:new Map()}}
+  for(const v of on){if(!vHash.m.has(v.id))vHash.m.set(v.id,await SB.h(rc.rid,"VIS:"+v.id));if(set.has(vHash.m.get(v.id))){v.ok=rc.rid;v.okc=code;v.okn=String(note||"").slice(0,40);save();
+    if(code===3&&typeof actAdd==="function")actAdd("⚠",tyOf(v)+" "+v.n+" needs help","visitors");return true}}
+  return false};
 
 function signIn(){const g=id=>(($("#"+id)||{}).value||"").trim();const n=g("vsName");if(!n){vv.msg="Type the visitor's name.";draw();const i=$("#vsName");if(i)i.focus();return}
-  const v={id:"v"+Date.now().toString(36)+rndId(3),n:n.slice(0,60),host:g("vsHost").slice(0,60),org:g("vsOrg").slice(0,60),ph:(typeof normPh==="function"?normPh(g("vsPh")):g("vsPh")).slice(0,20),in:Date.now(),out:0};
-  vlist().unshift(v);save();vv.last=v.n;vv.msg="";if(!vv.kiosk)actAdd("🪪","Visitor signed in: "+v.n+(v.host?" (visiting "+v.host+")":""),"visitors");
+  const v={id:"v"+Date.now().toString(36)+rndId(3),n:n.slice(0,60),ty:TYPES.some(t=>t[0]===vv.ty)?vv.ty:"Visitor",host:g("vsHost").slice(0,60),org:g("vsOrg").slice(0,60),ph:(typeof normPh==="function"?normPh(g("vsPh")):g("vsPh")).slice(0,20),in:Date.now(),out:0};
+  vlist().unshift(v);save();vv.last=v.n;vv.msg="";if(!vv.kiosk)actAdd(icOf(v),tyOf(v)+" signed in: "+v.n+(v.host?" (visiting "+v.host+")":""),"visitors");vv.ty="Visitor";
   draw();toast(vv.kiosk?"Welcome, "+v.n.split(" ")[0]+". You're signed in.":"Signed in: "+v.n+". They count in an emergency check-in.");setTimeout(()=>{const i=$("#vsName");if(i)i.focus({preventScroll:true})},60)}
-function signOut(id){const v=vlist().find(x=>x.id===id);if(!v||v.out)return;v.out=Date.now();save();if(!vv.kiosk)actAdd("👋","Visitor signed out: "+v.n,"visitors");
+function signOut(id){const v=vlist().find(x=>x.id===id);if(!v||v.out)return;v.out=Date.now();save();if(!vv.kiosk)actAdd("👋",tyOf(v)+" signed out: "+v.n,"visitors");
   toast(vv.kiosk?"Thanks, "+v.n.split(" ")[0]+". You're signed out.":"Signed out: "+v.n);draw()}
-function csv(){const q=s=>'"'+String(s==null?"":s).replace(/"/g,'""')+'"';const L=[["Name","Visiting","Company","Phone","Signed in","Signed out"].map(q).join(",")];
-  for(const v of vlist())L.push([v.n,v.host,v.org,v.ph,new Date(v.in).toLocaleString(),v.out?new Date(v.out).toLocaleString():"On site"].map(q).join(","));return L.join("\r\n")}
+function csv(){const q=s=>'"'+String(s==null?"":s).replace(/"/g,'""')+'"';const L=[["Name","Type","Visiting","Company","Phone","Signed in","Signed out"].map(q).join(",")];
+  for(const v of vlist())L.push([v.n,tyOf(v),v.host,v.org,v.ph,new Date(v.in).toLocaleString(),v.out?new Date(v.out).toLocaleString():"On site"].map(q).join(","));return L.join("\r\n")}
 
 function formHTML(){return `<div class="panel" id="vsForm"><b style="font-size:18px">${vv.kiosk?"Welcome! Please sign in":"Sign a visitor in"}</b>
+  <div class="evts" role="group" aria-label="Who is signing in" style="margin-top:6px">${TYPES.map(([t,i])=>`<button type="button" data-vsty="${t}" aria-pressed="${vv.ty===t}">${i} ${t}</button>`).join("")}</div>
   <label for="vsName">Name</label><input id="vsName" type="text" maxlength="60" autocomplete="off" autocapitalize="words" placeholder="First and last name">
   <label for="vsHost">Visiting</label><input id="vsHost" type="text" maxlength="60" autocomplete="off" autocapitalize="words" placeholder="Who or which office">
   <div class="row2"><div><label for="vsOrg">Company (optional)</label><input id="vsOrg" type="text" maxlength="60" autocomplete="off"></div>
   <div><label for="vsPh">Phone (optional)</label><input id="vsPh" type="tel" inputmode="tel" maxlength="20" autocomplete="off"></div></div>
   <button class="btn" id="vsIn" style="min-height:56px;font-size:18px">Sign in</button></div>`}
 function rowHTML(v,showOut){return `<div class="rrow" style="--sc:var(${v.out?"--line":"--s-onhand"})"><div class="rtop"><div class="who"><b>${esc(v.n)}</b>
-  <div class="ph">${esc([v.host?"Visiting "+v.host:"",v.org].filter(Boolean).join(" · "))}${v.host||v.org?" · ":""}In ${esc(hm(v.in))}${v.out?" · Out "+esc(hm(v.out)):""}</div></div>
+  <div class="ph">${esc(icOf(v)+" "+tyOf(v))} · ${esc([v.host?"Visiting "+v.host:"",v.org].filter(Boolean).join(" · "))}${v.host||v.org?" · ":""}In ${esc(hm(v.in))}${v.out?" · Out "+esc(hm(v.out)):""}</div></div>
   ${showOut&&!v.out?`<button class="btn alt" data-vsout="${esc(v.id)}">Sign out</button>`:""}</div></div>`}
 function draw(){if(view!=="visitors")return;const y=window.scrollY;renderVisitors();window.scrollTo(0,y)}
 function renderVisitors(){prune();const on=onSite();const today=new Date().toDateString();
@@ -39,7 +54,7 @@ function renderVisitors(){prune();const on=onSite();const today=new Date().toDat
     h+=formHTML();
     h+=`<h2>Leaving? Tap your name</h2>`+(on.length?`<div class="alist">${on.map(v=>`<button class="rrow vs-out-big" data-vsout="${esc(v.id)}" style="--sc:var(--s-onhand);width:100%;text-align:left"><b>${esc(v.n)}</b><span class="ph">Signed in ${esc(hm(v.in))} · tap to sign out</span></button>`).join("")}</div>`:`<div class="card"><p class="note" style="margin:0">No one is signed in.</p></div>`);
     $("#main").innerHTML=h;return}
-  h+=`<div class="sech" style="margin-top:12px"><h2>Visitors</h2><span class="chip">${on.length} on site</span></div>`;
+  h+=`<div class="sech" style="margin-top:12px"><h2>Visitors</h2><span class="chip">${on.length} on site${on.length?" · "+esc(byType(on)):""}</span></div>`;
   h+=formHTML();
   h+=`<h2>On site now</h2>`+(on.length?`<div class="alist">${on.map(v=>rowHTML(v,true)).join("")}</div>`:`<div class="card"><p class="note" style="margin:0">No visitors on site.</p></div>`);
   if(earlier.length)h+=`<h2>Earlier today</h2><div class="alist">${earlier.map(v=>rowHTML(v,false)).join("")}</div>`;
@@ -54,11 +69,12 @@ function kiosk(on){vv.kiosk=on;vv.armed="";document.body.classList.toggle("vs-ki
   const r=_r.apply(this,arguments);try{homeChip()}catch(e){}return r}}
 document.addEventListener("click",e=>{if(!e.target.closest)return;const t=e.target;
   if(t.closest("#vsIn")){signIn();return}
+  const ty=t.closest("[data-vsty]");if(ty){vv.ty=ty.dataset.vsty;document.querySelectorAll("[data-vsty]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.vsty===vv.ty));return}
   const o=t.closest("[data-vsout]");if(o){signOut(o.dataset.vsout);return}
   if(t.closest("#vsKiosk")){kiosk(true);return}
   if(t.closest("#vsKioskEnd")){if(vv.armed!=="k"){vv.armed="k";draw();setTimeout(()=>{if(vv.armed==="k"){vv.armed="";draw()}},4000);return}kiosk(false);return}
   if(t.closest("#vsCsv")){shareFile(csv(),(unitName()+" visitors "+new Date().toISOString().slice(0,10)).replace(/[^\w -]+/g,"")+".csv","text/csv");return}
-  const ok=t.closest("[data-vsok]");if(ok){const v=vlist().find(x=>x.id===ok.dataset.vsok);if(v&&S.rc){v.ok=v.ok===S.rc.rid?"":S.rc.rid;save();if(typeof render==="function"){const y=window.scrollY;render();window.scrollTo(0,y)}}return}});
+  const ok=t.closest("[data-vsok]");if(ok){const v=vlist().find(x=>x.id===ok.dataset.vsok);if(v&&S.rc){v.ok=v.ok===S.rc.rid?"":S.rc.rid;v.okc=0;v.okn="";save();if(typeof render==="function"){const y=window.scrollY;render();window.scrollTo(0,y)}}return}});
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&/^vs(Name|Host|Org|Ph)$/.test(e.target.id||"")){e.preventDefault();signIn()}},true);
 {const css=document.createElement("style");css.textContent=`body.vs-kiosk header.top,body.vs-kiosk #tabbar,body.vs-kiosk #subnav{display:none!important}
 body.vs-kiosk #main{padding-top:calc(env(safe-area-inset-top,0px) + 12px)}
@@ -69,19 +85,21 @@ body.vs-kiosk #vsForm input{font-size:20px;min-height:52px}`;document.head.appen
 /* ---------- emergency check-in: who else is in the building ---------- */
 {const _rr=renderRecall;renderRecall=function(){_rr.apply(this,arguments);const on=onSite();if(!S.rc||!S.rc.open||!on.length)return;const main=$("#main");if(!main)return;
   const okN=on.filter(v=>v.ok===S.rc.rid).length;
-  const html=`<div class="panel" id="vsEm" style="border-color:var(${okN===on.length?"--s-onhand":"--warn"})"><b>🪪 Visitors on site: ${okN} of ${on.length} accounted for</b>
-    <div class="alist" style="margin-top:6px">${on.map(v=>`<div class="rrow" style="--sc:var(${v.ok===S.rc.rid?"--s-onhand":"--warn"})"><div class="rtop"><div class="who"><b>${esc(v.n)}</b><div class="ph">${esc(v.host?"Visiting "+v.host:"")}${v.ph?` · <a href="tel:${esc(v.ph)}">Call</a>`:""}</div></div>
+  const html=`<div class="panel" id="vsEm" style="border-color:var(${okN===on.length?"--s-onhand":"--warn"})"><b>🪪 Visitors and contractors on site: ${okN} of ${on.length} accounted for</b>
+    <div class="note">${esc(byType(on))}</div>
+    <div class="alist" style="margin-top:6px">${on.map(v=>`<div class="rrow" style="--sc:var(${v.ok===S.rc.rid?(v.okc===3?"--warn":"--s-onhand"):"--warn"})"><div class="rtop"><div class="who"><b>${esc(v.n)}</b><div class="ph">${esc(icOf(v)+" "+tyOf(v))}${v.org?" · "+esc(v.org):""}${v.host?" · Visiting "+esc(v.host):""}${v.ph?` · <a href="tel:${esc(v.ph)}">Call</a>`:""}</div>${v.ok===S.rc.rid&&v.okc?`<div class="ph" style="font-weight:700;color:var(${v.okc===3?"--warn":v.okc===2?"--s-duty":"--s-onhand"})">${v.okc===3?"⚠ NEED HELP":v.okc===2?"Delayed":"✓ Replied: OK"}${v.okn?" · "+esc(v.okn):""}</div>`:""}</div>
       <button class="btn${v.ok===S.rc.rid?" alt":""}" data-vsok="${esc(v.id)}" aria-pressed="${v.ok===S.rc.rid}">${v.ok===S.rc.rid?"✓ Accounted for":"Mark accounted for"}</button></div></div>`).join("")}</div></div>`;
   const first=main.querySelector(".panel");if(first)first.insertAdjacentHTML("afterend",html);else main.insertAdjacentHTML("afterbegin",html)}}
 /* the shared headcount gets a visitors line */
 {const _rt=reportText;reportText=function(){let t=_rt.apply(this,arguments);const on=onSite();if(!on.length)return t;
-  return t+"\nVISITORS ON SITE: "+on.length+" ("+on.slice(0,12).map(v=>v.n).join(", ")+(on.length>12?", …":"")+")"}}
+  const ok=S.rc&&S.rc.open?on.filter(v=>v.ok===S.rc.rid).length:-1;
+  return t+"\nVISITORS/CONTRACTORS ON SITE: "+on.length+" ("+byType(on)+")"+(ok>=0?" · "+ok+" accounted for":"")+"\n"+on.slice(0,12).map(v=>v.n+" ("+tyOf(v).toLowerCase()+")").join(", ")+(on.length>12?", …":"")}}
 
 /* ---------- Home: a line when visitors are on site ---------- */
 function homeChip(){if(view!=="board"||vv.kiosk)return;const on=onSite().length;const old=$("#vsHome");if(!on){if(old)old.remove();return}
-  const html=`<button class="chip" id="vsHome" data-go="visitors" style="cursor:pointer;margin:8px 0 0">🪪 ${on} visitor${on>1?"s":""} on site</button>`;
+  const html=`<button class="chip" id="vsHome" data-go="visitors" style="cursor:pointer;margin:8px 0 0">🪪 ${esc(byType(onSite()))} on site</button>`;
   if(old){old.outerHTML=html;return}const hero=document.querySelector("#main .card.hero");if(hero)hero.insertAdjacentHTML("afterend",html)}
 
 /* ---------- Tools tile + help ---------- */
-if(typeof HELP==="object")HELP.visitors=["Visitors","Sign guests in and out so everyone in the building counts in an emergency.",["Sign in: name and who they're visiting. Company and phone are optional.","On site now: tap Sign out as they go.","Emergency check-in lists visitors on site; tap Mark accounted for as you find each one. Shared headcount adds a visitors line.","Kiosk mode: a phone or tablet at the door where visitors sign themselves in and out. Staff tap Exit kiosk twice to close it.","Export log saves a spreadsheet of every visit."]];
+if(typeof HELP==="object")HELP.visitors=["Visitors","Sign visitors, contractors, vendors and deliveries in and out so everyone in the building counts in an emergency.",["Sign in: pick Visitor, Contractor, Vendor or Delivery, then name and who they're visiting. Company and phone are optional.","With a phone number, they get the emergency check-in text too and can reply 1, 2 or 3 (Pro server texting).","On site now: tap Sign out as they go.","Emergency check-in lists visitors on site; tap Mark accounted for as you find each one. Shared headcount adds a visitors line.","Kiosk mode: a phone or tablet at the door where visitors sign themselves in and out. Staff tap Exit kiosk twice to close it.","Export log saves a spreadsheet of every visit."]];
 })();

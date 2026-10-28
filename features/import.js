@@ -13,6 +13,7 @@ const H={
   phone:/^(phone|cell|mobile|cell ?phone|mobile ?phone|phone ?number|telephone|tel|primary ?phone|contact ?number)$/i,
   phone2:/^(alt(ernate)? ?phone|phone ?2|second(ary)? ?phone|home ?phone|work ?phone|other ?phone)$/i,
   status:/^(status|duty ?status)$/i,
+  fam:/^(parent|guardian|family|mom|dad|mother|father)( ?\/ ?(guardian|parent))?( ?[12])?( ?(phone|cell|mobile|number|contact( ?number)?))?$/i,
 };
 const norm=s=>String(s||"").replace(/[_*#:]+/g," ").replace(/\s+/g," ").trim();
 const BAD=/edipi|dod ?id|ssn|social|dob|birth|sex|gender|race|religion|blood|nok|next of kin|emerg|spouse|salary|pay|address|zip/i;
@@ -38,7 +39,7 @@ function flexParse(rows){
     const st=g("status");
     out.push({id:"f"+(++n),rank:toRank(g("rank")),name:name.toUpperCase().slice(0,48),sec:findSec(g("sec")),
       status:st&&typeof mapStatus==="function"?mapStatus(st):"On Hand",detail:st&&!STATUSES.includes(st)?st.slice(0,40):"",loc:"",start:"",end:"",
-      phone:normPh(g("phone"))||undefined,phone2:normPh(g("phone2"))||undefined})}
+      phone:normPh(g("phone"))||undefined,phone2:normPh(g("phone2"))||normPh(g("fam"))||undefined})}
   if(!out.length)throw new Error("Found the header row but no people under it.");
   return {roster:out,own:false,newSecs,cols:Object.keys(col)};
 }

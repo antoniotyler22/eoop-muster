@@ -164,3 +164,24 @@ test("company command notes: command key writes cmd rows only; platoon key reads
   assert.throws(() => anon(`select * from public.get_cmd(${q(co)}, ${q(rk.replace(/r$/, "s"))})`), /link not valid/);
   assert.equal(anon(`select count(*) from public.get_units(${q(co)}, ${q(rk)})`), "2", "command still sees everything");
 });
+
+test("text-back check-in: only the server stores routes; a reply checks in as the person texted; closing wipes them", { skip }, () => {
+  const key = "k".repeat(30), rc = "smsrc0001";
+  const asServer = (sql) => pg.psql(`set role service_role; ${sql}`);
+  anon(`select public.create_recall(${q(rc)}, ${q(key)})`);
+  const ph = sha("af-sms|pepper|+18085550100"), other = sha("af-sms|pepper|+18085550199");
+  const rows = JSON.stringify([{ k: ph, w: ["aaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbb", "not-a-hash"] }, { k: "short", w: ["cccccccccccccccc"] }]);
+  assert.throws(() => anon(`select public.sms_routes_put(${q(rc)}, ${q(rows)}::jsonb)`), /permission denied/, "the public can't add routes");
+  assert.throws(() => anon(`select public.sms_reply(${q(ph)}, 1, '')`), /permission denied/, "the public can't fake a reply");
+  assert.throws(() => anon(`select count(*) from public.sms_routes`), /permission denied/);
+  assert.equal(asServer(`select public.sms_routes_put(${q(rc)}, ${q(rows)}::jsonb)`), "1", "bad keys are skipped");
+  assert.equal(pg.psql(`select array_to_string(words, ',') from public.sms_routes where ph_key = ${q(ph)}`), "aaaaaaaaaaaaaaaa,bbbbbbbbbbbbbbbb");
+  assert.equal(asServer(`select public.sms_reply(${q(ph)}, 2, 'ETA 1400')`), rc);
+  assert.equal(anon(`select code || '|' || note || '|' || array_to_string(words, ',') from public.get_checkins(${q(rc)}, ${q(key)}, 0)`), "2|ETA 1400|aaaaaaaaaaaaaaaa,bbbbbbbbbbbbbbbb");
+  assert.equal(asServer(`select coalesce(public.sms_reply(${q(other)}, 1, ''), 'none')`), "none", "a number that wasn't texted counts for nothing");
+  assert.throws(() => asServer(`select public.sms_reply(${q(ph)}, 7, '')`), /bad code/);
+  anon(`select public.close_recall(${q(rc)}, ${q(key)})`);
+  assert.equal(pg.psql(`select count(*) from public.sms_routes where recall_id = ${q(rc)}`), "0", "closing the check-in deletes its routes");
+  assert.equal(asServer(`select coalesce(public.sms_reply(${q(ph)}, 1, ''), 'none')`), "none");
+  assert.throws(() => asServer(`select public.sms_routes_put(${q(rc)}, ${q(rows)}::jsonb)`), /recall closed/);
+});

@@ -40,3 +40,42 @@ test("server texting: the server writes the text; only the app's own check-in li
   assert.equal(buildText(base + "ci=abc12345&u=Free+%24%24%24+http%3A%2F%2Fx.co", "abc12345", app), null);
   assert.equal(buildText(base + "ci=abc12345&u=X&to=call-me", "abc12345", app), null);
 });
+
+test("server texting: reply routes and family texts are written by the server, inputs checked", async () => {
+  const { cleanPeople, familyTexts, phKey } = await import("../supabase/functions/sms/index.ts");
+  const ppl = cleanPeople([{ to: "(808) 555-0100", w: ["0123456789abcdef", "bad", 5] }, { to: "808-555-0100", w: ["0123456789abcdef"] }, { to: "123", w: ["0123456789abcdef"] }, { to: "8085550199", w: [] }]);
+  assert.deepEqual(ppl, [{ to: "+18085550100", w: ["0123456789abcdef"] }]);
+  assert.match(buildText("https://antoniotyler22.github.io/eoop-muster/#ci=abcdefgh1&u=1ST", "abcdefgh1", ["https://antoniotyler22.github.io/eoop-muster/"], true), /Or reply 1 = OK, 2 = delayed, 3 = need help\.$/);
+  const f = familyTexts([{ to: "8085550101", n: "Ana R." }, { to: "808-555-0101", n: "Leo R." }, { to: "8085550199", n: "Max L." }, { to: "8085550188", n: "<script>" }], "Lincoln Elem", "10:42 AM", "North gym doors");
+  assert.equal(f.length, 2);
+  assert.equal(f[0].body, "Lincoln Elem: Ana R. and Leo R. are accounted for and safe as of 10:42 AM. Pickup: North gym doors. More updates will come by text.");
+  assert.equal(familyTexts([], "Lincoln Elem", "soon", ""), null, "the time is checked");
+  assert.equal(familyTexts([], "Lincoln Elem", "10:42", "http://evil.example/?x=1"), null, "no links in the pickup place");
+  assert.equal(familyTexts([], "<b>", "10:42", ""), null);
+  const k = await phKey("+18085550100", "pepper");
+  assert.match(k, /^[0-9a-f]{64}$/);
+  const inbound = await import("../supabase/functions/sms-in/index.ts");
+  assert.equal(await inbound.phKey("+18085550100", "pepper"), k, "sms-in makes the same key as sms");
+});
+
+test("sms-in: reads 1/2/3 and plain words, checks Twilio's signature", async () => {
+  const m = await import("../supabase/functions/sms-in/index.ts");
+  for (const [t, c] of [["1", 1], ["OK", 1], ["safe 👍", 1], ["2 eta 1400", 2], ["running late", 2], ["3", 3], ["HELP my ankle", 3], ["hello?", 0], ["5 min out", 0]]) assert.equal(m.replyCode(t), c, t);
+  assert.equal(m.replyNote("2 eta 1400", 2), "ETA 1400");
+  assert.equal(m.replyNote("3 broke my ankle", 3), "broke my ankle");
+  assert.equal(m.replyNote("1", 1), "");
+  assert.equal(m.e164("1 (808) 555-0100"), "+18085550100");
+  assert.equal(m.e164("555-0100"), undefined);
+  // Twilio's signing: HMAC-SHA1 over the URL plus each field name and value, sorted by name
+  const { createHmac } = await import("node:crypto");
+  const url = "https://x.supabase.co/functions/v1/sms-in", p = new URLSearchParams({ From: "+18085550100", Body: "1", To: "+18085550000" });
+  const want = createHmac("sha1", "tok").update(url + "Body1From+18085550100To+18085550000").digest("base64");
+  assert.equal(await m.twilioSig("tok", url, p), want);
+  // an unsigned request is refused before anything is looked up
+  const D = globalThis.Deno; globalThis.Deno = { env: { get: (k) => ({ TWILIO_AUTH_TOKEN: "tok", SUPABASE_URL: "https://x.supabase.co" })[k] } };
+  try {
+    const fresh = await import("../supabase/functions/sms-in/index.ts?unsigned");
+    const r = await fresh.handle(new Request(url, { method: "POST", body: p.toString(), headers: { "content-type": "application/x-www-form-urlencoded" } }));
+    assert.equal(r.status, 403);
+  } finally { globalThis.Deno = D; }
+});

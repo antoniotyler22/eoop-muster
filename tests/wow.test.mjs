@@ -9,7 +9,7 @@ test("a template sets the groups and status words in one tap", async () => {
     await sleep(600);
     a.w.eval(`S.mode=null;S.welcomed=0;showWelcome()`); await sleep(50);
     a.$("[data-sgstart]").click(); await sleep(20);
-    assert.equal(a.$$("[data-sgtpl]").length, 6, "six templates");
+    assert.equal(a.$$("[data-sgtpl]").length, 7, "seven templates (School added in 1.8)");
     a.$('[data-sgtpl="fire"]').click(); await sleep(20);
     a.$("#sgName").value = "Acme HQ";
     a.$("#sgGo").click(); await sleep(50);

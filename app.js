@@ -61,7 +61,7 @@ const JOBS=[];function every(ms,fn,name){JOBS.push({ms,fn,name,next:Date.now()+M
 function runDue(stagger){const t=Date.now();let k=0;for(const j of JOBS){if(t<j.next)continue;j.next=t+j.ms;const go=()=>{try{j.fn()}catch(e){}};if(stagger)setTimeout(go,(k++)*300);else go()}}
 setInterval(()=>{if(!document.hidden)runDue(false)},2000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)runDue(true)});
-const APP_VER=window.AV||"3.5.0";const APP_BUILD="2026-10-25";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER=window.AV||"3.5.0";const APP_BUILD="2026-10-27";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 /* Custom: a version people name themselves (5K, field trip, class, shift…). Starts from Civilian; labels come from S.customV. */
 MODES.custom=Object.assign(JSON.parse(JSON.stringify(MODES.civilian)),{name:"Custom",desc:"Name it yourself: 5K, field trip, class, shift, anything",title:"Accounted For"});
@@ -916,7 +916,8 @@ async function mergeFile(f){const text=await fileToCSV(f);let list;
   if(S.level==="co"){const P=companyParse(text);list=P.roster;for(const [k,n] of P.secs)if(!SECTIONS.some(x=>x[0]===k)&&SECTIONS.length<10)SECTIONS.push([k,n]);S.secs=SECTIONS.map(x=>x.slice())}
   else list=importCSV(text).roster;
   const have=new Set(S.roster.map(fullK));let n=0;if(S.source==="sample"){S.roster=[];S.source="mol"}
-  for(const m of list){if(have.has(fullK(m)))continue;m.id="a"+Date.now().toString(36)+rndId(3);S.roster.push(m);have.add(fullK(m));n++}save();return n}
+  let up=0;for(const m of list){if(have.has(fullK(m))){const o=S.roster.find(x=>fullK(x)===fullK(m));if(o){let u=0;if(!o.phone&&m.phone){o.phone=m.phone;u=1}if(!o.phone2&&m.phone2&&m.phone2!==o.phone){o.phone2=m.phone2;u=1}up+=u}continue}
+    m.id="a"+Date.now().toString(36)+rndId(3);S.roster.push(m);have.add(fullK(m));n++}mergeFile.up=up;save();return n}
 document.addEventListener("click",e=>{const t=e.target;
   if(t.closest("[data-addm]")){if(!canEdit())return denyMsg();addSheet(t.closest("[data-addm]").dataset.addm||"");return}
   if(t.id==="amAdd"){const name=($("#amName").value||"").trim();if(!name){toast("Enter a name.");return}const ph=normPh($("#amPh").value||"");
@@ -2027,7 +2028,8 @@ async function bcPoll(){const b=bcActive();if(!b||bcBusy)return;bcBusy=true;
     const rows=await SB.rpc("get_checkins",{p_recall:b.rid,p_read_key:b.key,p_after:b.after||0});b.err="";
     if(rows&&rows.length){const idx=await bcIndexFor(b.rid);b.ack=b.ack||{};let n=0,pr=0;
       for(const r of rows){b.after=Math.max(b.after||0,+r.id);const set=new Set(r.words||[]);
-        const sc=idx.map.filter(x=>x.last.length&&x.last.every(h=>set.has(h))).map(x=>({m:x.m,s:(set.has(x.rank)?2:0)+(x.first&&set.has(x.first)?1:0)}));
+        const exact=idx.map.find(x=>set.has(x.idh));/* a reply to the server text carries the person's id hash */
+        const sc=exact?[{m:exact.m,s:9}]:idx.map.filter(x=>x.last.length&&x.last.every(h=>set.has(h))).map(x=>({m:x.m,s:(set.has(x.rank)?2:0)+(x.first&&set.has(x.first)?1:0)}));
         const best=sc.length?Math.max(...sc.map(x=>x.s)):-1;const top=sc.filter(x=>x.s===best);
         if(top.length===1){b.ack[top[0].m.id]={c:+r.code===2?2:1,note:String(r.note||"").slice(0,40),t:Date.parse(r.created_at)||Date.now()};n++;if(+r.code===2)pr++}
         else b.un=(b.un||0)+1}
@@ -2356,7 +2358,9 @@ async function livePoll(){const L=S.rc.live;if(!S.rc.open||!L||liveBusy)return;l
     const rows=await SB.rpc("get_checkins",{p_recall:S.rc.rid,p_read_key:L.key,p_after:L.after||0});L.err="";
     if(rows&&rows.length){const idx=await liveIndex();const ci=S.rc.ci=S.rc.ci||{};let n=0,help=0,un=0;
       for(const r of rows){L.after=Math.max(L.after||0,+r.id);const set=new Set(r.words||[]);
-        const sc=idx.map.filter(x=>x.last.length&&x.last.every(h=>set.has(h))).map(x=>({m:x.m,s:(set.has(x.rank)?2:0)+(x.first&&set.has(x.first)?1:0)}));
+        if(typeof ciVisitorHit==="function"&&await ciVisitorHit(set,+r.code,r.note)){n++;if(+r.code===3)help++;continue}
+        const exact=idx.map.find(x=>set.has(x.idh));/* a reply to the server text carries the person's id hash */
+        const sc=exact?[{m:exact.m,s:9}]:idx.map.filter(x=>x.last.length&&x.last.every(h=>set.has(h))).map(x=>({m:x.m,s:(set.has(x.rank)?2:0)+(x.first&&set.has(x.first)?1:0)}));
         const best=sc.length?Math.max(...sc.map(x=>x.s)):-1;const top=sc.filter(x=>x.s===best);
         if(top.length===1){const m=top[0].m;ci[m.id]={c:+r.code,eta:String(r.note||"").slice(0,40),t:Date.parse(r.created_at)||Date.now(),live:1};S.rc.res[m.id]="ok";n++;if(+r.code===3)help++}
         else{un++;L.un=(L.un||[]).concat({c:+r.code,note:String(r.note||"").slice(0,40),amb:top.length>1}).slice(-20)}}
