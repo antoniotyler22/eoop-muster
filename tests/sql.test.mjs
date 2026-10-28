@@ -231,3 +231,31 @@ test("app owner (part 29): phones read the announcement and switches; the table 
   assert.equal(anon(`select announce || '|' || ask_off || '|' || news_off from public.app_cfg_get()`), "Maintenance tonight|true|false");
   assert.throws(() => pg.psql(`update public.app_cfg set announce = repeat('x', 301) where id = 1`), /check/, "300 characters at most");
 });
+
+test("owner health and log (part 30): only the server reads health; the owner log is closed; the cron job carries the token", { skip }, () => {
+  const asServer = (sql) => pg.psql(`set role service_role; ${sql}`);
+  assert.throws(() => anon(`select public.owner_health()`), /permission denied/, "the public can't read health");
+  assert.throws(() => anon(`select count(*) from public.owner_log`), /permission denied/);
+  pg.psql(`insert into public.client_errors(kind, msg, ver, plat) values ('test', 'boom', '4.13.0', 'ios')`);
+  const h = JSON.parse(asServer(`select public.owner_health()`));
+  assert.ok(Array.isArray(h.cron) && h.cron.some((j) => j.name === "accounted-for-owner"), "sees its own job");
+  assert.ok(h.crash.h1 >= 1, "counts the crash just reported");
+  assert.equal(h.crash.vers["4.13.0"], 1);
+  assert.ok(h.db.bytes > 0 && Array.isArray(h.db.tables));
+  assert.equal(typeof h.queue.n, "number", "queue stand-in counted");
+  assert.match(pg.psql(`select command from cron.job where jobname = 'accounted-for-owner'`), /cron_token/);
+  asServer(`insert into public.owner_log(ip, op, detail) values ('1.1.1.1', 'login', 'test')`);
+  assert.equal(asServer(`select count(*) from public.owner_log`), "1", "the server writes and reads the log");
+  assert.equal(asServer(`select tok_epoch from public.app_cfg where id = 1`), "0", "the server reads the owner settings");
+  asServer(`update public.app_cfg set tok_epoch = 1 where id = 1`);
+  // counts, crash list and removals go through functions too: the server key can't read tables directly on every project
+  assert.throws(() => anon(`select public.owner_stats()`), /permission denied/);
+  const st = JSON.parse(asServer(`select public.owner_stats()`));
+  assert.ok(st.feeds >= 1 && typeof st.crash_h1 === "number" && typeof st.pro === "number", "counts come back");
+  assert.ok(JSON.parse(asServer(`select public.owner_errors()`)).some((e) => e.msg === "boom"));
+  pg.psql(`insert into public.feeds(id, member_key_hash, leader_key_hash) values ('ownerrm001', 'm', 'l')`);
+  assert.equal(asServer(`select public.owner_remove('feed', 'ownerrm001')`), "1");
+  assert.equal(asServer(`select public.owner_remove('feed', 'ownerrm001')`), "0", "gone");
+  assert.throws(() => asServer(`select public.owner_remove('table', 'x')`), /bad kind/);
+  assert.match(pg.psql(`select cron_token from public.app_cfg where id = 1`), /^[0-9a-f]{64}$/);
+});

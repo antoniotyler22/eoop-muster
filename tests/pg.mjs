@@ -15,11 +15,13 @@ function findBin() {
 const STUBS = `
 create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
 create schema if not exists cron; create schema if not exists net;
-create table cron.job(jobid bigserial primary key, jobname text, schedule text, command text);
+create table cron.job(jobid bigserial primary key, jobname text, schedule text, command text, active boolean not null default true);
+create table cron.job_run_details(runid bigserial primary key, jobid bigint, status text, return_message text, start_time timestamptz default now(), end_time timestamptz);
 create function cron.schedule(n text, s text, c text) returns bigint language sql as $$ insert into cron.job(jobname,schedule,command) values(n,s,c) returning jobid $$;
 create function cron.unschedule(n text) returns boolean language sql as $$ delete from cron.job where jobname=n returning true $$;
 create function cron.unschedule(i bigint) returns boolean language sql as $$ delete from cron.job where jobid=i returning true $$;
 create table net.calls(id bigserial primary key, url text, body jsonb);
+create table net._http_response(id bigserial primary key, status_code int, content_type text, headers jsonb, content text, timed_out boolean default false, error_msg text, created timestamptz default now());
 create function net.http_post(url text, body jsonb default '{}', params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds int default 5000) returns bigint
   language sql as $$ insert into net.calls(url, body) values(url, body) returning id $$;
 -- pgmq (message queue) stand-in: one table per queue, with the send / read / delete / list_queues calls part 27 uses.
