@@ -40,6 +40,7 @@ export const SOURCES = [
   "features/feed-coleaders.js",
   "features/team-alerts.js",
   "features/cal-everyone.js",
+  "features/cal-pick.js",
 ];
 
 export function build() {
