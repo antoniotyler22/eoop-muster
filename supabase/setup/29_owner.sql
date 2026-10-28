@@ -15,6 +15,7 @@ create table if not exists public.app_cfg (
 insert into public.app_cfg(id) values (1) on conflict (id) do nothing;
 alter table public.app_cfg enable row level security;
 revoke all on public.app_cfg from anon, authenticated;
+grant select, insert, update on public.app_cfg to service_role;   -- the owner function; not automatic on every project
 
 drop function if exists public.app_cfg_get();
 create function public.app_cfg_get()
