@@ -119,7 +119,7 @@ async function feed(id: string, lk: string, urg: boolean, skip = "") {
   return out("sent " + ((subs?.length ?? 0) - dead.length));
 }
 
-const WHAT: Record<string, string> = { roster: "People were added or removed", status: "Statuses changed", cal: "The calendar changed", duty: "The duty roster changed", ready: "Due-outs changed", events: "Events changed", sec: "A section sent an update" };
+const WHAT: Record<string, string> = { roster: "People were added or removed", status: "Statuses changed", cal: "The calendar changed", duty: "The duty roster changed", ready: "Due-outs changed", events: "Events changed", sec: "A section sent an update", ask: "The company sent your platoon an ask" };
 async function team(id: string, k: string, what: string[], skip: string) {
   const { data: f } = await db.from("feeds").select("*").eq("id", id).maybeSingle();
   if (!f) return out("no feed");
@@ -129,7 +129,9 @@ async function team(id: string, k: string, what: string[], skip: string) {
   if (f.team_push_at && Date.now() - new Date(f.team_push_at).getTime() < 90000) return out("throttled");
   if ("team_push_at" in f) await db.from("feeds").update({ team_push_at: new Date().toISOString() }).eq("id", id);
   const lines = [...new Set(what.map((w) => WHAT[w]).filter(Boolean))].slice(0, 3);
-  const payload = { title: "📋 Team update", body: (lines.length ? lines.join(". ") : "Something changed") + ". Open the app to see.", help: false, open: "board" };
+  const payload = what.includes("ask")
+    ? { title: "📋 Company ask", body: "The company sent your platoon an ask. Open Company to answer.", help: false, open: "co" }
+    : { title: "📋 Team update", body: (lines.length ? lines.join(". ") : "Something changed") + ". Open the app to see.", help: false, open: "board" };
   const { data: subs } = await db.from("feed_subs").select("id,sub").eq("feed_id", id).limit(500);
   const dead: number[] = [];
   const list = (subs ?? []).filter((s) => !isSkip(s.sub, skip));
