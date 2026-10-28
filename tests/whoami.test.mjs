@@ -198,3 +198,19 @@ test("new events take an optional start time", async () => {
     assert.equal(a.w.eval(`S.events.find(e=>e.name==="Rifle qual").tm`), "07:30");
   } finally { a.close(); }
 });
+
+test("a co-leader's Feed posts carry the name they picked, not the OIC's synced 'post as'; posts are logged", async () => {
+  const a = await openApp({ rpc: () => null });
+  try {
+    a.w.eval(`S.source="mol";S.leaderMode=true;S.welcomed=1;S.onb=true;S.role="co";S.postAs="EOP OIC";S.who={id:S.roster[0].id,n:"SSGT ROE"};
+      S.feeds=[{id:"feedabcdef12",mk:"${"m".repeat(30)}",lk:"${"l".repeat(30)}",ek:"${EK}",unit:"1ST",posts:[],seen:0}];save();`);
+    assert.equal(a.w.eval("fdBy(S.feeds[0])"), "SSGT ROE");
+    a.w.eval(`S.role="oic";`);
+    assert.equal(a.w.eval("fdBy(S.feeds[0])"), "EOP OIC", "the owner's own override still works on the owner's phone");
+    a.w.eval(`S.role="co";document.body.click();`);
+    await a.w.eval(`SB.rpc("feed_post",{p_feed:"feedabcdef12"})`);
+    const e = JSON.parse(a.w.eval("JSON.stringify(S.chg[0])"));
+    assert.equal(e.f, "feed");
+    assert.equal(e.by, "SSGT ROE");
+  } finally { a.close(); }
+});
