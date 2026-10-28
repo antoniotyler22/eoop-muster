@@ -42,6 +42,7 @@ export const SOURCES = [
   "features/cal-everyone.js",
   "features/cal-pick.js",
   "features/send-out.js",
+  "features/co-command.js",
 ];
 
 export function build() {
