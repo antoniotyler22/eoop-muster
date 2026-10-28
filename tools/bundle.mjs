@@ -49,6 +49,7 @@ export const SOURCES = [
   "features/roster-import.js",
   "features/whoami.js",
   "features/news.js",
+  "features/owner.js",
 ];
 
 export function build() {
