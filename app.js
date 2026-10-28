@@ -2209,7 +2209,7 @@ function renderFeed(){let h=S.source==="sample"?"":banner();const f=fdCur();
 
 /* ---------- Feed cards (social style) ---------- */
 const AV_COL=["#2f6fde","#17795f","#b4532a","#7a4bd1","#c23a5b","#0f8b9c","#6b7a1f"];
-function fdBy(f){return (S.postAs||S.myName||(f&&f.unit)||unitName()).toUpperCase().slice(0,30)}
+function fdBy(f){const w=S.who&&S.who.n&&role()!=="oic"?S.who.n:"";return (w||S.postAs||S.myName||(f&&f.unit)||unitName()).toUpperCase().slice(0,30)}
 function fdAv(name){const w=String(name||"?").toUpperCase().split(/\s+/).filter(Boolean);const ini=(w.length>1?w[0][0]+w[w.length-1][0]:(w[0]||"?").slice(0,2));let hsh=0;for(const c of String(name))hsh=(hsh*31+c.charCodeAt(0))>>>0;
   return `<div class="av" style="background:${AV_COL[hsh%AV_COL.length]}" aria-hidden="true">${esc(ini)}</div>`}
 function podParse(txt){const L=txt.split("\n");const o={title:L[0]||"",f:"",u:"",sch:[],du:"",n:""};let inS=false;
