@@ -15,8 +15,8 @@ const q = (s) => "'" + String(s).replace(/'/g, "''") + "'";
 
 function applyAll() {
   for (const f of pg.setupFiles()) {
-    // pg_cron / pg_net are Supabase extensions; the test database has stand-ins for them.
-    const sql = fs.readFileSync(f, "utf8").replace(/create extension if not exists pg_(cron|net)[^;]*;/gi, "");
+    // pg_cron / pg_net / pgmq are Supabase extensions; the test database has stand-ins for them.
+    const sql = fs.readFileSync(f, "utf8").replace(/create extension if not exists (pg_cron|pg_net|pgmq)[^;]*;/gi, "");
     const tmp = path.join(os.tmpdir(), "af-" + path.basename(f));
     fs.writeFileSync(tmp, sql);
     try { pg.psql(null, { file: tmp }); } catch (e) { throw new Error(path.basename(f) + ": " + String(e.stderr || e.message)); }
@@ -184,4 +184,30 @@ test("text-back check-in: only the server stores routes; a reply checks in as th
   assert.equal(pg.psql(`select count(*) from public.sms_routes where recall_id = ${q(rc)}`), "0", "closing the check-in deletes its routes");
   assert.equal(asServer(`select coalesce(public.sms_reply(${q(ph)}, 1, ''), 'none')`), "none");
   assert.throws(() => asServer(`select public.sms_routes_put(${q(rc)}, ${q(rows)}::jsonb)`), /recall closed/);
+});
+
+test("server push hooks (part 27): check-ins call notify, Feed posts wait on the queue, only the server reads it", { skip }, () => {
+  const asServer = (sql) => pg.psql(`set role service_role; ${sql}`);
+  const rid = "hookrc0001", fid = "hookfd0001";
+  pg.psql(`truncate net.calls`);
+  pg.psql(`insert into public.recalls(id, read_key_hash, push_sub) values (${q(rid)}, 'x', '{"endpoint":"e"}'), ('hookrc0002', 'x', null)`);
+  pg.psql(`insert into public.checkins(recall_id, words, code) values (${q(rid)}, '{a}', 1), ('hookrc0002', '{b}', 1)`);
+  assert.equal(pg.psql(`select count(*) || '|' || min(body->>'recall') || '|' || string_agg(url, ',' order by url) from net.calls`),
+    `2|${rid}|https://vdhxhvklwbimjpoomnui.supabase.co/functions/v1/Notify,https://vdhxhvklwbimjpoomnui.supabase.co/functions/v1/notify`,
+    "one call to each spelling of notify, and none for a check-in nobody is watching");
+  pg.psql(`insert into public.feeds(id, member_key_hash, leader_key_hash) values (${q(fid)}, 'm', 'l')`);
+  pg.psql(`insert into public.feed_subs(feed_id, endpoint, sub) values (${q(fid)}, 'e1', '{}')`);
+  const post = pg.psql(`insert into public.feed_posts(feed_id, ct) values (${q(fid)}, 'QQ==') returning id`);
+  assert.equal(pg.psql(`select message->>'kind' || '|' || (message->>'post') || '|' || (vt > now() + interval '15 seconds') from pgmq.q_push`), `feed|${post}|true`, "queued with a 20 s wait");
+  assert.equal(asServer(`select count(*) from public.push_q_read(50)`), "0", "not ready yet");
+  assert.throws(() => anon(`select * from public.push_q_read(50)`), /permission denied/, "the public can't read the queue");
+  assert.throws(() => anon(`select public.push_q_send('{}'::jsonb, 0)`), /permission denied/, "or add to it");
+  assert.throws(() => anon(`select public.push_hook_call('{}'::jsonb)`), /permission denied/, "or make the server call notify");
+  const id = asServer(`select public.push_q_send('{"kind":"retry","t":"sub","id":1}'::jsonb, 0)`);
+  assert.equal(asServer(`select msg_id || '|' || read_ct || '|' || (message->>'kind') from public.push_q_read(50)`), `${id}|1|retry`);
+  asServer(`select public.push_q_del(array[${id}]::bigint[])`);
+  assert.equal(pg.psql(`select count(*) from pgmq.q_push where msg_id = ${id}`), "0");
+  assert.throws(() => asServer(`select public.push_q_send(jsonb_build_object('x', repeat('a', 9000)), 0)`), /too big/);
+  assert.equal(anon(`select public.push_hooks_ok()`), "t", "System check can see it's set up");
+  assert.match(pg.psql(`select schedule || '|' || command from cron.job where jobname = 'accounted-for-push-queue'`), /^20 seconds\|[\s\S]*"drain":1/);
 });

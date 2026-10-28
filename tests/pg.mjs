@@ -1,5 +1,5 @@
 // Throwaway Postgres for tests: runs every supabase/setup/*.sql in order against a real database
-// that mimics Supabase's roles (anon, authenticated, service_role) and stubs pg_cron / pg_net.
+// that mimics Supabase's roles (anon, authenticated, service_role) and stubs pg_cron / pg_net / pgmq.
 // Skips (returns null) when Postgres isn't installed on this machine.
 import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
@@ -22,6 +22,23 @@ create function cron.unschedule(i bigint) returns boolean language sql as $$ del
 create table net.calls(id bigserial primary key, url text, body jsonb);
 create function net.http_post(url text, body jsonb default '{}', params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds int default 5000) returns bigint
   language sql as $$ insert into net.calls(url, body) values(url, body) returning id $$;
+-- pgmq (message queue) stand-in: one table per queue, with the send / read / delete / list_queues calls part 27 uses.
+create schema if not exists pgmq;
+create table pgmq.meta(queue_name text primary key);
+create function pgmq.list_queues() returns table(queue_name text) language sql as $$ select queue_name from pgmq.meta $$;
+create function pgmq."create"(q text) returns void language plpgsql as $$ begin
+  insert into pgmq.meta values (q) on conflict do nothing;
+  execute format('create table if not exists pgmq.%I(msg_id bigserial primary key, read_ct int not null default 0, enqueued_at timestamptz not null default now(), vt timestamptz not null default now(), message jsonb)', 'q_' || q);
+end $$;
+create function pgmq.send(q text, msg jsonb, delay int default 0) returns setof bigint language plpgsql as $$ begin
+  return query execute format('insert into pgmq.%I(message, vt) values ($1, now() + make_interval(secs => $2)) returning msg_id', 'q_' || q) using msg, delay;
+end $$;
+create function pgmq.read(q text, vis int, qty int) returns table(msg_id bigint, read_ct int, enqueued_at timestamptz, vt timestamptz, message jsonb) language plpgsql as $$ begin
+  return query execute format('update pgmq.%1$I t set read_ct = t.read_ct + 1, vt = now() + make_interval(secs => $1) where t.msg_id in (select msg_id from pgmq.%1$I where vt <= now() order by msg_id limit $2) returning t.msg_id, t.read_ct, t.enqueued_at, t.vt, t.message', 'q_' || q) using vis, qty;
+end $$;
+create function pgmq.delete(q text, ids bigint[]) returns setof bigint language plpgsql as $$ begin
+  return query execute format('delete from pgmq.%I where msg_id = any($1) returning msg_id', 'q_' || q) using ids;
+end $$;
 create extension if not exists pgcrypto;
 -- Supabase Auth stand-ins: auth.users, auth.uid() and auth.jwt() read the request's JWT claims.
 create schema if not exists auth;
