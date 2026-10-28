@@ -20,7 +20,7 @@ async function load(force){const X=N();if(X.off||busy)return;if(!force&&X.at&&Da
   catch(e){X.err=String(e.message||e).slice(0,60);rawSave();paint()}
   finally{busy=false}}
 window.newsLoad=load;
-function html(){const X=N();if(X.off||!isLeaderPhone())return"";const L=cards();const c=L[i]||null;
+function html(){const X=N();if(X.off||!isLeaderPhone()||(typeof appNewsOff==="function"&&appNewsOff()))return"";const L=cards();const c=L[i]||null;
   const body=c?`<button class="nw-main" data-nw-open${c.url?` data-nw-url="${esc(c.url)}"`:""} aria-label="Open"><span class="nw-g${c.k==="alert"?" nw-al":""}">${GL[c.k]}</span><span class="nw-tx"><span class="nw-t">${esc(c.t)}</span><span class="nw-s">${esc(c.s)}${c.at?" · "+ago(c.at):""}</span></span></button>`
     :`<div class="nw-main"><span class="nw-g">${GL.news}</span><span class="nw-tx"><span class="nw-t">${X.err==="setup"?"News isn't set up on your server":X.err?"Couldn't load the news":busy?"Loading…":"No news yet"}</span><span class="nw-s">${X.err==="setup"?"Leader: DATA → System check":X.err?"Check signal and pull to refresh":X.loc?"Weather, alerts and world news":"Turn on location for weather and alerts (⋯)"}</span></span></div>`;
   return `<div class="card nw" id="nwCard"><div class="nw-row">${body}<div class="nw-ctl"><button data-nw-prev aria-label="Previous">‹</button><span class="nw-n">${L.length?(i+1)+"/"+L.length:"–"}</span><button data-nw-next aria-label="Next">›</button><button data-nw-menu aria-label="News options">⋯</button></div></div>
@@ -62,7 +62,7 @@ document.addEventListener("click",e=>{const t=e.target;
   if(t.closest("#nwRefresh")){e.stopImmediatePropagation();N().at=0;closeSheet();load(true);return}
   if(t.closest("#nwOff")){e.stopImmediatePropagation();N().off=true;rawSave();closeSheet();paint();toast("News card hidden. Turn it back on in Tools → Settings.");return}},true);
 /* the way back on: a switch in Settings */
-{const _rt=renderTools;renderTools=function(){const r=_rt.apply(this,arguments);try{if(!N().off)return r;const g=document.querySelector("#main .tgrid");if(g)g.insertAdjacentHTML("beforeend",`<button id="nwOn"><span class="ic">🌐</span><span><b>News on Home</b><small>Hidden · tap to show</small></span></button>`)}catch(e){}return r}}
+{const _rt=renderTools;renderTools=function(){const r=_rt.apply(this,arguments);try{if(!N().off)return r;let g=[...document.querySelectorAll("#main .tgrid")].find(x=>x.id!=="sgGrid");if(!g){g=document.createElement("div");g.className="tgrid";$("#main").appendChild(g)}g.insertAdjacentHTML("beforeend",`<button id="nwOn"><span class="ic">🌐</span><span><b>News on Home</b><small>Hidden · tap to show</small></span></button>`);if(typeof sgRegroup==="function")sgRegroup()}catch(e){}return r}}
 document.addEventListener("click",e=>{if(!e.target.closest("#nwOn"))return;N().off=false;N().at=0;rawSave();view="board";render();toast("News card is back on Home")},true);
 
 every(10*60000,()=>{if(view==="board"&&!N().off)load(false)},"news");

@@ -25,7 +25,7 @@ const GROUPS=[
   {k:"rollup",l:"Rollup",s:"Add up the teams under you",ic:"rollup",keys:["co","rollup"]},
   {k:"home",l:"My day",s:"Dashboard, today, my log",ic:"today",keys:["dash","today","log"]},
   {k:"help",l:"Help",s:"Ask a question, guide, short tour",ic:"help",keys:["support","guide","trStart","v11SignInTool","v11ShareApp","ask"]},
-  {k:"settings",l:"Settings",s:"Teams, data, version, connections",ic:"data",keys:["teams","data","sys","modeOpen","integ"]}];
+  {k:"settings",l:"Settings",s:"Teams, data, version, connections",ic:"data",keys:["teams","data","sys","modeOpen","integ","owner","nwOn"]}];
 const tileKey=b=>{if(b.id)return b.id;if(b.dataset.go)return b.dataset.go;const d=Object.keys(b.dataset)[0];if(d)return d;
   const h=b.getAttribute&&b.getAttribute("href")||"";if(/help\.html/.test(h)||/Help guide/i.test(b.textContent))return "guide";return (b.textContent||"").trim().slice(0,20)};
 let STORE={};
@@ -45,6 +45,14 @@ function groupTiles(){const main=$("#main");if(!main)return;const grids=[...main
   main.querySelectorAll("#v11Em").forEach(b=>b.remove());
   main.querySelectorAll('.btn.warn[data-go="recall"]').forEach(b=>{if(b.previousElementSibling===null||b.parentNode===main)b.remove()})}
 {const _rt=renderTools;renderTools=function(){_rt.apply(this,arguments);try{groupTiles()}catch(e){}}}
+/* tiles added by later features (news, owner) land in a grid of their own; fold them into the groups too */
+window.sgRegroup=function(){const main=$("#main");if(!main)return;const sg=$("#sgGrid");if(!sg)return;const extra=[...main.querySelectorAll(".tgrid")].filter(g=>g!==sg);if(!extra.length)return;
+  const tiles=[];extra.forEach(g=>{[...g.children].forEach(c=>tiles.push(c));g.remove()});let ch=false;
+  for(const t of tiles){const k=tileKey(t);const G=GROUPS.find(x=>x.keys.includes(k))||GROUPS.find(x=>x.k==="settings");STORE[G.k]=(STORE[G.k]||[]).concat([t]);ch=true}
+  if(!ch)return;for(const G of GROUPS)if(STORE[G.k])STORE[G.k].sort((a,b)=>G.keys.indexOf(tileKey(a))-G.keys.indexOf(tileKey(b)));
+  for(const G of GROUPS){const L=STORE[G.k];if(!L||!L.length)continue;const have=sg.querySelector(`[data-sgrp="${G.k}"],[data-sg1="${G.k}"]`);
+    if(have&&have.hasAttribute("data-sg1")&&L.length>1)have.outerHTML=`<button data-sgrp="${G.k}"><span class="ic">${svg(G.ic)}</span><span><b>${esc(G.l)}</b><small>${esc(G.s)}</small></span></button>`;
+    else if(!have)sg.insertAdjacentHTML("beforeend",L.length===1?(()=>{const t=L[0].cloneNode(true);t.setAttribute("data-sg1",G.k);return t.outerHTML})():`<button data-sgrp="${G.k}"><span class="ic">${svg(G.ic)}</span><span><b>${esc(G.l)}</b><small>${esc(G.s)}</small></span></button>`)}}
 function openGroup(k){const G=GROUPS.find(x=>x.k===k);const L=STORE[k];if(!G||!L)return;sheetCtx={kind:"sgrp"};
   $("#sheetT").innerHTML=`${esc(G.l)}<small>${esc(G.s)}</small>`;
   $("#sheetOpts").innerHTML=`<div class="tgrid" style="margin:0">${L.map(t=>t.outerHTML).join("")}</div>`;
