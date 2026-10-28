@@ -64,7 +64,7 @@ const JOBS=[];function every(ms,fn,name){JOBS.push({ms,fn,name,next:Date.now()+M
 function runDue(stagger){const t=Date.now();let k=0;for(const j of JOBS){if(t<j.next)continue;j.next=t+j.ms;const go=()=>{try{j.fn()}catch(e){}};if(stagger)setTimeout(go,(k++)*300);else go()}}
 setInterval(()=>{if(!document.hidden)runDue(false)},2000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)runDue(true)});
-const APP_VER=window.AV||"3.5.0";const APP_BUILD="2026-10-27";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER=window.AV||"3.5.0";const APP_BUILD="2026-10-28";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 /* Custom: a version people name themselves (5K, field trip, class, shift…). Starts from Civilian; labels come from S.customV. */
 MODES.custom=Object.assign(JSON.parse(JSON.stringify(MODES.civilian)),{name:"Custom",desc:"Name it yourself: 5K, field trip, class, shift, anything",title:"Accounted For"});
@@ -1521,7 +1521,7 @@ async function scRun(){scBusy=true;scRes={at:Date.now(),g:{},nt:null};renderSys(
   const one=async([fn,args])=>{try{await SB.rpc(fn,args);return {ok:1}}catch(e){const m=String(e.message||e);if(/could not find the function|schema cache|PGRST202/i.test(m))return {miss:1,fn};if(/permission denied/i.test(m))return {perm:1,fn};if(/abort|Failed to fetch|NetworkError|Load failed/i.test(m))return {net:1,fn};return {ok:1}}};
   await Promise.all(SC.map(async g=>{const r=await Promise.all(g.t.map(one));scRes.g[g.k]={ok:r.every(x=>x.ok),miss:r.filter(x=>x.miss).map(x=>x.fn),perm:r.filter(x=>x.perm).map(x=>x.fn),net:r.some(x=>x.net)}}));
   const nt={};try{await SB.findNotify();const r=await fetch(SB.url+"/functions/v1/"+SB.nfn,{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:"{}"});nt.s=r.status;nt.t=(await r.text()).slice(0,120);
-    if(r.status===400&&/bad/.test(nt.t)){const r2=await fetch(SB.url+"/functions/v1/"+SB.nfn,{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify({feed:"aaaaaaaaaa",lk:"a".repeat(24)})});nt.s2=r2.status;nt.t2=(await r2.text()).slice(0,60);const r3=await fetch(SB.url+"/functions/v1/"+SB.nfn,{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify({team:"aaaaaaaaaa",k:"a".repeat(24)})});nt.s3=r3.status}}catch(e){nt.err=String(e.message||e)}
+    if(r.status===400&&/bad/.test(nt.t)){const r2=await fetch(SB.url+"/functions/v1/"+SB.nfn,{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify({feed:"aaaaaaaaaa",lk:"a".repeat(24)})});nt.s2=r2.status;nt.t2=(await r2.text()).slice(0,60);const r3=await fetch(SB.url+"/functions/v1/"+SB.nfn,{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify({team:"aaaaaaaaaa",k:"a".repeat(24)})});nt.s3=r3.status;const r4=await fetch(SB.url+"/functions/v1/"+SB.nfn,{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:'{"drain":1}'});nt.s4=r4.status}}catch(e){nt.err=String(e.message||e)}
   scRes.nt=nt;{const ak={};try{await SB.findAsk();const r=await fetch(SB.url+"/functions/v1/"+SB.afn,{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify({ping:1})});ak.s=r.status;try{Object.assign(ak,await r.json())}catch(e){}}catch(e){ak.err=1}scRes.ak=ak}
   scBusy=false;renderSys()}
 function akState(a){if(!a)return null;if(a.err)return {ok:0,msg:"Couldn't reach it. Check signal."};if(a.s===404)return {ok:0,msg:"Optional. Not set up: create the Edge Function named ask, add ANTHROPIC_API_KEY, run part 10."};
@@ -1530,7 +1530,7 @@ function akState(a){if(!a)return null;if(a.err)return {ok:0,msg:"Couldn't reach 
 function ntState(nt){if(!nt)return null;if(nt.err)return {ok:0,msg:"Couldn't reach it. Check signal."};if(nt.s===404)return {ok:0,msg:"Not deployed. Create the Edge Function named notify."};
   if(nt.s===401||nt.s===403)return {ok:0,msg:"JWT checking is on. Open notify → Details and turn off Enforce JWT verification."};
   if(nt.s>=500)return {ok:0,msg:"It crashed. Usually the VAPID_PUBLIC / VAPID_PRIVATE secrets are missing, or the code was cut off when pasted."};
-  if(nt.s===400&&/bad/.test(nt.t)){if(nt.s2===200&&nt.s3===200)return {ok:1,msg:"Deployed and current."};if(nt.s2===200)return {ok:0,msg:"Deployed but an older version (no Team alerts). Tap Copy notify code, paste it over the old code in notify, Deploy."};return {ok:0,msg:"Deployed but an older version (no Feed alerts). Paste the latest code."}}
+  if(nt.s===400&&/bad/.test(nt.t)){if(nt.s2===200&&nt.s3===200&&nt.s4===200)return {ok:1,msg:"Deployed and current."};if(nt.s2===200&&nt.s3===200)return {ok:0,msg:"Deployed but an older version (failed alerts aren't retried). Tap Copy notify code, paste it over the old code in notify, Deploy."};if(nt.s2===200)return {ok:0,msg:"Deployed but an older version (no Team alerts). Tap Copy notify code, paste it over the old code in notify, Deploy."};return {ok:0,msg:"Deployed but an older version (no Feed alerts). Paste the latest code."}}
   return {ok:0,msg:"Unexpected answer ("+nt.s+")."}}
 async function scCopy(file){try{const r=await fetch("supabase/setup/"+file+".sql",{cache:"no-cache"});if(!r.ok)throw 0;const t=await r.text();await navigator.clipboard.writeText(t);toast("Copied "+file+". Paste it in SQL Editor and Run.")}catch(e){toast("Copy blocked. Open the file in GitHub: supabase/setup/"+file+".sql")}}
 async function scCopyNotify(){try{const r=await fetch("supabase/functions/notify/index.ts",{cache:"no-cache"});const t=await r.text();await navigator.clipboard.writeText(t);toast("notify code copied. Paste it in Edge Functions → notify → Code, then Deploy.")}catch(e){toast("Copy blocked here.")}}
@@ -4334,6 +4334,8 @@ setInterval(()=>{const a=document.activeElement;if(view==="recall"&&S.rc.open&&S
 setTimeout(schedLocal,1500);
 
 if(typeof SC==="object"&&Array.isArray(SC))SC.push({k:"esc",n:"1.3: missed check-in alerts",f:["22_escalate"],t:[["esc_set",{p_recall:"zz",p_key:"x",p_due:null,p_expected:1}]]});
+/* 4.10.1: the server sends check-in, board and Feed alerts itself and retries failed ones (part 27 + notify 4.10.1) */
+if(typeof SC==="object"&&Array.isArray(SC))SC.push({k:"ph",n:"4.10.1: alerts sent by the server, with retries",f:["27_push_hooks"],t:[["push_hooks_ok",{}]]});
 })();
 
 /* ===== features/import.js ===== */
