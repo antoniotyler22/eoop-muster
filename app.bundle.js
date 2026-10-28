@@ -3166,7 +3166,7 @@ function renderLogins(){let h=`<h2>Logins</h2>`;
     const RL=lgRoles(),cur=RL.find(r=>r.ds.some(x=>x.id===lgForm.dest))||RL.find(r=>r.ds.length);
     h+=`<label for="lgRole">Role</label><select id="lgRole" style="width:100%">${RL.map(r=>`<option value="${r.k}"${r===cur?" selected":""}${r.ds.length?"":" disabled"}>${esc(r.n)}${r.ds.length?"":" (not set up)"}</option>`).join("")}</select>
       <p class="note" style="margin:4px 0 0">${esc(cur.d)}</p>${RL.some(r=>!r.ds.length)?`<details><summary class="note">More roles</summary><p class="note" style="margin:2px 0 0">${RL.filter(r=>!r.ds.length).map(r=>`<b>${esc(r.n)}</b>: ${esc(r.hint)}`).join("<br>")}</p></details>`:""}
-      ${cur.ds.length>1?`<label for="lgDest">${cur.k==="member"?"Person":cur.k==="secl"?"Section":"Which one"}</label><select id="lgDest" style="width:100%">${cur.ds.map(x=>`<option value="${esc(x.id)}"${x.id===lgForm.dest?" selected":""}>${esc(x.l)}</option>`).join("")}</select>`:""}
+      ${cur.ds.length>1?`<label for="lgDest">${cur.k==="member"?"Person":cur.k==="secl"?(S.level==="co"?"Platoon":"Section"):"Which one"}</label><select id="lgDest" style="width:100%">${cur.ds.map(x=>`<option value="${esc(x.id)}"${x.id===lgForm.dest?" selected":""}>${esc(x.l)}</option>`).join("")}</select>`:""}
       <label for="lgU">Username</label><input type="text" id="lgU" value="${esc(lgForm.user)}" autocomplete="off" autocapitalize="none" spellcheck="false">
       <label for="lgP">Password</label><input type="text" id="lgP" value="${esc(lgForm.pw)}" autocomplete="off" autocapitalize="none" spellcheck="false">
       <div class="row2"><button class="btn" id="lgMake">Create login</button><button class="btn alt" id="lgNewPw">New password</button></div><div class="note" id="lgOut" role="status">${esc(lgMsg)}</div>`}
@@ -4841,7 +4841,7 @@ function renderInvite(){let h=`<h2>Invite</h2>`;const so=typeof window.soHTML===
     else{if(!cur.ds.some(x=>x.id===inv.dest))inv.dest=cur.ds[0].id;
       h+=`<label for="invRole">Role</label><select id="invRole" style="width:100%">${RL.map(r=>`<option value="${r.k}"${r===cur?" selected":""}${r.ds.length?"":" disabled"}>${esc(r.n)}${r.ds.length?"":" (not set up)"}</option>`).join("")}</select>
         <p class="note" style="margin:4px 0 0">${esc(cur.d)}</p>${cur.k==="member"&&typeof window.invPvBtn==="function"?window.invPvBtn():""}
-        ${cur.ds.length>1?`<label for="invDest">${cur.k==="member"?"Person":cur.k==="secl"?"Section":"Which one"}</label><select id="invDest" style="width:100%">${cur.ds.map(x=>`<option value="${esc(x.id)}"${x.id===inv.dest?" selected":""}>${esc(x.l)}</option>`).join("")}</select>`:""}
+        ${cur.ds.length>1?`<label for="invDest">${cur.k==="member"?"Person":cur.k==="secl"?(S.level==="co"?"Platoon":"Section"):"Which one"}</label><select id="invDest" style="width:100%">${cur.ds.map(x=>`<option value="${esc(x.id)}"${x.id===inv.dest?" selected":""}>${esc(x.l)}</option>`).join("")}</select>`:""}
         <div class="row2"><button class="btn" id="invLink"${inv.busy?" disabled":""}>${inv.busy?"Making…":"Make a link"}</button><button class="btn alt" data-go="logins">Make a login instead</button></div>
         <div class="note" role="status">${esc(inv.msg)}</div>`;
       if(inv.out&&inv.out.dest===inv.dest)h+=`<div class="panel" style="margin:6px 0 0;border-color:var(--s-onhand)"><b>Link ready · ${esc(inv.out.label)}</b> <span class="chip">${esc(inv.out.role)}</span>
@@ -6779,12 +6779,12 @@ const multi=R=>R.k==="cmd"&&R.ds.length>1;
 function destFor(p){const v=eff(p),rk=v.split(":")[0],R=roles().find(r=>r.k===rk);
   if(!R)return {err:"Pick a role."};if(!R.ds.length)return {err:R.n+": "+R.hint};
   if(rk==="member"){if(!p.m)return {err:"Not on your roster, so no Member page. Give them another role."};const d=R.ds.find(x=>x.id==="me:"+p.m.id);return d?{d,label:d.l,mid:p.m.id}:{err:"No Member page for them yet."}}
-  if(rk==="secl"){const sec=v.split(":")[1]||"";const d=R.ds.find(x=>x.id==="sec:"+sec);return d?{d,label:p.name+" · "+sec+" section leader",mid:p.m?p.m.id:p.k}:{err:"Pick their section."}}
+  if(rk==="secl"){const sec=v.split(":")[1]||"";const d=R.ds.find(x=>x.id==="sec:"+sec);return d?{d,label:p.name+" · "+sec+(S.level==="co"?" platoon":" section leader"),mid:p.m?p.m.id:p.k}:{err:S.level==="co"?"Pick their platoon.":"Pick their section."}}
   if(multi(R)){const id=v.slice(rk.length+1);const d=R.ds.find(x=>x.id===id);if(!d)return {err:"Pick which "+R.n.toLowerCase()+" seat for them."};return {d,label:p.name+" · "+d.l,mid:p.m?p.m.id:p.k}}
   const d=R.ds[0];return {d,label:p.name+" · "+d.l,mid:p.m?p.m.id:p.k}}
 function roleOpts(p){const v=eff(p);let o="";for(const R of roles()){if(!R.ds.length)continue;
     if(R.k==="member"){if(p.m)o+=`<option value="member"${v==="member"?" selected":""}>Member</option>`;continue}
-    if(R.k==="secl"){for(const d of R.ds){const s=d.id.slice(4);o+=`<option value="secl:${esc(s)}"${v==="secl:"+s?" selected":""}>Section leader · ${esc(s)}</option>`}continue}
+    if(R.k==="secl"){for(const d of R.ds){const s=d.id.slice(4);o+=`<option value="secl:${esc(s)}"${v==="secl:"+s?" selected":""}>${S.level==="co"?"Platoon":"Section leader"} · ${esc(s)}</option>`}continue}
     if(multi(R)){for(const d of R.ds){const val=R.k+":"+d.id;o+=`<option value="${esc(val)}"${v===val?" selected":""}>${esc(R.n+" · "+d.l.replace(/ · company dashboard$/,""))}</option>`}continue}
     o+=`<option value="${R.k}"${v===R.k?" selected":""}>${esc(R.n)}</option>`}
   if(!/ selected/.test(o))o=`<option value="" selected>Pick a role…</option>`+o;return o}
@@ -6994,6 +6994,14 @@ const forTxt=f=>(f||["off","snco"]).length===2?"officers & SNCOs":(f||[])[0]==="
 {const _ro=lgRoleOf;lgRoleOf=function(dest){return /^co:(co|xo|1sg)$/.test(String(dest||""))?"Company command":_ro.apply(this,arguments)}}
 {const _h=lgHash;lgHash=async function(id,create){const m=/^co:(co|xo|1sg)$/.exec(String(id||""));if(!m)return _h.apply(this,arguments);
   if(!S.coBoard||!S.coBoard.rk)return null;const u=coLink(m[1]);const j=u.indexOf("#");return j<0?null:u.slice(j+1)}}
+/* company level: "Section leader" is really one platoon (EOOP, GEMP…): that platoon only, nothing else in the company */
+const coLvl=()=>S.level==="co";
+const plName=k=>{const x=(typeof SECTIONS!=="undefined"?SECTIONS:[]).find(s=>s[0]===k);return x&&x[1]&&x[1]!==k?k+" ("+x[1]+")":k};
+{const _d=lgDests;lgDests=function(){const D=_d.apply(this,arguments);if(!coLvl())return D;
+  for(const x of D)if(x.id.startsWith("sec:")){const k=x.id.slice(4);x.g="Platoon (only that platoon)";x.l=plName(k)+" platoon";x.base=k.toLowerCase()+"plt"}return D}}
+{const _r=lgRoles;lgRoles=function(){const RL=_r.apply(this,arguments);if(!coLvl())return RL;const s=RL.find(r=>r.k==="secl");
+  if(s){s.n="Platoon";s.d="Only their platoon (for example EOOP or GEMP): sees and updates that platoon's people, statuses and calendar. Nothing else in the company.";s.hint="Turn on Live sections (your platoons) first (Tools)."}return RL}}
+{const _ro=lgRoleOf;lgRoleOf=function(dest){return coLvl()&&String(dest||"").startsWith("sec:")?"Platoon":_ro.apply(this,arguments)}}
 /* opening a command link remembers the seat */
 {const _j=coJoinPrompt;coJoinPrompt=function(q,kind){const w=q&&q.get&&q.get("w");const r=_j.apply(this,arguments);
   if(kind==="cov"&&S.coBoard&&SEAT_L[w]){const M=me();if(M.seat!==w){M.seat=w;save();cmdPush()}if(view==="co")redraw(renderCo)}return r}}
