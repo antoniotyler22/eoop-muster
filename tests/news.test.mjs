@@ -57,7 +57,8 @@ test("turning on location sends it rounded; hiding the card and bringing it back
     a.$("#nwOff").click();
     assert.ok(!a.$("#nwCard"), "hidden");
     a.w.eval(`view="tools";render()`);
-    assert.ok(a.$("#nwOn"), "switch in Tools");
+    if (!a.$("#nwOn")) a.w.eval(`openToolGroup("settings")`);
+    assert.ok(a.$("#nwOn"), "switch in Tools → Settings");
     a.$("#nwOn").click();
     await until(() => a.$("#nwCard"));
     assert.ok(a.$("#nwCard"), "back on Home");

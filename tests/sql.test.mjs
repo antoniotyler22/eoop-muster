@@ -222,3 +222,12 @@ test("Feed names (part 28): only the leader key writes, only the member key read
   assert.equal(anon(`select count(*) from public.feed_names_get('namesfd001', ${q("wrong-key-0123456789abcdef")})`), "0");
   assert.throws(() => anon(`select count(*) from public.feed_names`), /permission denied/);
 });
+
+test("app owner (part 29): phones read the announcement and switches; the table is closed to the public", { skip }, () => {
+  assert.equal(anon(`select count(*) from public.app_cfg_get()`), "1", "one settings row from the start");
+  assert.throws(() => anon(`update public.app_cfg set announce = 'x' where id = 1`), /permission denied/, "the public can't post announcements");
+  assert.throws(() => anon(`select count(*) from public.app_cfg`), /permission denied/);
+  pg.psql(`update public.app_cfg set announce = 'Maintenance tonight', announce_at = now(), ask_off = true where id = 1`);
+  assert.equal(anon(`select announce || '|' || ask_off || '|' || news_off from public.app_cfg_get()`), "Maintenance tonight|true|false");
+  assert.throws(() => pg.psql(`update public.app_cfg set announce = repeat('x', 301) where id = 1`), /check/, "300 characters at most");
+});
