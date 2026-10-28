@@ -342,7 +342,7 @@ function banner0(){
   if((S.wsCur||"plt")!=="co"&&S.level==="co"&&isOwner()&&typeof restoreHTML==="function")return `<div class="banner" style="border-color:var(--warn)"><span><b>Your platoon view is showing company data.</b> Put your platoon back.</span><button data-go="data">Restore</button></div>`;
   {const sb=staleBanner();if(sb)return sb}
   const LK=S.link;if(LK&&LK.rk2){if(!LK.pulled)return `<div class="banner"><span>${LK.perr?esc(LK.perr):`Loading <b>${esc(LK.sec)}</b> from ${esc(LK.unit)}'s board…`}</span>${LK.perr?`<button id="lkRetry">Retry</button>`:""}</div>`;
-    if(!LK.me)return `<div class="banner"><span><b>${esc(LK.sec)}</b> roster from ${esc(LK.unit)}. Add your name so they see who sent updates.</span><button id="lkName">Add name</button></div>`}
+    }
   if(S.source==="sample"&&!memberMode()) return `<div class="banner"><span>Showing <b>sample Marines</b>. Load your MOL detail list to start.</span><button data-go="data">Load roster</button></div>`;
   if(!storageOK) return `<div class="banner"><span>This browser isn't saving changes. Export a backup from DATA before closing.</span></div>`;
   return "";
@@ -778,8 +778,8 @@ async function linkPush(force){const L=S.link;if(!L||lkBusy)return;if(L.rk2&&!L.
     if(force||st!==L.sig){const me=await Promise.all(SB.words(L.me).map(w=>SB.h(L.board,w)));
       await SB.rpc("push_update",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_sender:me,p_strength:ms.length,p_items:items});
       L.sig=st;L.sent=Date.now();L.lsig=lsigOf(ms);L.err="";save();SB.notify(null,{board:L.board})}
-    if(L.ek){const cal=ms.flatMap(m=>(m.cal||[]).filter(e=>(e.end||e.d)>=dkey(new Date(Date.now()-30*86400000))).map(e=>({nk:fullK(m),d:e.d,tm:e.tm||"",end:e.end||"",ty:e.ty,ti:e.ti,no:e.no||""})));const dt=ms.map(m=>({nk:fullK(m),id:m.uid||m.id,sb:L.whole&&m.sec!=="ATT"?m.sec:undefined,st:m.status,s:m.start||"",e:m.end||"",l:m.loc||"",x:m.detail||"",du:m.due||{}}));const cs=sigF([cal,dt]);
-      if(force||cs!==L.calSig){const ct=await fdEnc(L.ek,{e:cal,d:dt});await SB.rpc("push_cal",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_ct:ct});L.calSig=cs;L.err="";rawSave()}}}
+    if(L.ek){const cal=ms.flatMap(m=>(m.cal||[]).filter(e=>(e.end||e.d)>=dkey(new Date(Date.now()-30*86400000))).map(e=>({nk:fullK(m),d:e.d,tm:e.tm||"",end:e.end||"",ty:e.ty,ti:e.ti,no:e.no||""})));const dt=ms.map(m=>({nk:fullK(m),id:m.uid||m.id,sb:L.whole&&m.sec!=="ATT"?m.sec:undefined,st:m.status,s:m.start||"",e:m.end||"",l:m.loc||"",x:m.detail||"",du:m.due||{}}));const wx=typeof whoCalExtra==="function"?whoCalExtra():{};const cs=sigF([cal,dt,wx]);
+      if(force||cs!==L.calSig){const ct=await fdEnc(L.ek,Object.assign({e:cal,d:dt},wx));await SB.rpc("push_cal",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_ct:ct});L.calSig=cs;L.err="";rawSave()}}}
   catch(e){const t=String(e.message||e);L.err=/link not valid/i.test(t)?"This link was replaced by your OIC. Ask them for the new one.":t.slice(0,80);save();clearTimeout(lkTimer);if(!/replaced/.test(L.err))lkTimer=setTimeout(linkPush,60000)}
   finally{lkBusy=false;if(view==="live"||view===(L.mysec||"").toLowerCase()){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;render();window.scrollTo(0,y)}}}}
 function linkStatus(){const L=S.link;if(!L)return"";if(L.err)return `<span style="color:var(--warn)">Not sent yet (${esc(L.err)}). Retrying.</span>`;
@@ -794,7 +794,7 @@ function boardPushHTML(){if(!pushOK())return isIOS()&&!standalone()?`<p class="n
   return `<button class="btn alt" id="bpushOn">🔔 Alert me when a section updates, even when locked</button>`}
 async function boardCreate(){const id=rndId(14),rk=rndId(32),wk=rndId(32);await SB.rpc("create_board",{p_id:id,p_read_key:rk,p_write_key:wk});S.board={id,rk,wk,ek:b64url(crypto.getRandomValues(new Uint8Array(32))),after:0,last:{}};save()}
 async function livePollCal(){const B=S.board;if(!B||!B.ek)return;try{const rows=await SB.rpc("get_cal",{p_board:B.id,p_read_key:B.rk});let ch=false;
-  for(const r of rows||[]){const t=Date.parse(r.updated_at)||0;if(S.secCal[r.sec]&&S.secCal[r.sec].t>=t)continue;const o=await fdDec(B.ek,r.ct);if(!o||!Array.isArray(o.e))continue;const calCh=!S.secCal[r.sec]||sigF(S.secCal[r.sec].e)!==sigF(o.e.slice(0,2000));if(S.secCal[r.sec]&&calCh)actAdd("🗓",r.sec+" section calendar updated","cal");S.secCal[r.sec]={t,e:o.e.slice(0,2000)};ch=true;
+  for(const r of rows||[]){const t=Date.parse(r.updated_at)||0;if(S.secCal[r.sec]&&S.secCal[r.sec].t>=t)continue;const o=await fdDec(B.ek,r.ct);if(!o||!Array.isArray(o.e))continue;try{if(whoCalApply(r.sec,o))ch=true}catch(e){}const calCh=!S.secCal[r.sec]||sigF(S.secCal[r.sec].e)!==sigF(o.e.slice(0,2000));if(S.secCal[r.sec]&&calCh)actAdd("🗓",r.sec+" section calendar updated","cal");S.secCal[r.sec]={t,e:o.e.slice(0,2000)};ch=true;
     if(Array.isArray(o.d)){const ms=S.roster.filter(m=>m.sec===r.sec);const by={};ms.forEach(m=>(by[fullK(m)]=by[fullK(m)]||[]).push(m));const who=[];
       const dueWho=[];for(const x of o.d.slice(0,600)){const byId=x.id?ms.find(m=>m.id===String(x.id)):null;const hit=byId?[byId]:by[String(x.nk)];if(!hit||hit.length!==1)continue;const m=hit[0];let c=false;if(x.sb&&/^[A-Z0-9]{1,6}$/.test(x.sb)&&m.sub!==x.sb){m.sub=x.sb;c=true}
         if(x.du&&typeof x.du==="object"){const nd=sanDue(x.du);if(JSON.stringify(nd)!==JSON.stringify(sanDue(m.due||{}))){const chg=Object.keys(nd).filter(k=>JSON.stringify(nd[k])!==JSON.stringify((m.due||{})[k]));m.due=nd;dueWho.push(m.rank+" "+lastOf(m)+(chg.length?" ("+chg.slice(0,2).join(", ")+")":""))}}
@@ -802,6 +802,25 @@ async function livePollCal(){const B=S.board;if(!B||!B.ek)return;try{const rows=
       if(dueWho.length)actAdd("✅",r.sec+" leader updated due-outs: "+dueWho.slice(0,6).join(", ")+(dueWho.length>6?" +"+(dueWho.length-6)+" more":""),"ready");
       if(who.length)actAdd("📝",r.sec+" leader updated dates/details: "+who.slice(0,6).join(", ")+(who.length>6?" +"+(who.length-6)+" more":""),r.sec.toLowerCase())}}
   if(ch){save();if(view==="cal"||view==="board"||view==="p"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"&&a!=="SELECT"){const y=window.scrollY;render();window.scrollTo(0,y)}}}}catch(e){}}
+/* 4.11 "Who are you?" (features/whoami.js): a section leader's update says who sent it, carries their change log and
+   anyone who added themselves. Plain data, so the server hub (tools/build-hub.mjs) applies it the same way. */
+function chgTrim(){const old=Date.now()-120*86400000;S.chg=(S.chg||[]).filter(e=>e&&e.t>old).sort((a,b)=>b.t-a.t).slice(0,1500)}
+function chgMerge(list,how){S.chg=S.chg||[];const have=new Set(S.chg.map(e=>e.id));let n=0;
+  for(const e of list||[]){if(!e||!e.id||have.has(String(e.id))||!(+e.t))continue;const c={id:String(e.id).slice(0,16),t:+e.t,by:String(e.by||"").slice(0,40),bid:String(e.bid||"").slice(0,40),src:String(how||e.src||"").slice(0,50),mid:String(e.mid||"").slice(0,40),who:String(e.who||"").slice(0,70),f:String(e.f||"").slice(0,20),a:String(e.a==null?"":e.a).slice(0,80),b:String(e.b==null?"":e.b).slice(0,80)};S.chg.push(c);have.add(c.id);n++}
+  if(n)chgTrim();return n}
+function whoAddFrom(x,sec,by,how){const up=v=>String(v||"").toUpperCase().replace(/[|#<>]/g," ").replace(/\s+/g," ").trim();
+  const rank=RANKS.includes(up(x.rank))?up(x.rank):(MODE().rankDef||"LCPL"),name=up(x.name).replace(/[^A-Z0-9 ,.'-]/g,"").slice(0,60);if(!/^[A-Z' .-]+, ?[A-Z]/.test(name))return null;
+  const ex=S.roster.find(m=>fullK(m)===fullK({name}));if(ex)return {m:ex,dup:true};
+  const o={rank,name,sec:/^[A-Z0-9]{1,6}$/.test(sec||"")?sec:SECTIONS[0][0]};const ph=String(x.phone||"").replace(/\D/g,"");if(ph.length===10)o.phone=ph;if(/^[A-Z0-9]{1,6}$/.test(x.sub||"")&&S.level==="co")o.sub=x.sub;
+  const rec=addMarine(o,o.sec);if(!rec)return null;rec.detail="Added themselves ("+how+")";
+  S.chg=S.chg||[];S.chg.unshift({id:rndId(10),t:Date.now(),by:String(by||"").slice(0,40),bid:"",src:how,mid:rec.id,who:rec.rank+" "+rec.name,f:"added",a:"",b:"added themselves"});chgTrim();
+  actAdd("➕",(by||rec.rank+" "+lastOf(rec))+" added themselves to the roster ("+how+")","people");return {m:rec}}
+function whoCalApply(sec,o){let ch=false;const how=sec+" section leader link";S.seen=S.seen||{};const nmU=v=>String(v||"").toUpperCase().replace(/[^A-Z0-9 .'-]/g," ").replace(/\s+/g," ").trim().slice(0,40);
+  for(const x of (Array.isArray(o.a)?o.a:[]).slice(0,5)){const r=whoAddFrom(S.level==="co"?Object.assign({},x,{sub:x.sec}):x,sec,o.by&&nmU(o.by.n),how);if(r&&!r.dup)ch=true}
+  if(o.by&&o.by.n){const n=nmU(o.by.n),id=String(o.by.id||"");const pm=o.by.pend?S.roster.find(m=>fullK(m)===String(o.by.pend)):null;const k=pm?pm.id:S.roster.some(m=>m.id===id)?id:"n:"+n;const was=S.seen[k];
+    if(!was||was.how!==how||Date.now()-was.t>3600000){if(!was||was.how!==how)actAdd("👤",n+" is on the app ("+how+")","people");S.seen[k]={t:Date.now(),who:n,how};ch=true}}
+  if(Array.isArray(o.c)&&o.c.length&&chgMerge(o.c.slice(0,300),how))ch=true;
+  return ch}
 async function livePollBoard(){const B=S.board;if(!B||lvBusy)return;livePollCal();lvBusy=true;
   try{const rows=await SB.rpc("get_board_updates",{p_board:B.id,p_read_key:B.rk,p_after:B.after||0});B.err="";
     if(rows&&rows.length){const latest={};for(const r of rows){B.after=Math.max(B.after||0,+r.id);latest[r.sec]=r}
@@ -1722,7 +1741,7 @@ async function exportXL(kind){try{const X=await loadXLSX();const wb=X.utils.book
 const xlBtn=k=>`<button class="chip" data-xl="${k}" style="cursor:pointer;font-size:13px">⬇ Excel</button>`;
 
 /* ---------- backup + sync: encrypted with a recovery code; server stores an unreadable blob ---------- */
-const SYNC_SKIP=["sync","pushOn","link","ts","onb","role","me","ask","askSt","dev","hubMode","ws","wsCur","pendLink"];const CODE_AB="23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+const SYNC_SKIP=["sync","pushOn","link","ts","onb","role","me","who","ask","askSt","dev","hubMode","ws","wsCur","pendLink"];const CODE_AB="23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 let syncT=null,syncBusy=false,syncShow=false;
 const fnv=str=>{let h=0x811c9dc5;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)}return (h>>>0).toString(36)+str.length.toString(36)};
 const sig=v=>fnv(JSON.stringify(v===undefined?null:v));
@@ -1876,7 +1895,9 @@ function busyOn(m,day,ctx){ctx=ctx||{};const out=[];const add=(ty,hard,why,sh)=>
   (m.cal||[]).forEach(e=>calE(e,""));
   const nk=fullK(m);for(const [sec,c] of Object.entries(S.secCal||{}))for(const e of c.e||[])if(e.nk===nk)calE(e,sec+" leader");
   for(const r of S.duty.rosters)if(r.id!==ctx.roster&&(r.assign||{})[day]===m.id)add("DUTY",true,"Duty: "+r.name,r.name);
-  for(const ev of S.events||[]){if(ev.id===ctx.event)continue;const d=isoOf(ev.date)||ev.date;if(d===day&&evReq(ev).some(x=>x.id===m.id))add("EVENT",false,"Event: "+ev.name,ev.name)}
+  for(const ev of S.events||[]){if(ev.id===ctx.event)continue;const d=isoOf(ev.date)||ev.date;if(d!==day||!evReq(ev).some(x=>x.id===m.id))continue;
+    if(ctx.event){if(ctx.tm&&ev.tm===ctx.tm)add("EVENT",true,"Event: "+ev.name+" "+ev.tm,ev.tm+" "+ev.name);continue}
+    add("EVENT",false,"Event: "+ev.name+(ev.tm?" "+ev.tm:""),(ev.tm?ev.tm+" ":"")+ev.name)}
   if(ctx.lim&&dutyOf(m)==="LIMDU")add("LIMDU",false,"LIMDU","LIMDU");
   return out}
 const cfCol=list=>list.some(x=>x.hard)?"--warn":"--s-duty";
@@ -1885,7 +1906,7 @@ function daysIn(a,b,cap){const out=[];const d=parseD(a);const e=parseD(b&&b>a?b:
 function upcomingConflicts(n){n=n||14;const out=[];const t=today0();
   for(let i=0;i<n;i++){const d=new Date(t);d.setDate(d.getDate()+i);const k=dkey(d);
     for(const r of S.duty.rosters){const id=(r.assign||{})[k];const m=id&&S.roster.find(x=>x.id===id);if(!m)continue;const cf=busyOn(m,k,{roster:r.id,lim:r.skipLim});if(cf.length)out.push({d:k,m,what:r.name,kind:"duty",cf})}
-    for(const ev of S.events||[]){const ed=isoOf(ev.date)||ev.date;if(ed!==k)continue;for(const m of evReq(ev)){const cf=busyOn(m,k,{event:ev.id}).filter(x=>x.hard);if(cf.length)out.push({d:k,m,what:ev.name,kind:"event",cf})}}}
+    for(const ev of S.events||[]){const ed=isoOf(ev.date)||ev.date;if(ed!==k)continue;for(const m of evReq(ev)){const cf=busyOn(m,k,{event:ev.id,tm:ev.tm||""}).filter(x=>x.hard);if(cf.length)out.push({d:k,m,what:ev.name,kind:"event",cf})}}}
   return out}
 function cfRow(c){const dd=parseD(c.d);return `<div class="rrow" style="--sc:var(${cfCol(c.cf)})"><div class="who"><b>${DOW[dd.getDay()]} ${short(dd)} · ${esc(c.what)}</b><div class="ph"><span data-pcard="${c.m.id}" style="cursor:pointer;text-decoration:underline">${esc(c.m.rank+" "+c.m.name)}</span> · ${esc(c.m.sec)}</div><div class="ph">${cfLine(c.cf)}</div></div>${c.kind==="duty"?`<button class="chip" data-go="duty" style="cursor:pointer">Fix in DUTY</button>`:""}</div>`}
 
@@ -2107,7 +2128,7 @@ async function fdPoll(f,full){const ackN={};const after=full?0:Math.max(0,f.ctl|
   let ctlTop=full?0:(f.ctl||0);for(const r of [...(rows||[])].sort((a,b)=>a.id-b.id)){if(have.has(+r.id))continue;const o=await fdDec(f.ek,r.ct);if(!o)continue;if(o.c==="pin"){if(+r.id>=ctlTop){ctlTop=+r.id;f.pins=Array.isArray(o.ids)?o.ids.map(Number).slice(0,5):[]}continue}const to=o.to&&["all","secs","one"].includes(o.to.k)?o.to:{k:"all"};if(to.k==="secs"&&!Array.isArray(to.s))to.s=[];if(o.sa&&!f.lk)f.secsAll=o.sa;const post={id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,1500),urg:!!o.u,to};if(o.pod&&o.pod.d)post.pod={d:String(o.pod.d).slice(0,10)};if(o.by)post.by=String(o.by).slice(0,30);if(typeof o.ci==="string"&&/^https:\/\/[^\s]+#ci=/.test(o.ci))post.ci=o.ci.slice(0,500);if(o.sl)post.sl=String(o.sl).replace(/[^A-Z0-9]/g,"").slice(0,6);keep.push(post);if(f.lk&&post.sl&&+r.id>(f.actTop||0)){f.actTop=+r.id;if(!full||f.actInit)actAdd("✎",post.sl+" leader "+(post.by||"")+" posted"+(post.to&&post.to.k==="secs"?" to "+fdToLabel(post.to):" to everyone")+": “"+post.txt.slice(0,80)+(post.txt.length>80?"…":"")+"”","feed")}if(+r.id>(f.seen||0)&&(f.lk||post.to.k!=="one"||fdForMe(f,post)))fresh++}
   f.actInit=1;f.posts=keep.sort((a,b)=>b.id-a.id).slice(0,200);f.ctl=ctlTop;if(full&&!ctlTop)f.pins=[];f.err="";
   if(f.lk){try{const rq=await SB.rpc("feed_reqs_get",{p_feed:f.id,p_leader_key:f.lk,p_after:f.reqAfter||0});let nr=0;
-      for(const r of rq||[]){f.reqAfter=Math.max(f.reqAfter||0,+r.id);const o=await fdDec(f.ek,r.ct);if(o&&o.k==="rep"&&typeof repIn==="function"){repIn(f,o,r);continue}if(o&&o.k==="ck"&&typeof ckIn==="function"){ckIn(f,o,r);continue}if(!o||o.k!=="req"||S.reqs.some(x=>x.rid===o.rid))continue;const m=matchMarine(String(o.me||""));
+      for(const r of rq||[]){f.reqAfter=Math.max(f.reqAfter||0,+r.id);const o=await fdDec(f.ek,r.ct);if(o&&o.k==="rep"&&typeof repIn==="function"){repIn(f,o,r);continue}if(o&&o.k==="ck"&&typeof ckIn==="function"){ckIn(f,o,r);continue}if(o&&(o.k==="who"||o.k==="join")&&typeof whoIn==="function"){whoIn(f,o,r);continue}if(!o||o.k!=="req"||S.reqs.some(x=>x.rid===o.rid))continue;const m=matchMarine(String(o.me||""));
         actAdd("📨",String(o.me||"Someone").slice(0,30)+" requested "+String(o.ty||"Other").slice(0,24)+(o.from?" "+String(o.from).slice(0,10)+(o.to&&o.to!==o.from?" to "+String(o.to).slice(0,10):""):""),"feed");S.reqs.unshift({rid:String(o.rid).slice(0,20),feed:f.id,mid:m?m.id:"",who:String(o.me||"").slice(0,30),ty:String(o.ty||"Other").slice(0,24),from:String(o.from||"").slice(0,10),to:String(o.to||"").slice(0,10),tm:String(o.tm||"").slice(0,5),note:String(o.note||"").slice(0,200),t:Date.parse(r.created_at)||Date.now(),st:"pending"});nr++}
       if(nr){S.reqs=S.reqs.slice(0,400);toast("📨 "+nr+" new request"+(nr>1?"s":""));try{navigator.vibrate&&navigator.vibrate([80,60,80])}catch(e){}}}catch(e){}
     const acks=await SB.rpc("feed_acks_get",{p_feed:f.id,p_leader_key:f.lk,p_after:f.ackAfter||0});
@@ -2460,8 +2481,8 @@ function renderEvents(){let h=banner();
   const ev=evOpen&&S.events.find(e=>e.id===evOpen);
   if(ev){const req=evReq(ev);const got=req.filter(m=>evDone(ev,m)).length;
     h+=`<div class="mbar"><div class="ct">${got}/${req.length}<small>attended</small></div><button class="btn alt" id="evBack">All events</button></div>
-      <h2 style="margin-top:6px">${esc(ev.name)}</h2><div class="note">${esc(ev.type||"")}${ev.date?" · "+esc(ev.date):""} · required: ${ev.secs.join(", ")}${ev.att?", attached":""}</div>
-      ${(()=>{const d=isoOf(ev.date)||ev.date;if(!/^\d{4}-\d{2}-\d{2}$/.test(d||"")||d<dkey())return"";const c=sorted(req).map(m=>({m,cf:busyOn(m,d,{event:ev.id,lim:true})})).filter(x=>x.cf.length);
+      <h2 style="margin-top:6px">${esc(ev.name)}</h2><div class="note">${esc(ev.type||"")}${ev.date?" · "+esc(ev.date):""}${ev.tm?" "+esc(ev.tm):""} · required: ${ev.secs.join(", ")}${ev.att?", attached":""}</div>
+      ${(()=>{const d=isoOf(ev.date)||ev.date;if(!/^\d{4}-\d{2}-\d{2}$/.test(d||"")||d<dkey())return"";const c=sorted(req).map(m=>({m,cf:busyOn(m,d,{event:ev.id,tm:ev.tm||""})})).filter(x=>x.cf.length);
         return c.length?`<div class="panel" style="border-color:var(${c.some(x=>x.cf.some(y=>y.hard))?"--warn":"--s-duty"})"><b>⚠ Conflicts on ${short(parseD(d))} (${c.length})</b>${c.map(x=>`<div class="rtop"><div class="who"><span data-pcard="${x.m.id}" style="cursor:pointer;text-decoration:underline"><b>${esc(x.m.rank)}</b> ${esc(x.m.name)}</span><div class="ph">${cfLine(x.cf)}</div></div></div>`).join("")}</div>`:`<p class="note" style="color:var(--s-onhand)">✓ No conflicts on the event date.</p>`})()}
       <label class="tog" style="margin:8px 0"><input type="checkbox" id="evOnly"${evOnly?" checked":""}> Show who still owes only</label>
       <div class="row2"><a class="btn" href="${esc(smsHref(evText(ev)))}">Text owe list</a><button class="btn alt" id="evCopy">Copy</button></div>`;
@@ -2475,7 +2496,7 @@ function renderEvents(){let h=banner();
   h+=`<div class="ahead"><h2>Events & attendance</h2><span>${S.events.length}</span></div>`;
   if(evNew){const _n=new Date();const today=_n.getFullYear()+"-"+String(_n.getMonth()+1).padStart(2,"0")+"-"+String(_n.getDate()).padStart(2,"0");
     h+=`<form class="panel" id="evForm"><label for="evName">Event name</label><input type="text" id="evName" placeholder="e.g. Annual rifle qual, MCMAP tan belt" required>
-      <label for="evDate">Date</label><input type="date" id="evDate" value="${today}" class="wsel">
+      <div class="row2"><div><label for="evDate">Date</label><input type="date" id="evDate" value="${today}" class="wsel"></div><div><label for="evTm">Start time (optional)</label><input type="time" id="evTm" class="wsel"></div></div>
       <label>Type</label><div class="evts">${EV_TYPES.map((t,i)=>`<label class="tog"><input type="radio" name="evType" value="${t}"${i===0?" checked":""}> ${t}</label>`).join("")}</div>
       <label>Required for</label><div class="evts">${SECTIONS.map(([k])=>`<label class="tog"><input type="checkbox" name="evSec" value="${k}" checked> ${k}</label>`).join("")}<label class="tog"><input type="checkbox" id="evAtt"> Attached</label></div>
       <div class="row2"><button class="btn" type="submit">Create event</button><button class="btn alt" type="button" id="evCancel">Cancel</button></div></form>`}
@@ -2958,7 +2979,7 @@ document.addEventListener("input",e=>{
 document.addEventListener("submit",e=>{
   if(e.target.id==="evForm"){e.preventDefault();const name=$("#evName").value.trim();if(!name){toast("Name the event.");return}
     const secs=[...document.querySelectorAll("input[name=evSec]:checked")].map(x=>x.value);const att=$("#evAtt").checked;if(!secs.length&&!att){toast("Pick at least one section.");return}
-    const ev={id:"e"+Date.now(),name,date:$("#evDate").value,type:(document.querySelector("input[name=evType]:checked")||{}).value||"",secs,att,done:{}};
+    const ev={id:"e"+Date.now(),name,date:$("#evDate").value,tm:/^\d\d:\d\d$/.test(($("#evTm")||{}).value||"")?$("#evTm").value:"",type:(document.querySelector("input[name=evType]:checked")||{}).value||"",secs,att,done:{}};
     S.events.push(ev);save();evNew=false;evOpen=ev.id;renderEvents();window.scrollTo(0,0);toast("Event created");return}
   if(e.target.id!=="addf")return;e.preventDefault();
   const name=$("#aName").value.trim().toUpperCase();if(!name){toast("Enter a name first.");return}
