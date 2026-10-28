@@ -47,6 +47,7 @@ export const SOURCES = [
   "features/drills.js",
   "features/family.js",
   "features/roster-import.js",
+  "features/whoami.js",
 ];
 
 export function build() {
