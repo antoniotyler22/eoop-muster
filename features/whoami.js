@@ -181,6 +181,9 @@ function watch(){if(!Array.isArray(S.roster))return;const now=snap();
 {const _save=save;save=function(){const r=_save.apply(this,arguments);try{watch()}catch(e){}return r}}
 {const _raw=rawSave;rawSave=function(){const r=_raw.apply(this,arguments);try{if(base)base=snap()}catch(e){}return r}}
 setTimeout(()=>{try{base=snap()}catch(e){}},0);
+/* Feed posts and direct messages sent from this phone are logged too */
+{const _rpc=SB.rpc.bind(SB);SB.rpc=async function(fn,args){const r=await _rpc(fn,args);
+  try{if((fn==="feed_post"||fn==="feed_post_sl")&&real()&&Date.now()-touchT<60000)logEntry({mid:"",who:"",f:"feed",b:"posted to the Feed"})}catch(e){}return r}}
 /* data arriving from other phones is never logged as a change made here */
 for(const fn of ["livePollBoard","livePollCal","rosterPull","syncPull","fdPollAll","mpFetch"]){const f0=window[fn];if(typeof f0!=="function")continue;
   window[fn]=async function(){remote++;try{return await f0.apply(this,arguments)}finally{remote--;try{base=snap()}catch(e){}}}}
@@ -189,7 +192,7 @@ for(const fn of ["livePollBoard","livePollCal","rosterPull","syncPull","fdPollAl
   try{const keep=S.chg;S.chg=[];mergeChg(lc);mergeChg((R&&R.chg)||[]);if(Array.isArray(keep))mergeChg(keep);const rs=(R&&R.seen)||{};S.seen=Object.assign({},S.seen||{});for(const src of [ls,rs])for(const [k,v] of Object.entries(src))if(v&&(!S.seen[k]||(+v.t||0)>(+S.seen[k].t||0)))S.seen[k]=v}catch(e){}return r}}
 
 /* ---------- showing it ---------- */
-const fmt=e=>{const w=e.f==="added"?(e.b||"added"):e.f==="removed"?"removed":e.f==="many"?e.b:e.f==="calendar"?(e.b==="removed"?"calendar: removed "+e.a:"calendar: "+e.b.replace(/^\+ /,"added ")):e.f+": "+(e.a||"—")+" → "+(e.b||"—");return w};
+const fmt=e=>{const w=e.f==="added"?(e.b||"added"):e.f==="removed"?"removed":e.f==="many"||e.f==="feed"?e.b:e.f==="calendar"?(e.b==="removed"?"calendar: removed "+e.a:"calendar: "+e.b.replace(/^\+ /,"added ")):e.f+": "+(e.a||"—")+" → "+(e.b||"—");return w};
 function rowHTML(e,showWho){const d=new Date(e.t);return `<div class="rrow" style="--sc:var(--line)"><div class="who"><b>${esc(e.by||"Someone")}</b>${showWho&&e.who?" · "+esc(e.who):""}<div class="ph">${esc(fmt(e))}</div><div class="ph">${esc(e.src||"")} · ${esc(short(d))} ${String(d.getHours()).padStart(2,"0")}${String(d.getMinutes()).padStart(2,"0")}</div></div></div>`}
 window.whoChgFor=m=>(S.chg||[]).filter(e=>e.mid&&(e.mid===m.id||e.mid===m.uid));
 {const _rp=renderPerson;renderPerson=function(){const r=_rp.apply(this,arguments);try{const m=S.roster.find(x=>x.id===pid);const main=$("#main");if(!m||!main||$("#whoHist"))return r;
