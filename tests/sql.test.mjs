@@ -151,3 +151,16 @@ test("accounts: sign-in required, each person sees only their own; teams sent to
   assert.equal(pg.psql(`select count(*) from public.af_invite where owner = ${q(u1)}`), "0");
   assert.equal(pg.psql(`select count(*) from public.af_account where user_id = ${q(u1)}`), "0");
 });
+
+test("company command notes: command key writes cmd rows only; platoon key reads only cmd rows and can't forge one", { skip }, () => {
+  const rk = "r".repeat(32), wk = "w".repeat(32), co = "cmdtestco1";
+  anon(`select public.create_company(${q(co)}, ${q(rk)}, ${q(wk)})`);
+  anon(`select public.put_unit(${q(co)}, ${q(wk)}, 'plt1abcdef', 'unitdata')`);
+  anon(`select public.put_cmd(${q(co)}, ${q(rk)}, 'cmdxo12345', 'notes')`);
+  assert.throws(() => anon(`select public.put_cmd(${q(co)}, ${q(wk)}, 'cmdxo12345', 'x')`), /link not valid/, "platoon key can't write command notes");
+  assert.throws(() => anon(`select public.put_cmd(${q(co)}, ${q(rk)}, 'plt1abcdef', 'x')`), /bad unit/, "command key can't overwrite a platoon");
+  assert.throws(() => anon(`select public.put_unit(${q(co)}, ${q(wk)}, 'cmdfake123', 'x')`), /bad unit/, "platoon can't forge a command row");
+  assert.equal(anon(`select string_agg(unit, ',') from public.get_cmd(${q(co)}, ${q(wk)})`), "cmdxo12345");
+  assert.throws(() => anon(`select * from public.get_cmd(${q(co)}, ${q(rk.replace(/r$/, "s"))})`), /link not valid/);
+  assert.equal(anon(`select count(*) from public.get_units(${q(co)}, ${q(rk)})`), "2", "command still sees everything");
+});
