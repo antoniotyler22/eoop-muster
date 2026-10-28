@@ -264,7 +264,16 @@ if(S.newCo&&S.source==="sample"){S.roster=sampleRoster();let si=0;const sb=MIL_S
 S.mus=Object.assign({open:false,seen:{},inc:["On Hand"],att:true,only:false,last:null},S.mus||{});
 S.pt=Object.assign({event:"Unit PT",when:"",inc:["On Hand"],att:true},S.pt||{});
 const dutyOf=m=>DUTIES.includes(m.duty)?m.duty:"Full Duty";
-function save(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.write(t);else localStorage.setItem(KEY,t);storageOK=true}catch(e){storageOK=false}if(S.link&&typeof linkSchedule==="function")linkSchedule();if(typeof histTick==="function")histTick();if(typeof syncSchedule==="function")syncSchedule();if(typeof mpSchedule==="function")mpSchedule();if(S.board&&typeof rpSchedule==="function")rpSchedule();if(S.coRep&&typeof coSchedule==="function")coSchedule()}
+/* Last change to each section, from any source (this phone, a section leader's link, a member check-in, a sync).
+   S.secAt[sec]=time (shared with team.js), S.secBy[sec]=who. Compared on every save against a per-section signature. */
+let secSigs=null;
+function secTouch(by){try{if(!Array.isArray(S.roster))return;const sg={};for(const m of S.roster){if(!m||!m.sec)continue;sg[m.sec]=(sg[m.sec]||"")+m.id+"|"+(m.status||"")+"|"+(m.duty||"")+"|"+(m.start||"")+"|"+(m.end||"")+"|"+(m.loc||"")+";"}
+  if(secSigs){S.secAt=S.secAt&&typeof S.secAt==="object"?S.secAt:{};S.secBy=S.secBy&&typeof S.secBy==="object"?S.secBy:{};for(const k of Object.keys(sg))if(sg[k]!==secSigs[k]&&secSigs[k]!==undefined){S.secAt[k]=Date.now();S.secBy[k]=by||secBy()}}
+  secSigs=sg}catch(e){}}
+function secBy(){if(S.link)return "this phone ("+(S.link.me||"section leader")+")";return S.role==="view"?"a synced phone":"this phone"}
+/* the latest update for a section: a section leader's push (board) or any change made here */
+function secLast(k){const B=S.board,r=B&&B.last&&B.last[k],t=+((S.secAt||{})[k])||0;if(r&&(!t||r.t>=t))return r;if(t)return {t,by:(S.secBy||{})[k]||"",ch:0,local:true};return null}
+function save(){secTouch();try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.write(t);else localStorage.setItem(KEY,t);storageOK=true}catch(e){storageOK=false}if(S.link&&typeof linkSchedule==="function")linkSchedule();if(typeof histTick==="function")histTick();if(typeof syncSchedule==="function")syncSchedule();if(typeof mpSchedule==="function")mpSchedule();if(S.board&&typeof rpSchedule==="function")rpSchedule();if(S.coRep&&typeof coSchedule==="function")coSchedule()}
 
 let view="board", armed=null, query="";
 const h0=(location.hash||"").slice(1).toLowerCase();
@@ -839,19 +848,19 @@ async function livePollBoard(){const B=S.board;if(!B||lvBusy)return;livePollCal(
             if(hit.length){const rk=await Promise.all(hit.map(m=>SB.h(B.id,String(m.rank).toUpperCase().replace(/[^A-Z0-9]/g,""))));const both=hit.filter((m,i)=>set.has(rk[i]));const pick=both.length===1?both[0]:hit.length===1?hit[0]:null;if(pick)res.by=pick.rank+" "+lastOf(pick)}}}
         else res.unknown=true;
         if(res.chg&&res.chg.length)actAdd("📋",sec+" · "+(res.by||"section leader")+": "+res.chg.slice(0,8).join(", ")+(res.chg.length>8?" +"+(res.chg.length-8)+" more":""),sec.toLowerCase());
-        B.last[sec]=res;msgs.push(sec+(res.ch?" "+res.ch+" change"+(res.ch>1?"s":""):" no changes"))}
+        B.last[sec]=res;S.secAt=S.secAt||{};S.secBy=S.secBy||{};S.secAt[sec]=res.t;S.secBy[sec]=res.by||"section leader";secSigs=null;msgs.push(sec+(res.ch?" "+res.ch+" change"+(res.ch>1?"s":""):" no changes"))}
       save();renderTabs();if(["board","live"].includes(view)||Object.keys(latest).includes(view.toUpperCase())){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;render();window.scrollTo(0,y)}}
       toast("Live: "+msgs.join(" · "));try{navigator.vibrate&&navigator.vibrate(30)}catch(e){}}
   }catch(e){B.err=String(e.message||e).slice(0,80)}finally{lvBusy=false;liveTimesFresh()}}
 /* the "updated … ago" lines on the Live page and the board strip tick along with the 15-second poll */
-function liveTimesFresh(){try{const B=S.board;if(!B||!B.last)return;document.querySelectorAll("#main [data-livet]").forEach(el=>{const r=B.last[el.dataset.livet];if(r)el.textContent=ago(r.t)})}catch(e){}}
+function liveTimesFresh(){try{if(!S.board)return;document.querySelectorAll("#main [data-livet]").forEach(el=>{const r=secLast(el.dataset.livet);if(r)el.textContent=ago(r.t)})}catch(e){}}
 every(15000,()=>{if(S.board)livePollBoard()},"board");
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.board)livePollBoard()});
 const ago=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?"just now":m<60?m+" min ago":m<1440?Math.round(m/60)+" hr ago":Math.round(m/1440)+" d ago"};
 /* a plain date and time for "updated when" lines: "Oct 28, 7:23 AM" (adds the year when it isn't this year) */
 const whenAt=t=>{const d=new Date(t);if(isNaN(d))return"";const o={month:"short",day:"numeric",hour:"numeric",minute:"2-digit"};if(d.getFullYear()!==new Date().getFullYear())o.year="numeric";return d.toLocaleString([],o)};
 function liveStrip(){const B=S.board;if(!B)return `<button class="att" data-go="live" style="text-align:left;width:100%;cursor:pointer"><div><div class="lbl">Live sections · off</div><div class="note" style="margin-top:4px">Let section leaders update your board from their phones. Tap to set up.</div></div></button>`;
-  return `<button class="att" data-go="live" style="text-align:left;width:100%;cursor:pointer"><div><div class="lbl">● Live sections</div><div class="note" style="display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:4px">${SECTIONS.map(([k])=>{const r=B.last[k];const old=r&&Date.now()-r.t>4*3600000;
+  return `<button class="att" data-go="live" style="text-align:left;width:100%;cursor:pointer"><div><div class="lbl">● Live sections</div><div class="note" style="display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:4px">${SECTIONS.map(([k])=>{const r=secLast(k);const old=r&&Date.now()-r.t>4*3600000;
     return `<span title="${r?esc(whenAt(r.t)):"No update yet"}"><b>${k}</b> <span style="color:var(${!r?"--muted":old?"--warn":"--s-onhand"})"${r?` data-livet="${esc(k)}"`:""}>${r?ago(r.t):"waiting"}</span></span>`}).join("")}</div></div></button>`}
 function renderLive(){let h=banner();const B=S.board,L=S.link;
   h+=`<h2>Live ${LV().sec} updates</h2>`;if(!B)h+=accessHTML();
@@ -860,10 +869,10 @@ function renderLive(){let h=banner();const B=S.board,L=S.link;
   else{h+=`<div class="panel"><div><b style="color:var(--s-onhand)">● Live</b> · checks every 15 seconds while the app is open${B.err?` · <span style="color:var(--warn)">${esc(B.err)}</span>`:""}</div>
       ${boardPushHTML()}
       <p class="note">Send each ${LV().head} their link. Their ${LV().sec} roster loads from your board, so they don't load anything.${S.level==="co"?" Each platoon OIC gets their platoon with its own sections and can run their own section leaders.":""} Every change they make shows up here, and they land in your Feed where you see every post.</p>${hubHTML()}${accessHTML()}</div>
-    <div class="alist" style="margin-top:10px">${SECTIONS.map(([k,n])=>{const r=B.last[k];const old=r&&Date.now()-r.t>4*3600000;
+    <div class="alist" style="margin-top:10px">${SECTIONS.map(([k,n])=>{const r=secLast(k);const old=r&&Date.now()-r.t>4*3600000;
       return `<div class="rrow" style="--sc:var(${!r?"--line":old?"--warn":"--s-onhand"})"><div class="rtop"><div class="who"><b>${k}</b> ${esc(n)}
-        <div class="ph">${B.rsig&&B.rsig[k]?`<b style="color:var(--s-onhand)">✓ Roster shared</b> · `:S.source==="sample"?"":`Roster sharing… · `}${r?`Updated ${esc(whenAt(r.t))} · <span data-livet="${esc(k)}">${ago(r.t)}</span>${r.by?" by "+esc(r.by):""} · ${r.ch} change${r.ch===1?"":"s"}`:"No update yet"}</div>
-        ${r&&(r.miss||r.str!==r.mine)?`<div class="ph" style="color:var(--warn)">${r.miss?r.miss+" name"+(r.miss>1?"s":"")+" not on your roster. ":""}${r.str!==r.mine?"Their strength "+r.str+", yours "+r.mine+".":""}</div>`:""}</div></div>
+        <div class="ph">${B.rsig&&B.rsig[k]?`<b style="color:var(--s-onhand)">✓ Roster shared</b> · `:S.source==="sample"?"":`Roster sharing… · `}${r?`Updated ${esc(whenAt(r.t))} · <span data-livet="${esc(k)}">${ago(r.t)}</span>${r.by?" by "+esc(r.by):""}${r.local?"":` · ${r.ch} change${r.ch===1?"":"s"}`}`:"No update yet"}</div>
+        ${r&&!r.local&&(r.miss||r.str!==r.mine)?`<div class="ph" style="color:var(--warn)">${r.miss?r.miss+" name"+(r.miss>1?"s":"")+" not on your roster. ":""}${r.str!==r.mine?"Their strength "+r.str+", yours "+r.mine+".":""}</div>`:""}</div></div>
         <div class="row2">${(()=>{const hd=S.roster.find(m=>m.id===(B.heads||{})[k]);return `<select class="wsel" data-lvhead="${k}" aria-label="${k} section head"><option value="">${LV().Head}: pick from ${k}…</option>${sorted(S.roster.filter(m=>m.sec===k)).map(m=>`<option value="${m.id}"${hd&&hd.id===m.id?" selected":""}>${esc(m.rank+" "+m.name)}${m.phone?"":" (no number)"}</option>`).join("")}</select><a class="btn alt" href="${esc((hd&&hd.phone?"sms:+1"+String(hd.phone).replace(/\D/g,"").slice(-10):"sms:")+"?&body="+encodeURIComponent(unitName()+": you're the "+k+" "+LV().head+". Open this link in Accounted For. Your "+LV().sec+" roster loads from my board, your updates come straight to me, and you can post to the unit Feed: "+boardLink(k)+" · iPhone: open in Safari, then Share → Add to Home Screen so alerts work."))}">Text ${k} link${hd?" to "+esc(hd.rank+" "+lastOf(hd)):""}</a>`})()}<button class="btn alt" data-lvcopy="${k}">Copy link</button></div>${(S.wsCur||"plt")==="co"?`<button class="chip" data-lvmine="${k}" style="cursor:pointer;margin:6px 6px 0 0">${S.ws&&S.ws.plt&&S.ws.plt.link&&S.ws.plt.link.board===B.id&&S.ws.plt.link.sec===k?"✓ My platoon view runs "+k:"I run "+k+": link my platoon view"}</button>`:""}<button class="chip" data-lvreset="${k}" style="cursor:pointer;margin-top:6px">${armed==="lvreset"+k?"Tap again: old "+k+" link stops working":"↺ Replace "+k+" link (cut off the old one)"}</button></div>`}).join("")}</div>
     <button class="btn warn" id="lvOff" style="margin-top:16px;width:100%">${armed==="lvoff"?"Tap again: turn off and disconnect all sections":"Turn off live updates"}</button>`}
   if(L)h+=`<h2>My link</h2><div class="panel"><div>This phone sends <b>${esc(L.mysec)}</b> to <b>${esc(L.unit)}</b> as <b>${esc(L.sec)}</b>${L.me?" · sender "+esc(L.me):""}.</div><div class="note">${linkStatus()}</div>${L.rk2?`<div class="note">${L.perr?`<span style="color:var(--warn)">Roster: ${esc(L.perr)}</span>`:L.pulled?`Roster from ${esc(L.unit)} · ${(L.whole?S.roster:S.roster.filter(m=>m.sec===L.mysec)).length} people · updated ${ago(L.pt)}`:"Loading your section roster…"}</div>`:""}
@@ -1360,7 +1369,7 @@ function renderBoard(){const {c,T,A}=counts();const P=pct(T["On Hand"],T.total);
 function renderPeople(){const {c,A}=counts();let h=banner()+(canEdit()&&isLeaderPhone()?`<button class="btn alt" data-addm="" style="width:100%;margin-top:10px">+ Add Marines</button>`:"");
   h+=`<div style="margin-top:12px"><input class="search" id="gq" type="search" placeholder="Find anyone: name, rank or section" autocomplete="off" style="margin:0"><div id="gqr" class="alist" style="margin-top:6px"></div></div>`;
   h+=`<div class="sech"><h2>Sections</h2><span class="note" style="margin:0">${S.roster.filter(m=>m.sec!=="ATT").length} people</span></div><div class="tgrid">`;
-  h+=SECTIONS.map(([k,n])=>{const o=c[k];const p=pct(o["On Hand"],o.total);const away=o.total-present(o);const r=S.board&&S.board.last[k];
+  h+=SECTIONS.map(([k,n])=>{const o=c[k];const p=pct(o["On Hand"],o.total);const away=o.total-present(o);const r=S.board?secLast(k):null;
     return `<button class="pcard" data-go="${k.toLowerCase()}"><span style="display:flex;justify-content:space-between;width:100%"><b style="font-size:15px">${esc(k)}</b><b style="font-variant-numeric:tabular-nums">${o["On Hand"]}/${o.total}</b></span><span class="note" style="margin:0">${esc(n)}</span><span class="hbar" style="width:100%"><i style="width:${p}%"></i></span><span class="note" style="margin:0">${away} away${r?` · updated <span data-livet="${esc(k)}">${ago(r.t)}</span>`:""}</span></button>`}).join("");
   h+=`<button class="pcard" data-go="att"><span style="display:flex;justify-content:space-between;width:100%"><b style="font-size:15px">ATT</b><b>+${A.total}</b></span><span class="note" style="margin:0">Attached, not on strength</span><span class="note" style="margin:0">${A["On Hand"]} on hand</span></button></div>`;
   h+=`<div class="sech"><h2>More</h2></div><div class="tgrid">

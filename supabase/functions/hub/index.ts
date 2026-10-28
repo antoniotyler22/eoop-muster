@@ -118,6 +118,8 @@ function secFix(){for(const m of S.roster){if(m.sec!=="ATT"&&!SECTIONS.some(s=>s
 const DUTIES=["Full Duty","Light Duty","LIMDU"];
 const RANKS=["CWO5","CWO4","CWO3","CWO2","WO","MAJ","CAPT","1STLT","2NDLT","SGTMAJ","MGYSGT","1STSGT","MSGT","GYSGT","SSGT","SGT","CPL","LCPL","PFC","PVT"];
 const dutyOf=m=>DUTIES.includes(m.duty)?m.duty:"Full Duty";
+let secSigs=null;
+function secLast(k){const B=S.board,r=B&&B.last&&B.last[k],t=+((S.secAt||{})[k])||0;if(r&&(!t||r.t>=t))return r;if(t)return {t,by:(S.secBy||{})[k]||"",ch:0,local:true};return null}
 const SCODE={"Appointment on Base":"AOB","Appointment off Base":"AOFF","Company Duties":"DUTY","Operation":"OP","TAD":"TAD","Leave":"LV"};
 const SDEC=Object.fromEntries(Object.entries(SCODE).map(([a,b])=>[b,a]));
 function tok(m){const [last,rest]=m.name.split(",");const first=((rest||"").trim().split(/\s+/)[0]||"").replace(/[^A-Z]/gi,"").slice(0,3);
@@ -168,11 +170,11 @@ async function livePollBoard(){const B=S.board;if(!B||lvBusy)return;lvBusy=true;
             if(hit.length){const rk=await Promise.all(hit.map(m=>SB.h(B.id,String(m.rank).toUpperCase().replace(/[^A-Z0-9]/g,""))));const both=hit.filter((m,i)=>set.has(rk[i]));const pick=both.length===1?both[0]:hit.length===1?hit[0]:null;if(pick)res.by=pick.rank+" "+lastOf(pick)}}}
         else res.unknown=true;
         if(res.chg&&res.chg.length)actAdd("📋",sec+" · "+(res.by||"section leader")+": "+res.chg.slice(0,8).join(", ")+(res.chg.length>8?" +"+(res.chg.length-8)+" more":""),sec.toLowerCase());
-        B.last[sec]=res;msgs.push(sec+(res.ch?" "+res.ch+" change"+(res.ch>1?"s":""):" no changes"))}
+        B.last[sec]=res;S.secAt=S.secAt||{};S.secBy=S.secBy||{};S.secAt[sec]=res.t;S.secBy[sec]=res.by||"section leader";secSigs=null;msgs.push(sec+(res.ch?" "+res.ch+" change"+(res.ch>1?"s":""):" no changes"))}
       save();renderTabs();if(["board","live"].includes(view)||Object.keys(latest).includes(view.toUpperCase())){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;render();window.scrollTo(0,y)}}
       toast("Live: "+msgs.join(" · "));try{navigator.vibrate&&navigator.vibrate(30)}catch(e){}}
   }catch(e){B.err=String(e.message||e).slice(0,80)}finally{lvBusy=false;liveTimesFresh()}}
-function liveTimesFresh(){try{const B=S.board;if(!B||!B.last)return;document.querySelectorAll("#main [data-livet]").forEach(el=>{const r=B.last[el.dataset.livet];if(r)el.textContent=ago(r.t)})}catch(e){}}
+function liveTimesFresh(){try{if(!S.board)return;document.querySelectorAll("#main [data-livet]").forEach(el=>{const r=secLast(el.dataset.livet);if(r)el.textContent=ago(r.t)})}catch(e){}}
 const ago=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?"just now":m<60?m+" min ago":m<1440?Math.round(m/60)+" hr ago":Math.round(m/1440)+" d ago"};
 function actAdd(ic,txt,go){S.act=S.act||[];S.act.unshift({t:Date.now(),ic,txt:String(txt).slice(0,220),go:go||""});if(S.act.length>300)S.act.length=300}
 function addMarine(o,defSec){const sec=o.sec||defSec||SECTIONS[0][0];const rec={id:"a"+Date.now().toString(36)+rndId(3),rank:o.rank||(MODE().rankDef||"LCPL"),name:o.name.toUpperCase().slice(0,60),sec,status:o.status||"On Hand",duty:"Full Duty",detail:"Added in app",loc:"",start:"",end:""};

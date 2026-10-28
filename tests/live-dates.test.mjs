@@ -20,3 +20,14 @@ test("a UT update lands with its date and the total stays put", async () => {
     assert.match(a.w.eval(`(()=>{view="board";render();return liveStrip()})()`), /data-livet="UT"/);
   } finally { a.close(); }
 });
+
+test("a status changed on this phone stamps the section's Live line too", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    const r = a.w.eval(`(()=>{${lead}S.board={id:"b1",rk:"r",wk:"w",ek:"e",after:0,last:{},sk:{}};save();
+      const m=S.roster.find(x=>x.sec==="UT");m.status=m.status==="Leave"?"On Hand":"Leave";save();
+      const strip=liveStrip();view="live";render();return [strip.includes('data-livet="UT"'),document.querySelector('#main').textContent.includes("No update yet"),!!secLast("UT")]})()`);
+    assert.equal(r[0], true, "UT shows a time on the strip");
+    assert.equal(r[2], true);
+  } finally { a.close(); }
+});
