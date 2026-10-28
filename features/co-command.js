@@ -51,7 +51,7 @@ coPoll=async function(){const C=S.coBoard;if(!C||coBusy)return;coBusy=true;
     for(const r of rs||[]){seen.add(r.unit);const t=Date.parse(r.updated_at)||0;
       if(isCmd(r.unit)){const cur=C.cmd[r.unit];if(cur&&cur.t===t)continue;const o=await fdDec(C.ek,r.ct);if(o&&o.kind==="cmd")C.cmd[r.unit]={t,o};continue}
       const cur=C.units[r.unit];if(cur&&cur.t===t)continue;const o=await fdDec(C.ek,r.ct);if(!o||!Array.isArray(o.ms))continue;
-      C.units[r.unit]={t,name:String(o.name||"Unit").slice(0,30),ms:o.ms.slice(0,600),secs:Array.isArray(o.secs)?o.secs.slice(0,10):[],ans:o.ans&&typeof o.ans==="object"?o.ans:{},seen:o.seen&&typeof o.seen==="object"?o.seen:{}}}
+      C.units[r.unit]={t,name:String(o.name||"Unit").slice(0,30),ms:o.ms.slice(0,600),secs:Array.isArray(o.secs)?o.secs.slice(0,10):[],ans:o.ans&&typeof o.ans==="object"?o.ans:{},seen:o.seen&&typeof o.seen==="object"?o.seen:{},al:o.al&&typeof o.al==="object"?o.al:null}}
     for(const k of Object.keys(C.units))if(!seen.has(k))delete C.units[k];for(const k of Object.keys(C.cmd))if(!seen.has(k))delete C.cmd[k];
     C.err="";C.at=Date.now();rawSave();
     if(view==="co"){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"&&a!=="SELECT")redraw(renderCo)}}
@@ -142,7 +142,7 @@ document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;let 
   if(t.closest("#caCancel")){ca=null;return redraw(renderCo)}
   if((b=t.closest("[data-cafor]"))){ca.txt=(($("#caTxt")||{}).value||"");ca.to=(($("#caTo")||{}).value||ca.to);const k=b.dataset.cafor;const f=new Set(ca.for);f.has(k)?f.delete(k):f.add(k);if(!f.size){toast("Pick officers, SNCOs or both.");return}ca.for=[...f];return redraw(renderCo)}
   if(t.closest("#caSend")){const txt=(($("#caTxt")||{}).value||"").trim().slice(0,400);if(!txt){toast("Type the ask.");return}
-    me().asks.push({id:uid(),to:(($("#caTo")||{}).value||"all"),for:ca.for,txt,t:Date.now()});ca=null;save();toast("Ask sent");cmdPush();return}
+    const to=(($("#caTo")||{}).value||"all");me().asks.push({id:uid(),to,for:ca.for,txt,t:Date.now()});ca=null;save();toast("Ask sent");cmdPush().then(()=>{if(typeof window.coAskBuzz==="function")window.coAskBuzz(to)});return}
   if((b=t.closest("[data-cadel]"))){const id=b.dataset.cadel;if(armed!=="cadel"+id){armed="cadel"+id;return redraw(renderCo)}armed=null;const M=me();M.asks=M.asks.filter(a=>a.id!==id);save();cmdPush();return}
   if((b=t.closest("[data-cmdlg]"))){const s=b.dataset.cmdlg;const d=lgDests().find(x=>x.id==="co:"+s);if(!d)return;lgForm={dest:d.id,user:lgUser(d.base),pw:lgPw(),ed:false};view="logins";render();window.scrollTo(0,0);return}
   if((b=t.closest("[data-cosend]"))){const id=b.dataset.cosend;const R=S.coRep;const box=document.querySelector(`[data-coans="${id}"]`);const txt=((box||{}).value||"").trim().slice(0,300);if(!txt){toast("Type your answer.");return}

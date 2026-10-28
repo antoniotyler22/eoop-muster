@@ -75,6 +75,7 @@ const btn=cls=>`<button class="btn${cls||""}" data-ctstart="1" style="width:100%
 {const _as=addSheet;addSheet=function(){_as.apply(this,arguments);const o=$("#sheetOpts");if(o&&!o.querySelector("[data-ctstart]"))o.insertAdjacentHTML("afterbegin",`<div style="margin-bottom:8px">${btn(" alt")}<p class="note" style="margin:4px 0 0">${can()?"Pick people from your phone's contacts.":"iPhone: in Contacts, share a list as a contact card file, then pick it here."}</p></div>`)}}
 if(typeof HELP==="object"&&HELP.people&&Array.isArray(HELP.people[2]))HELP.people[2]=HELP.people[2].concat(["From Contacts: tick people from your phone's contacts and pick their group. Their mobile number and email come along."]);
 window.parseVCF=parseVCF;
+window.ctFetch=async()=>plugin()?await fromPhone():(navigator.contacts&&navigator.contacts.select)?await fromBrowser():null;
 /* last 1.7 file: draw once more so the header, tiles and screens above show on first open */
 if(typeof render==="function")try{render()}catch(e){}
 })();
