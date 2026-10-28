@@ -9,8 +9,10 @@ const phoneOf=v=>{const d=String(v||"").replace(/[^\d+]/g,"");if(!d)return "";co
 const appLinks=()=>({ios:(typeof STORE_URL==="object"&&STORE_URL.ios)||"https://apps.apple.com/app/id6826541947",web:PUB()});
 const startURL=()=>PUB()+"#start";
 function startText(){const L=appLinks();return "Try Accounted For to run your own team: headcount, check-ins and getting the word out.\n\niPhone app: "+L.ios+"\nOr on the web: "+startURL()+"\n\nIt sets up your own team. Nothing is shared with me."}
+window.invStartText=startText;
 function linkText(role,label,url){return unitName()+" · Accounted For\nRole: "+role+" · "+label+"\n\nOpen this link on your phone: "+url+"\n\nNo app yet? iPhone: "+appLinks().ios+" (install it, then tap the link again).\nKeep this link private: it opens "+label+"."}
 
+window.invLinkText=(...a)=>linkText(...a);
 /* a send box: any phone number or email, nothing saved */
 function sendBox(id,text,subject){return `<div class="invsend" data-invtext="${esc(text)}" data-invsub="${esc(subject||"Accounted For")}" data-noxl>
   <label for="invTo${id}">Send to a phone number or email</label><input id="invTo${id}" class="invto" type="text" inputmode="email" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="(808) 555-0123 or name@example.com">
@@ -28,7 +30,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-invgo]");i
     location.href="sms:"+p+(/iPhone|iPad|Mac/.test(navigator.userAgent)?"&":"?")+"body="+encodeURIComponent(text)}},true);
 
 /* ---------- the Invite screen ---------- */
-function renderInvite(){let h=`<h2>Invite</h2>`;
+function renderInvite(){let h=`<h2>Invite</h2>`;const so=typeof window.soHTML==="function";if(so)h+=window.soHTML()+`<details id="invOld"${inv.out||inv.msg||inv.busy?" open":""}><summary class="note" style="margin:10px 0">One at a time (the older Invite tools)</summary>`;
   const own=typeof isOwner==="function"&&isOwner();
   h+=`<div class="panel"><b>Connect them to your team</b><p class="note" style="margin:0">They open the link and land on the page for their role. Their updates come to you.</p>`;
   if(!own){h+=`<p class="note">Only the phone that runs the board can invite people to it. You can still send the app so they can start their own team (below).</p></div>`}
@@ -45,6 +47,7 @@ function renderInvite(){let h=`<h2>Invite</h2>`;
       h+=`</div>`}}
   h+=`<div class="panel"><b>Let them start their own team</b><p class="note" style="margin:0">For another leader, coach or manager. They get the app and set up their own board with their own people. <b>Nothing connects back to you</b>, and you don't see their information.</p>
     <div class="note" style="word-break:break-all;user-select:all;margin:6px 0">${esc(startURL())}</div>${sendBox("S",startText(),"Try Accounted For")}</div>`;
+  if(so)h+=`</details>`;
   $("#main").innerHTML=h}
 async function makeLink(){const RL=lgRoles();const d=lgDests().find(x=>x.id===inv.dest);if(!d){inv.msg="Pick a role first.";return renderInvite()}
   inv.busy=true;inv.msg="";renderInvite();
