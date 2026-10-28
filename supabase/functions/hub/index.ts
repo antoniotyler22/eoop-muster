@@ -155,7 +155,7 @@ function whoCalApply(sec,o){let ch=false;const how=sec+" section leader link";S.
   return ch}
 async function livePollBoard(){const B=S.board;if(!B||lvBusy)return;lvBusy=true;
   try{const rows=await SB.rpc("get_board_updates",{p_board:B.id,p_read_key:B.rk,p_after:B.after||0});B.err="";
-    if(rows&&rows.length){const latest={};for(const r of rows){B.after=Math.max(B.after||0,+r.id);latest[r.sec]=r}
+    if(rows&&rows.length){const latest={};for(const r of rows){B.after=Math.max(B.after||0,+r.id);const sc=String(r.sec||"").toUpperCase().trim();if(SECTIONS.some(x=>x[0]===sc))r.sec=sc;else{const alt=SECTIONS.find(x=>x[1].toUpperCase()===sc||(typeof subCode==="function"&&subCode(sc)===x[0]));if(alt)r.sec=alt[0]}latest[r.sec]=r}
       const msgs=[];
       for(const r of Object.values(latest)){const sec=r.sec;const ms=S.roster.filter(m=>m.sec===sec);const res={t:Date.parse(r.created_at)||Date.now(),ch:0,miss:0,str:+r.strength,mine:ms.length,by:""};
         if(SECTIONS.some(x=>x[0]===sec)){const byT={},byL={},byI={};
@@ -171,11 +171,14 @@ async function livePollBoard(){const B=S.board;if(!B||lvBusy)return;lvBusy=true;
         B.last[sec]=res;msgs.push(sec+(res.ch?" "+res.ch+" change"+(res.ch>1?"s":""):" no changes"))}
       save();renderTabs();if(["board","live"].includes(view)||Object.keys(latest).includes(view.toUpperCase())){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;render();window.scrollTo(0,y)}}
       toast("Live: "+msgs.join(" · "));try{navigator.vibrate&&navigator.vibrate(30)}catch(e){}}
-  }catch(e){B.err=String(e.message||e).slice(0,80)}finally{lvBusy=false}}
+  }catch(e){B.err=String(e.message||e).slice(0,80)}finally{lvBusy=false;liveTimesFresh()}}
+function liveTimesFresh(){try{const B=S.board;if(!B||!B.last)return;document.querySelectorAll("#main [data-livet]").forEach(el=>{const r=B.last[el.dataset.livet];if(r)el.textContent=ago(r.t)})}catch(e){}}
+const ago=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?"just now":m<60?m+" min ago":m<1440?Math.round(m/60)+" hr ago":Math.round(m/1440)+" d ago"};
 function actAdd(ic,txt,go){S.act=S.act||[];S.act.unshift({t:Date.now(),ic,txt:String(txt).slice(0,220),go:go||""});if(S.act.length>300)S.act.length=300}
 function addMarine(o,defSec){const sec=o.sec||defSec||SECTIONS[0][0];const rec={id:"a"+Date.now().toString(36)+rndId(3),rank:o.rank||(MODE().rankDef||"LCPL"),name:o.name.toUpperCase().slice(0,60),sec,status:o.status||"On Hand",duty:"Full Duty",detail:"Added in app",loc:"",start:"",end:""};
   if(o.sub)rec.sub=o.sub;if(o.phone)rec.phone=o.phone;if(S.source==="sample"){S.roster=[];S.source="mol";S.loadedAt=new Date().toLocaleString([], {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}
   if(S.roster.some(m=>fullK(m)===fullK(rec)))return null;S.roster.push(rec);return rec}
+function subCode(v){const U=String(v||"").toUpperCase().trim().replace(/^EE$/,"HE");const m={HEADQUARTERS:"HQ",HQ:"HQ","HEAVY EQUIPMENT":"HE",HE:"HE",EE:"HE","COMBAT ENGINEER":"CE",CE:"CE",ORDNANCE:"ORD",ORD:"ORD",UTILITIES:"UT",UT:"UT"};return m[U]||U.replace(/[^A-Z0-9]/g,"").slice(0,6)}
 let coBusy=false,coPT=null,coPushBusy=false,coOpen=null,coNew=false;
 function coPayload(){const R=S.coRep;const ms=S.roster.map(m=>{const o={rank:m.rank,sec:m.sec,status:m.status,duty:dutyOf(m)};if(R.names!==false){o.name=m.name;if(m.start)o.start=m.start;if(m.end)o.end=m.end;if(m.loc)o.loc=m.loc;if(m.detail)o.detail=String(m.detail).slice(0,60)}return o});
   return {v:1,name:R.name||unitName(),secs:SECTIONS.map(x=>x.slice()),ms}}

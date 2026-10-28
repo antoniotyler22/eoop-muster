@@ -10,7 +10,7 @@ test("a person deleted here stays off when the other phone syncs back an edited 
   try {
     const r = a.w.eval(`(()=>{${lead}
       S.sync={on:true,code:"X"};const all=JSON.parse(JSON.stringify(S.roster));setBase({roster:all});
-      const gone=S.roster[0].id;S.roster=S.roster.filter(m=>m.id!==gone);save();
+      const gone=S.roster[0].id;logLoad("Removed people","x");S.roster=S.roster.filter(m=>m.id!==gone);save();
       const R={roster:all.map(m=>m.id===gone?Object.assign({},m,{status:"Leave",pkAt:Date.now()}):m)};
       mergeRemote(R);return [S.roster.some(m=>m.id===gone),!!S.gone[gone]]})()`);
     assert.deepEqual([...r], [false, true]);
@@ -30,7 +30,7 @@ test("a delete made on the other phone also comes off here, even if this phone e
 test("Undo / adding the same person back clears the delete note", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
-    const r = a.w.eval(`(()=>{${lead}const m=S.roster[0];S.roster=S.roster.slice(1);save();const was=!!S.gone[m.id];S.roster.push(m);save();return [was,!!S.gone[m.id]]})()`);
+    const r = a.w.eval(`(()=>{${lead}const m=S.roster[0];logLoad("Removed people","x");S.roster=S.roster.slice(1);save();const was=!!S.gone[m.id];S.roster.push(m);save();return [was,!!S.gone[m.id]]})()`);
     assert.deepEqual([...r], [true, false]);
   } finally { a.close(); }
 });
@@ -68,5 +68,29 @@ test("the add box inside a section won't add a double", async () => {
     a.$("#addf").dispatchEvent(new a.w.Event("submit", { bubbles: true, cancelable: true }));
     await sleep(5);
     assert.equal(a.w.eval("S.roster.length"), n0);
+  } finally { a.close(); }
+});
+
+test("a status change never takes anyone off the numbers, here or over a sync", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    const r = a.w.eval(`(()=>{${lead}
+      S.sync={on:true,code:"X"};const all=JSON.parse(JSON.stringify(S.roster));setBase({roster:all});const n0=counts().T.total;
+      const m=S.roster[2];m.status="Leave";save();const n1=counts().T.total;
+      // the other phone's copy is late and is missing two people nobody deleted
+      const R={roster:all.filter((x,i)=>i!==2&&i!==4)};mergeRemote(R);
+      return [n0,n1,counts().T.total,S.roster.length===all.length,Object.keys(S.gone).length]})()`);
+    assert.equal(r[1], r[0], "status change keeps the total");
+    assert.equal(r[2], r[0], "sync keeps the total");
+    assert.equal(r[3], true);
+    assert.equal(r[4], 0, "nobody is marked deleted");
+  } finally { a.close(); }
+});
+
+test("dropping a name without a delete (team switch, link pull) does not mark them deleted", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    const r = a.w.eval(`(()=>{${lead}const id=S.roster[0].id;S.roster=S.roster.slice(1);save();return !!S.gone[id]})()`);
+    assert.equal(r, false);
   } finally { a.close(); }
 });

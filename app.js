@@ -783,7 +783,7 @@ async function linkPush(force){const L=S.link;if(!L||lkBusy)return;if(L.rk2&&!L.
   catch(e){const t=String(e.message||e);L.err=/link not valid/i.test(t)?"This link was replaced by your OIC. Ask them for the new one.":t.slice(0,80);save();clearTimeout(lkTimer);if(!/replaced/.test(L.err))lkTimer=setTimeout(linkPush,60000)}
   finally{lkBusy=false;if(view==="live"||view===(L.mysec||"").toLowerCase()){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;render();window.scrollTo(0,y)}}}}
 function linkStatus(){const L=S.link;if(!L)return"";if(L.err)return `<span style="color:var(--warn)">Not sent yet (${esc(L.err)}). Retrying.</span>`;
-  return L.sent?`Last sent ${dtg(new Date(L.sent)).slice(0,7)}.`:"Sending…"}
+  return L.sent?`Last sent ${esc(whenAt(L.sent))} (${ago(L.sent)}).`:"Sending…"}
 window.addEventListener("online",()=>{if(S.link)linkPush();if(S.board)livePollBoard()});
 /* OIC side */
 function boardLink(sec){if(!S.board.ek){S.board.ek=b64url(crypto.getRandomValues(new Uint8Array(32)));save()}const q=new URLSearchParams();q.set("join",S.board.id);q.set("k",(S.board.wks&&S.board.wks[sec])||S.board.wk);q.set("s",sec);q.set("u",unitName());q.set("e",S.board.ek);q.set("r",secKey(sec));return PUB()+"#"+q.toString()}
@@ -823,7 +823,7 @@ function whoCalApply(sec,o){let ch=false;const how=sec+" section leader link";S.
   return ch}
 async function livePollBoard(){const B=S.board;if(!B||lvBusy)return;livePollCal();lvBusy=true;
   try{const rows=await SB.rpc("get_board_updates",{p_board:B.id,p_read_key:B.rk,p_after:B.after||0});B.err="";
-    if(rows&&rows.length){const latest={};for(const r of rows){B.after=Math.max(B.after||0,+r.id);latest[r.sec]=r}
+    if(rows&&rows.length){const latest={};for(const r of rows){B.after=Math.max(B.after||0,+r.id);const sc=String(r.sec||"").toUpperCase().trim();if(SECTIONS.some(x=>x[0]===sc))r.sec=sc;else{const alt=SECTIONS.find(x=>x[1].toUpperCase()===sc||(typeof subCode==="function"&&subCode(sc)===x[0]));if(alt)r.sec=alt[0]}latest[r.sec]=r}
       const msgs=[];
       for(const r of Object.values(latest)){const sec=r.sec;const ms=S.roster.filter(m=>m.sec===sec);const res={t:Date.parse(r.created_at)||Date.now(),ch:0,miss:0,str:+r.strength,mine:ms.length,by:""};
         if(SECTIONS.some(x=>x[0]===sec)){const byT={},byL={},byI={};
@@ -839,13 +839,17 @@ async function livePollBoard(){const B=S.board;if(!B||lvBusy)return;livePollCal(
         B.last[sec]=res;msgs.push(sec+(res.ch?" "+res.ch+" change"+(res.ch>1?"s":""):" no changes"))}
       save();renderTabs();if(["board","live"].includes(view)||Object.keys(latest).includes(view.toUpperCase())){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;render();window.scrollTo(0,y)}}
       toast("Live: "+msgs.join(" · "));try{navigator.vibrate&&navigator.vibrate(30)}catch(e){}}
-  }catch(e){B.err=String(e.message||e).slice(0,80)}finally{lvBusy=false}}
+  }catch(e){B.err=String(e.message||e).slice(0,80)}finally{lvBusy=false;liveTimesFresh()}}
+/* the "updated … ago" lines on the Live page and the board strip tick along with the 15-second poll */
+function liveTimesFresh(){try{const B=S.board;if(!B||!B.last)return;document.querySelectorAll("#main [data-livet]").forEach(el=>{const r=B.last[el.dataset.livet];if(r)el.textContent=ago(r.t)})}catch(e){}}
 every(15000,()=>{if(S.board)livePollBoard()},"board");
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.board)livePollBoard()});
 const ago=t=>{const m=Math.round((Date.now()-t)/60000);return m<1?"just now":m<60?m+" min ago":m<1440?Math.round(m/60)+" hr ago":Math.round(m/1440)+" d ago"};
+/* a plain date and time for "updated when" lines: "Oct 28, 7:23 AM" (adds the year when it isn't this year) */
+const whenAt=t=>{const d=new Date(t);if(isNaN(d))return"";const o={month:"short",day:"numeric",hour:"numeric",minute:"2-digit"};if(d.getFullYear()!==new Date().getFullYear())o.year="numeric";return d.toLocaleString([],o)};
 function liveStrip(){const B=S.board;if(!B)return `<button class="att" data-go="live" style="text-align:left;width:100%;cursor:pointer"><div><div class="lbl">Live sections · off</div><div class="note" style="margin-top:4px">Let section leaders update your board from their phones. Tap to set up.</div></div></button>`;
   return `<button class="att" data-go="live" style="text-align:left;width:100%;cursor:pointer"><div><div class="lbl">● Live sections</div><div class="note" style="display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:4px">${SECTIONS.map(([k])=>{const r=B.last[k];const old=r&&Date.now()-r.t>4*3600000;
-    return `<span><b>${k}</b> <span style="color:var(${!r?"--muted":old?"--warn":"--s-onhand"})">${r?ago(r.t):"waiting"}</span></span>`}).join("")}</div></div></button>`}
+    return `<span title="${r?esc(whenAt(r.t)):"No update yet"}"><b>${k}</b> <span style="color:var(${!r?"--muted":old?"--warn":"--s-onhand"})"${r?` data-livet="${esc(k)}"`:""}>${r?ago(r.t):"waiting"}</span></span>`}).join("")}</div></div></button>`}
 function renderLive(){let h=banner();const B=S.board,L=S.link;
   h+=`<h2>Live ${LV().sec} updates</h2>`;if(!B)h+=accessHTML();
   if(!B){h+=`<div class="panel"><p class="note">Section leaders change their people's statuses on their own phones, and your board updates by itself. You see which section updated, who sent it and when. Names never go to the server: only scrambled codes your phone matches to your roster.</p>
@@ -855,7 +859,7 @@ function renderLive(){let h=banner();const B=S.board,L=S.link;
       <p class="note">Send each ${LV().head} their link. Their ${LV().sec} roster loads from your board, so they don't load anything.${S.level==="co"?" Each platoon OIC gets their platoon with its own sections and can run their own section leaders.":""} Every change they make shows up here, and they land in your Feed where you see every post.</p>${hubHTML()}${accessHTML()}</div>
     <div class="alist" style="margin-top:10px">${SECTIONS.map(([k,n])=>{const r=B.last[k];const old=r&&Date.now()-r.t>4*3600000;
       return `<div class="rrow" style="--sc:var(${!r?"--line":old?"--warn":"--s-onhand"})"><div class="rtop"><div class="who"><b>${k}</b> ${esc(n)}
-        <div class="ph">${B.rsig&&B.rsig[k]?`<b style="color:var(--s-onhand)">✓ Roster shared</b> · `:S.source==="sample"?"":`Roster sharing… · `}${r?`Updated ${ago(r.t)} (${dtg(new Date(r.t)).slice(0,7)})${r.by?" by "+esc(r.by):""} · ${r.ch} change${r.ch===1?"":"s"}`:"No update yet"}</div>
+        <div class="ph">${B.rsig&&B.rsig[k]?`<b style="color:var(--s-onhand)">✓ Roster shared</b> · `:S.source==="sample"?"":`Roster sharing… · `}${r?`Updated ${esc(whenAt(r.t))} · <span data-livet="${esc(k)}">${ago(r.t)}</span>${r.by?" by "+esc(r.by):""} · ${r.ch} change${r.ch===1?"":"s"}`:"No update yet"}</div>
         ${r&&(r.miss||r.str!==r.mine)?`<div class="ph" style="color:var(--warn)">${r.miss?r.miss+" name"+(r.miss>1?"s":"")+" not on your roster. ":""}${r.str!==r.mine?"Their strength "+r.str+", yours "+r.mine+".":""}</div>`:""}</div></div>
         <div class="row2">${(()=>{const hd=S.roster.find(m=>m.id===(B.heads||{})[k]);return `<select class="wsel" data-lvhead="${k}" aria-label="${k} section head"><option value="">${LV().Head}: pick from ${k}…</option>${sorted(S.roster.filter(m=>m.sec===k)).map(m=>`<option value="${m.id}"${hd&&hd.id===m.id?" selected":""}>${esc(m.rank+" "+m.name)}${m.phone?"":" (no number)"}</option>`).join("")}</select><a class="btn alt" href="${esc((hd&&hd.phone?"sms:+1"+String(hd.phone).replace(/\D/g,"").slice(-10):"sms:")+"?&body="+encodeURIComponent(unitName()+": you're the "+k+" "+LV().head+". Open this link in Accounted For. Your "+LV().sec+" roster loads from my board, your updates come straight to me, and you can post to the unit Feed: "+boardLink(k)+" · iPhone: open in Safari, then Share → Add to Home Screen so alerts work."))}">Text ${k} link${hd?" to "+esc(hd.rank+" "+lastOf(hd)):""}</a>`})()}<button class="btn alt" data-lvcopy="${k}">Copy link</button></div>${(S.wsCur||"plt")==="co"?`<button class="chip" data-lvmine="${k}" style="cursor:pointer;margin:6px 6px 0 0">${S.ws&&S.ws.plt&&S.ws.plt.link&&S.ws.plt.link.board===B.id&&S.ws.plt.link.sec===k?"✓ My platoon view runs "+k:"I run "+k+": link my platoon view"}</button>`:""}<button class="chip" data-lvreset="${k}" style="cursor:pointer;margin-top:6px">${armed==="lvreset"+k?"Tap again: old "+k+" link stops working":"↺ Replace "+k+" link (cut off the old one)"}</button></div>`}).join("")}</div>
     <button class="btn warn" id="lvOff" style="margin-top:16px;width:100%">${armed==="lvoff"?"Tap again: turn off and disconnect all sections":"Turn off live updates"}</button>`}
@@ -1354,7 +1358,7 @@ function renderPeople(){const {c,A}=counts();let h=banner()+(canEdit()&&isLeader
   h+=`<div style="margin-top:12px"><input class="search" id="gq" type="search" placeholder="Find anyone: name, rank or section" autocomplete="off" style="margin:0"><div id="gqr" class="alist" style="margin-top:6px"></div></div>`;
   h+=`<div class="sech"><h2>Sections</h2><span class="note" style="margin:0">${S.roster.filter(m=>m.sec!=="ATT").length} people</span></div><div class="tgrid">`;
   h+=SECTIONS.map(([k,n])=>{const o=c[k];const p=pct(o["On Hand"],o.total);const away=o.total-present(o);const r=S.board&&S.board.last[k];
-    return `<button class="pcard" data-go="${k.toLowerCase()}"><span style="display:flex;justify-content:space-between;width:100%"><b style="font-size:15px">${esc(k)}</b><b style="font-variant-numeric:tabular-nums">${o["On Hand"]}/${o.total}</b></span><span class="note" style="margin:0">${esc(n)}</span><span class="hbar" style="width:100%"><i style="width:${p}%"></i></span><span class="note" style="margin:0">${away} away${r?" · updated "+ago(r.t):""}</span></button>`}).join("");
+    return `<button class="pcard" data-go="${k.toLowerCase()}"><span style="display:flex;justify-content:space-between;width:100%"><b style="font-size:15px">${esc(k)}</b><b style="font-variant-numeric:tabular-nums">${o["On Hand"]}/${o.total}</b></span><span class="note" style="margin:0">${esc(n)}</span><span class="hbar" style="width:100%"><i style="width:${p}%"></i></span><span class="note" style="margin:0">${away} away${r?` · updated <span data-livet="${esc(k)}">${ago(r.t)}</span>`:""}</span></button>`}).join("");
   h+=`<button class="pcard" data-go="att"><span style="display:flex;justify-content:space-between;width:100%"><b style="font-size:15px">ATT</b><b>+${A.total}</b></span><span class="note" style="margin:0">Attached, not on strength</span><span class="note" style="margin:0">${A["On Hand"]} on hand</span></button></div>`;
   h+=`<div class="sech"><h2>More</h2></div><div class="tgrid">
     <button data-go="live"><span class="ic">${svg("live")}</span><span><b>Live sections</b><small>${S.board?"On · section leaders update you":"Let section leaders update you"}</small></span></button>
@@ -2891,8 +2895,8 @@ document.addEventListener("click",e=>{
   if(e.target.closest("#bText")){view=view==="text"?"board":"text";armed=null;render();window.scrollTo(0,0);return}
   if(e.target.closest("#bData")){secDraft=null;view=view==="data"?"board":"data";armed=null;render();window.scrollTo(0,0);return}
   const rm=e.target.closest("[data-rm]");
-  if(rm){const id=rm.dataset.rm;if(armed===id){S.roster=S.roster.filter(m=>m.id!==id);armed=null;save();toast("Marine removed")}else armed=id;render();return}
-  if(e.target.id==="reset"){if(armed==="reset"){S.roster=sampleRoster();S.source="sample";S.loadedAt="";armed=null;save();toast("Roster cleared")}else armed="reset";render();return}
+  if(rm){const id=rm.dataset.rm;if(armed===id){if(typeof kdDelete==="function")kdDelete(id);S.roster=S.roster.filter(m=>m.id!==id);armed=null;save();toast("Marine removed")}else armed=id;render();return}
+  if(e.target.id==="reset"){if(armed==="reset"){if(typeof kdArm==="function")kdArm();S.roster=sampleRoster();S.source="sample";S.loadedAt="";armed=null;save();toast("Roster cleared")}else armed="reset";render();return}
   if(e.target.id==="copy"){const t=$("#msg").value;setTimeout(()=>markSent("report"),300);
     const fallback=()=>{const ta=$("#msg");ta.removeAttribute("readonly");ta.select();ta.setSelectionRange(0,t.length);ta.setAttribute("readonly","");toast("Text selected. Tap Copy in the menu.")};
     try{navigator.clipboard.writeText(t).then(()=>toast("Copied. Paste into your text."),fallback)}catch(err){fallback()}return}
