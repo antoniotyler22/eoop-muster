@@ -1214,7 +1214,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.link&&S
 
 /* ---------- ASK: OIC controls + status ---------- */
 let akCtl=null,akCtlBusy=false,akCtlErr="",akShowKey=false;
-const akHidden=()=>!!(S.askSt&&S.askSt.on===false);
+const akHidden=()=>!!(S.askSt&&S.askSt.on===false)||!!(S.appCfg&&S.appCfg.ask_off);
 async function akStatus(force){if(!force&&S.askSt&&Date.now()-S.askSt.t<6*3600000)return;try{const r=await fetch(SB.url+"/functions/v1/"+SB.afn,{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify({ping:1})});
   if(r.status===404){S.askSt={on:false,setup:false,t:Date.now()}}else{const o=await r.json();S.askSt={on:o.on!==false&&!!o.key,who:o.who||"all",admin:!!o.admin,setup:!!o.key,t:Date.now()}}rawSave();if(["board","today","ask"].includes(view)){const y=window.scrollY;render();window.scrollTo(0,y)}}catch(e){}}
 async function akManage(set){akCtlBusy=true;akCtlErr="";renderAsk();
@@ -1261,6 +1261,7 @@ async function akSend(q){akBusy=true;akErr="";renderAsk();
   catch(e){akErr=e.name==="AbortError"?"That took too long. Try again or shorten the question.":String(e.message||e)}
   finally{clearTimeout(tm);akBusy=false;if(view==="ask"){renderAsk();window.scrollTo(0,0)}}}
 function renderAsk(){const ex=AK_EX[MODES[S.mode]?S.mode:"military"]||AK_EX.military;akStatus();
+  if(S.appCfg&&S.appCfg.ask_off){$("#main").innerHTML=`<h2>💬 Ask</h2><div class="panel"><p class="note">Ask is turned off by the app owner for now.</p></div>`;return}
   if(akHidden()&&!(canEdit()&&!memberMode())){$("#main").innerHTML=`<h2>💬 Ask</h2><div class="panel"><p class="note">${S.askSt&&S.askSt.setup===false?"Ask isn't set up for your unit.":"Ask is turned off by your leader."}</p></div>`;return}
   let h=akCtlHTML()+`<h2>💬 Ask</h2><div class="panel"><label for="akQ">Ask about orders, admin, leave, pay, fitness, anything ${S.mode&&S.mode!=="military"?"for your team":"military"}</label>
     <textarea id="akQ" maxlength="600" style="min-height:80px" placeholder="${esc(ex[0])}"${akBusy?" disabled":""}>${esc(akDraft)}</textarea>
