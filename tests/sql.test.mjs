@@ -211,3 +211,14 @@ test("server push hooks (part 27): check-ins call notify, Feed posts wait on the
   assert.equal(anon(`select public.push_hooks_ok()`), "t", "System check can see it's set up");
   assert.match(pg.psql(`select schedule || '|' || command from cron.job where jobname = 'accounted-for-push-queue'`), /^20 seconds\|[\s\S]*"drain":1/);
 });
+
+test("Feed names (part 28): only the leader key writes, only the member key reads, the table is closed", { skip }, () => {
+  const mk = "member-key-names-0123456789", lk = "leader-key-names-0123456789";
+  pg.psql(`insert into public.feeds(id, member_key_hash, leader_key_hash) values ('namesfd001', ${q(sha(mk))}, ${q(sha(lk))})`);
+  assert.throws(() => anon(`select public.feed_names_put('namesfd001', ${q(mk)}, 'x')`), /not allowed/, "a member can't write the list");
+  anon(`select public.feed_names_put('namesfd001', ${q(lk)}, 'v1')`);
+  anon(`select public.feed_names_put('namesfd001', ${q(lk)}, 'v2')`);
+  assert.equal(anon(`select ct from public.feed_names_get('namesfd001', ${q(mk)})`), "v2", "one row, latest wins");
+  assert.equal(anon(`select count(*) from public.feed_names_get('namesfd001', ${q("wrong-key-0123456789abcdef")})`), "0");
+  assert.throws(() => anon(`select count(*) from public.feed_names`), /permission denied/);
+});
