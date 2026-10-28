@@ -41,6 +41,14 @@ const forTxt=f=>(f||["off","snco"]).length===2?"officers & SNCOs":(f||[])[0]==="
 {const _ro=lgRoleOf;lgRoleOf=function(dest){return /^co:(co|xo|1sg)$/.test(String(dest||""))?"Company command":_ro.apply(this,arguments)}}
 {const _h=lgHash;lgHash=async function(id,create){const m=/^co:(co|xo|1sg)$/.exec(String(id||""));if(!m)return _h.apply(this,arguments);
   if(!S.coBoard||!S.coBoard.rk)return null;const u=coLink(m[1]);const j=u.indexOf("#");return j<0?null:u.slice(j+1)}}
+/* company level: "Section leader" is really one platoon (EOOP, GEMP…): that platoon only, nothing else in the company */
+const coLvl=()=>S.level==="co";
+const plName=k=>{const x=(typeof SECTIONS!=="undefined"?SECTIONS:[]).find(s=>s[0]===k);return x&&x[1]&&x[1]!==k?k+" ("+x[1]+")":k};
+{const _d=lgDests;lgDests=function(){const D=_d.apply(this,arguments);if(!coLvl())return D;
+  for(const x of D)if(x.id.startsWith("sec:")){const k=x.id.slice(4);x.g="Platoon (only that platoon)";x.l=plName(k)+" platoon";x.base=k.toLowerCase()+"plt"}return D}}
+{const _r=lgRoles;lgRoles=function(){const RL=_r.apply(this,arguments);if(!coLvl())return RL;const s=RL.find(r=>r.k==="secl");
+  if(s){s.n="Platoon";s.d="Only their platoon (for example EOOP or GEMP): sees and updates that platoon's people, statuses and calendar. Nothing else in the company.";s.hint="Turn on Live sections (your platoons) first (Tools)."}return RL}}
+{const _ro=lgRoleOf;lgRoleOf=function(dest){return coLvl()&&String(dest||"").startsWith("sec:")?"Platoon":_ro.apply(this,arguments)}}
 /* opening a command link remembers the seat */
 {const _j=coJoinPrompt;coJoinPrompt=function(q,kind){const w=q&&q.get&&q.get("w");const r=_j.apply(this,arguments);
   if(kind==="cov"&&S.coBoard&&SEAT_L[w]){const M=me();if(M.seat!==w){M.seat=w;save();cmdPush()}if(view==="co")redraw(renderCo)}return r}}

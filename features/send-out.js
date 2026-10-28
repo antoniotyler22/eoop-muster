@@ -30,12 +30,12 @@ const multi=R=>R.k==="cmd"&&R.ds.length>1;
 function destFor(p){const v=eff(p),rk=v.split(":")[0],R=roles().find(r=>r.k===rk);
   if(!R)return {err:"Pick a role."};if(!R.ds.length)return {err:R.n+": "+R.hint};
   if(rk==="member"){if(!p.m)return {err:"Not on your roster, so no Member page. Give them another role."};const d=R.ds.find(x=>x.id==="me:"+p.m.id);return d?{d,label:d.l,mid:p.m.id}:{err:"No Member page for them yet."}}
-  if(rk==="secl"){const sec=v.split(":")[1]||"";const d=R.ds.find(x=>x.id==="sec:"+sec);return d?{d,label:p.name+" · "+sec+" section leader",mid:p.m?p.m.id:p.k}:{err:"Pick their section."}}
+  if(rk==="secl"){const sec=v.split(":")[1]||"";const d=R.ds.find(x=>x.id==="sec:"+sec);return d?{d,label:p.name+" · "+sec+(S.level==="co"?" platoon":" section leader"),mid:p.m?p.m.id:p.k}:{err:S.level==="co"?"Pick their platoon.":"Pick their section."}}
   if(multi(R)){const id=v.slice(rk.length+1);const d=R.ds.find(x=>x.id===id);if(!d)return {err:"Pick which "+R.n.toLowerCase()+" seat for them."};return {d,label:p.name+" · "+d.l,mid:p.m?p.m.id:p.k}}
   const d=R.ds[0];return {d,label:p.name+" · "+d.l,mid:p.m?p.m.id:p.k}}
 function roleOpts(p){const v=eff(p);let o="";for(const R of roles()){if(!R.ds.length)continue;
     if(R.k==="member"){if(p.m)o+=`<option value="member"${v==="member"?" selected":""}>Member</option>`;continue}
-    if(R.k==="secl"){for(const d of R.ds){const s=d.id.slice(4);o+=`<option value="secl:${esc(s)}"${v==="secl:"+s?" selected":""}>Section leader · ${esc(s)}</option>`}continue}
+    if(R.k==="secl"){for(const d of R.ds){const s=d.id.slice(4);o+=`<option value="secl:${esc(s)}"${v==="secl:"+s?" selected":""}>${S.level==="co"?"Platoon":"Section leader"} · ${esc(s)}</option>`}continue}
     if(multi(R)){for(const d of R.ds){const val=R.k+":"+d.id;o+=`<option value="${esc(val)}"${v===val?" selected":""}>${esc(R.n+" · "+d.l.replace(/ · company dashboard$/,""))}</option>`}continue}
     o+=`<option value="${R.k}"${v===R.k?" selected":""}>${esc(R.n)}</option>`}
   if(!/ selected/.test(o))o=`<option value="" selected>Pick a role…</option>`+o;return o}
