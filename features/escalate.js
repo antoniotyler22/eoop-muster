@@ -57,4 +57,6 @@ setInterval(()=>{const a=document.activeElement;if(view==="recall"&&S.rc.open&&S
 setTimeout(schedLocal,1500);
 
 if(typeof SC==="object"&&Array.isArray(SC))SC.push({k:"esc",n:"1.3: missed check-in alerts",f:["22_escalate"],t:[["esc_set",{p_recall:"zz",p_key:"x",p_due:null,p_expected:1}]]});
+/* 4.10.1: the server sends check-in, board and Feed alerts itself and retries failed ones (part 27 + notify 4.10.1) */
+if(typeof SC==="object"&&Array.isArray(SC))SC.push({k:"ph",n:"4.10.1: alerts sent by the server, with retries",f:["27_push_hooks"],t:[["push_hooks_ok",{}]]});
 })();
