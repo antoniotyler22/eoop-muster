@@ -21,6 +21,13 @@ test("home: Needs attention lines hide one at a time or all, and come back only 
     // the problem goes away: its hidden mark is dropped, so it shows again if it returns
     a.w.eval(`S.sync={on:true};save();render()`);
     assert.ok(a.w.eval("!S.hideHealth['Backup is off. Losing this phone loses the board.']"));
+    // delete for good: stays out even after the problem goes away and comes back
+    a.w.eval(`S.sync=null;save();render()`);
+    a.$('[data-hdel="Backup is off. Losing this phone loses the board."]').click();
+    assert.equal(a.w.eval("S.hideHealth['Backup is off. Losing this phone loses the board.']"), "never");
+    a.w.eval(`S.sync={on:true};save();render();S.sync=null;save();render()`);
+    assert.equal(a.w.eval("S.hideHealth['Backup is off. Losing this phone loses the board.']"), "never");
+    assert.ok(!a.$('[data-hdel="Backup is off. Losing this phone loses the board."]'));
   } finally { a.close(); }
 });
 
@@ -59,18 +66,18 @@ test("tools: the search box finds any screen or feature and hides the groups whi
   } finally { a.close(); }
 });
 
-test("home: Live sections sits right under quick actions, On the app takes its old spot, Ask and How-do-I at the bottom", async () => {
+test("home: On the app takes Live sections' old spot; Need a hand then Live sections at the bottom", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     a.w.eval(LEAD + `S.roster.slice(0,3).forEach(m=>m.sec="HQ");view="board";render();`);
     const order = a.w.eval(`[...document.querySelectorAll('#main > *')].map(x=>x.id||(x.tagName==="DETAILS"?"details":x.className.split(' ')[0])||x.tagName)`);
-    const qa = order.indexOf("qa"), live = order.indexOf("att"), details = order.indexOf("details");
-    assert.ok(live > qa && live - qa <= 2, order.join(","));
+    const live = order.indexOf("att"), details = order.indexOf("details"), ask = order.indexOf("hmAsk");
+    assert.equal(live, order.length - 1, order.join(","));
+    assert.equal(ask, order.length - 2, order.join(","));
     const i = order.indexOf("oaPanel");
-    if (i >= 0) assert.ok(i > live && i < details, order.join(","));
+    if (i >= 0) assert.ok(i < details, order.join(","));
     assert.ok(a.$('#hmAsk [data-go="support"]'));
     assert.ok(a.$('#hmAsk [data-go="ask"]'));
-    assert.equal(a.w.eval(`document.querySelector('#main > :last-child').id`), "hmAsk");
   } finally { a.close(); }
 });
 
