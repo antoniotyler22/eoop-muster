@@ -4085,6 +4085,10 @@ async function unlock(){const u=($("#v13U").value||""),p=($("#v13P").value||""),
     /* the password may have been reset by the leader: check with the server */
     const r=await SB.rpc("login_get",{p_uid:K.uid,p_vf:K.vf});const row=Array.isArray(r)?r[0]:r;
     if(row&&row.ct&&K.uid===S.lgSelf.uid){const X=await lgOpen(K,row.ct);S.lgSelf.vf=K.vf;S.lgSelf.h=X.h;S.lgUnlocked=Date.now();save();hideLock();toast("Welcome back");return}
+    /* a different login that checks out: sign in as that person and open their page */
+    if(row&&row.ct){const X=await lgOpen(K,row.ct);if(X&&typeof X.h==="string"&&/^[a-z]+=/.test(X.h)){
+      S.lgSelf={uid:K.uid,vf:K.vf,l:String(X.l||"").slice(0,60),user:lgNormU(u),h:X.h,at:Date.now()};S.lgUnlocked=Date.now();save();hideLock();toast("Opening "+(X.l||"your page")+"…");
+      setTimeout(()=>{try{history.replaceState(null,"",location.pathname)}catch(e){}if(location.hash==="#"+X.h){render()}else location.hash=X.h},300);return}}
     o.textContent=row&&row.wait>0?"Too many tries. Wait "+Math.ceil(row.wait/60)+" min.":"Username or password is wrong."}
   catch(e){o.textContent=/fetch|network|Load failed/i.test(String(e&&e.message))?"Wrong password, or no signal to check a new one.":"Username or password is wrong."}
   finally{b.disabled=false}}
@@ -6911,7 +6915,8 @@ function soHTML(){
   const secs=SECTIONS.map(s=>s[0]).concat("ATT").filter(k=>R.some(m=>m.sec===k));
   let h=`<div class="panel" id="soBox" data-noxl style="border-color:var(--s-onhand)"><b>Send out</b><p class="note" style="margin:0">Send links or logins to everyone from one place.</p>`;
   /* 1 who */
-  h+=stepHead(1,"Who");
+  h+=stepHead(1,"Who");const picked=so.all||so.secs.size||so.ids.size||so.extra.length||Object.keys(so.over).length;
+  if(picked)h+=`<button type="button" class="chip" id="soClear" style="cursor:pointer;margin:0 0 6px">✕ Clear all · start over</button>`;
   if(R.length){h+=`<div class="evts">${btn('data-soall="1"',so.all,"Everyone · "+R.length)}${secs.map(k=>btn(`data-sosec="${esc(k)}"`,so.all||so.secs.has(k),esc(k)+" · "+R.filter(m=>m.sec===k).length,so.all)).join("")}</div>
     <details id="soPickD"${so.open?" open":""}><summary class="note">Pick people one at a time (${so.ids.size} picked)</summary><input type="search" id="soQ" placeholder="Search names" style="width:100%;box-sizing:border-box;margin:6px 0">
       <div style="max-height:260px;overflow:auto">${sorted(R).map(m=>`<label data-sorow="${esc((m.rank+" "+m.name+" "+m.sec).toLowerCase())}" style="display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid var(--line);cursor:pointer"><input type="checkbox" data-sop="${esc(m.id)}"${so.all||so.ids.has(m.id)||so.secs.has(m.sec)?" checked":""}${so.all||so.secs.has(m.sec)?" disabled":""} style="width:20px;height:20px;margin:0"><span>${esc(m.rank+" "+m.name)} <span class="note">· ${esc(m.sec)}</span></span></label>`).join("")}</div></details>`}
@@ -7021,6 +7026,7 @@ function go(x,how){if(!x||x.err)return;
 /* ---------- events ---------- */
 const item=k=>(so.list||[]).find(x=>x.k===k);
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest||!t.closest("#soBox"))return;let b;
+  if(t.closest("#soClear")){so.all=false;so.secs=new Set();so.ids=new Set();so.extra=[];so.over={};so.list=null;so.sent=new Set();so.msg="";so.open=false;so.conn="team";so.role="member";so.as="login";keep();toast("Cleared. Pick who to send to.");return redraw()}
   if((b=t.closest("[data-soall]"))){so.all=!so.all;if(so.all){so.secs=new Set();}return redraw()}
   if((b=t.closest("[data-sosec]"))){const k=b.dataset.sosec;so.secs.has(k)?so.secs.delete(k):so.secs.add(k);return redraw()}
   if((b=t.closest("[data-soconn]"))){so.conn=b.dataset.soconn;return redraw()}

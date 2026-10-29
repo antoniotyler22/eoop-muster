@@ -77,6 +77,10 @@ async function unlock(){const u=($("#v13U").value||""),p=($("#v13P").value||""),
     /* the password may have been reset by the leader: check with the server */
     const r=await SB.rpc("login_get",{p_uid:K.uid,p_vf:K.vf});const row=Array.isArray(r)?r[0]:r;
     if(row&&row.ct&&K.uid===S.lgSelf.uid){const X=await lgOpen(K,row.ct);S.lgSelf.vf=K.vf;S.lgSelf.h=X.h;S.lgUnlocked=Date.now();save();hideLock();toast("Welcome back");return}
+    /* a different login that checks out: sign in as that person and open their page */
+    if(row&&row.ct){const X=await lgOpen(K,row.ct);if(X&&typeof X.h==="string"&&/^[a-z]+=/.test(X.h)){
+      S.lgSelf={uid:K.uid,vf:K.vf,l:String(X.l||"").slice(0,60),user:lgNormU(u),h:X.h,at:Date.now()};S.lgUnlocked=Date.now();save();hideLock();toast("Opening "+(X.l||"your page")+"…");
+      setTimeout(()=>{try{history.replaceState(null,"",location.pathname)}catch(e){}if(location.hash==="#"+X.h){render()}else location.hash=X.h},300);return}}
     o.textContent=row&&row.wait>0?"Too many tries. Wait "+Math.ceil(row.wait/60)+" min.":"Username or password is wrong."}
   catch(e){o.textContent=/fetch|network|Load failed/i.test(String(e&&e.message))?"Wrong password, or no signal to check a new one.":"Username or password is wrong."}
   finally{b.disabled=false}}
