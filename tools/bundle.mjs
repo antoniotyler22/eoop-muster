@@ -58,6 +58,7 @@ export const SOURCES = [
   "features/header.js",
   "features/feed-tabs.js",
   "features/stay-view.js",
+  "features/feed-dates.js",
 ];
 
 export function build() {
