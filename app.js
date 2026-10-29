@@ -1113,9 +1113,11 @@ function healthIssues(){const out=[];const B=S.board;
   if(isOwner()&&S.source!=="sample"&&(!S.sync||!S.sync.on))out.push({t:"Backup is off. Losing this phone loses the board.",go:"data"});
   if(S.sync&&S.sync.err)out.push({t:"Backup: "+S.sync.err,go:"data"});
   if(B){if(B.err)out.push({t:"Live sections: "+B.err,go:"live"});if(B.rerr)out.push({t:"Sharing rosters: "+B.rerr,go:"live"});if(S.hubErr)out.push({t:"Feed setup: "+S.hubErr,go:"live"});
-    const keyed=Object.keys(B.sk||{});const never=keyed.filter(k=>!B.last[k]);const quiet=keyed.filter(k=>B.last[k]&&Date.now()-B.last[k].t>24*3600000);
+    const keyed=Object.keys(B.sk||{});const never=keyed.filter(k=>!B.last[k]);/* quiet = the leader has a link and has pushed before, but nothing has changed in that section (from them or from this phone) in 24 hr */
+    const lastT=k=>{const r=typeof secLast==="function"?secLast(k):null;return Math.max(+(r&&r.t)||0,+(B.last[k]&&B.last[k].t)||0)};
+    const quiet=keyed.filter(k=>B.last[k]&&Date.now()-lastT(k)>24*3600000);
     if(never.length)out.push({t:LV().heads+" not connected yet: "+never.join(", ")+". Text them their links.",go:"live"});
-    if(quiet.length)out.push({t:quiet.join(", ")+(quiet.length>1?" haven't":" hasn't")+" sent an update in over 24 hr.",go:"live"})}
+    for(const k of quiet){const t=lastT(k);out.push({t:k+" "+LV().head+" hasn't sent an update in "+hrs(t)+" hr (last "+short(new Date(t))+" "+hhmm(t)+"). Not an error: their link still works. Tap to open Live sections and nudge or resend it; or update "+k+" here and this clears.",go:"live"})}}
   if(S.mpErr)out.push({t:"My pages: "+S.mpErr,go:"data"});
   if(S.coRep&&S.coRep.err)out.push({t:"Company report: "+S.coRep.err,go:"co"});
   for(const f of S.feeds)if(f.err)out.push({t:"Feed "+f.unit+": "+f.err,go:"feed"});
