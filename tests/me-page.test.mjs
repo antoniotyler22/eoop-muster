@@ -91,3 +91,23 @@ test("feed: a photo-only post goes through; the leader has Delete on each post a
     assert.ok(dels.includes(11));
   } finally { a.close(); }
 });
+
+test("feed: two tabs — Feed shows posts and hides the compose box; Post shows the compose box; posting flips to Feed", async () => {
+  const a = await openApp({ rpc: (fn) => fn === "feed_post" ? 12 : [] });
+  try {
+    a.w.eval(`S.source="mol";S.leaderMode=true;S.welcomed=1;S.onb=true;S.role="oic";S.tos=99;const ek=b64url(crypto.getRandomValues(new Uint8Array(32)));S.feeds=[{id:"f1",lk:"l".repeat(32),mk:"m".repeat(32),ek,unit:"1ST PLT",posts:[{id:3,t:Date.now()-5000,txt:"Old word",urg:false,to:{k:"all"},by:"Me"}],mine:{},acks:{}}];save();view="feed";render();`);
+    assert.ok(a.$("#fdTabs"));
+    assert.equal(a.w.eval("document.querySelector('#fdTabs [data-fdtab=feed]').getAttribute('aria-pressed')"), "true");
+    assert.equal(a.w.eval("document.querySelector('article.fc').hidden"), false);
+    assert.equal(a.w.eval("document.getElementById('fdTxt').closest('.panel').hidden"), true, "compose hidden on Feed tab");
+    a.$('[data-fdtab="post"]').click();
+    assert.equal(a.w.eval("document.getElementById('fdTxt').closest('.panel').hidden"), false);
+    assert.equal(a.w.eval("document.querySelector('article.fc').hidden"), true);
+    a.$("#fdTxt").value = "New word";
+    a.$("#fdPost").click();
+    for (let i = 0; i < 40 && a.w.eval("S.feeds[0].posts.length") < 2; i++) await sleep(50);
+    await sleep(50);
+    assert.equal(a.w.eval("document.querySelector('#fdTabs [data-fdtab=feed]').getAttribute('aria-pressed')"), "true", "back on Feed after posting");
+    assert.equal(a.w.eval("[...document.querySelectorAll('article.fc')].filter(x=>!x.hidden).length"), 2);
+  } finally { a.close(); }
+});
