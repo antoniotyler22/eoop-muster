@@ -23,6 +23,7 @@ const cors = {
 };
 webpush.setVapidDetails("mailto:antoniotyler22@gmail.com", Deno.env.get("VAPID_PUBLIC")!, Deno.env.get("VAPID_PRIVATE")!);
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+const VER = "4.28.0";
 const out = (t: string, status = 200) => new Response(t, { status, headers: cors });
 
 // ---- Apple push (iPhone app). A subscription from the app looks like {apns: "<device token>"}. ----
@@ -300,9 +301,19 @@ async function remember(req: Request) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return out("ok");
   if (req.method !== "POST") return out("method", 405);
-  let body: { recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown; drain?: unknown; team?: unknown; k?: unknown; what?: unknown; skip?: unknown; whoami?: unknown } = {};
+  let body: { ver?: unknown; test?: unknown; sub?: unknown; recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown; drain?: unknown; team?: unknown; k?: unknown; what?: unknown; skip?: unknown; whoami?: unknown } = {};
   try { body = await req.json(); } catch { return out("bad", 400); }
   if (body.whoami === 1) { namedAt = 0; await remember(req); return out("ok"); }
+  // {ver:1}: which version is deployed (System check).  {test:1, sub}: one "Test alert" to the asking phone only.
+  if (body.ver === 1) return out(VER);
+  if (body.test === 1) {
+    // deno-lint-ignore no-explicit-any
+    const sub = body.sub as any;
+    const ok = sub && typeof sub === "object" && ((typeof sub.apns === "string" && /^[0-9a-fA-F]{32,200}$/.test(sub.apns)) || (typeof sub.endpoint === "string" && /^https:\/\//.test(sub.endpoint) && sub.keys && typeof sub.keys.p256dh === "string" && typeof sub.keys.auth === "string"));
+    if (!ok) return out("bad sub", 400);
+    const r = await pushAny(sub, { title: "🔔 Test alert", body: "Alerts work on this phone.", help: false, open: "board" }, true, 300);
+    return out(r === "ok" ? "sent" : r === "gone" ? "phone token expired" : "push failed");
+  }
   if (body.escalate === 1) { remember(req); return escalate(); }
   if (body.drain === 1) { remember(req); return drain(); }
   const skip = typeof body.skip === "string" ? body.skip.slice(0, 600) : "";
