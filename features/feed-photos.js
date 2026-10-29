@@ -3,7 +3,7 @@
    the post's encrypted payload like the text, and each phone keeps them in its own store (IndexedDB) so the roster
    and feed in storage stay small. Tap a photo to see it full screen. */
 (()=>{
-const MAXP=4,MAXPX=1280,Q=0.74;
+const MAXP=4,MAXPX=1024,Q=0.7;
 const DB={name:"af-feed",store:"pic"};
 const cache=new Map();let pend=[];
 function idb(){return new Promise((ok,no)=>{try{const r=indexedDB.open(DB.name,1);r.onupgradeneeded=()=>r.result.createObjectStore(DB.store);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}catch(e){no(e)}})}
@@ -59,5 +59,7 @@ window.feedPicsFill=fill;
 .fp-x{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:12px;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:16px;line-height:1;cursor:pointer}
 .fp-pics{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;margin-top:8px}.fp-pic{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface-2);padding:0;min-height:96px;display:block}.fp-pic img{width:100%;height:140px;object-fit:cover;display:block}.fp-miss{display:block;font-size:12px;padding:12px;text-align:center}
 .rm-view{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:12px}.rm-view img{max-width:100%;max-height:85vh;object-fit:contain;touch-action:pinch-zoom}`;document.head.appendChild(st)}
+if(typeof SC==="object"&&Array.isArray(SC))SC.push({k:"fph",n:"4.18: photos on Feed posts (bigger posts)",f:["32_feed_photos"],t:[["feed_photos_ok",{}]]});
+{const orig=toast;toast=function(t){let long=false;if(/feed_posts_ct_check/.test(String(t))){t="Photos need a one-time server update: Tools → Settings → System check → run part 32 (feed photos). Then post again.";long=true}const r=orig(t);if(long){clearTimeout(toast.t);toast.t=setTimeout(()=>{const el=$("#toast");if(el)el.hidden=true},7000)}return r}}
 if(typeof HELP==="object"&&HELP.feed&&Array.isArray(HELP.feed[2]))HELP.feed[2].push("Add photos: attach up to 4 photos to a post. They travel with the post and open full screen with a tap.");
 })();

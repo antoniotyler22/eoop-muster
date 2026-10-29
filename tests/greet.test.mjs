@@ -30,16 +30,18 @@ test("home: the greeting uses the full rank and last name", async () => {
   } finally { a.close(); }
 });
 
-test("header: app icon, big name, and the Live pill beside the name when connected", async () => {
+test("header: the icon alone with PLT/CO, blue when live, black when not, and it opens the Dashboard", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     a.w.eval(`S.source="mol";S.leaderMode=true;S.welcomed=1;S.onb=true;S.role="oic";save();view="board";render();`);
-    assert.ok(a.$("header.top #hdIcon"), "icon");
-    assert.ok(a.$("header.top .hd-row h1"), "name in the row");
-    assert.ok(a.$("header.top .hd-row #hdLive"), "live slot beside the name");
-    // simulate the live dot the way live.js paints it
+    assert.ok(a.$("header.top #hdIcon"), "icon button");
+    assert.equal(a.w.eval("getComputedStyle(document.querySelector('header.top .brand h1')).display"), "none", "no app name");
+    assert.equal(a.w.eval("document.getElementById('hdIcon').classList.contains('live')"), false);
     a.w.eval(`const d=document.getElementById("dtg");const el=document.createElement("span");el.id="liveDot";el.innerHTML="<i></i>Live";d.after(el);`);
     await sleep(30);
-    assert.ok(a.$("#hdLive #liveDot"), "Live pill moved beside the name");
+    assert.equal(a.w.eval("document.getElementById('hdIcon').classList.contains('live')"), true, "blue when live");
+    assert.equal(a.w.eval("getComputedStyle(document.getElementById('liveDot')).display"), "none", "no Live pill");
+    a.$("#hdIcon").click();
+    assert.equal(a.w.eval("view"), "dash");
   } finally { a.close(); }
 });
