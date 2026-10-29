@@ -8350,7 +8350,9 @@ document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;cons
 
 /* outgoing: a post being encrypted takes the pending photos with it */
 let lastImg=null,lastTxt="";
-if(typeof fdEnc==="function"){const _enc=fdEnc;fdEnc=function(ek,o){if(o&&typeof o==="object"&&typeof o.t==="string"&&!o.c&&pend.length&&!o.img){o.img=pend.map(p=>p.id);o.pics={};for(const p of pend){o.pics[p.id]=p.data;put(p.id,p.data)}lastImg=o.img.slice();lastTxt=o.t;pend=[]}return _enc.apply(this,arguments)}}
+/* only a Feed post (text + to + urgent flag), and only right after Post was tapped: nothing else the app encrypts takes the photos */
+let posting=0;document.addEventListener("click",e=>{if(e.target&&e.target.id==="fdPost")posting=Date.now()},true);
+if(typeof fdEnc==="function"){const _enc=fdEnc;fdEnc=function(ek,o){if(o&&typeof o==="object"&&typeof o.t==="string"&&!o.c&&o.to&&"u" in o&&pend.length&&!o.img&&Date.now()-posting<15000){o.img=pend.map(p=>p.id);o.pics={};for(const p of pend){o.pics[p.id]=p.data;put(p.id,p.data)}lastImg=o.img.slice();lastTxt=o.t;pend=[]}return _enc.apply(this,arguments)}}
 /* incoming: photos come out of the payload into this phone's store; the post keeps only their ids */
 if(typeof fdDec==="function"){const _dec=fdDec;fdDec=async function(){const o=await _dec.apply(this,arguments);try{if(o&&o.pics&&typeof o.pics==="object"){for(const [id,data] of Object.entries(o.pics))if(/^[a-z0-9]{6,24}$/i.test(id)&&typeof data==="string"&&data.startsWith("data:image/"))await put(id,data);delete o.pics}}catch(e){}return o}}
 /* the post we just made shows its photos right away */
