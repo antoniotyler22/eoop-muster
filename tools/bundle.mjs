@@ -63,6 +63,7 @@ export const SOURCES = [
   "features/status-done.js",
   "features/feed-poll.js",
   "features/my-checkin.js",
+  "features/harp.js",
 ];
 
 export function build() {
