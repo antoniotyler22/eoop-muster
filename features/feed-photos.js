@@ -11,14 +11,18 @@ async function put(id,data){cache.set(id,data);try{const d=await idb();await new
 async function get(id){if(cache.has(id))return cache.get(id);try{const d=await idb();const v=await new Promise((ok,no)=>{const r=d.transaction(DB.store).objectStore(DB.store).get(id);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});d.close();if(v)cache.set(id,v);return v||""}catch(e){return ""}}
 window.feedPic=get;
 function shrink(file){return new Promise(ok=>{try{const img=new Image();const u=URL.createObjectURL(file);img.onload=()=>{const r=Math.min(1,MAXPX/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*r);c.height=Math.round(img.height*r);c.getContext("2d").drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL("image/jpeg",Q))};img.onerror=()=>ok("");img.src=u}catch(e){ok("")}})}
-async function addFiles(files){for(const f of [...files]){if(!/^image\//.test(f.type))continue;if(pend.length>=MAXP){toast("Up to "+MAXP+" photos per post.");break}const data=await shrink(f);if(!data){toast("Couldn't read that photo.");continue}pend.push({id:"i"+Date.now().toString(36)+rndId(5),data})}
-  drawPend()}
+const raw=f=>new Promise(ok=>{try{const r=new FileReader();r.onload=()=>ok(String(r.result||""));r.onerror=()=>ok("");r.readAsDataURL(f)}catch(e){ok("")}});
+async function addFiles(files){let n=0;for(const f of [...files]){const isImg=/^image\//.test(f.type||"")||!f.type||/\.(jpe?g|png|gif|webp|heic|heif)$/i.test(f.name||"");if(!isImg){toast("That file isn't a photo.");continue}
+    if(pend.length>=MAXP){toast("Up to "+MAXP+" photos per post.");break}
+    let data=await shrink(f);if(!data||!data.startsWith("data:image/")){const r=await raw(f);if(r.startsWith("data:image/")&&r.length<2500000)data=r}
+    if(!data){toast("Couldn't read that photo. Try a JPEG or PNG.");continue}pend.push({id:"i"+Date.now().toString(36)+rndId(5),data});n++}
+  drawPend();if(n)toast(n+" photo"+(n>1?"s":"")+" added · tap Post")}
 window.feedAddPhoto=(id,data)=>{pend.push({id,data})};
 window.feedPendingPhotos=()=>pend.length;
 function pendHTML(){return `<div class="fp-box" id="fpBox"><div class="fp-pend">${pend.map(p=>`<span class="fp-th"><img src="${p.data}" alt=""><button type="button" class="fp-x" data-fpx="${p.id}" aria-label="Remove photo">×</button></span>`).join("")}</div>
   <div class="row2"><button type="button" class="btn alt" id="fpPick">📷 ${pend.length?"Add another photo":"Add photos"}</button><button type="button" class="btn alt" id="fpCam">📸 Take a photo</button></div>
   <input type="file" id="fpIn" accept="image/*" multiple class="fp-hid" aria-label="Choose photos"><input type="file" id="fpCamIn" accept="image/*" capture="environment" class="fp-hid" aria-label="Take a photo">${pend.length?`<p class="note" style="margin:4px 0 0">${pend.length} of ${MAXP} photos · you can post with no text</p>`:""}</div>`}
-function drawPend(){const b=$("#fpBox");if(b)b.outerHTML=pendHTML()}
+function drawPend(){const b=$("#fpBox");if(b)b.outerHTML=pendHTML();else{const p=$("#fdPost");if(p)p.insertAdjacentHTML("beforebegin",pendHTML())}}
 /* compose box: the photo row sits right above Post */
 if(typeof renderFeed==="function"){const _rf=renderFeed;renderFeed=function(){const r=_rf.apply(this,arguments);try{const b=$("#fdPost");if(b&&!$("#fpBox"))b.insertAdjacentHTML("beforebegin",pendHTML());fill()}catch(e){}return r}}
 document.addEventListener("change",e=>{if(e.target.id!=="fpIn"&&e.target.id!=="fpCamIn")return;const f=e.target.files;if(f&&f.length)addFiles(f).then(()=>{try{e.target.value=""}catch(x){}})});
