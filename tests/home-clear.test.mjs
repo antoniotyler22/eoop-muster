@@ -23,11 +23,11 @@ test("home: Needs attention lines hide one at a time or all, and come back only 
     assert.ok(a.w.eval("!S.hideHealth['Backup is off. Losing this phone loses the board.']"));
     // delete for good: stays out even after the problem goes away and comes back
     a.w.eval(`S.sync=null;save();render()`);
-    a.$('[data-hdel="Backup is off. Losing this phone loses the board."]').click();
+    a.$('[data-hgone="Backup is off. Losing this phone loses the board."]').click();
     assert.equal(a.w.eval("S.hideHealth['Backup is off. Losing this phone loses the board.']"), "never");
     a.w.eval(`S.sync={on:true};save();render();S.sync=null;save();render()`);
     assert.equal(a.w.eval("S.hideHealth['Backup is off. Losing this phone loses the board.']"), "never");
-    assert.ok(!a.$('[data-hdel="Backup is off. Losing this phone loses the board."]'));
+    assert.ok(!a.$('[data-hgone="Backup is off. Losing this phone loses the board."]'));
   } finally { a.close(); }
 });
 
