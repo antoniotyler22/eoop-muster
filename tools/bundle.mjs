@@ -53,6 +53,8 @@ export const SOURCES = [
   "features/rooms.js",
   "features/home-clear.js",
   "features/greet.js",
+  "features/feed-photos.js",
+  "features/me-page.js",
 ];
 
 export function build() {
