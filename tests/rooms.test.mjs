@@ -78,3 +78,15 @@ test("rooms: two synced phones merge their taps room by room; newest tap wins; r
     assert.equal(a.w.eval("roomsLeft()"), 1);
   } finally { a.close(); }
 });
+
+test("rooms: the picture list syncs; a picture another phone added shows as a name until this phone has it", async () => {
+  const a = await openApp({ rpc: () => null });
+  try {
+    a.w.eval(LEAD + `roomsAdd("A");S.roomPics=[{id:"pZ",n:"Floor plan",t:Date.now()}];save();view="recall";render();`);
+    assert.ok(a.$("[data-rmpic]"));
+    a.$("#rmEdit").click();
+    assert.ok(a.$("#rmPic"), "add-pictures input in setup");
+    a.$("[data-rmpicx]").click();
+    assert.equal(a.w.eval("S.roomPics.length"), 0);
+  } finally { a.close(); }
+});

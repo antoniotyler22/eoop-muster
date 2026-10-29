@@ -54,6 +54,46 @@ document.addEventListener("input",e=>{if(e.target.id!=="tsQ")return;q=e.target.v
 document.addEventListener("click",e=>{const t=e.target;if(t.closest&&t.closest("#tsRes [data-go],#tsRes [id]"))q=""},true);
 window.toolsSearch=v=>{q=String(v||"");results()};
 
+/* ---------- Home: "Needs you" hide; Today cards by time of day, with clear ---------- */
+const today=()=>new Date().toISOString().slice(0,10);
+const dayStore=k=>{let o=S[k];if(!o||typeof o!=="object"||o.d!==today())o=S[k]={d:today(),h:{}};return o};
+const hhmm=()=>{const d=new Date();return d.getHours()*60+d.getMinutes()};
+const dutyAt=()=>{const v=String(S.dutyAt||"08:00");const m=v.match(/^(\d{1,2}):(\d{2})$/);return m?(+m[1])*60+ +m[2]:480};
+/* when a Today card shows: timed items from 2 h before to 1 h after; duty around the duty start time; the rest all day */
+function cardWindow(card){const k=(card.querySelector(".k")||{}).textContent||"";const m=k.match(/^(\d{1,2}):(\d{2})/);const now=hhmm();
+  if(m){const t=(+m[1])*60+ +m[2];return now>=t-120&&now<=t+60}
+  if(/^DUTY$/i.test(k.trim())){const t=dutyAt();return now>=t-60&&now<=t+60}
+  return true}
+const cardKey=c=>(c.textContent||"").replace(/\s+/g," ").trim().slice(0,100);
+let showToday=false,armedToday=false,showNy=false;
+function todayFix(main){const strip=main.querySelector(".strip");if(!strip)return;const head=strip.previousElementSibling;if(!head||!head.classList.contains("sech"))return;
+  const H=dayStore("todayHide").h;const cards=[...strip.children];let hidden=0,later=0;
+  for(const c of cards){const key=cardKey(c);c.setAttribute("data-tdk",key);
+    if(H[key]&&!showToday){c.hidden=true;hidden++;continue}
+    if(!showToday&&!cardWindow(c)){c.hidden=true;later++;continue}
+    if(!c.querySelector(".hc-tx"))c.insertAdjacentHTML("beforeend",`<span class="hc-tx" data-tdhide="${esc(key)}" role="button" aria-label="Hide" title="Hide until tomorrow">×</span>`)}
+  const vis=cards.length-hidden-later;
+  const chips=`<span style="display:flex;gap:6px;align-items:center">${vis>0?`<button class="chip" id="tdClear" style="cursor:pointer">${armedToday?"Tap again to clear":"Clear"}</button>`:""}${(hidden||later)&&!showToday?`<button class="chip" id="tdShow" style="cursor:pointer">${hidden+later} more</button>`:showToday?`<button class="chip" id="tdShow" style="cursor:pointer">Just now</button>`:""}<button class="chip" data-go="cal" style="cursor:pointer">Calendar ▸</button></span>`;
+  const old=head.querySelector(".chip");if(old)old.outerHTML=chips;
+  if(!vis){strip.insertAdjacentHTML("afterend",`<p class="note" id="tdNone">${hidden?"Cleared for today. ":""}${later?"More shows up closer to its time. ":""}It's all on the calendar.</p>`)}
+  strip.insertAdjacentHTML("afterend",`<div class="note" id="tdSet" style="display:flex;gap:6px;align-items:center;margin-top:4px">Duty shows around <select id="tdDuty" class="wsel" style="width:auto;padding:2px 6px">${Array.from({length:24},(_,i)=>`<option value="${String(i).padStart(2,"0")}:00"${dutyAt()===i*60?" selected":""}>${i===0?"12 AM":i<12?i+" AM":i===12?"12 PM":(i-12)+" PM"}</option>`).join("")}</select></div>`)}
+function nyFix(main){const h2=[...main.querySelectorAll(".sech h2")].find(x=>/^Needs you$|^Pendiente$/.test(x.textContent.trim()));if(!h2)return;const sech=h2.parentElement;const card=sech.nextElementSibling;if(!card||!card.classList.contains("ny"))return;
+  const H=dayStore("nyHide").h;const rows=[...card.children].filter(x=>x.tagName==="BUTTON");let hidden=0;
+  for(const b of rows){const key=cardKey(b);if(H[key]&&!showNy){b.hidden=true;hidden++;continue}
+    const w=document.createElement("div");w.className="hc-row";b.replaceWith(w);w.appendChild(b);b.style.borderTop="0";b.style.flex="1";b.style.minWidth="0";w.insertAdjacentHTML("beforeend",`<button class="hc-x" data-nyhide="${esc(key)}" aria-label="Hide" title="Hide until tomorrow">×</button>`)}
+  const vis=rows.length-hidden;
+  const n=sech.querySelector(".note");const chips=`<span style="display:flex;gap:6px;align-items:center">${vis?`<span class="note" style="margin:0">${vis}</span>`:""}${vis>1?`<button class="chip" id="nyAll" style="cursor:pointer">Hide all</button>`:""}${hidden&&!showNy?`<button class="chip" id="nyShow" style="cursor:pointer">${hidden} hidden</button>`:showNy&&hidden?`<button class="chip" id="nyShow" style="cursor:pointer">Hide again</button>`:""}</span>`;
+  if(n)n.outerHTML=chips;else sech.insertAdjacentHTML("beforeend",chips);
+  if(!vis)card.outerHTML=`<div class="card" style="align-items:center;text-align:center"><b style="color:var(--s-onhand)">✓ Hidden for today</b></div>`}
+document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;
+  const td=t.closest("[data-tdhide]");if(td){e.preventDefault();e.stopImmediatePropagation();dayStore("todayHide").h[td.dataset.tdhide]=1;rawSave();home();return}
+  if(t.closest("#tdClear")){e.stopImmediatePropagation();if(!armedToday){armedToday=true;home();setTimeout(()=>{if(armedToday){armedToday=false;home()}},4000);return}armedToday=false;const H=dayStore("todayHide").h;document.querySelectorAll("#main .strip [data-tdk]").forEach(c=>{H[c.dataset.tdk]=1});rawSave();showToday=false;home();toast("Cleared for today. It's all on the calendar.");return}
+  if(t.closest("#tdShow")){e.stopImmediatePropagation();showToday=!showToday;home();return}
+  const ny=t.closest("[data-nyhide]");if(ny){e.stopImmediatePropagation();dayStore("nyHide").h[ny.dataset.nyhide]=1;rawSave();home();return}
+  if(t.closest("#nyAll")){e.stopImmediatePropagation();const H=dayStore("nyHide").h;document.querySelectorAll("#main [data-nyhide]").forEach(x=>{H[x.dataset.nyhide]=1});rawSave();showNy=false;home();return}
+  if(t.closest("#nyShow")){e.stopImmediatePropagation();showNy=!showNy;home();return}},true);
+document.addEventListener("change",e=>{if(e.target.id!=="tdDuty")return;S.dutyAt=e.target.value;rawSave();home();toast("Duty cards show around "+e.target.options[e.target.selectedIndex].text)});
+
 /* ---------- Home: Live sections up top, On the app where Live sections was; Ask + help at the bottom ---------- */
 function homeFix(){const main=$("#main");if(!main||view!=="board")return;
   const live=main.querySelector('.att[data-go="live"]'),oa=main.querySelector("#oaPanel"),qa=main.querySelector(".qa");
@@ -64,9 +104,10 @@ function homeFix(){const main=$("#main");if(!main||view!=="board")return;
   main.insertAdjacentHTML("beforeend",`<div class="panel" id="hmAsk" style="margin-top:14px"><b>Need a hand?</b><p class="note" style="margin:2px 0 8px">Ask about your team, orders or anything, or learn how to do something in this app.</p>
     <div class="row2">${ask}<button class="btn alt" data-go="support">❓ How do I…</button></div>
     <div class="row2" style="margin-top:6px"><button class="btn alt" data-trfull="1">👆 Take the tour</button><a class="btn alt" href="help.html" target="_blank" rel="noopener">📖 Guide</a></div></div>`)}
-{const _r=render;render=function(){const r=_r.apply(this,arguments);try{homeFix()}catch(e){}return r}}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{homeFix();if(view==="board"){const m=$("#main");if(m){todayFix(m);nyFix(m)}}}catch(e){}return r}}
 
 {const st=document.createElement("style");st.textContent=`.hc-row{display:flex;align-items:stretch;border-top:1px solid var(--line)}.hc-row:first-child{border-top:0}.hc-row .lrow{min-width:0}
 .hc-x{flex:0 0 44px;border:0;background:none;color:var(--muted,inherit);opacity:.7;font-size:22px;line-height:1;cursor:pointer}.hc-x:active{opacity:1}
+.strip>*{position:relative}.hc-tx{position:absolute;top:4px;right:8px;font-size:18px;line-height:1;color:var(--muted);opacity:.7;cursor:pointer;padding:2px 4px}
 .hc-search{margin:10px 0 4px}.hc-search .search{margin:0 0 8px}#tsRes{margin:0}`;document.head.appendChild(st)}
 })();

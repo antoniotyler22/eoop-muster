@@ -85,3 +85,30 @@ test("tour: Take the tour runs the in-depth leader tour with Room sweep and the 
     assert.match(a.$("#tour .tr-t").textContent, /Welcome/);
   } finally { a.close(); }
 });
+
+test("home: Needs you lines hide until tomorrow; Today cards show by time of day and clear for the day", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    a.w.eval(LEAD + `S.rc.open=true;S.rc.start=Date.now();S.rc.rid="x1";S.rc.res={};S.rc.ci={};S.rc.live=null;
+      const k=dkey();S.duty.rosters.push({id:"d1",name:"Duty NCO",secs:[],att:false,skip:[],order:[],ptr:0,assign:{[k]:S.roster[0].id},excl:{}});
+      const m=S.roster[1];m.cal=[{id:"c1",d:k,tm:"23:59",ty:"APPT",ti:"Dentist"},{id:"c2",d:k,tm:"",ty:"APPT",ti:"Allday"}];save();view="board";render();`);
+    assert.ok(a.$("[data-nyhide]"), "needs-you rows get an ×");
+    const n = a.w.eval("document.querySelectorAll('[data-nyhide]').length");
+    a.$("[data-nyhide]").click();
+    assert.equal(a.w.eval("document.querySelectorAll('[data-nyhide]').length"), n - 1);
+    assert.equal(a.w.eval("Object.keys(S.nyHide.h).length"), 1);
+    // Today: the all-day item shows; the 23:59 appointment is hidden unless it's late; duty depends on the hour
+    const now = a.w.eval("new Date().getHours()*60+new Date().getMinutes()");
+    const vis = a.w.eval("[...document.querySelectorAll('#main .strip [data-tdk]')].filter(c=>!c.hidden).map(c=>c.dataset.tdk)");
+    assert.ok(vis.some(k => /Allday/.test(k)), vis.join("|"));
+    assert.equal(vis.some(k => /Dentist/.test(k)), now >= 23*60+59-120, vis.join("|"));
+    assert.equal(vis.some(k => /^DUTY/.test(k)), now >= 420 && now <= 540);
+    assert.ok(a.$("#tdShow") || a.$("#tdClear"));
+    a.w.eval(`S.dutyAt=String(new Date().getHours()).padStart(2,"0")+":00";save();render()`);
+    assert.ok(a.w.eval("[...document.querySelectorAll('#main .strip [data-tdk]')].some(c=>!c.hidden&&/^DUTY/.test(c.dataset.tdk))"), "duty shows around the chosen hour");
+    a.$("#tdClear").click(); a.$("#tdClear").click();
+    assert.equal(a.w.eval("[...document.querySelectorAll('#main .strip [data-tdk]')].filter(c=>!c.hidden).length"), 0);
+    assert.ok(a.$("#tdNone"));
+    assert.equal(a.w.eval("S.todayHide.d"), a.w.eval("new Date().toISOString().slice(0,10)"));
+  } finally { a.close(); }
+});
