@@ -64,6 +64,7 @@ export const SOURCES = [
   "features/feed-poll.js",
   "features/my-checkin.js",
   "features/harp.js",
+  "features/ck-missing.js",
 ];
 
 export function build() {
