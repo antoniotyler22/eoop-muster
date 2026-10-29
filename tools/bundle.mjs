@@ -51,6 +51,7 @@ export const SOURCES = [
   "features/news.js",
   "features/owner.js",
   "features/rooms.js",
+  "features/home-clear.js",
 ];
 
 export function build() {
