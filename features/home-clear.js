@@ -54,6 +54,18 @@ document.addEventListener("input",e=>{if(e.target.id!=="tsQ")return;q=e.target.v
 document.addEventListener("click",e=>{const t=e.target;if(t.closest&&t.closest("#tsRes [data-go],#tsRes [id]"))q=""},true);
 window.toolsSearch=v=>{q=String(v||"");results()};
 
+/* ---------- Home: Live sections up top, On the app where Live sections was; Ask + help at the bottom ---------- */
+function homeFix(){const main=$("#main");if(!main||view!=="board")return;
+  const live=main.querySelector('.att[data-go="live"]'),oa=main.querySelector("#oaPanel"),qa=main.querySelector(".qa");
+  const spot=live?live.nextElementSibling:null;
+  if(live&&qa){let after=qa;const em=main.querySelector("#v11Em");if(em&&(qa.compareDocumentPosition(em)&Node.DOCUMENT_POSITION_FOLLOWING))after=em;after.insertAdjacentElement("afterend",live)}
+  if(oa){const anchor=spot&&spot.isConnected?spot:main.querySelector("details.card");if(anchor&&anchor!==oa)anchor.insertAdjacentElement("beforebegin",oa)}
+  if(main.querySelector("#hmAsk"))return;const ask=typeof akHidden==="function"&&akHidden()?"":`<button class="btn alt" data-go="ask">💬 Ask a question</button>`;
+  main.insertAdjacentHTML("beforeend",`<div class="panel" id="hmAsk" style="margin-top:14px"><b>Need a hand?</b><p class="note" style="margin:2px 0 8px">Ask about your team, orders or anything, or learn how to do something in this app.</p>
+    <div class="row2">${ask}<button class="btn alt" data-go="support">❓ How do I…</button></div>
+    <div class="row2" style="margin-top:6px"><button class="btn alt" data-trfull="1">👆 Take the tour</button><a class="btn alt" href="help.html" target="_blank" rel="noopener">📖 Guide</a></div></div>`)}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{homeFix()}catch(e){}return r}}
+
 {const st=document.createElement("style");st.textContent=`.hc-row{display:flex;align-items:stretch;border-top:1px solid var(--line)}.hc-row:first-child{border-top:0}.hc-row .lrow{min-width:0}
 .hc-x{flex:0 0 44px;border:0;background:none;color:var(--muted,inherit);opacity:.7;font-size:22px;line-height:1;cursor:pointer}.hc-x:active{opacity:1}
 .hc-search{margin:10px 0 4px}.hc-search .search{margin:0 0 8px}#tsRes{margin:0}`;document.head.appendChild(st)}

@@ -8,7 +8,7 @@ const tab=k=>`#tabbar [data-tab="${k}"]`;
 
 /* ---------- steps ---------- */
 function leaderLib(){return [
-  {t:"Welcome to your walk-through",b:"This shows you every part of the app, one spot at a time. When a button lights up and says <b>Tap it</b>, tap it. Takes about 2 minutes. When you finish, the app is yours to use.",go:"board"},
+  {t:"Welcome to your walk-through",b:"This shows you every part of the app, one spot at a time. When a button lights up and says <b>Tap it</b>, tap it. Takes about 5 minutes; <b>Exit</b> any time. When you finish, the app is yours to use.",go:"board"},
   {s:"#bMode",t:"Your app name",b:"Tap the name any time to switch versions (Military, Police, Jobs, HR, Civilian or Custom) or rename your team."},
   {s:"#main .card.hero",t:"Your numbers",b:"Who's here now out of everyone you're responsible for. The bar fills as people show up. Below it is the count by status."},
   {s:"#main .card.hero [data-go]",t:"Sections",b:"Each chip is a section: here / total. Tap one later to see its people."},
@@ -16,8 +16,12 @@ function leaderLib(){return [
   {s:"#v11Em",t:"Emergency check-in",b:"One tap (then tap again to confirm) sends everyone a check-in link. They answer Good, Delayed or Need help, and you watch the count fill in. Use it for drills, storms and real emergencies."},
   {s:'#main .qa [data-go="text"]',tap:1,t:"Send the numbers",b:el=>`Tap <b>${lbl(el)}</b>.`},
   {t:"Your report",b:"This report builds itself from your board. Text it, copy it or share it to whoever needs your numbers. No typing."},
+  {go:"recall",s:"#main .panel",opt:1,t:"Check-in screen",b:"Start a drill or a real check-in here. Everyone with a number gets a text; they reply 1, 2 or 3 or tap the link. Visitors on site count too."},
+  {go:"recall",s:"#rmPanel, #rmSetup, #main [id^=rm]",opt:1,t:"Room sweep",b:"Add your rooms once. During a check-in, wardens tap each room as they clear it; a second tap marks a problem with a note. Phones synced to the team sweep together and you see which rooms are still unchecked."},
+  {go:"recall",s:"#dlAlarm, #dlCsv",opt:1,t:"Drill history and alarms",b:"Every closed-out check-in is logged: how long to get everyone, who was missing, who needed help, rooms cleared. Export it for your safety records. Buzz me every 2, 5 or 10 min tells you how many are still missing."},
   {s:tab("people"),tap:1,t:"People",b:"Tap <b>People</b>."},
   {s:"#main .pcard",t:"Sections and people",b:"Open a section to see everyone in it. Tap a person's status to change it. The numbers update right away."},
+  {s:"#gq",opt:1,t:"Find anyone",b:"Type a name, rank or section to jump straight to a person."},
   {s:'#main [data-go="data"]',opt:1,t:"Load your roster",b:"Bring in your people from Excel or CSV. Until then you're looking at sample people."},
   {s:'#main [data-go="live"]',opt:1,t:"Live sections",b:"Lets each section leader update their own section from their phone. It all rolls up to you."},
   {s:tab("feed"),tap:1,t:"Feed",b:"Tap <b>Feed</b>."},
@@ -25,6 +29,19 @@ function leaderLib(){return [
   {s:tab("plan"),tap:1,t:"Plan",b:"Tap <b>Plan</b>."},
   {s:"#subnav",opt:1,t:"Plan tabs",b:"Calendar, duty roster, readiness (who's due for what) and events. Everything on the calendar can go to your phone's calendar."},
   {s:tab("tools"),tap:1,t:"Tools",b:"Tap <b>Tools</b>."},
+  {s:"#tsQ",opt:1,t:"Search any feature",b:"Type a word (room, visitor, PDF, calendar) to find any screen in the app and open it in one tap."},
+  {s:'#sgGrid [data-sgrp="checkin"], #sgGrid [data-sg1="checkin"]',opt:1,t:"Muster",b:"Formation muster with QR check-in, check-ins people send from their phones, missed check-in alerts, and Visitors: sign guests, contractors and deliveries in and out so they count in an emergency. Kiosk mode turns a tablet at the door into a sign-in screen."},
+  {s:'#sgGrid [data-sgrp="feed"], #sgGrid [data-sg1="feed"]',opt:1,t:"Feed",b:"Post to everyone with Confirm I saw it, send texts, direct messages, and each person's page."},
+  {s:'#sgGrid [data-sgrp="people"], #sgGrid [data-sg1="people"]',opt:1,t:"People & access",b:"Send out links or logins (pick people, roles, linked to your roster or building their own team), see everyone with access, paste a roster from a spreadsheet, Live sections, and your account for the same teams on any phone."},
+  {s:'#sgGrid [data-sgrp="reports"], #sgGrid [data-sg1="reports"]',opt:1,t:"Reports",b:"Headcount text, PDF report, incident report and trends. They build themselves from your board."},
+  {s:'#sgGrid [data-sgrp="plan"], #sgGrid [data-sg1="plan"]',opt:1,t:"Calendar",b:"Calendar, events, duty roster, meetings and PT. Everything can go on each person's phone calendar."},
+  {s:'#sgGrid [data-sgrp="ready"], #sgGrid [data-sg1="ready"]',opt:1,t:"Readiness",b:"Who's due for what, and when."},
+  {s:'#sgGrid [data-sgrp="recall"], #sgGrid [data-sg1="recall"]',opt:1,t:"Recall",b:"Call or text everyone, load phone numbers from a file or contacts."},
+  {s:'#sgGrid [data-sgrp="armory"], #sgGrid [data-sg1="armory"]',opt:1,t:"Armory",b:"Sign gear in and out."},
+  {s:'#sgGrid [data-sgrp="rollup"], #sgGrid [data-sg1="rollup"]',opt:1,t:"Rollup",b:"Add up the teams under you: each team updates its own numbers and it rolls up to one page."},
+  {s:'#sgGrid [data-sgrp="home"], #sgGrid [data-sg1="home"]',opt:1,t:"My day",b:"Dashboard, today's items and your own log."},
+  {s:'#sgGrid [data-sgrp="help"], #sgGrid [data-sg1="help"]',opt:1,t:"Help",b:"Ask any question about the app, read the guide, or replay this tour."},
+  {s:'#sgGrid [data-sgrp="settings"], #sgGrid [data-sg1="settings"]',opt:1,t:"Settings",b:"Teams, your data and backup, app version, connections, news on Home and the system check."},
   {s:'#main [data-go="dash"]',opt:1,t:"Dashboard",b:"Everything on one screen: present, requests, reports, overdue items and who's logged in."},
   {s:'#main [data-go="invite"]',opt:1,t:"Invite",b:"Send links or logins to everyone from one place: pick people, Linked to this roster or Building their own team, a role, then a login or a link. Send next texts each person their own message."},
   {s:'#main [data-go="logins"]',opt:1,t:"Logins",b:"Give someone a username and password instead of a link, and pick their role: member, section leader, viewer, editor and more."},
@@ -120,7 +137,7 @@ async function show(i){const w=ui();if(i<0)i=0;if(i>=T.steps.length){finish();re
   w.classList.toggle("tr-tapping",tapNow);w.hidden=false;document.body.classList.add("tour-open");place();loop();
   setTimeout(()=>{const b=tapNow?el:nx;if(b&&b.focus)b.focus({preventScroll:true})},60)}
 function start(kind,custom){if(T.on)return;try{if(typeof closeSheet==="function")closeSheet()}catch(e){}const o=document.getElementById("onb");if(o&&!o.hidden){o.hidden=true;o.innerHTML="";document.body.classList.remove("onb-open")}
-  T.kind=kind||kindNow();T.screen=!!custom;T.steps=custom||(T.kind==="member"?memberSteps():T.kind==="section"?sectionSteps():leaderSteps());T.on=true;T.back=false;show(0)}
+  T.kind=kind||kindNow();T.screen=!!custom;T.steps=custom||(T.kind==="member"?memberLib():T.kind==="section"?sectionLib():leaderLib());T.on=true;T.back=false;show(0)}
 function finish(){T.on=false;cancelAnimationFrame(T.raf);const w=ui();w.hidden=true;document.body.classList.remove("tour-open");if(T.screen){T.screen=false;toast("Tap ? any time to see this again.");return}S.onb=true;S.tour=Object.assign({},S.tour,{[T.kind]:Date.now()});save();
   if(typeof render==="function"){if(!(typeof memberMode==="function"&&memberMode())&&T.kind==="leader"){view="board"}render();window.scrollTo(0,0)}toast("You're in. The app is live.")}
 window.startTour=start;
@@ -174,7 +191,7 @@ document.addEventListener("click",e=>{if(e.target.closest("[data-trscreen]")){e.
   if(e.target.closest("[data-trfull]")){e.stopImmediatePropagation();try{closeSheet()}catch(err){}setTimeout(()=>start(kindNow()),350)}},true);
 /* Tools → Take the tour */
 if(typeof renderTools==="function"){const _rt=renderTools;renderTools=function(){_rt.apply(this,arguments);const g=[...document.querySelectorAll("#main .tgrid")].pop();if(!g)return;
-  g.insertAdjacentHTML("afterbegin",`<button id="trStart"><span class="ic">${svg("help")}</span><span><b>Take the tour</b><small>5 quick stops</small></span></button>`)}}
+  g.insertAdjacentHTML("afterbegin",`<button id="trStart"><span class="ic">${svg("help")}</span><span><b>Take the tour</b><small>Every feature, step by step</small></span></button>`)}}
 document.addEventListener("click",e=>{if(e.target.closest("#trStart")){e.stopImmediatePropagation();start(kindNow())}});
 if(typeof HELP==="object"&&HELP.tools&&Array.isArray(HELP.tools[2]))HELP.tools[2].push("Take the tour walks you through every part of the app, one tap at a time.");
 })();

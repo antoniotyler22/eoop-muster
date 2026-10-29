@@ -58,3 +58,30 @@ test("tools: the search box finds any screen or feature and hides the groups whi
     assert.equal(a.w.eval("document.querySelector('#sgGrid').hidden"), false);
   } finally { a.close(); }
 });
+
+test("home: Live sections sits right under quick actions, On the app takes its old spot, Ask and How-do-I at the bottom", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    a.w.eval(LEAD + `S.roster.slice(0,3).forEach(m=>m.sec="HQ");view="board";render();`);
+    const order = a.w.eval(`[...document.querySelectorAll('#main > *')].map(x=>x.id||(x.tagName==="DETAILS"?"details":x.className.split(' ')[0])||x.tagName)`);
+    const qa = order.indexOf("qa"), live = order.indexOf("att"), details = order.indexOf("details");
+    assert.ok(live > qa && live - qa <= 2, order.join(","));
+    const i = order.indexOf("oaPanel");
+    if (i >= 0) assert.ok(i > live && i < details, order.join(","));
+    assert.ok(a.$('#hmAsk [data-go="support"]'));
+    assert.ok(a.$('#hmAsk [data-go="ask"]'));
+    assert.equal(a.w.eval(`document.querySelector('#main > :last-child').id`), "hmAsk");
+  } finally { a.close(); }
+});
+
+test("tour: Take the tour runs the in-depth leader tour with Room sweep and the Tools groups", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    a.w.eval(LEAD + `view="board";render();`);
+    a.$("#hmAsk [data-trfull]").click();
+    await sleep(900);
+    const n = +a.$("#tour .tr-k").textContent.replace(/\D+/g, " ").trim().split(" ")[1];
+    assert.ok(n >= 30, "steps: " + n);
+    assert.match(a.$("#tour .tr-t").textContent, /Welcome/);
+  } finally { a.close(); }
+});

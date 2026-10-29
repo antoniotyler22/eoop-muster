@@ -61,14 +61,14 @@ test("joining shows sign-in and link; members get My status, Feed, Calendar", as
   } finally { await a.close(); }
 });
 
-test("full tour is 5 stops and Exit leaves in one tap", async () => {
+test("full tour is the in-depth walk-through and Exit leaves in one tap", async () => {
   const a = await openApp();
   try {
     a.w.Element.prototype.scrollIntoView = function () {};
     a.w.Element.prototype.getBoundingClientRect = function () { return { left: 10, top: 10, width: 100, height: 40, right: 110, bottom: 50, x: 10, y: 10 }; };
     a.w.eval(`S.welcomed=1;S.onb=true;S.leaderMode=true;view="board";render();startTour("leader")`);
     await sleep(300);
-    assert.match(a.$("#tour .tr-k").textContent, /of 5/);
+    assert.match(a.$("#tour .tr-k").textContent, /of [3-9][0-9]/);
     a.$('#tour [data-tr="exit"]').click();
     await sleep(50);
     assert.ok(a.$("#tour").hidden, "one tap exits");
