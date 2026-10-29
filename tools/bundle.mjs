@@ -62,6 +62,7 @@ export const SOURCES = [
   "features/no-doubles.js",
   "features/status-done.js",
   "features/feed-poll.js",
+  "features/my-checkin.js",
 ];
 
 export function build() {

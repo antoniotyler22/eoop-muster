@@ -16,12 +16,17 @@ let myEnd="";
 async function endpoint(){if(myEnd)return myEnd;try{const s=await pushSub(false);myEnd=s&&(s.endpoint||(s.toJSON&&s.toJSON().endpoint))||""}catch(e){}return myEnd}
 
 /* 1) put this phone on the alert list of every feed it's on, leader phones included */
-let attaching=false;
-async function attachAll(force){if(!S.pushOn||attaching)return 0;attaching=true;let n=0;
-  try{const s=await pushSub(false);if(!s)return 0;const j=s.toJSON();myEnd=j.endpoint||myEnd;const M=subMap();
+/* one at a time: a tap waits for a background run instead of giving up (that used to read as "Couldn't connect") */
+let running=Promise.resolve(0),lastErr="";
+function attachAll(force){const go=()=>attachOnce(force);running=running.then(go,go);return running}
+async function attachOnce(force){if(!S.pushOn)return 0;let n=0;lastErr="";
+  try{const s=await pushSub(false);if(!s){lastErr=window.__pushWhy==="notoken"?"this phone didn't get an alert token from Apple. Close the app fully, open it and try again.":window.__pushWhy==="noplugin"?"alerts aren't in this build of the app.":"alerts aren't allowed for this app in Settings.";return 0}
+    const j=s.toJSON();myEnd=j.endpoint||myEnd;const M=subMap();
     for(const f of S.feeds||[]){if(!f.mk)continue;if(!force&&M[f.id]===j.endpoint){f.push=true;continue}
-      try{await SB.rpc("feed_sub",{p_feed:f.id,p_member_key:f.mk,p_sub:j});M[f.id]=j.endpoint;f.push=true;n++}catch(e){}}
-    putMap(M);if(n)rawSave()}catch(e){}finally{attaching=false}return n}
+      try{await SB.rpc("feed_sub",{p_feed:f.id,p_member_key:f.mk,p_sub:j});M[f.id]=j.endpoint;f.push=true;n++}
+      catch(e){const msg=String(e&&e.message||e);lastErr=/full/.test(msg)?"the team's alert list is full (500 phones).":/find the function|schema|does not exist/i.test(msg)?"alerts aren't set up on the server yet (DATA → System check).":/fetch|network|Failed/i.test(msg)?"no signal reaching the server. Try again.":msg.slice(0,80)}}
+    putMap(M);if(n)rawSave()}catch(e){lastErr=String(e&&e.message||e).slice(0,80)}return n}
+window.taLastErr=()=>lastErr;
 window.taAttach=attachAll;
 fdPushAttach=async function(f){return attachAll()};
 const hasAlerts=()=>{const f=teamFeed();return !!(f&&S.pushOn&&subMap()[f.id])};
@@ -70,9 +75,9 @@ if(typeof renderToday==="function"){const _rt=renderToday;renderToday=function()
 if(typeof renderBoard==="function"){const _rb=renderBoard;renderBoard=function(){_rb.apply(this,arguments);if(teamFeed())place()}}
 if(typeof renderMe==="function"){const _rm=renderMe;renderMe=function(){_rm.apply(this,arguments);place()}}
 document.addEventListener("click",e=>{if(!e.target.closest("#taOn"))return;e.stopImmediatePropagation();const b=e.target.closest("#taOn");b.disabled=true;b.textContent="Asking…";
-  pushSub(true).then(async sub=>{if(!sub){toast("Alerts not allowed on this phone");b.disabled=false;b.textContent="Turn on team alerts";return}
+  pushSub(true).then(async sub=>{if(!sub){toast(window.__pushWhy==="notoken"?"Apple didn't send an alert token. Close the app fully and try again.":window.__pushWhy==="noplugin"?"Alerts aren't in this build of the app yet.":"Alerts are off for this app. Turn them on in Settings → Notifications → Accounted For.");b.disabled=false;b.textContent="Turn on team alerts";return}
     S.pushOn=true;save();await attachAll(true);try{if(S.board&&typeof boardPush==="function")await boardPush()}catch(e){}
-    const c=$("#taCard");if(c)c.remove();toast(hasAlerts()?"Team alerts on":"Couldn't connect alerts. Try again.")})
+    const c=$("#taCard");if(c)c.remove();if(hasAlerts())toast("🔔 Team alerts on");else{toast("Couldn't connect alerts: "+(lastErr||"try again."));const y=window.scrollY;render();window.scrollTo(0,y)}})
   .catch(()=>{toast("Couldn't turn on alerts here.");b.disabled=false;b.textContent="Turn on team alerts"})},true);
 
 /* keep the list current: new feeds (joined, synced) and refreshed phone tokens */

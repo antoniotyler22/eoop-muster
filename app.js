@@ -1117,7 +1117,7 @@ function healthIssues(){const out=[];const B=S.board;
     const lastT=k=>{const r=typeof secLast==="function"?secLast(k):null;return Math.max(+(r&&r.t)||0,+(B.last[k]&&B.last[k].t)||0)};
     const quiet=keyed.filter(k=>B.last[k]&&Date.now()-lastT(k)>24*3600000);
     if(never.length)out.push({t:LV().heads+" not connected yet: "+never.join(", ")+". Text them their links.",go:"live"});
-    for(const k of quiet){const t=lastT(k);out.push({t:k+" "+LV().head+" hasn't sent an update in "+hrs(t)+" hr (last "+short(new Date(t))+" "+hhmm(t)+"). Not an error: their link still works. Tap to open Live sections and nudge or resend it; or update "+k+" here and this clears.",go:"live"})}}
+    /* a quiet section is not a problem: its tile shows when it last updated, so nothing goes in Needs attention */void quiet}
   if(S.mpErr)out.push({t:"My pages: "+S.mpErr,go:"data"});
   if(S.coRep&&S.coRep.err)out.push({t:"Company report: "+S.coRep.err,go:"co"});
   for(const f of S.feeds)if(f.err)out.push({t:"Feed "+f.unit+": "+f.err,go:"feed"});
