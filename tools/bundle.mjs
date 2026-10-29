@@ -50,6 +50,7 @@ export const SOURCES = [
   "features/whoami.js",
   "features/news.js",
   "features/owner.js",
+  "features/rooms.js",
 ];
 
 export function build() {
