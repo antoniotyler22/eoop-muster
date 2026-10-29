@@ -10,7 +10,7 @@
 const BATCH=20;
 /* ---------- School template (joins the one-tap templates on the welcome screen) ---------- */
 if(window.SG_TPL&&!SG_TPL.school){const school={n:"School",ic:"🏫",d:"Classes, roll call, drills, families",m:"custom",
-    v:{p:"Student",ps:"Students",here:"Present",aob:"Nurse / office",aoff:"Picked up early",cod:"Pulled out",op:"Field trip",tad:"Absent",lv:"Excused",mus:"Roll call",attPl:"Staff",eo:"SCHOOL"},
+    v:{pt:"Recess / PE",p:"Student",ps:"Students",here:"Present",aob:"Nurse / office",aoff:"Picked up early",cod:"Pulled out",op:"Field trip",tad:"Absent",lv:"Excused",mus:"Roll call",attPl:"Staff",eo:"SCHOOL"},
     secs:[["K","Kindergarten"],["G1","Grade 1"],["G2","Grade 2"],["G3","Grade 3"],["G4","Grade 4"],["G5","Grade 5"],["STAF","Staff"]]};
   const all=Object.entries(SG_TPL);for(const [k] of all)delete SG_TPL[k];
   for(const [k,t] of all){SG_TPL[k]=t;if(k==="trip")SG_TPL.school=school}if(!SG_TPL.school)SG_TPL.school=school}

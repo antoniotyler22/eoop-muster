@@ -2,10 +2,18 @@
 
 /* ===== app.js ===== */
 /* Accounted For app. Loaded by index.html after the PIN lock (if on) opens the vault. */
-const STATUSES=["On Hand","Appointment on Base","Appointment off Base","Company Duties","Operation","TAD","Leave"];
-const SHORT={"On Hand":"On Hand","Appointment on Base":"Appt On Base","Appointment off Base":"Appt Off Base","Company Duties":"Co Duties","Operation":"Operation","TAD":"TAD","Leave":"Leave"};
-const SVAR={"On Hand":"--s-onhand","Appointment on Base":"--s-aob","Appointment off Base":"--s-aoff","Company Duties":"--s-duty","Operation":"--s-op","TAD":"--s-tad","Leave":"--s-leave"};
-const PRESENT=["On Hand","Appointment on Base","Company Duties"];
+const STATUSES=["On Hand","Appointment","Company Duties","Duty Recovery","At PT","Operation","TAD","Leave"];
+const SHORT={"On Hand":"On Hand","Appointment":"Appt","Company Duties":"Co Duties","Duty Recovery":"Duty Rec","At PT":"At PT","Operation":"Operation","TAD":"TAD","Leave":"Leave"};
+const SVAR={"On Hand":"--s-onhand","Appointment":"--s-aob","Company Duties":"--s-duty","Duty Recovery":"--s-aoff","At PT":"--s-pt","Operation":"--s-op","TAD":"--s-tad","Leave":"--s-leave"};
+const PRESENT=["On Hand","Appointment","Company Duties","Duty Recovery","At PT"];
+/* An appointment counts as present on deck unless its location says off base. Duty Recovery counts as present (on base, not usable). */
+const apptOff=m=>!!m&&((m.status==="Appointment"&&/\boff\b/i.test(String(m.loc||"")))||(m.status==="Duty Recovery"&&typeof S==="object"&&S&&S.mode&&S.mode!=="military"));
+const isPresent=m=>!!m&&PRESENT.includes(m.status)&&!apptOff(m);
+/* Old statuses: "Appointment on Base" / "Appointment off Base" are now one status, Appointment, with the location saying on or off base. */
+const OLD_STATUS={"Appointment on Base":"Appointment","Appointment off Base":"Appointment","Appt On Base":"Appointment","Appt Off Base":"Appointment"};
+const fixStatus=s=>OLD_STATUS[s]||s;
+function fixMember(m){if(!m||typeof m!=="object")return m;const o=m.status;if(!OLD_STATUS[o])return m;m.status="Appointment";
+  const l=String(m.loc||"").trim();if(/off Base$/i.test(o)){if(!/\boff\b/i.test(l))m.loc=("Off base"+(l?" · "+l:"")).slice(0,60)}else if(!l)m.loc="On base";return m}
 const SECTIONS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
 const DEF_SECS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
 const RESERVED=["BOARD","ATT","PT","W6","TEXT","DATA","MUSTER","ALERTS","RECALL","EVENTS","ARMORY","ROLLUP","LIVE","SEND","FEED","TRENDS","READY","DUTY","P","CAL","LOG","ME","SYS","TODAY","ASK","PEOPLE","TOOLS"];
@@ -21,7 +29,7 @@ const MODES={
   evTypes:["Range","In-service","Briefing","Detail","Community event","Inspection","Other"],
   wTypes:["Use of force","Injury","Vehicle collision","Missed shift","Medical","Family emergency","Other"],
   items:["Duty pistol","Patrol rifle","Shotgun","Taser","Radio","Body cam","Vehicle keys","Other"],
-  v:{p:"Officer",ps:"Officers",here:"On Duty",aob:"In Station",aobS:"In Station",aoff:"Court",aoffS:"Court",cod:"Special Detail",codS:"Detail",op:"Call-Out",tad:"Training",
+  v:{pt:"PT",p:"Officer",ps:"Officers",here:"On Duty",aob:"In Station",aobS:"In Station",aoff:"Court",aoffS:"Court",cod:"Special Detail",codS:"Detail",op:"Call-Out",tad:"Training",
    lim:"Restricted",attPl:"Mutual Aid",attP:"mutual aid officers",att1:"mutual aid officer",attC:"Mutual Aid Officers",code:"AID",org:"agency",mus:"roll call",
    coEx:"PATROL DIVISION",lead:"Supervisor",asst:"Asst Supervisor",sr:"Senior Sergeant",xo:"Lieutenant",plt:"shift",pltA:"SHIFT",co:"division",coA:"DIV",cmdAll:"commander, lieutenant and senior sergeant",notify:"supervisor, watch commander, dispatch",deck:"Present for duty",eo:"SHIFT",billet:"assignment",fap:"loaned in, detailed to us, mutual aid",mol:"roster file",w6:"IR",edd:"end date"}},
  jobs:{name:"Jobs",desc:"Crews, job sites, head count, tool crib",title:"Crew Numbers",
@@ -31,7 +39,7 @@ const MODES={
   evTypes:["Safety class","Certification","Site walk","Cleanup","Inspection","Other"],
   wTypes:["Injury","Near miss","Equipment damage","Vehicle accident","No-show","Family emergency","Other"],
   items:["Drill","Impact driver","Saw","Grinder","Laser level","Ladder","Radio","Truck keys","Other"],
-  v:{p:"Worker",ps:"Workers",here:"On Site",aob:"In the Yard",aobS:"Yard",aoff:"Appointment",aoffS:"Appt",cod:"Shop Work",codS:"Shop",op:"Other Job Site",opS:"Other Site",tad:"Off-Site Training",tadS:"Training",lv:"Off / PTO",
+  v:{pt:"On Break",p:"Worker",ps:"Workers",here:"On Site",aob:"In the Yard",aobS:"Yard",aoff:"Appointment",aoffS:"Appt",cod:"Shop Work",codS:"Shop",op:"Other Job Site",opS:"Other Site",tad:"Off-Site Training",tadS:"Training",lv:"Off / PTO",
    fd:"Cleared",ld:"Light Work",lim:"Restricted",attPl:"Subcontractors",attP:"subcontractors",att1:"subcontractor",attC:"Subcontractors",code:"SUB",org:"company",mus:"head count",
    rec:"call tree",ptB:"BRIEF",ptT:"Safety brief roster",arm:"tool crib",armB:"TOOL CRIB",wpn:"tool",bin:"bin",coEx:"NORTH SITE",lead:"Foreman",asst:"Lead Hand",sr:"Safety Lead",xo:"Asst Superintendent",plt:"crew",pltA:"CREW",co:"site",coA:"SITE",cmdAll:"superintendent and site leads",notify:"foreman, superintendent, safety lead",deck:"On the job",eo:"CREW",billet:"trade",rank:"Title",
    fap:"loaned in, from other crews, subs",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}},
@@ -42,7 +50,7 @@ const MODES={
   evTypes:["Required training","Compliance","Town hall","Volunteer","Review","Other"],
   wTypes:["Workplace injury","Conduct concern","Property damage","No call / no show","Medical","Family emergency","Other"],
   items:["Laptop","Phone","Badge","Keys","Monitor","Vehicle","Other"],
-  v:{p:"Employee",ps:"Employees",here:"In Office",aob:"Remote",aobS:"Remote",aoff:"Appointment",aoffS:"Appt",cod:"Training",codS:"Training",op:"Off-Site Work",opS:"Off-Site",tad:"Business Travel",tadS:"Travel",lv:"PTO",
+  v:{pt:"On Break",p:"Employee",ps:"Employees",here:"In Office",aob:"Remote",aobS:"Remote",aoff:"Appointment",aoffS:"Appt",cod:"Training",codS:"Training",op:"Off-Site Work",opS:"Off-Site",tad:"Business Travel",tadS:"Travel",lv:"PTO",
    fd:"Full Schedule",ld:"Modified Duty",lim:"Accommodation",attPl:"Contractors",attP:"contractors",att1:"contractor",attC:"Contractors",code:"CTR",org:"department",mus:"check-in",
    rec:"call tree",ptB:"MTG",ptT:"Meeting roster",arm:"asset",armB:"ASSETS",wpn:"asset",bin:"tag",coEx:"OPERATIONS",lead:"Manager",asst:"Asst Manager",sr:"HR Lead",xo:"Deputy Director",plt:"team",pltA:"TEAM",co:"department",coA:"DEPT",cmdAll:"director, deputy and HR lead",notify:"manager, HR, security",deck:"Working today",eo:"STAFF",billet:"job title",rank:"Title",
    fap:"loaned in, temps, contractors",mol:"HR roster file",strength:"headcount",w6:"IR",edd:"end date"}},
@@ -53,7 +61,7 @@ const MODES={
   evTypes:["Meeting","Class","Volunteer","Cleanup","Trip","Other"],
   wTypes:["Injury","Lost person","Property damage","Missed pickup","Medical","Family emergency","Other"],
   items:["Radio","Keys","Vest","First aid kit","Laptop","Camera","Other"],
-  v:{p:"Member",ps:"Members",here:"Here",aob:"Appt On Site",aobS:"Appt On Site",aoff:"Appt Off Site",aoffS:"Appt Off Site",cod:"Assigned Task",codS:"Task",op:"Event",tad:"Away",lv:"Time Off",
+  v:{pt:"On Break",p:"Member",ps:"Members",here:"Here",aob:"Appt On Site",aobS:"Appt On Site",aoff:"Appt Off Site",aoffS:"Appt Off Site",cod:"Assigned Task",codS:"Task",op:"Event",tad:"Away",lv:"Time Off",
    fd:"Full Go",ld:"Limited",lim:"Restricted",attPl:"Guests",attP:"guests",att1:"guest",attC:"Guests",code:"GST",org:"group",mus:"check-in",
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",coEx:"YOUTH LEAGUE",lead:"Leader",asst:"Co-leader",sr:"Coordinator",xo:"Vice President",plt:"group",pltA:"GROUP",co:"organization",coA:"ORG",cmdAll:"president, vice president and coordinator",notify:"leader, co-leader, coordinator",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
@@ -69,7 +77,7 @@ const DISCLAIMER="Independent app. Not an official system of, or endorsed by, th
 /* Custom: a version people name themselves (5K, field trip, class, shift…). Starts from Civilian; labels come from S.customV. */
 MODES.custom=Object.assign(JSON.parse(JSON.stringify(MODES.civilian)),{name:"Custom",desc:"Name it yourself: 5K, field trip, class, shift, anything",title:"Accounted For"});
 Object.defineProperty(MODES.custom,"v",{configurable:true,enumerable:true,get(){const b=JSON.parse(JSON.stringify(MODES.civilian.v));let c={};try{c=(typeof S==="object"&&S&&S.customV)||{}}catch(e){}
-  for(const k of ["p","ps","here","aob","aoff","cod","op","tad","lv","mus","rec","attPl","eo"])if(c[k])b[k]=c[k];
+  for(const k of ["p","ps","here","aob","aoff","pt","cod","op","tad","lv","mus","rec","attPl","eo"])if(c[k])b[k]=c[k];
   if(c.aob)b.aobS=c.aob;if(c.aoff)b.aoffS=c.aoff;if(c.cod)b.codS=c.cod;if(c.op)b.opS=c.op;if(c.tad)b.tadS=c.tad;if(c.attPl){b.attC=c.attPl;b.attP=c.attPl.toLowerCase();b.att1=c.attPl.toLowerCase().replace(/s$/,"")}return b}});
 const MODE_ORDER=["military","police","jobs","hr","civilian","custom"];
 const MODE=()=>MODES[S&&MODES[S.mode]?S.mode:"military"];
@@ -78,7 +86,7 @@ const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 function modeDict(md){const v=md.v;if(!v)return null;const t=[];const add=(a,b)=>{if(b!=null&&b!==a)t.push([a,b])};
   add("EOP Numbers",md.title);add("EOOP",v.eo);
   add("Present on deck",v.deck);add("on deck","present");add("off deck","away");
-  add("On Hand",v.here);add("Appointment on Base",v.aob);add("Appt On Base",v.aobS);add("Appointment off Base",v.aoff);add("Appt Off Base",v.aoffS);
+  add("On Hand",v.here);add("Appointment",v.aob);add("Appt",v.aobS);add("Duty Recovery",v.aoff);add("Duty Rec",v.aoffS);add("At PT",v.pt);
   add("Company Duties",v.cod);add("Co Duties",v.codS);add("Operation",v.opS||v.op);add("TAD",v.tadS||v.tad);add("Leave",v.lv);
   add("Full Duty",v.fd);add("Light Duty",v.ld);add("LIMDU",v.lim);
   add("FAP in, TAD to us, attachments",v.fap);add("TAD/FAP",v.tadS||v.tad||"TAD");add("FAP in","loaned in");add("FAP","loan");
@@ -183,7 +191,7 @@ function restoreHTML(){if((S.wsCur||"plt")==="co"||!isOwner())return"";const R=r
     <p class="note">Or load your platoon's MOL file under Roster data. Restoring keeps phone numbers, My pages and notes for anyone whose name matches, and stays connected to the company: your platoon is the master and its changes still go up.</p></div>`}
 function restoreFrom(k){const keepBy={};S.roster.forEach(m=>keepBy[fullK(m)]=m);let list=[];
   if(k==="pre"){list=JSON.parse(JSON.stringify(S.preLink.roster));if(S.preLink.secs)S.secs=S.preLink.secs}
-  else if(k==="snap"){let i=0;list=Object.entries(S.snap.st).map(([name,v])=>({id:"r"+(++i),rank:v.r||"",name,sec:v.sec||"HQ",status:STATUSES.includes(v.s)?v.s:"On Hand",duty:v.d||"Full Duty",detail:"",loc:"",start:"",end:""}))}
+  else if(k==="snap"){let i=0;list=Object.entries(S.snap.st).map(([name,v])=>({id:"r"+(++i),rank:v.r||"",name,sec:v.sec||"HQ",status:STATUSES.includes(fixStatus(v.s))?fixStatus(v.s):"On Hand",duty:v.d||"Full Duty",detail:"",loc:"",start:"",end:""}))}
   else if(k==="co"){const pl=($("#rsPl")||{}).value;let i=0;list=S.ws.co.roster.filter(m=>m.sec===pl).map(m=>Object.assign({},m,{id:"r"+(++i),sec:/^[A-Z0-9]{1,6}$/.test(m.sub||"")?m.sub:"HQ",sub:undefined}))}
   if(!list.length)return toast("Nothing to restore from that.");
   for(const m of list){const o=keepBy[fullK(m)];if(!o)continue;for(const f of ["phone","phone2","pk","pkSig","pkAt","notes","cal","due","wpn","edd","eas","uid"])if(o[f]!=null&&m[f]==null)m[f]=o[f];if(k!=="pre"&&o.id)m.id=o.id}
@@ -232,14 +240,14 @@ const KEY="eoop-muster-v1";setTimeout(()=>{try{const n=localStorage.getItem("eop
 function sampleRoster(){
   const spec=[["HQ",["MSGT","SGT","CPL","LCPL"],["On Hand","On Hand","TAD","Leave"]],
     ["HE",["GYSGT","SGT","CPL","CPL","LCPL","LCPL","PFC"],["On Hand","On Hand","TAD","On Hand","Leave","On Hand","Company Duties"]],
-    ["CE",["SGT","CPL","LCPL","LCPL"],["On Hand","TAD","On Hand","Appointment off Base"]],
+    ["CE",["SGT","CPL","LCPL","LCPL"],["On Hand","TAD","On Hand","Appointment"]],
     ["ORD",["SSGT","CPL","LCPL","PFC"],["Leave","On Hand","On Hand","On Hand"]],
-    ["UT",["GYSGT","SGT","CPL","LCPL","LCPL","PFC"],["On Hand","Operation","Operation","Appointment on Base","On Hand","TAD"]]];
+    ["UT",["GYSGT","SGT","CPL","LCPL","LCPL","PFC"],["On Hand","Operation","Operation","Duty Recovery","On Hand","At PT"]]];
   const out=[];let n=1;
   const rk=r=>{const j=MIL_RANKS.indexOf(r);return RANKS.join()===MIL_RANKS.join()||j<0?r:RANKS[Math.min(RANKS.length-1,Math.floor(j*RANKS.length/MIL_RANKS.length))]};
   for(const [si,[s0,ranks,sts]] of spec.entries()){const sec=(SECTIONS[si]||SECTIONS[SECTIONS.length-1])[0];ranks.forEach((r,i)=>out.push({id:"s"+n,rank:rk(r),name:"SAMPLE, MARINE "+String(n++).padStart(2,"0"),sec,status:sts[i],detail:"Sample row",loc:"",start:"",end:""}));}
   out.push({id:"s"+n++,rank:rk("CPL"),name:"SAMPLE, ATTACHED 01",sec:"ATT",parent:"CLB-3 (FAP in)",status:"On Hand",detail:"Working with "+(SECTIONS[1]||SECTIONS[0])[0],loc:"",start:"",end:"30 NOV 26"});
-  out.push({id:"s"+n++,rank:rk("LCPL"),name:"SAMPLE, ATTACHED 02",sec:"ATT",parent:"7th ESB (TAD to us)",status:"Appointment on Base",detail:"Working with "+(SECTIONS[4]||SECTIONS[SECTIONS.length-1])[0],loc:"",start:"",end:"15 NOV 26"});
+  out.push({id:"s"+n++,rank:rk("LCPL"),name:"SAMPLE, ATTACHED 02",sec:"ATT",parent:"7th ESB (TAD to us)",status:"On Hand",detail:"Working with "+(SECTIONS[4]||SECTIONS[SECTIONS.length-1])[0],loc:"",start:"",end:"15 NOV 26"});
   if(out[5])out[5].duty="Light Duty";if(out[13])out[13].duty="LIMDU";
   return out;
 }
@@ -263,6 +271,11 @@ S.roll=Object.assign({units:{},own:true,name:""},S.roll||{});
 if(S.newCo&&S.source==="sample"){S.roster=sampleRoster();let si=0;const sb=MIL_SECS.map(x=>x[0]);for(const m of S.roster)if(m.sec!=="ATT")m.sub=sb[si++%sb.length];delete S.newCo}else if(!S.roster.length&&S.source==="sample")S.roster=sampleRoster();if(!S.roll.units||typeof S.roll.units!=="object")S.roll.units={};
 S.mus=Object.assign({open:false,seen:{},inc:["On Hand"],att:true,only:false,last:null},S.mus||{});
 S.pt=Object.assign({event:"Unit PT",when:"",inc:["On Hand"],att:true},S.pt||{});
+/* one-time move from the old two appointment statuses to one */
+try{for(const m of S.roster)fixMember(m);const fl=a=>Array.isArray(a)?[...new Set(a.map(fixStatus))]:a;S.pt.inc=fl(S.pt.inc);S.mus.inc=fl(S.mus.inc);
+  for(const r of S.duty.rosters)if(r&&Array.isArray(r.skip))r.skip=fl(r.skip);
+  const fst=o=>{if(!o||typeof o!=="object")return;for(const k of Object.keys(OLD_STATUS))if(o[k]!=null){o.Appointment=(o.Appointment||0)+(+o[k]||0);delete o[k]}};
+  for(const d of Object.values(S.days))if(d&&d.st)fst(d.st);for(const u of Object.values(S.roll.units))if(u&&u.st)fst(u.st)}catch(e){}
 const dutyOf=m=>DUTIES.includes(m.duty)?m.duty:"Full Duty";
 /* Last change to each section, from any source (this phone, a section leader's link, a member check-in, a sync).
    S.secAt[sec]=time (shared with team.js), S.secBy[sec]=who. Compared on every save against a per-section signature. */
@@ -321,15 +334,16 @@ function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTim
 
 function counts(){
   const c={};for(const [k] of SECTIONS){c[k]={total:0};STATUSES.forEach(s=>c[k][s]=0)}
-  for(const m of S.roster){if(!c[m.sec])continue;c[m.sec].total++;if(c[m.sec][m.status]!==undefined)c[m.sec][m.status]++}
-  const T={total:0};STATUSES.forEach(s=>T[s]=0);
-  for(const [k] of SECTIONS){T.total+=c[k].total;STATUSES.forEach(s=>T[s]+=c[k][s])}
-  const A={total:0};STATUSES.forEach(x=>A[x]=0);
-  for(const m of S.roster){if(m.sec!=="ATT")continue;A.total++;if(A[m.status]!==undefined)A[m.status]++}
+  for(const [k] of SECTIONS)c[k].off=0;
+  for(const m of S.roster){if(!c[m.sec])continue;c[m.sec].total++;if(c[m.sec][m.status]!==undefined)c[m.sec][m.status]++;if(apptOff(m))c[m.sec].off++}
+  const T={total:0,off:0};STATUSES.forEach(s=>T[s]=0);
+  for(const [k] of SECTIONS){T.total+=c[k].total;T.off+=c[k].off;STATUSES.forEach(s=>T[s]+=c[k][s])}
+  const A={total:0,off:0};STATUSES.forEach(x=>A[x]=0);
+  for(const m of S.roster){if(m.sec!=="ATT")continue;A.total++;if(A[m.status]!==undefined)A[m.status]++;if(apptOff(m))A.off++}
   c.ATT=A;
   return {c,T,A};
 }
-const present=o=>PRESENT.reduce((a,s)=>a+o[s],0);
+const present=o=>PRESENT.reduce((a,s)=>a+(o[s]||0),0)-(o.off||0);
 const pct=(a,b)=>b?Math.round(100*a/b):0;
 
 function zoneLetter(){const off=-new Date().getTimezoneOffset()/60;if(!Number.isInteger(off))return"";if(off===0)return"Z";
@@ -476,7 +490,7 @@ function renderData(){
     <li>Muster history, saved 6Ws and the last-report snapshot stay on this phone; they are not in the backup file.</li>
     <li>Light Duty / LIMDU settings carry over when you load a new MOL list (matched by name).</li>
     <li>Attached Marines (ATT tab) stay in the app when you load a new MOL list.</li>
-    <li>MOL status mapping: Present for Duty → On Hand, Leave → Leave, TAD/FAP → TAD, Field Duty → Operation, Medical/SIQ → Appt On Base. EE section → HE; no section → HQ.</li>
+    <li>MOL status mapping: Present for Duty → On Hand, Leave → Leave, TAD/FAP → TAD, Field Duty → Operation, Medical/SIQ → Appointment (on base). EE section → HE; no section → HQ.</li>
   </ul></div>
   <h2>Put it on your home screen</h2><div class="panel"><ul class="plain">
     <li><b>iPhone:</b> open this page's web address in Safari → Share → Add to Home Screen.</li>
@@ -508,7 +522,7 @@ function renderPT(){
   let h=banner();
   h+=`<h2>Physical activity roster</h2><div class="panel"><div class="evts">${EVENTS.map(e=>`<button data-evt="${e}" aria-pressed="${S.pt.event===e}">${e}</button>`).join("")}</div>
     <div class="row2"><div><label for="ptEvt">Event</label><input type="text" id="ptEvt" value="${esc(S.pt.event)}"></div><div><label for="ptWhen">When</label><input type="text" id="ptWhen" value="${esc(S.pt.when)}" placeholder="${dtg()}"></div></div>
-    <div class="note">Count Marines whose status is:</div><div class="evts">${STATUSES.filter(x=>["On Hand","Company Duties","Appointment on Base"].includes(x)).map(x=>`<label class="tog"><input type="checkbox" data-inc="${x}"${S.pt.inc.includes(x)?" checked":""}> ${SHORT[x]}</label>`).join("")}<label class="tog"><input type="checkbox" id="ptAtt"${S.pt.att?" checked":""}> Attached</label></div></div>`;
+    <div class="note">Count Marines whose status is:</div><div class="evts">${STATUSES.filter(x=>["On Hand","Company Duties","Appointment","Duty Recovery","At PT"].includes(x)).map(x=>`<label class="tog"><input type="checkbox" data-inc="${x}"${S.pt.inc.includes(x)?" checked":""}> ${SHORT[x]}</label>`).join("")}<label class="tog"><input type="checkbox" id="ptAtt"${S.pt.att?" checked":""}> Attached</label></div></div>`;
   h+=`<div class="pt-sum" style="margin-top:12px"><div class="go"><b>${go.length}</b><span>Available</span></div><div><b>${ld.length+lim.length}</b><span>LD / LIMDU</span></div><div><b>${out.length}</b><span>Not here</span></div></div>`;
   h+=`<div class="row2" style="margin-top:12px"><button class="btn" id="ptCopy">Copy list</button><a class="btn alt" id="ptSms" href="${esc(smsHref(ptText()))}">Text list</a></div>`;
   for(const [k,ms] of bySec(go)) h+=`<div class="grp"><h3><span>${k}</span><span>${ms.length}</span></h3><div class="names">${ms.map(m=>`<div><b>${esc(m.rank)}</b> ${esc(m.name)}${m.sec==="ATT"&&m.parent?` <span class="note">(${esc(m.parent)})</span>`:""}</div>`).join("")}</div></div>`;
@@ -575,7 +589,7 @@ const dayDiff=d=>Math.round((d-today0())/86400000);
 const short=d=>String(d.getDate()).padStart(2,"0")+" "+MON[d.getMonth()];
 
 /* ---------- alerts: overdue, returning, departing ---------- */
-const AWAY=["Leave","TAD","Operation","Appointment off Base"];
+const AWAY=["Leave","TAD","Operation","Appointment","Duty Recovery"];
 function alerts(){const over=[],ret=[],dep=[];
   for(const m of S.roster){const e=parseD(m.end);
     if(e){const dd=dayDiff(e);
@@ -617,7 +631,7 @@ function renderMuster(){const M=S.mus;let h=banner();if(M.open&&M.qr&&!qrTimer)s
     const last=(S.hist||[]).filter(x=>x.type==="muster").slice(-5).reverse();
     h+=`<h2>Formation muster</h2><div class="panel">
       <div class="note">Who is expected at formation:</div>
-      <div class="evts">${["On Hand","Company Duties","Appointment on Base"].map(x=>`<label class="tog"><input type="checkbox" data-minc="${x}"${M.inc.includes(x)?" checked":""}> ${SHORT[x]}</label>`).join("")}<label class="tog"><input type="checkbox" id="mAtt"${M.att?" checked":""}> Attached</label></div>
+      <div class="evts">${["On Hand","Company Duties","Appointment","Duty Recovery","At PT"].map(x=>`<label class="tog"><input type="checkbox" data-minc="${x}"${M.inc.includes(x)?" checked":""}> ${SHORT[x]}</label>`).join("")}<label class="tog"><input type="checkbox" id="mAtt"${M.att?" checked":""}> Attached</label></div>
       <div><b>${musPool().length}</b> Marines expected</div>
       <button class="btn" id="mStart">Start muster</button></div>`;
     if(M.last){h+=`<h2>Last muster</h2><div class="panel"><textarea id="mMsg" readonly>${esc(musText(M.last))}</textarea>
@@ -686,8 +700,8 @@ function changeLines(){const sn=S.snap;if(!sn)return [];const cur={};S.roster.fo
 function markSent(kind){S.snap=snapNow();S.hist=(S.hist||[]).concat({type:kind,t:S.snap.t}).slice(-60);save()}
 
 /* ---------- section leader rollup ---------- */
-const SCODE={"Appointment on Base":"AOB","Appointment off Base":"AOFF","Company Duties":"DUTY","Operation":"OP","TAD":"TAD","Leave":"LV"};
-const SDEC=Object.fromEntries(Object.entries(SCODE).map(([a,b])=>[b,a]));
+const SCODE={"Appointment":"APPT","Company Duties":"DUTY","Duty Recovery":"REC","At PT":"PT","Operation":"OP","TAD":"TAD","Leave":"LV"};
+const SDEC=Object.assign({AOB:"Appointment",AOFF:"Appointment"},Object.fromEntries(Object.entries(SCODE).map(([a,b])=>[b,a])));
 function tok(m){const [last,rest]=m.name.split(",");const first=((rest||"").trim().split(/\s+/)[0]||"").replace(/[^A-Z]/gi,"").slice(0,3);
   return (m.rank+"."+(last||"").trim()+"."+first).toUpperCase().replace(/[;|=]/g,"")}
 function sectionUpdateText(code){const ms=sorted(S.roster.filter(m=>m.sec===code));const oh=ms.filter(m=>m.status==="On Hand").length;
@@ -715,30 +729,32 @@ function applySectionUpdates(text){const lines=String(text).split(/\r?\n/).map(x
   save();return res}
 
 /* ---------- unit rollup: platoon → company → battalion, by text ----------
-   Code line: #EOOP2|NAME|time36|STR|OnHand|AOB|AOFF|DUTY|OP|TAD|LV|LD|LIM|ATT|ATTOH
-   Counts only, no names. A rollup sends its own #EOOP2 line, so it chains up any number of levels. */
-const RSTAT=["On Hand","Appointment on Base","Appointment off Base","Company Duties","Operation","TAD","Leave"];
+   Code line: #EOOP3|NAME|time36|STR|OnHand|APPT|DUTY|REC|PT|OP|TAD|LV|APPTOFF|LD|LIM|ATT|ATTOH (older #EOOP2 lines still read)
+   Counts only, no names. A rollup sends its own #EOOP3 line, so it chains up any number of levels. */
+const RSTAT=STATUSES.slice();const RSTAT2=["On Hand","Appointment on Base","Appointment off Base","Company Duties","Operation","TAD","Leave"];
 const STALE_H=12;
 const cleanName=s=>String(s||"").toUpperCase().replace(/[|#\r\n]/g," ").replace(/\s+/g," ").trim().slice(0,24);
 function unitName(){return cleanName(S.unit)||(MODE().v?MODE().v.eo:"UNIT")}
-function ownNums(){const {T,A}=counts();const d=dutyCounts(S.roster.filter(m=>m.sec!=="ATT"));const st={};RSTAT.forEach(s=>st[s]=T[s]||0);
+function ownNums(){const {T,A}=counts();const d=dutyCounts(S.roster.filter(m=>m.sec!=="ATT"));const st={};RSTAT.forEach(s=>st[s]=T[s]||0);st.off=T.off||0;
   return {name:unitName(),t:Date.now(),str:T.total,st,ld:d["Light Duty"],lim:d["LIMDU"],att:A.total,attoh:A["On Hand"],own:true}}
-function rollCode(u){return "#EOOP2|"+cleanName(u.name)+"|"+Math.floor(u.t).toString(36)+"|"+[u.str].concat(RSTAT.map(s=>u.st[s]||0),[u.ld,u.lim,u.att,u.attoh]).map(n=>Math.max(0,+n||0)).join("|")}
+function rollCode(u){return "#EOOP3|"+cleanName(u.name)+"|"+Math.floor(u.t).toString(36)+"|"+[u.str].concat(RSTAT.map(s=>u.st[s]||0),[u.st.off||0,u.ld,u.lim,u.att,u.attoh]).map(n=>Math.max(0,+n||0)).join("|")}
 function parseRoll(text){const out=[];
-  for(const raw of String(text).split(/\r?\n/)){const ln=raw.trim();const i=ln.indexOf("#EOOP2|");if(i<0)continue;const p=ln.slice(i).split("|");if(p.length<15)continue;
-    const n=p.slice(3,15).map(x=>parseInt(x,10));if(n.some(x=>!Number.isFinite(x)||x<0))continue;const t=parseInt(p[2],36);if(!Number.isFinite(t))continue;
-    const st={};RSTAT.forEach((s,j)=>st[s]=n[1+j]);out.push({name:cleanName(p[1])||"UNIT",t,str:n[0],st,ld:n[8],lim:n[9],att:n[10],attoh:n[11]})}
+  for(const raw of String(text).split(/\r?\n/)){const ln=raw.trim();let i=ln.indexOf("#EOOP3|"),v3=true;if(i<0){i=ln.indexOf("#EOOP2|");v3=false}if(i<0)continue;const p=ln.slice(i).split("|");
+    const need=v3?17:15;if(p.length<need)continue;
+    const n=p.slice(3,need).map(x=>parseInt(x,10));if(n.some(x=>!Number.isFinite(x)||x<0))continue;const t=parseInt(p[2],36);if(!Number.isFinite(t))continue;
+    const st={};if(v3){RSTAT.forEach((s,j)=>st[s]=n[1+j]);st.off=n[9];out.push({name:cleanName(p[1])||"UNIT",t,str:n[0],st,ld:n[10],lim:n[11],att:n[12],attoh:n[13]})}
+    else{RSTAT.forEach(s=>st[s]=0);RSTAT2.forEach((s,j)=>{st[fixStatus(s)]=(st[fixStatus(s)]||0)+n[1+j]});st.off=n[3];out.push({name:cleanName(p[1])||"UNIT",t,str:n[0],st,ld:n[8],lim:n[9],att:n[10],attoh:n[11]})}}
   return out}
-function addRoll(text){const got=parseRoll(text);if(!got.length)throw new Error("No rollup code found. Paste the whole report, including the line that starts with #EOOP2.");
+function addRoll(text){const got=parseRoll(text);if(!got.length)throw new Error("No rollup code found. Paste the whole report, including the line that starts with #EOOP3.");
   const res=[];for(const u of got){const k=u.name;const old=S.roll.units[k];
     if(S.roll.own&&k===unitName()){res.push(k+": same name as your board, skipped (rename one)");continue}
     if(old&&old.t>u.t){res.push(k+": older than the one you have, skipped");continue}
     S.roll.units[k]=u;res.push(k+(old?" updated":" added")+" · "+u.st["On Hand"]+"/"+u.str)}
   save();return res}
 function rollUnits(){const L=Object.values(S.roll.units).sort((a,b)=>a.name.localeCompare(b.name));return S.roll.own?[ownNums()].concat(L):L}
-function rollSum(L){const R={str:0,oh:0,st:{},ld:0,lim:0,att:0,attoh:0};RSTAT.forEach(s=>R.st[s]=0);
-  for(const u of L){R.str+=u.str;RSTAT.forEach(s=>R.st[s]+=u.st[s]||0);R.ld+=u.ld;R.lim+=u.lim;R.att+=u.att;R.attoh+=u.attoh}R.oh=R.st["On Hand"];return R}
-const presentOf=st=>PRESENT.reduce((a,s)=>a+(st[s]||0),0);
+function rollSum(L){const R={str:0,oh:0,st:{off:0},ld:0,lim:0,att:0,attoh:0};RSTAT.forEach(s=>R.st[s]=0);
+  for(const u of L){R.str+=u.str;R.st.off+=u.st.off||0;RSTAT.forEach(s=>R.st[s]+=u.st[s]||0);R.ld+=u.ld;R.lim+=u.lim;R.att+=u.att;R.attoh+=u.attoh}R.oh=R.st["On Hand"];return R}
+const presentOf=st=>PRESENT.reduce((a,s)=>a+(st[s]||0),0)-(st.off||0);
 function rollStale(){return Object.values(S.roll.units).filter(u=>Date.now()-u.t>STALE_H*3600000)}
 function rollName(){return cleanName(S.roll.name)||"ROLLUP"}
 function rollText(){const L0=rollUnits();const R=rollSum(L0);const L=[rollName()+" ROLLUP "+dtg()];
@@ -757,7 +773,7 @@ function renderRollup(){const L0=rollUnits();const R=rollSum(L0);const others=Ob
     <input type="text" id="rollNm" value="${esc(S.roll.name||"")}" maxlength="24" placeholder="e.g. ${esc(MODE().v&&MODE().v.coEx||"ALPHA CO")}" autocapitalize="characters" style="text-transform:uppercase">
     <label class="tog"><input type="checkbox" id="rollOwn"${S.roll.own?" checked":""}> Include my own board as <b>${esc(unitName())}</b></label>
     <label for="rollIn">Paste unit reports</label>
-    <textarea id="rollIn" style="min-height:90px" placeholder="1ST PLT ACCOUNTABILITY ...&#10;#EOOP2|1ST PLT|..."></textarea>
+    <textarea id="rollIn" style="min-height:90px" placeholder="1ST PLT ACCOUNTABILITY ...&#10;#EOOP3|1ST PLT|..."></textarea>
     <div class="row2"><button class="btn" id="rollGo">Add reports</button><button class="btn alt" id="rollClip">Paste from clipboard</button></div>
     <div class="note" id="rollOut"></div></div>`;
   if(L0.length){h+=`<h2>${esc(rollName())} · ${R.oh}/${R.str}</h2><div class="gridwrap"><table><thead><tr><th>Unit</th><th>On hand</th><th>Present</th>${RSTAT.slice(1).map(s=>`<th>${SHORT[s]}</th>`).join("")}<th>As of</th><th></th></tr></thead><tbody>
@@ -775,7 +791,7 @@ function renderRollup(){const L0=rollUnits();const R=rollSum(L0);const others=Ob
    OIC phone owns a "board" with a private read key. Section leaders get a link with the write key.
    Their phone sends only salted hashes of each Marine not On Hand / Full Duty plus a status code.
    OIC phone matches the hashes to its own roster. Everyone not listed in that section = On Hand, Full Duty. */
-const LCODES=["AOB","AOFF","DUTY","OP","TAD","LV","LD","LIM"];
+const LCODES=["APPT","DUTY","REC","PT","OP","TAD","LV","LD","LIM"];
 let lvBusy=false,lkBusy=false,lkTimer=null,lvIdx={};
 const lf=m=>tok(m).split(".").slice(1).join(".");
 const fullK=m=>String(m.name).toUpperCase().replace(/[^A-Z0-9]+/g," ").trim();
@@ -1200,7 +1216,7 @@ async function rosterPull(force){const L=S.link;if(!L||!L.rk2||rpullBusy)return;
       L.prev=L.prev||{};const first=!L.pulled;const chg=[];
       for(const x of o.ms.slice(0,600)){const k=fullK({name:String(x.name||"")});const m=byId[x.id]||(byN[k]&&byN[k]!=="dup"?byN[k]:null);if(!m)continue;m.uid=String(x.id);
         const now=(x.status||"On Hand")+"|"+(x.duty||"Full Duty");const pv=L.prev[x.id];
-        if(!first&&pv&&pv!==now&&!dirty&&STATUSES.includes(x.status)&&(m.status!==x.status||dutyOf(m)!==(x.duty||"Full Duty"))){m.status=x.status;if(x.duty)m.duty=x.duty;chg.push(m.rank+" "+lastOf(m))}
+        if(!first&&pv&&pv!==now&&!dirty&&(x.status=fixStatus(x.status),STATUSES.includes(x.status))&&(m.status!==x.status||dutyOf(m)!==(x.duty||"Full Duty"))){m.status=x.status;if(x.duty)m.duty=x.duty;chg.push(m.rank+" "+lastOf(m))}
         L.prev[x.id]=now}
       if(chg.length)actAdd("↓",(L.unit||"Company")+" changed: "+chg.slice(0,6).join(", "),"board");next=S.roster}
     else next=o.ms.slice(0,600).map(x=>{const m={};for(const k of RPF)if(k!=="due"&&x[k]!=null)m[k]=String(x[k]).slice(0,120);if(x.due)m.due=sanDue(x.due);const ouid=m.id;m.uid=ouid;m.sec=whole?(/^[A-Z0-9]{1,6}$/.test(m.sub||"")?m.sub:"HQ"):L.mysec;if(whole)delete m.sub;if(!STATUSES.includes(m.status))m.status="On Hand";
@@ -1364,7 +1380,7 @@ function renderBoard(){const {c,T,A}=counts();const P=pct(T["On Hand"],T.total);
   h+=`<details class="card" style="gap:8px"><summary style="font-weight:800;cursor:pointer">Numbers by status and section</summary><div class="gridwrap"><table><thead><tr><th>Status</th>${SECTIONS.map(([k])=>`<th><button data-go="${k.toLowerCase()}">${k}</button></th>`).join("")}<th class="tot">Total</th></tr></thead><tbody>`;
   for(const st of STATUSES){h+=`<tr><td><span class="dot" style="background:var(${SVAR[st]})"></span>${SHORT[st]}</td>${SECTIONS.map(([k])=>`<td class="${c[k][st]?"":"z"}">${c[k][st]}</td>`).join("")}<td class="tot">${T[st]}</td></tr>`}
   h+=`<tr class="sum"><td>Present on deck</td>${SECTIONS.map(([k])=>`<td>${present(c[k])}</td>`).join("")}<td>${present(T)}</td></tr><tr class="sum"><td>% On hand</td>${SECTIONS.map(([k])=>`<td>${pct(c[k]["On Hand"],c[k].total)}%</td>`).join("")}<td>${P}%</td></tr></tbody></table></div>
-    <div class="note">Present on deck = On Hand + Appt On Base + Co Duties.${A.total?` Attached (not on strength): ${A.total}, ${A["On Hand"]} on hand. Total accounted for ${T.total+A.total}.`:""}</div><div class="row2"><button class="btn alt" data-go="text">Send the numbers</button><button class="btn alt" data-go="trends">Trends</button></div></details>`;
+    <div class="note">Present on deck = On Hand + Appt (on base) + Co Duties + Duty Rec + At PT.${A.total?` Attached (not on strength): ${A.total}, ${A["On Hand"]} on hand. Total accounted for ${T.total+A.total}.`:""}</div><div class="row2"><button class="btn alt" data-go="text">Send the numbers</button><button class="btn alt" data-go="trends">Trends</button></div></details>`;
   $("#main").innerHTML=h}
 function renderPeople(){const {c,A}=counts();let h=banner()+(canEdit()&&isLeaderPhone()?`<button class="btn alt" data-addm="" style="width:100%;margin-top:10px">+ Add Marines</button>`:"");
   h+=`<div style="margin-top:12px"><input class="search" id="gq" type="search" placeholder="Find anyone: name, rank or section" autocomplete="off" style="margin:0"><div id="gqr" class="alist" style="margin-top:6px"></div></div>`;
@@ -1664,7 +1680,7 @@ let calM=null,calDay=null,calSec=null,calAdd=false,calFor=null,calEdit=null;cons
 function calSecDefault(){return S.link&&S.link.mysec&&!S.board?S.link.mysec:"ALL"}
 function calEntries(from,to,secF){const out=[];const inR=d=>d>=from&&d<=to;const pool=S.roster.filter(m=>!secF||secF==="ALL"||m.sec===secF);const byNk={};S.roster.forEach(m=>byNk[fullK(m)]=m);
   for(const m of pool){for(const e of m.cal||[]){const end=e.end&&e.end>e.d?e.end:e.d;if(end<from||e.d>to)continue;out.push({d:e.d,end,tm:e.tm||"",ty:e.ty,ti:e.ti,no:e.no||"",m,id:e.id,own:1})}
-    const sd=isoOf(m.start),ed=isoOf(m.end);if(["Leave","TAD","Operation","Appointment off Base"].includes(m.status)&&(sd||ed)){const a=sd||dkey(),b=ed||a;if(!(b<from||a>to))out.push({d:a,end:b,ty:m.status==="Leave"?"LEAVE":m.status==="TAD"?"TAD":"APPT",ti:SHORT[m.status]+(m.detail?" · "+m.detail:""),m,auto:1})}
+    const sd=isoOf(m.start),ed=isoOf(m.end);if(AWAY.includes(m.status)&&(sd||ed)){const a=sd||dkey(),b=ed||a;if(!(b<from||a>to))out.push({d:a,end:b,ty:m.status==="Leave"?"LEAVE":m.status==="TAD"?"TAD":"APPT",ti:SHORT[m.status]+(m.detail?" · "+m.detail:""),m,auto:1})}
     if(ed&&inR(ed)&&m.status!=="On Hand")out.push({d:ed,ty:"OTHER",ti:"Returns ("+(SHORT[m.status]||m.status)+" ends)",m,auto:1});
     for(const [k,lab] of [["edd","EDD"],["eas","EAS"]]){const x=isoOf(m[k]);if(x&&inR(x))out.push({d:x,ty:"OTHER",ti:lab,m,auto:1})}
     for(const it of readyItems()){const r=((m.due||{})[it.n])||{};if(r.due&&inR(r.due))out.push({d:r.due,ty:"DUE",ti:it.n+" due",m,auto:1})}}
@@ -1932,7 +1948,7 @@ function upcomingConflicts(n){n=n||14;const out=[];const t=today0();
 function cfRow(c){const dd=parseD(c.d);return `<div class="rrow" style="--sc:var(${cfCol(c.cf)})"><div class="who"><b>${DOW[dd.getDay()]} ${short(dd)} · ${esc(c.what)}</b><div class="ph"><span data-pcard="${c.m.id}" style="cursor:pointer;text-decoration:underline">${esc(c.m.rank+" "+c.m.name)}</span> · ${esc(c.m.sec)}</div><div class="ph">${cfLine(c.cf)}</div></div>${c.kind==="duty"?`<button class="chip" data-go="duty" style="cursor:pointer">Fix in DUTY</button>`:""}</div>`}
 
 /* ---------- DUTY roster ---------- */
-const DUTY_SKIP=["Leave","TAD","Operation","Appointment off Base"];let dSel=null,dSetup=false,dSwap=null;
+const DUTY_SKIP=["Leave","TAD","Operation","Appointment","Duty Recovery"];let dSel=null,dSetup=false,dSwap=null;
 function dCur(){return S.duty.rosters.find(r=>r.id===dSel)||S.duty.rosters[0]||null}
 function dPool(r){const ex=r.excl||{};return sorted(S.roster.filter(m=>(m.sec==="ATT"?r.att:r.secs.includes(m.sec))&&!ex[m.id]))}
 function dOrder(r){const pool=dPool(r);const ids=new Set(pool.map(m=>m.id));r.order=(r.order||[]).filter(id=>ids.has(id));for(const m of pool)if(!r.order.includes(m.id))r.order.push(m.id);return r.order}
@@ -2048,7 +2064,7 @@ function renderTrends(){let h=banner();const keys=[];for(let i=trRange-1;i>=0;i-
     const t=(S.days[dkey()]||{}).sec;const tt=t&&t[k];return `<tr><td><b>${k}</b></td><td>${avg(r.map(x=>100*x[0]/x[1]))}%</td><td>${avg(r.map(x=>100*(x[2]??x[0])/x[1]))}%</td><td>${tt?tt[0]+"/"+tt[1]:"—"}</td></tr>`}).join("")}
     <tr class="sum"><td>Total</td><td>${avg(have.map(d=>100*d.oh/(d.str||1)))}%</td><td>${avg(have.map(d=>100*d.pr/(d.str||1)))}%</td><td>${(S.days[dkey()]||{}).oh??"—"}/${(S.days[dkey()]||{}).str??"—"}</td></tr></tbody></table></div>`;
   const from=Date.now()-trRange*86400000;const top=S.roster.filter(m=>m.sec!=="ATT").map(m=>({m,d:awayDays(m,from)})).filter(x=>x.d>=0.5).sort((a,b)=>b.d-a.d).slice(0,12);
-  h+=`<h2>Most days away · last ${trRange} days</h2><p class="note">Leave, TAD, operations and appointments off base, from the app's own history.</p>`;
+  h+=`<h2>Most days away · last ${trRange} days</h2><p class="note">Leave, TAD, operations, appointments and duty recovery, from the app's own history.</p>`;
   h+=top.length?`<div class="alist">${top.map(x=>`<button class="rrow" data-pcard="${x.m.id}" style="text-align:left;cursor:pointer"><div class="rtop"><div class="who"><b>${esc(x.m.rank)}</b> ${esc(x.m.name)}<div class="ph">${x.m.sec} · now ${esc(SHORT[x.m.status]||x.m.status)}</div></div><b>${Math.round(x.d)} d</b></div></button>`).join("")}</div>`:`<p class="note">No one away yet in this window.</p>`;
   $("#main").innerHTML=h}
 
@@ -2642,9 +2658,9 @@ function parseCSV(text){const rows=[];let row=[],f="",q=false;
   if(f||row.length){row.push(f);rows.push(row)}
   return rows.map(r=>r.map(x=>x.replace(/\t/g,"").trim()));
 }
-function mapStatus(d){d=d||"";if(STATUSES.includes(d))return d;const l=d.toLowerCase();
+function mapStatus(d){d=fixStatus(d||"");if(STATUSES.includes(d))return d;const l=d.toLowerCase();
   if(l.startsWith("leave"))return"Leave";if(l.startsWith("tad")||l.startsWith("fap"))return"TAD";
-  if(l.startsWith("field"))return"Operation";if(l.startsWith("medical")||l.includes("siq"))return"Appointment on Base";return"On Hand"}
+  if(l.startsWith("field"))return"Operation";if(l.startsWith("medical")||l.includes("siq")||l.includes("appt")||l.includes("appointment"))return"Appointment";if(l.includes("recover"))return"Duty Recovery";if(l==="pt"||l.startsWith("pt ")||l.includes(" pt"))return"At PT";return"On Hand"}
 function mapSec(u){const t=(u||"").toUpperCase().split("-").pop();const v={HQ:"HQ",EE:"HE",HE:"HE",CE:"CE",ORD:"ORD",UT:"UT"}[t]||t;return SECTIONS.some(s=>s[0]===v)?v:(SECTIONS.find(s=>s[1].toUpperCase()===(u||"").toUpperCase())||SECTIONS[0])[0]}
 function fmtD(s){if(!s)return"";const m=s.match(/(\d{4})[\/-](\d{2})[\/-](\d{2})/);if(!m)return s;
   const M=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];return m[3]+" "+M[+m[2]-1]+" "+m[1].slice(2)}
@@ -3717,7 +3733,7 @@ function w6Refresh(){const t=w6Text(W2);const a=$("#v12WMsg");if(a)a.value=t;con
 renderW=renderW6;
 
 /* ================= 3. ACCOUNT FOR ANYTHING ================= */
-const CUSTOM_KEYS=[["p","One person","Runner"],["ps","People","Runners"],["here","Present / here","Checked in"],["aob","Status 2","At the start"],["aoff","Status 3","Running"],["cod","Status 4","Finished"],["op","Status 5","Water station"],["tad","Status 6","DNF"],["lv","Status 7","Not coming"],
+const CUSTOM_KEYS=[["p","One person","Runner"],["ps","People","Runners"],["here","Present / here","Checked in"],["aob","Status 2","At the start"],["aoff","Status 3","Running"],["pt","Status 3b","Warming up"],["cod","Status 4","Finished"],["op","Status 5","Water station"],["tad","Status 6","DNF"],["lv","Status 7","Not coming"],
   ["mus","Check-in word","check-in"],["attPl","Extra people (not on roster)","Guests"],["eo","Report name","5K RACE"]];
 const EV_QUICK=["5K run","Unit run","PT","TAD","Training","Meeting","Shift","Field trip","Volunteer event","Practice","Class","Inspection","Range","Drill","Travel","Game day"];
 {const _al=applyLists;applyLists=function(){_al.apply(this,arguments);for(const t of (S.evTypesX||[]))if(!EV_TYPES.includes(t))EV_TYPES.push(t);for(const t of ["5K / Run","TAD / Travel"])if(!EV_TYPES.includes(t))EV_TYPES.push(t)}}
@@ -4513,7 +4529,7 @@ function headcountPDF(){
   doc.rule();
   doc.row([{x:X[0],t:"Total",w:180,bold:true},{x:X[1],t:String(T.total),bold:true},{x:X[2],t:String(P),bold:true},{x:X[3],t:pct(P,T.total)+"%",bold:true}]);
   // Everyone not present, by status
-  const out=sorted(S.roster.filter(m=>!PRESENT.includes(m.status)));
+  const out=sorted(S.roster.filter(m=>!isPresent(m)));
   if(out.length){doc.gap(10);doc.line("Not present ("+out.length+")",{size:13,bold:true});
     const Y=[M,M+150,M+205,M+380];
     for(const st of STATUSES.filter(s=>!PRESENT.includes(s))){const g=out.filter(m=>m.status===st);if(!g.length)continue;
@@ -4704,7 +4720,7 @@ renderReady=function(){_rr.apply(this,arguments);
   if(h&&over.length&&!$("#dueAckAll"))h.insertAdjacentHTML("afterend",`<div class="row2" style="margin:6px 0"><button class="btn alt" id="dueAckAll">${armed==="dueall"?"Tap again: acknowledge all "+over.length+" overdue":"Acknowledge all overdue ("+over.length+")"}</button><span class="note" style="align-self:center">They drop off until a new date is set.</span></div>`)};
 
 /* ---------- 2. alerts: back, departed, hide ---------- */
-const AWAYS=["Leave","TAD","Operation","Appointment off Base"];
+const AWAYS=["Leave","TAD","Operation","Appointment","Duty Recovery"];
 const alKey=(m,kind)=>m.id+"|"+kind+"|"+(kind==="dep"?(m.edd||""):(m.end||""));
 const _al=alerts;
 alerts=function(){const r=_al.apply(this,arguments);const H=AH();
@@ -4994,10 +5010,12 @@ function stDetSheet(id){const m=S.roster.find(x=>x.id===id);if(!m)return;sheetCt
   $("#sheetT").innerHTML=`${esc(SHORT[m.status]||m.status)}: dates and location<small>${esc(m.rank+" "+m.name)}</small>`;
   $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl>
     <div class="row2"><div><label for="sdF">From</label><input type="date" id="sdF" value="${esc(isoOf(m.start)||dkey())}" style="${inp}"></div><div><label for="sdT">To</label><input type="date" id="sdT" value="${esc(isoOf(m.end))}" style="${inp}"></div></div>
-    <label for="sdL">Location</label><input type="text" id="sdL" maxlength="60" value="${esc(m.loc||"")}" placeholder="City, clinic, base, address">
+    <label for="sdL">Location</label>${m.status==="Appointment"?`<div class="evts" style="margin-bottom:6px"><button type="button" class="chip" data-sdloc="On base">🏠 On base</button><button type="button" class="chip" data-sdloc="Off base">🚗 Off base</button></div>`:""}<input type="text" id="sdL" maxlength="60" value="${esc(m.loc||"")}" placeholder="${m.status==="Appointment"?"On base · clinic, or Off base · city, address":"City, clinic, base, address"}">
     <label for="sdD">Detail (optional)</label><input type="text" id="sdD" maxlength="80" value="${esc(m.detail||"")}" placeholder="Reason, who they're with, phone">
     <div class="row2"><button class="btn" id="sdSave">Save</button><button class="btn alt" data-sclose="1">Skip</button></div></div>`;
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")))}
+document.addEventListener("click",e=>{const lb=e.target.closest&&e.target.closest("[data-sdloc]");if(!lb||!sheetCtx||sheetCtx.kind!=="stdet")return;e.stopImmediatePropagation();const el=$("#sdL");if(!el)return;
+  const cur=el.value.replace(/^(on|off) base\s*(·\s*)?/i,"").trim();el.value=(lb.dataset.sdloc+(cur?" · "+cur:"")).slice(0,60);el.focus()},true);
 document.addEventListener("click",e=>{if(e.target.id!=="sdSave"||!sheetCtx||sheetCtx.kind!=="stdet")return;const m=S.roster.find(x=>x.id===sheetCtx.id);if(!m)return closeSheet();
   const f=$("#sdF").value,t=$("#sdT").value;if(f&&t&&t<f){toast("To can't be before From.");return}
   const set=(k,v)=>{v=String(v||"").trim();if(v)m[k]=v;else delete m[k]};set("start",f);set("end",t);set("loc",($("#sdL").value||"").slice(0,60));set("detail",($("#sdD").value||"").slice(0,80));
@@ -5084,7 +5102,7 @@ const startTeamHTML=()=>`<div class="panel" style="margin-top:12px"><b>Run your 
 
 /* =============== 3. LEADER: check-ins in, Confirm puts them on the roster =============== */
 window.ckIn=function(f,o,r){S.cks=S.cks||[];const cid=String(o.cid||"").slice(0,20);if(!cid||S.cks.some(x=>x.cid===cid))return;
-  const st=STATUSES.includes(o.st)?o.st:CK_OTHER;const who=String(o.me||"Someone").slice(0,30);
+  const st=STATUSES.includes(fixStatus(o.st))?fixStatus(o.st):CK_OTHER;const who=String(o.me||"Someone").slice(0,30);
   let m=o.mid&&S.roster.find(x=>x.id===String(o.mid));if(!m){const mm=typeof matchMarine==="function"?matchMarine(who):null;m=Array.isArray(mm)?(mm.length===1?mm[0]:null):mm||null}
   const clean=(v,n)=>String(v||"").replace(/[<>]/g,"").slice(0,n);const date=v=>/^\d{4}-\d{2}-\d{2}$/.test(String(v||""))?String(v):"";
   const x={cid,feed:f.id,mid:m?m.id:"",who,sec:clean(o.sec,6),st,oth:clean(o.oth,80),from:date(o.from),to:date(o.to),loc:clean(o.loc,60),note:clean(o.note,120),t:Date.parse(r&&r.created_at)||+o.at||Date.now(),state:"new"};
@@ -5583,16 +5601,16 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&typeof re
 const MK=["civilian","jobs","hr","police","military","custom"];
 /* one-tap templates: a version, its groups and its status words */
 const TPL={
-  trip:{n:"Field trip",ic:"🚌",d:"Buses, groups, chaperones",m:"custom",v:{p:"Student",ps:"Students",here:"With group",aob:"Restroom",aoff:"With chaperone",cod:"Nurse",op:"On the bus",tad:"Left early",lv:"Absent",mus:"Head count",attPl:"Chaperones",eo:"TRIP"},
+  trip:{n:"Field trip",ic:"🚌",d:"Buses, groups, chaperones",m:"custom",v:{pt:"Lunch",p:"Student",ps:"Students",here:"With group",aob:"Restroom",aoff:"With chaperone",cod:"Nurse",op:"On the bus",tad:"Left early",lv:"Absent",mus:"Head count",attPl:"Chaperones",eo:"TRIP"},
     secs:[["BUSA","Bus 1"],["BUSB","Bus 2"],["GRPA","Group A"],["GRPB","Group B"]]},
-  race:{n:"5K / race",ic:"🏃",d:"Runners, corrals, finish line",m:"custom",v:{p:"Runner",ps:"Runners",here:"Finished",aob:"On course",aoff:"Medical tent",cod:"Water stop",op:"Start corral",tad:"Dropped out",lv:"No-show",mus:"Check-in",attPl:"Volunteers",eo:"RACE"},
+  race:{n:"5K / race",ic:"🏃",d:"Runners, corrals, finish line",m:"custom",v:{pt:"Aid station",p:"Runner",ps:"Runners",here:"Finished",aob:"On course",aoff:"Medical tent",cod:"Water stop",op:"Start corral",tad:"Dropped out",lv:"No-show",mus:"Check-in",attPl:"Volunteers",eo:"RACE"},
     secs:[["FIVE","5K"],["TEN","10K"],["KIDS","Kids run"],["WALK","Walkers"]]},
   site:{n:"Job site",ic:"🦺",d:"Crews, trades, head count",m:"jobs"},
-  event:{n:"Event staff",ic:"🎟️",d:"Gates, security, concessions",m:"custom",v:{p:"Staff",ps:"Staff",here:"On post",aob:"On break",aoff:"Off site",cod:"Runner",op:"Setup",tad:"Training",lv:"Off today",mus:"Check-in",attPl:"Volunteers",eo:"EVENT"},
+  event:{n:"Event staff",ic:"🎟️",d:"Gates, security, concessions",m:"custom",v:{pt:"Break",p:"Staff",ps:"Staff",here:"On post",aob:"On break",aoff:"Off site",cod:"Runner",op:"Setup",tad:"Training",lv:"Off today",mus:"Check-in",attPl:"Volunteers",eo:"EVENT"},
     secs:[["GATE","Gates"],["SECU","Security"],["CONC","Concessions"],["MEDS","Medical"],["PARK","Parking"]]},
-  youth:{n:"Youth team",ic:"⚽",d:"Players, coaches, pickups",m:"custom",v:{p:"Player",ps:"Players",here:"Here",aob:"Restroom",aoff:"Picked up",cod:"Warming up",op:"In the game",tad:"Away game",lv:"Absent",mus:"Roll call",attPl:"Coaches",eo:"TEAM"},
+  youth:{n:"Youth team",ic:"⚽",d:"Players, coaches, pickups",m:"custom",v:{pt:"Warming up",p:"Player",ps:"Players",here:"Here",aob:"Restroom",aoff:"Picked up",cod:"Warming up",op:"In the game",tad:"Away game",lv:"Absent",mus:"Roll call",attPl:"Coaches",eo:"TEAM"},
     secs:[["STAR","Starters"],["BNCH","Bench"],["NEWP","New players"]]},
-  fire:{n:"Office fire drill",ic:"🔥",d:"Floors, wardens, assembly point",m:"custom",v:{p:"Employee",ps:"Employees",here:"At assembly point",aob:"Still inside",aoff:"Remote today",cod:"Floor warden",op:"Off site",tad:"Traveling",lv:"PTO",mus:"Fire drill",attPl:"Visitors",eo:"OFFICE"},
+  fire:{n:"Office fire drill",ic:"🔥",d:"Floors, wardens, assembly point",m:"custom",v:{pt:"On break",p:"Employee",ps:"Employees",here:"At assembly point",aob:"Still inside",aoff:"Remote today",cod:"Floor warden",op:"Off site",tad:"Traveling",lv:"PTO",mus:"Fire drill",attPl:"Visitors",eo:"OFFICE"},
     secs:[["FLR1","Floor 1"],["FLR2","Floor 2"],["FLR3","Floor 3"],["WARD","Wardens"]]}};
 window.SG_TPL=TPL;
 let wv={step:"pick",mode:"",tpl:""};
@@ -7460,7 +7478,7 @@ if(typeof HELP==="object"&&HELP.recall&&Array.isArray(HELP.recall[2]))HELP.recal
 const BATCH=20;
 /* ---------- School template (joins the one-tap templates on the welcome screen) ---------- */
 if(window.SG_TPL&&!SG_TPL.school){const school={n:"School",ic:"🏫",d:"Classes, roll call, drills, families",m:"custom",
-    v:{p:"Student",ps:"Students",here:"Present",aob:"Nurse / office",aoff:"Picked up early",cod:"Pulled out",op:"Field trip",tad:"Absent",lv:"Excused",mus:"Roll call",attPl:"Staff",eo:"SCHOOL"},
+    v:{pt:"Recess / PE",p:"Student",ps:"Students",here:"Present",aob:"Nurse / office",aoff:"Picked up early",cod:"Pulled out",op:"Field trip",tad:"Absent",lv:"Excused",mus:"Roll call",attPl:"Staff",eo:"SCHOOL"},
     secs:[["K","Kindergarten"],["G1","Grade 1"],["G2","Grade 2"],["G3","Grade 3"],["G4","Grade 4"],["G5","Grade 5"],["STAF","Staff"]]};
   const all=Object.entries(SG_TPL);for(const [k] of all)delete SG_TPL[k];
   for(const [k,t] of all){SG_TPL[k]=t;if(k==="trip")SG_TPL.school=school}if(!SG_TPL.school)SG_TPL.school=school}

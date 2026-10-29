@@ -34,7 +34,7 @@ renderReady=function(){_rr.apply(this,arguments);
   if(h&&over.length&&!$("#dueAckAll"))h.insertAdjacentHTML("afterend",`<div class="row2" style="margin:6px 0"><button class="btn alt" id="dueAckAll">${armed==="dueall"?"Tap again: acknowledge all "+over.length+" overdue":"Acknowledge all overdue ("+over.length+")"}</button><span class="note" style="align-self:center">They drop off until a new date is set.</span></div>`)};
 
 /* ---------- 2. alerts: back, departed, hide ---------- */
-const AWAYS=["Leave","TAD","Operation","Appointment off Base"];
+const AWAYS=["Leave","TAD","Operation","Appointment","Duty Recovery"];
 const alKey=(m,kind)=>m.id+"|"+kind+"|"+(kind==="dep"?(m.edd||""):(m.end||""));
 const _al=alerts;
 alerts=function(){const r=_al.apply(this,arguments);const H=AH();

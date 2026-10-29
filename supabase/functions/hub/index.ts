@@ -64,7 +64,7 @@ function makeCore() {
   const toast = () => {}, render = () => {}, renderTabs = () => {}, save = () => {}, rawSave = () => {};
   const document = { activeElement: null }, navigator = {};
   const window = Object.assign(Object.create(globalThis), { scrollY: 0, scrollTo() {}, VAULT: undefined });
-const SHORT={"On Hand":"On Hand","Appointment on Base":"Appt On Base","Appointment off Base":"Appt Off Base","Company Duties":"Co Duties","Operation":"Operation","TAD":"TAD","Leave":"Leave"};
+const SHORT={"On Hand":"On Hand","Appointment":"Appt","Company Duties":"Co Duties","Duty Recovery":"Duty Rec","At PT":"At PT","Operation":"Operation","TAD":"TAD","Leave":"Leave"};
 const SECTIONS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
 const DEF_SECS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
 const MODES={
@@ -76,7 +76,7 @@ const MODES={
   evTypes:["Range","In-service","Briefing","Detail","Community event","Inspection","Other"],
   wTypes:["Use of force","Injury","Vehicle collision","Missed shift","Medical","Family emergency","Other"],
   items:["Duty pistol","Patrol rifle","Shotgun","Taser","Radio","Body cam","Vehicle keys","Other"],
-  v:{p:"Officer",ps:"Officers",here:"On Duty",aob:"In Station",aobS:"In Station",aoff:"Court",aoffS:"Court",cod:"Special Detail",codS:"Detail",op:"Call-Out",tad:"Training",
+  v:{pt:"PT",p:"Officer",ps:"Officers",here:"On Duty",aob:"In Station",aobS:"In Station",aoff:"Court",aoffS:"Court",cod:"Special Detail",codS:"Detail",op:"Call-Out",tad:"Training",
    lim:"Restricted",attPl:"Mutual Aid",attP:"mutual aid officers",att1:"mutual aid officer",attC:"Mutual Aid Officers",code:"AID",org:"agency",mus:"roll call",
    coEx:"PATROL DIVISION",lead:"Supervisor",asst:"Asst Supervisor",sr:"Senior Sergeant",xo:"Lieutenant",plt:"shift",pltA:"SHIFT",co:"division",coA:"DIV",cmdAll:"commander, lieutenant and senior sergeant",notify:"supervisor, watch commander, dispatch",deck:"Present for duty",eo:"SHIFT",billet:"assignment",fap:"loaned in, detailed to us, mutual aid",mol:"roster file",w6:"IR",edd:"end date"}},
  jobs:{name:"Jobs",desc:"Crews, job sites, head count, tool crib",title:"Crew Numbers",
@@ -86,7 +86,7 @@ const MODES={
   evTypes:["Safety class","Certification","Site walk","Cleanup","Inspection","Other"],
   wTypes:["Injury","Near miss","Equipment damage","Vehicle accident","No-show","Family emergency","Other"],
   items:["Drill","Impact driver","Saw","Grinder","Laser level","Ladder","Radio","Truck keys","Other"],
-  v:{p:"Worker",ps:"Workers",here:"On Site",aob:"In the Yard",aobS:"Yard",aoff:"Appointment",aoffS:"Appt",cod:"Shop Work",codS:"Shop",op:"Other Job Site",opS:"Other Site",tad:"Off-Site Training",tadS:"Training",lv:"Off / PTO",
+  v:{pt:"On Break",p:"Worker",ps:"Workers",here:"On Site",aob:"In the Yard",aobS:"Yard",aoff:"Appointment",aoffS:"Appt",cod:"Shop Work",codS:"Shop",op:"Other Job Site",opS:"Other Site",tad:"Off-Site Training",tadS:"Training",lv:"Off / PTO",
    fd:"Cleared",ld:"Light Work",lim:"Restricted",attPl:"Subcontractors",attP:"subcontractors",att1:"subcontractor",attC:"Subcontractors",code:"SUB",org:"company",mus:"head count",
    rec:"call tree",ptB:"BRIEF",ptT:"Safety brief roster",arm:"tool crib",armB:"TOOL CRIB",wpn:"tool",bin:"bin",coEx:"NORTH SITE",lead:"Foreman",asst:"Lead Hand",sr:"Safety Lead",xo:"Asst Superintendent",plt:"crew",pltA:"CREW",co:"site",coA:"SITE",cmdAll:"superintendent and site leads",notify:"foreman, superintendent, safety lead",deck:"On the job",eo:"CREW",billet:"trade",rank:"Title",
    fap:"loaned in, from other crews, subs",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}},
@@ -97,7 +97,7 @@ const MODES={
   evTypes:["Required training","Compliance","Town hall","Volunteer","Review","Other"],
   wTypes:["Workplace injury","Conduct concern","Property damage","No call / no show","Medical","Family emergency","Other"],
   items:["Laptop","Phone","Badge","Keys","Monitor","Vehicle","Other"],
-  v:{p:"Employee",ps:"Employees",here:"In Office",aob:"Remote",aobS:"Remote",aoff:"Appointment",aoffS:"Appt",cod:"Training",codS:"Training",op:"Off-Site Work",opS:"Off-Site",tad:"Business Travel",tadS:"Travel",lv:"PTO",
+  v:{pt:"On Break",p:"Employee",ps:"Employees",here:"In Office",aob:"Remote",aobS:"Remote",aoff:"Appointment",aoffS:"Appt",cod:"Training",codS:"Training",op:"Off-Site Work",opS:"Off-Site",tad:"Business Travel",tadS:"Travel",lv:"PTO",
    fd:"Full Schedule",ld:"Modified Duty",lim:"Accommodation",attPl:"Contractors",attP:"contractors",att1:"contractor",attC:"Contractors",code:"CTR",org:"department",mus:"check-in",
    rec:"call tree",ptB:"MTG",ptT:"Meeting roster",arm:"asset",armB:"ASSETS",wpn:"asset",bin:"tag",coEx:"OPERATIONS",lead:"Manager",asst:"Asst Manager",sr:"HR Lead",xo:"Deputy Director",plt:"team",pltA:"TEAM",co:"department",coA:"DEPT",cmdAll:"director, deputy and HR lead",notify:"manager, HR, security",deck:"Working today",eo:"STAFF",billet:"job title",rank:"Title",
    fap:"loaned in, temps, contractors",mol:"HR roster file",strength:"headcount",w6:"IR",edd:"end date"}},
@@ -108,7 +108,7 @@ const MODES={
   evTypes:["Meeting","Class","Volunteer","Cleanup","Trip","Other"],
   wTypes:["Injury","Lost person","Property damage","Missed pickup","Medical","Family emergency","Other"],
   items:["Radio","Keys","Vest","First aid kit","Laptop","Camera","Other"],
-  v:{p:"Member",ps:"Members",here:"Here",aob:"Appt On Site",aobS:"Appt On Site",aoff:"Appt Off Site",aoffS:"Appt Off Site",cod:"Assigned Task",codS:"Task",op:"Event",tad:"Away",lv:"Time Off",
+  v:{pt:"On Break",p:"Member",ps:"Members",here:"Here",aob:"Appt On Site",aobS:"Appt On Site",aoff:"Appt Off Site",aoffS:"Appt Off Site",cod:"Assigned Task",codS:"Task",op:"Event",tad:"Away",lv:"Time Off",
    fd:"Full Go",ld:"Limited",lim:"Restricted",attPl:"Guests",attP:"guests",att1:"guest",attC:"Guests",code:"GST",org:"group",mus:"check-in",
    rec:"call tree",ptB:"MEET",ptT:"Meeting roster",arm:"gear",armB:"GEAR",wpn:"item",bin:"bin",coEx:"YOUTH LEAGUE",lead:"Leader",asst:"Co-leader",sr:"Coordinator",xo:"Vice President",plt:"group",pltA:"GROUP",co:"organization",coA:"ORG",cmdAll:"president, vice president and coordinator",notify:"leader, co-leader, coordinator",deck:"Present",eo:"TEAM",billet:"role",rank:"Role",
    fap:"loaned in, visitors, guests",mol:"roster file",strength:"headcount",w6:"IR",edd:"end date"}}
@@ -120,8 +120,8 @@ const RANKS=["CWO5","CWO4","CWO3","CWO2","WO","MAJ","CAPT","1STLT","2NDLT","SGTM
 const dutyOf=m=>DUTIES.includes(m.duty)?m.duty:"Full Duty";
 let secSigs=null;
 function secLast(k){const B=S.board,r=B&&B.last&&B.last[k],t=+((S.secAt||{})[k])||0;if(r&&(!t||r.t>=t))return r;if(t)return {t,by:(S.secBy||{})[k]||"",ch:0,local:true};return null}
-const SCODE={"Appointment on Base":"AOB","Appointment off Base":"AOFF","Company Duties":"DUTY","Operation":"OP","TAD":"TAD","Leave":"LV"};
-const SDEC=Object.fromEntries(Object.entries(SCODE).map(([a,b])=>[b,a]));
+const SCODE={"Appointment":"APPT","Company Duties":"DUTY","Duty Recovery":"REC","At PT":"PT","Operation":"OP","TAD":"TAD","Leave":"LV"};
+const SDEC=Object.assign({AOB:"Appointment",AOFF:"Appointment"},Object.fromEntries(Object.entries(SCODE).map(([a,b])=>[b,a])));
 function tok(m){const [last,rest]=m.name.split(",");const first=((rest||"").trim().split(/\s+/)[0]||"").replace(/[^A-Z]/gi,"").slice(0,3);
   return (m.rank+"."+(last||"").trim()+"."+first).toUpperCase().replace(/[;|=]/g,"")}
 const cleanName=s=>String(s||"").toUpperCase().replace(/[|#\r\n]/g," ").replace(/\s+/g," ").trim().slice(0,24);

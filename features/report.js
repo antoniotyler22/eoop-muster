@@ -58,7 +58,7 @@ function headcountPDF(){
   doc.rule();
   doc.row([{x:X[0],t:"Total",w:180,bold:true},{x:X[1],t:String(T.total),bold:true},{x:X[2],t:String(P),bold:true},{x:X[3],t:pct(P,T.total)+"%",bold:true}]);
   // Everyone not present, by status
-  const out=sorted(S.roster.filter(m=>!PRESENT.includes(m.status)));
+  const out=sorted(S.roster.filter(m=>!isPresent(m)));
   if(out.length){doc.gap(10);doc.line("Not present ("+out.length+")",{size:13,bold:true});
     const Y=[M,M+150,M+205,M+380];
     for(const st of STATUSES.filter(s=>!PRESENT.includes(s))){const g=out.filter(m=>m.status===st);if(!g.length)continue;

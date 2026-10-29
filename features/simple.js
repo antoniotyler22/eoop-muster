@@ -82,16 +82,16 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&typeof re
 const MK=["civilian","jobs","hr","police","military","custom"];
 /* one-tap templates: a version, its groups and its status words */
 const TPL={
-  trip:{n:"Field trip",ic:"🚌",d:"Buses, groups, chaperones",m:"custom",v:{p:"Student",ps:"Students",here:"With group",aob:"Restroom",aoff:"With chaperone",cod:"Nurse",op:"On the bus",tad:"Left early",lv:"Absent",mus:"Head count",attPl:"Chaperones",eo:"TRIP"},
+  trip:{n:"Field trip",ic:"🚌",d:"Buses, groups, chaperones",m:"custom",v:{pt:"Lunch",p:"Student",ps:"Students",here:"With group",aob:"Restroom",aoff:"With chaperone",cod:"Nurse",op:"On the bus",tad:"Left early",lv:"Absent",mus:"Head count",attPl:"Chaperones",eo:"TRIP"},
     secs:[["BUSA","Bus 1"],["BUSB","Bus 2"],["GRPA","Group A"],["GRPB","Group B"]]},
-  race:{n:"5K / race",ic:"🏃",d:"Runners, corrals, finish line",m:"custom",v:{p:"Runner",ps:"Runners",here:"Finished",aob:"On course",aoff:"Medical tent",cod:"Water stop",op:"Start corral",tad:"Dropped out",lv:"No-show",mus:"Check-in",attPl:"Volunteers",eo:"RACE"},
+  race:{n:"5K / race",ic:"🏃",d:"Runners, corrals, finish line",m:"custom",v:{pt:"Aid station",p:"Runner",ps:"Runners",here:"Finished",aob:"On course",aoff:"Medical tent",cod:"Water stop",op:"Start corral",tad:"Dropped out",lv:"No-show",mus:"Check-in",attPl:"Volunteers",eo:"RACE"},
     secs:[["FIVE","5K"],["TEN","10K"],["KIDS","Kids run"],["WALK","Walkers"]]},
   site:{n:"Job site",ic:"🦺",d:"Crews, trades, head count",m:"jobs"},
-  event:{n:"Event staff",ic:"🎟️",d:"Gates, security, concessions",m:"custom",v:{p:"Staff",ps:"Staff",here:"On post",aob:"On break",aoff:"Off site",cod:"Runner",op:"Setup",tad:"Training",lv:"Off today",mus:"Check-in",attPl:"Volunteers",eo:"EVENT"},
+  event:{n:"Event staff",ic:"🎟️",d:"Gates, security, concessions",m:"custom",v:{pt:"Break",p:"Staff",ps:"Staff",here:"On post",aob:"On break",aoff:"Off site",cod:"Runner",op:"Setup",tad:"Training",lv:"Off today",mus:"Check-in",attPl:"Volunteers",eo:"EVENT"},
     secs:[["GATE","Gates"],["SECU","Security"],["CONC","Concessions"],["MEDS","Medical"],["PARK","Parking"]]},
-  youth:{n:"Youth team",ic:"⚽",d:"Players, coaches, pickups",m:"custom",v:{p:"Player",ps:"Players",here:"Here",aob:"Restroom",aoff:"Picked up",cod:"Warming up",op:"In the game",tad:"Away game",lv:"Absent",mus:"Roll call",attPl:"Coaches",eo:"TEAM"},
+  youth:{n:"Youth team",ic:"⚽",d:"Players, coaches, pickups",m:"custom",v:{pt:"Warming up",p:"Player",ps:"Players",here:"Here",aob:"Restroom",aoff:"Picked up",cod:"Warming up",op:"In the game",tad:"Away game",lv:"Absent",mus:"Roll call",attPl:"Coaches",eo:"TEAM"},
     secs:[["STAR","Starters"],["BNCH","Bench"],["NEWP","New players"]]},
-  fire:{n:"Office fire drill",ic:"🔥",d:"Floors, wardens, assembly point",m:"custom",v:{p:"Employee",ps:"Employees",here:"At assembly point",aob:"Still inside",aoff:"Remote today",cod:"Floor warden",op:"Off site",tad:"Traveling",lv:"PTO",mus:"Fire drill",attPl:"Visitors",eo:"OFFICE"},
+  fire:{n:"Office fire drill",ic:"🔥",d:"Floors, wardens, assembly point",m:"custom",v:{pt:"On break",p:"Employee",ps:"Employees",here:"At assembly point",aob:"Still inside",aoff:"Remote today",cod:"Floor warden",op:"Off site",tad:"Traveling",lv:"PTO",mus:"Fire drill",attPl:"Visitors",eo:"OFFICE"},
     secs:[["FLR1","Floor 1"],["FLR2","Floor 2"],["FLR3","Floor 3"],["WARD","Wardens"]]}};
 window.SG_TPL=TPL;
 let wv={step:"pick",mode:"",tpl:""};

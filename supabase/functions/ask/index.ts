@@ -74,7 +74,7 @@ async function sha(s: string) {
 const APP_GUIDE = `Accounted For ("Accounted For – Team Check-In") is a headcount and check-in app for any team: military units, police, job sites, HR, schools, clubs, events.
 Versions: one app with labels for Military, Police, Jobs, HR and Civilian; switch in the mode menu. Same people, new labels.
 Board: total strength, on hand and present, a tile per section with when it was last updated. Tap a section, then the status or duty pill to change someone. Picking anything but On Hand asks From, To and Location.
-Statuses: On Hand, Appointment on Base, Appointment off Base, Company Duties, Operation, TAD, Leave. Duty: Full Duty, Light Duty, LIMDU.
+Statuses: On Hand, Appointment (location says on or off base), Company Duties, Duty Recovery, At PT, Operation, TAD, Leave. Duty: Full Duty, Light Duty, LIMDU.
 DATA: load the roster from any spreadsheet (Excel/CSV), backups, access links, System check (tests the server setup).
 TEXT: builds the accountability report to text. PDF headcount report on the Send screen.
 Tools: Muster (formation and QR check-in), Recall (call/text tree with missed check-in alerts), Emergency muster (one tap), Alerts, Calendar, Duty roster, Readiness/due-outs, Trends, 6W incident reports, Company roll-up, Live sections, Invite, Logins, Check-ins, People with access, Help & support.

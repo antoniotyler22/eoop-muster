@@ -78,7 +78,7 @@ function w6Refresh(){const t=w6Text(W2);const a=$("#v12WMsg");if(a)a.value=t;con
 renderW=renderW6;
 
 /* ================= 3. ACCOUNT FOR ANYTHING ================= */
-const CUSTOM_KEYS=[["p","One person","Runner"],["ps","People","Runners"],["here","Present / here","Checked in"],["aob","Status 2","At the start"],["aoff","Status 3","Running"],["cod","Status 4","Finished"],["op","Status 5","Water station"],["tad","Status 6","DNF"],["lv","Status 7","Not coming"],
+const CUSTOM_KEYS=[["p","One person","Runner"],["ps","People","Runners"],["here","Present / here","Checked in"],["aob","Status 2","At the start"],["aoff","Status 3","Running"],["pt","Status 3b","Warming up"],["cod","Status 4","Finished"],["op","Status 5","Water station"],["tad","Status 6","DNF"],["lv","Status 7","Not coming"],
   ["mus","Check-in word","check-in"],["attPl","Extra people (not on roster)","Guests"],["eo","Report name","5K RACE"]];
 const EV_QUICK=["5K run","Unit run","PT","TAD","Training","Meeting","Shift","Field trip","Volunteer event","Practice","Class","Inspection","Range","Drill","Travel","Game day"];
 {const _al=applyLists;applyLists=function(){_al.apply(this,arguments);for(const t of (S.evTypesX||[]))if(!EV_TYPES.includes(t))EV_TYPES.push(t);for(const t of ["5K / Run","TAD / Travel"])if(!EV_TYPES.includes(t))EV_TYPES.push(t)}}

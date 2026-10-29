@@ -52,10 +52,12 @@ function stDetSheet(id){const m=S.roster.find(x=>x.id===id);if(!m)return;sheetCt
   $("#sheetT").innerHTML=`${esc(SHORT[m.status]||m.status)}: dates and location<small>${esc(m.rank+" "+m.name)}</small>`;
   $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl>
     <div class="row2"><div><label for="sdF">From</label><input type="date" id="sdF" value="${esc(isoOf(m.start)||dkey())}" style="${inp}"></div><div><label for="sdT">To</label><input type="date" id="sdT" value="${esc(isoOf(m.end))}" style="${inp}"></div></div>
-    <label for="sdL">Location</label><input type="text" id="sdL" maxlength="60" value="${esc(m.loc||"")}" placeholder="City, clinic, base, address">
+    <label for="sdL">Location</label>${m.status==="Appointment"?`<div class="evts" style="margin-bottom:6px"><button type="button" class="chip" data-sdloc="On base">🏠 On base</button><button type="button" class="chip" data-sdloc="Off base">🚗 Off base</button></div>`:""}<input type="text" id="sdL" maxlength="60" value="${esc(m.loc||"")}" placeholder="${m.status==="Appointment"?"On base · clinic, or Off base · city, address":"City, clinic, base, address"}">
     <label for="sdD">Detail (optional)</label><input type="text" id="sdD" maxlength="80" value="${esc(m.detail||"")}" placeholder="Reason, who they're with, phone">
     <div class="row2"><button class="btn" id="sdSave">Save</button><button class="btn alt" data-sclose="1">Skip</button></div></div>`;
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")))}
+document.addEventListener("click",e=>{const lb=e.target.closest&&e.target.closest("[data-sdloc]");if(!lb||!sheetCtx||sheetCtx.kind!=="stdet")return;e.stopImmediatePropagation();const el=$("#sdL");if(!el)return;
+  const cur=el.value.replace(/^(on|off) base\s*(·\s*)?/i,"").trim();el.value=(lb.dataset.sdloc+(cur?" · "+cur:"")).slice(0,60);el.focus()},true);
 document.addEventListener("click",e=>{if(e.target.id!=="sdSave"||!sheetCtx||sheetCtx.kind!=="stdet")return;const m=S.roster.find(x=>x.id===sheetCtx.id);if(!m)return closeSheet();
   const f=$("#sdF").value,t=$("#sdT").value;if(f&&t&&t<f){toast("To can't be before From.");return}
   const set=(k,v)=>{v=String(v||"").trim();if(v)m[k]=v;else delete m[k]};set("start",f);set("end",t);set("loc",($("#sdL").value||"").slice(0,60));set("detail",($("#sdD").value||"").slice(0,80));
@@ -142,7 +144,7 @@ const startTeamHTML=()=>`<div class="panel" style="margin-top:12px"><b>Run your 
 
 /* =============== 3. LEADER: check-ins in, Confirm puts them on the roster =============== */
 window.ckIn=function(f,o,r){S.cks=S.cks||[];const cid=String(o.cid||"").slice(0,20);if(!cid||S.cks.some(x=>x.cid===cid))return;
-  const st=STATUSES.includes(o.st)?o.st:CK_OTHER;const who=String(o.me||"Someone").slice(0,30);
+  const st=STATUSES.includes(fixStatus(o.st))?fixStatus(o.st):CK_OTHER;const who=String(o.me||"Someone").slice(0,30);
   let m=o.mid&&S.roster.find(x=>x.id===String(o.mid));if(!m){const mm=typeof matchMarine==="function"?matchMarine(who):null;m=Array.isArray(mm)?(mm.length===1?mm[0]:null):mm||null}
   const clean=(v,n)=>String(v||"").replace(/[<>]/g,"").slice(0,n);const date=v=>/^\d{4}-\d{2}-\d{2}$/.test(String(v||""))?String(v):"";
   const x={cid,feed:f.id,mid:m?m.id:"",who,sec:clean(o.sec,6),st,oth:clean(o.oth,80),from:date(o.from),to:date(o.to),loc:clean(o.loc,60),note:clean(o.note,120),t:Date.parse(r&&r.created_at)||+o.at||Date.now(),state:"new"};
