@@ -36,8 +36,10 @@ if(typeof logLoad==="function"){const _ll=logLoad;logLoad=function(kind){if(/^(R
   for(const k of Object.keys(B))if(G[k]&&B[k]>G[k])delete G[k];else if(G[k])delete B[k];
   // nobody leaves the numbers over a sync unless a phone deleted them on purpose: put back anyone the merge dropped
   // who is on neither deleted list (a changed status, a late backup or a half-synced copy is not a delete)
-  {const have=new Set(S.roster.map(m=>m.id));const back=[];
-    for(const m of mine)if(!have.has(m.id)&&!G[m.id])back.push(m);
+  {const have=new Set(S.roster.map(m=>m.id));const nk=m=>String(m.rank||"").toUpperCase().replace(/[^A-Z0-9]/g,"")+"|"+String(m.name||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+    const haveN=new Set(S.roster.map(nk));const back=[];
+    // ...but not a second copy of someone already here under another id (the other phone re-added or re-loaded them)
+    for(const m of mine)if(!have.has(m.id)&&!G[m.id]&&!haveN.has(nk(m)))back.push(m);
     if(back.length)S.roster=S.roster.concat(back)}
   S.gone=G;S.back=B;const n0=S.roster.length;S.roster=S.roster.filter(m=>!G[m.id]);
   S.rids=S.roster.map(m=>m.id);if(S.roster.length!==n0&&typeof syncSchedule==="function")setTimeout(()=>{try{syncSchedule()}catch(e){}},0)}}

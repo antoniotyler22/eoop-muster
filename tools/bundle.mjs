@@ -59,6 +59,7 @@ export const SOURCES = [
   "features/feed-tabs.js",
   "features/stay-view.js",
   "features/feed-dates.js",
+  "features/no-doubles.js",
 ];
 
 export function build() {
