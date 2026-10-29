@@ -60,7 +60,10 @@ document.addEventListener("change",e=>{if(e.target.id==="invRole"){const r=lgRol
   else if(e.target.id==="invDest"){inv.dest=e.target.value;inv.out=null;inv.msg="";renderInvite()}});
 
 /* hook into the app */
-{const _render=render;render=function(){if(view==="invite"){renderTabs();renderInvite();if(typeof animateView==="function")animateView();return}return _render.apply(this,arguments)}}
+/* A redraw of Invite (a poll, a sync, a check-in landing) keeps the scroll position and whatever was typed in the search box. */
+{const _render=render;render=function(){if(view==="invite"){const again=typeof lastView!=="undefined"&&lastView==="invite";const y=window.scrollY;const ae=document.activeElement;const keep=again&&ae&&ae.id&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)?{id:ae.id,v:ae.value,s:ae.selectionStart,e:ae.selectionEnd}:null;
+  renderTabs();renderInvite();if(typeof animateView==="function")animateView();
+  if(again){window.scrollTo(0,y);if(keep){const el=document.getElementById(keep.id);if(el){if(el.value!==keep.v){el.value=keep.v;try{el.dispatchEvent(new Event("input",{bubbles:true}))}catch(e){}}try{el.focus({preventScroll:true});if(keep.s!=null&&el.setSelectionRange)el.setSelectionRange(keep.s,keep.e)}catch(e){}window.scrollTo(0,y)}}}return}return _render.apply(this,arguments)}}
 {const _rt=renderTools;renderTools=function(){_rt.apply(this,arguments);const g=document.querySelector("#main .tgrid");if(!g)return;
   g.insertAdjacentHTML("afterbegin",`<button data-go="invite"><span class="ic">${svg("send")}</span><span><b>Invite</b><small>Link with a role, or their own team</small></span></button>`)}}
 if(typeof HELP==="object")HELP.invite=["Invite","Bring people onto your team, or send the app to someone who wants their own.",["Connect them to your team: pick a role and Make a link. Text or email it to any number or address. They don't have to be on your roster.","Make a login instead gives a username and password with the same role.","Let them start their own team: they get the app and their own board. Nothing connects back to you."]];

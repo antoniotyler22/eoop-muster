@@ -57,6 +57,7 @@ export const SOURCES = [
   "features/me-page.js",
   "features/header.js",
   "features/feed-tabs.js",
+  "features/stay-view.js",
 ];
 
 export function build() {
