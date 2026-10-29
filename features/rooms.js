@@ -51,8 +51,9 @@ async function fillThumbs(){for(const el of document.querySelectorAll("[data-rmp
   if(u){img.src=u;img.hidden=false;el.querySelector(".rm-miss").hidden=true}else{img.hidden=true;el.querySelector(".rm-miss").hidden=false}}}
 function picsHTML(edit){const P=pics();if(!P.length&&!edit)return "";
   return `<div class="rm-pics">${P.map(p=>`<button type="button" class="rm-pic" data-rmpic="${esc(p.id)}" title="${esc(p.n)}"><img alt="${esc(p.n)}" hidden><span class="rm-miss" hidden>📄 ${esc(p.n)}<br><small>on another phone</small></span>${edit?`<span class="rm-picx" data-rmpicx="${esc(p.id)}" role="button" aria-label="Remove">×</span>`:""}</button>`).join("")}</div>
-    ${edit?`<label class="btn alt" style="display:block;text-align:center;margin-top:6px"><input type="file" id="rmPic" accept="image/*" multiple hidden>📷 Add blueprint or room photos</label><p class="note" style="margin:4px 0 0">Pictures stay on this phone. Other phones see the names and can add their own.</p>`:""}`}
+    ${edit?`<button type="button" class="btn alt" id="rmPicGo" style="width:100%;margin-top:6px">📷 Add blueprint or room photos</button><input type="file" id="rmPic" accept="image/*" multiple style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden" aria-label="Choose pictures"><p class="note" style="margin:4px 0 0">Pictures stay on this phone. Other phones see the names and can add their own.</p>`:""}`}
 document.addEventListener("change",e=>{if(e.target.id!=="rmPic")return;const f=e.target.files;if(!f||!f.length)return;addPics(f).then(()=>redraw())});
+document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest("#rmPicGo")){const i=$("#rmPic");if(i)i.click()}});
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;
   const x=t.closest("[data-rmpicx]");if(x){e.stopImmediatePropagation();const id=x.dataset.rmpicx;S.roomPics=pics().filter(p=>p.id!==id);picDel(id);save();if(typeof syncSchedule==="function")syncSchedule();redraw();return}
   const p=t.closest("[data-rmpic]");if(p){const img=p.querySelector("img");if(!img||img.hidden||!img.src)return;

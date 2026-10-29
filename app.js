@@ -2809,7 +2809,7 @@ document.addEventListener("click",e=>{
   if(e.target.id==="fdNewFeed"){fdNew=true;renderFeed();return}
   if(e.target.id==="fdCancelNew"){fdNew=false;renderFeed();return}
   const fsel=e.target.closest("[data-fdsel]");if(fsel){fdSel=fsel.dataset.fdsel;fdOpen=null;renderFeed();window.scrollTo(0,0);return}
-  if(e.target.id==="fdPost"){const f=fdCur();const txt=($("#fdTxt").value||"").trim();if(!txt){toast("Type the word first.");return}const urg=$("#fdUrg").checked;const D=fdDraft;let to={k:"all"};
+  if(e.target.id==="fdPost"){const f=fdCur();const txt=($("#fdTxt").value||"").trim();if(!txt&&!(typeof window.feedPendingPhotos==="function"&&window.feedPendingPhotos())){toast("Type the word or add a photo first.");return}const urg=$("#fdUrg").checked;const D=fdDraft;let to={k:"all"};
     if(D.to==="secs"){if(!D.secs.length&&!D.att){toast("Pick at least one section.");return}to={k:"secs",s:D.secs.slice(),att:D.att}}
     let wP=Promise.resolve(null);if(D.to==="one"){const m=S.roster.find(x=>x.id===D.mid);if(!m){toast("Pick the person.");return}to={k:"one",mid:m.id,n:m.rank+" "+lastOf(m),w:[]};wP=Promise.all(SB.words(m.rank+" "+lastOf(m)).map(w=>SB.h(f.id,w)))}
     e.target.disabled=true;e.target.textContent="Posting…";

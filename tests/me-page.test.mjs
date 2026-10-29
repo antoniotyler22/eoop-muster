@@ -68,3 +68,26 @@ test("feed photos: pending photos ride inside the post, come out on the other si
     assert.ok(a.$('[data-fpid="i1abc234"]'), "the card shows the photo");
   } finally { a.close(); }
 });
+
+test("feed: a photo-only post goes through; the leader has Delete on each post and Clear the whole feed", async () => {
+  const dels = [];
+  const a = await openApp({ rpc: (fn, args) => { if (fn === "feed_post") return 11; if (fn === "feed_delete_post") { dels.push(args.p_post); return true; } return []; } });
+  try {
+    a.w.eval(`S.source="mol";S.leaderMode=true;S.welcomed=1;S.onb=true;S.role="oic";S.tos=99;const ek=b64url(crypto.getRandomValues(new Uint8Array(32)));S.feeds=[{id:"f1",lk:"l".repeat(32),mk:"m".repeat(32),ek,unit:"1ST PLT",posts:[{id:3,t:Date.now()-5000,txt:"Old word",urg:false,to:{k:"all"},by:"Me"}],mine:{},acks:{}}];save();view="feed";render();`);
+    assert.ok(a.$("#fpPick") && a.$("#fpCam"), "photo buttons");
+    a.w.eval(`feedAddPhoto("i2abc234","data:image/jpeg;base64,/9j/4AAQSkZJRg==");`);
+    a.$("#fdTxt").value = "";
+    a.$("#fdPost").click();
+    for (let i = 0; i < 40 && a.w.eval("S.feeds[0].posts.length") < 2; i++) await sleep(50);
+    assert.equal(a.w.eval("S.feeds[0].posts[0].id"), 11, "posted with no text");
+    assert.ok(a.$('[data-fddel="3"]'), "Delete chip on a post");
+    a.$('[data-fddel="3"]').click(); a.$('[data-fddel="3"]').click();
+    for (let i = 0; i < 40 && !dels.length; i++) await sleep(50);
+    assert.deepEqual(dels, [3]);
+    assert.ok(a.$("#fpClear"), "Clear the whole feed");
+    a.$("#fpClear").click(); a.$("#fpClear").click();
+    for (let i = 0; i < 40 && a.w.eval("S.feeds[0].posts.length"); i++) await sleep(50);
+    assert.equal(a.w.eval("S.feeds[0].posts.length"), 0);
+    assert.ok(dels.includes(11));
+  } finally { a.close(); }
+});
