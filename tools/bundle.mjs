@@ -60,6 +60,8 @@ export const SOURCES = [
   "features/stay-view.js",
   "features/feed-dates.js",
   "features/no-doubles.js",
+  "features/status-done.js",
+  "features/feed-poll.js",
 ];
 
 export function build() {

@@ -64,7 +64,7 @@ function makeCore() {
   const toast = () => {}, render = () => {}, renderTabs = () => {}, save = () => {}, rawSave = () => {};
   const document = { activeElement: null }, navigator = {};
   const window = Object.assign(Object.create(globalThis), { scrollY: 0, scrollTo() {}, VAULT: undefined });
-const SHORT={"On Hand":"On Hand","Appointment":"Appt","Company Duties":"Co Duties","Duty Recovery":"Duty Rec","At PT":"At PT","Operation":"Operation","TAD":"TAD","Leave":"Leave"};
+const SHORT={"On Hand":"On Hand","Appointment":"Appt","Company Duties":"Co Duties","Duty Recovery":"Duty Rec","At PT":"At PT","SIQ":"SIQ","Operation":"Operation","TAD":"TAD","Leave":"Leave","Other":"Other"};
 const SECTIONS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
 const DEF_SECS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
 const MODES={
@@ -120,7 +120,7 @@ const RANKS=["CWO5","CWO4","CWO3","CWO2","WO","MAJ","CAPT","1STLT","2NDLT","SGTM
 const dutyOf=m=>DUTIES.includes(m.duty)?m.duty:"Full Duty";
 let secSigs=null;
 function secLast(k){const B=S.board,r=B&&B.last&&B.last[k],t=+((S.secAt||{})[k])||0;if(r&&(!t||r.t>=t))return r;if(t)return {t,by:(S.secBy||{})[k]||"",ch:0,local:true};return null}
-const SCODE={"Appointment":"APPT","Company Duties":"DUTY","Duty Recovery":"REC","At PT":"PT","Operation":"OP","TAD":"TAD","Leave":"LV"};
+const SCODE={"Appointment":"APPT","Company Duties":"DUTY","Duty Recovery":"REC","At PT":"PT","SIQ":"SIQ","Operation":"OP","TAD":"TAD","Leave":"LV","Other":"OTH"};
 const SDEC=Object.assign({AOB:"Appointment",AOFF:"Appointment"},Object.fromEntries(Object.entries(SCODE).map(([a,b])=>[b,a])));
 function tok(m){const [last,rest]=m.name.split(",");const first=((rest||"").trim().split(/\s+/)[0]||"").replace(/[^A-Z]/gi,"").slice(0,3);
   return (m.rank+"."+(last||"").trim()+"."+first).toUpperCase().replace(/[;|=]/g,"")}

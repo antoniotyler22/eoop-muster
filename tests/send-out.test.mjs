@@ -35,14 +35,14 @@ test("a section as Member logins: one login each, sent again (not duplicated) th
   } finally { await a.close(); }
 }, { timeout: 120000 });
 
-test("someone off the roster is flagged under Member until given another role; links work for them", async () => {
+test("someone off the roster can be sent a Member link (added to the roster) or given another role; links work for them", async () => {
   const a = await openApp({ rpc: () => null });
   try {
     a.w.eval(prep); await sleep(20);
     a.w.eval(`$("#soXN").value="Pat Lee";$("#soXT").value="(808) 555-0199"`);
     click(a, "#soXAdd"); await sleep(10);
-    assert.match(a.$("#soBox").textContent, /Not on your roster/);
-    assert.ok(a.$("#soMake").disabled, "nothing to make yet");
+    assert.doesNotMatch(a.$("#soBox").textContent, /Not on your roster/, "Member now adds them to the roster");
+    assert.ok(!a.$("#soMake").disabled, "ready to make");
     a.w.eval(`{const s=document.querySelector('[data-sorole="x:1"]');s.value="view";s.dispatchEvent(new Event("change",{bubbles:true}))}`); await sleep(10);
     assert.doesNotMatch(a.$("#soBox").textContent, /Not on your roster/);
     click(a, '[data-soas="link"]');
@@ -72,5 +72,25 @@ test("Building their own team: everyone gets the same start text, Email all at o
     a.w.eval(`view="logins";render()`); await sleep(10);
     assert.ok(a.$("#soLg"), "Logins screen opens Send out");
     assert.deepEqual(navErr(a.errors), []);
+  } finally { await a.close(); }
+});
+
+test("Member link to someone not on the roster puts them on the roster and links to their page", async () => {
+  const a = await openApp({ rpc: () => null });
+  try {
+    a.w.eval(prep); await sleep(20);
+    const n0 = a.w.eval("S.roster.length");
+    a.w.eval(`$("#soXN").value="SGT Pat Lee";$("#soXT").value="(808) 555-0199"`);
+    click(a, "#soXAdd"); await sleep(10);
+    click(a, '[data-soas="link"]');
+    click(a, "#soMake");
+    await waitFor(() => a.$("#soNext"), 20000);
+    const it = a.w.eval(`__so().list[0]`);
+    assert.ok(!it.err, it.err);
+    assert.equal(it.role, "Member");
+    assert.equal(a.w.eval("S.roster.length"), n0 + 1);
+    const m = a.w.eval(`S.roster.find(m=>/LEE/.test(m.name))`);
+    assert.equal(m.rank, "SGT"); assert.equal(m.phone, "8085550199");
+    assert.ok(m.pk, "their My page is on");
   } finally { await a.close(); }
 });

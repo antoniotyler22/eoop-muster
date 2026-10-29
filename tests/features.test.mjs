@@ -230,11 +230,11 @@ test("clearing things off: due-outs, leave alerts, departed people and the calen
     assert.equal(over(), before - 1);
 
     // leave: past the end date → Back ✓ sets On Hand and the rest of the leave comes off the calendar
-    w.eval(`const m=S.roster[2];m.status="Leave";m.start="01 JAN 20";m.end="05 JAN 20";m.cal=[{id:"cL",d:dkey(new Date(Date.now()-3*864e5)),end:dkey(new Date(Date.now()+5*864e5)),ty:"LEAVE",ti:"Leave"}];save();view="alerts";render()`);
-    const m2 = w.eval("S.roster[2].id");
-    assert.ok(w.eval("alerts().over.some(a=>a.m.id===S.roster[2].id)"));
-    a.$(`[data-alback="${m2}"]`).click();
+    // leave: past the end date → back On Hand by itself, dates/location off, rest of the leave off the calendar
+    w.eval(`const m=S.roster[2];m.status="Leave";m.start="01 JAN 20";m.end="05 JAN 20";m.loc="Guam";m.cal=[{id:"cL",d:dkey(new Date(Date.now()-3*864e5)),end:dkey(new Date(Date.now()+5*864e5)),ty:"LEAVE",ti:"Leave"}];save();view="alerts";render()`);
     assert.equal(w.eval("S.roster[2].status"), "On Hand");
+    assert.equal(w.eval("S.roster[2].end||''"), "", "thru date gone");
+    assert.equal(w.eval("S.roster[2].loc||''"), "", "location gone");
     assert.ok(!w.eval("alerts().over.some(a=>a.m.id===S.roster[2].id)"), "falls off overdue");
     assert.ok(w.eval("S.roster[2].cal[0].end < dkey()"), "rest of the leave trimmed off the calendar");
 
@@ -266,7 +266,7 @@ test("mistakes can be undone: unhide, undo Back, undo Done, and delete at the so
   const a = await openApp();
   try {
     const w = a.w;
-    w.eval(`S.source="mol";const m=S.roster[2];m.status="Leave";m.start="01 JAN 20";m.end="05 JAN 20";m.cal=[{id:"cL",d:"2019-12-30",end:dkey(new Date(Date.now()+5*864e5)),ty:"LEAVE",ti:"Leave"}];S.roster[3].edd=fmtD(dkey(new Date(Date.now()+10*864e5)));save();view="alerts";render()`);
+    w.eval(`S.source="mol";const m=S.roster[2];m.status="Leave";m.start="01 JAN 20";m.end="05 JAN 20";m.cal=[{id:"cL",d:"2019-12-30",end:dkey(new Date(Date.now()+5*864e5)),ty:"LEAVE",ti:"Leave"}];m.noAuto=m.end;S.roster[3].edd=fmtD(dkey(new Date(Date.now()+10*864e5)));save();view="alerts";render()`);
     const id2 = w.eval("S.roster[2].id"), id3 = w.eval("S.roster[3].id");
     const inOver = () => w.eval(`alerts().over.some(a=>a.m.id===${JSON.stringify(id2)})`);
     // hide → unhide
@@ -303,5 +303,32 @@ test("mistakes can be undone: unhide, undo Back, undo Done, and delete at the so
     del().click(); del().click();
     assert.equal(w.eval("S.roster[4].edd"), undefined, "EDD deleted at the source");
     assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
+
+test("SIQ and Other are statuses; Other asks what's going on; status rows always have Edit", async () => {
+  const a = await openApp();
+  try {
+    const w = a.w;
+    assert.ok(w.eval(`STATUSES.includes("SIQ")&&STATUSES.includes("Other")`));
+    w.eval(`S.source="mol";S.leaderMode=true;S.welcomed=1;S.onb=true;const m=S.roster[0];m.status="SIQ";m.end=dkey(new Date(Date.now()+864e5));save();view=m.sec.toLowerCase();render()`);
+    assert.ok(a.$(`#main [data-stdet="${w.eval("S.roster[0].id")}"]`), "edit chip");
+    w.eval(`S.roster[0].status="Other";save();render()`);
+    a.$(`#main [data-stdet="${w.eval("S.roster[0].id")}"]`).click();
+    assert.match(a.$("#sheetOpts").textContent, /What's going on\?/);
+    assert.equal(w.eval(`isPresent(S.roster[0])`), false);
+  } finally { await a.close(); }
+});
+
+test("a status whose dates ended goes back On Hand by itself; Undo sticks", async () => {
+  const a = await openApp();
+  try {
+    const w = a.w;
+    w.eval(`S.source="mol";const m=S.roster[0];m.status="TAD";m.end=dkey(new Date(Date.now()-864e5));m.loc="San Diego";save();render()`);
+    assert.equal(w.eval("S.roster[0].status"), "On Hand");
+    w.eval(`view="alerts";render()`);
+    a.$("[data-unback]").click();
+    w.eval(`render()`);
+    assert.equal(w.eval("S.roster[0].status"), "TAD", "undo isn't undone by the next render");
   } finally { await a.close(); }
 });

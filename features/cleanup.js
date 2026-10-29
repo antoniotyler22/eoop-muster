@@ -34,7 +34,7 @@ renderReady=function(){_rr.apply(this,arguments);
   if(h&&over.length&&!$("#dueAckAll"))h.insertAdjacentHTML("afterend",`<div class="row2" style="margin:6px 0"><button class="btn alt" id="dueAckAll">${armed==="dueall"?"Tap again: acknowledge all "+over.length+" overdue":"Acknowledge all overdue ("+over.length+")"}</button><span class="note" style="align-self:center">They drop off until a new date is set.</span></div>`)};
 
 /* ---------- 2. alerts: back, departed, hide ---------- */
-const AWAYS=["Leave","TAD","Operation","Appointment","Duty Recovery"];
+const AWAYS=["Leave","TAD","Operation","Appointment","Duty Recovery","SIQ","Other"];
 const alKey=(m,kind)=>m.id+"|"+kind+"|"+(kind==="dep"?(m.edd||""):(m.end||""));
 const _al=alerts;
 alerts=function(){const r=_al.apply(this,arguments);const H=AH();
@@ -45,6 +45,7 @@ function backNow(m){const today=dkey();const was=m.status;
   for(const e of m.cal||[]){if(!["LEAVE","TAD"].includes(e.ty))continue;const end=e.end&&e.end>e.d?e.end:e.d;if(end<today)continue;
     if(e.d>=today)e.done=1;else{const y=new Date(today0());y.setDate(y.getDate()-1);e.end=dkey(y)}}
   return was}
+window.backNow=backNow;
 const _arow=arow;
 arow=function(a){const html=_arow.apply(this,arguments);const m=a.m;const dep=/^EDD /.test(a.why||"");const kind=dep?"dep":a.dd<0?"over":"ret";
   const btns=dep?`<button class="chip" data-algone="${m.id}">${armed==="gone"+m.id?"Remove?":"Departed"}</button>`
@@ -138,7 +139,7 @@ document.addEventListener("click",ev=>{const t=ev.target;if(!t.closest)return;le
   if((x=t.closest("[data-hdel]"))){const [w,...r]=x.dataset.hdel.split(":");const k=r.join(":");if(armed!=="hd"+k){armed="hd"+k;keep(render);return}armed=null;
     if(w==="al"){const [id,knd]=k.split("|");const m=byId(id);if(m){if(knd==="dep")delete m.edd;else{delete m.start;delete m.end}}delete AH()[k];save();toast(knd==="dep"?"EDD deleted":"Dates deleted")}
     else{const msg=delAuto(partsOf(k));delete CH()[k];save();toast(msg||"Deleted")}redo();return}
-  if((x=t.closest("[data-unback]"))){const b=BL()[+x.dataset.unback];const m=b&&byId(b.id);if(m){m.status=b.status;if(b.start)m.start=b.start;if(b.end)m.end=b.end;m.cal=b.cal;S.backLog=BL().filter(y=>y!==b);save();try{if(S.board)rpPublish(true)}catch(e){}toast(who(m)+" set back to "+(SHORT[b.status]||b.status))}redo();return}
+  if((x=t.closest("[data-unback]"))){const b=BL()[+x.dataset.unback];const m=b&&byId(b.id);if(m){m.status=b.status;if(b.start)m.start=b.start;if(b.end)m.end=b.end;m.cal=b.cal;if(b.end)m.noAuto=b.end;delete m.autoBack;S.backLog=BL().filter(y=>y!==b);save();try{if(S.board)rpPublish(true)}catch(e){}toast(who(m)+" set back to "+(SHORT[b.status]||b.status))}redo();return}
   if((x=t.closest("[data-unack]"))){const m=byId(x.dataset.unack);const r=m&&(m.due||{})[x.dataset.rdn];if(r){delete r.ack;save();toast("Unhidden")}redo();return}
   if((x=t.closest("[data-undone]"))){const [mid,cid]=x.dataset.undone.split(":");const c=((byId(mid)||{}).cal||[]).find(y=>y.id===cid);if(c){delete c.done;save();toast("Back on the calendar")}redo();return}
   if((x=t.closest("[data-cdel2]"))){const [mid,cid]=x.dataset.cdel2.split(":");if(armed!=="cd2"+cid){armed="cd2"+cid;keep(render);return}armed=null;const m=byId(mid);if(m){m.cal=(m.cal||[]).filter(y=>y.id!==cid);save();toast("Deleted")}redo();return}

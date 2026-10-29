@@ -29,12 +29,12 @@ function eff(p){let v=so.over[p.k]||so.role;if(v==="secl"&&p.m)v="secl:"+p.m.sec
 const multi=R=>R.k==="cmd"&&R.ds.length>1;
 function destFor(p){const v=eff(p),rk=v.split(":")[0],R=roles().find(r=>r.k===rk);
   if(!R)return {err:"Pick a role."};if(!R.ds.length)return {err:R.n+": "+R.hint};
-  if(rk==="member"){if(!p.m)return {err:"Not on your roster, so no Member page. Give them another role."};const d=R.ds.find(x=>x.id==="me:"+p.m.id);return d?{d,label:d.l,mid:p.m.id}:{err:"No Member page for them yet."}}
+  if(rk==="member"){if(!p.m)return own()&&S.source!=="sample"?{d:{id:"me:new",l:p.name},label:p.name+" · Member (added to the roster)",mid:p.k,add:true}:{err:"Not on your roster, so no Member page. Give them another role."};const d=R.ds.find(x=>x.id==="me:"+p.m.id);return d?{d,label:d.l,mid:p.m.id}:{err:"No Member page for them yet."}}
   if(rk==="secl"){const sec=v.split(":")[1]||"";const d=R.ds.find(x=>x.id==="sec:"+sec);return d?{d,label:p.name+" · "+sec+(S.level==="co"?" platoon":" section leader"),mid:p.m?p.m.id:p.k}:{err:S.level==="co"?"Pick their platoon.":"Pick their section."}}
   if(multi(R)){const id=v.slice(rk.length+1);const d=R.ds.find(x=>x.id===id);if(!d)return {err:"Pick which "+R.n.toLowerCase()+" seat for them."};return {d,label:p.name+" · "+d.l,mid:p.m?p.m.id:p.k}}
   const d=R.ds[0];return {d,label:p.name+" · "+d.l,mid:p.m?p.m.id:p.k}}
 function roleOpts(p){const v=eff(p);let o="";for(const R of roles()){if(!R.ds.length)continue;
-    if(R.k==="member"){if(p.m)o+=`<option value="member"${v==="member"?" selected":""}>Member</option>`;continue}
+    if(R.k==="member"){o+=`<option value="member"${v==="member"?" selected":""}>${p.m?"Member":"Member (adds them to the roster)"}</option>`;continue}
     if(R.k==="secl"){for(const d of R.ds){const s=d.id.slice(4);o+=`<option value="secl:${esc(s)}"${v==="secl:"+s?" selected":""}>${S.level==="co"?"Platoon":"Section leader"} · ${esc(s)}</option>`}continue}
     if(multi(R)){for(const d of R.ds){const val=R.k+":"+d.id;o+=`<option value="${esc(val)}"${v===val?" selected":""}>${esc(R.n+" · "+d.l.replace(/ · company dashboard$/,""))}</option>`}continue}
     o+=`<option value="${R.k}"${v===R.k?" selected":""}>${esc(R.n)}</option>`}
@@ -99,7 +99,11 @@ async function make(){const ps=people();const team=so.conn==="team";const todo=t
   so.busy=true;so.msg="";redraw();const out=[],links={};let made=0,reused=0,bad=0;
   for(const p of todo){const it={k:p.k,name:p.name,phone:p.phone&&digits(p.phone).length>=7?p.phone:"",email:isEmail(p.email)?p.email.trim():"",role:"Own team",sub:"Try Accounted For"};
     try{if(!team){it.text=startText()}
-      else{const r=destFor(p),dest=r.d.id;it.role=lgRoleOf(dest);it.sub=unitName()+" · Accounted For"+(so.as==="login"?" login":"");
+      else{let r=destFor(p);
+        // someone not on the roster, sent a Member link: put them on the roster first so the link has a page to open
+        if(r.add){const o=(typeof addParse==="function"&&addParse(p.name))||{name:p.name};const ph=digits(p.phone);const rec=addMarine({rank:o.rank,name:o.name||p.name,sec:o.sec,phone:ph.length>=10?ph.slice(-10):""})||S.roster.find(m=>fullK(m)===fullK({name:(o.name||p.name)}));
+          if(!rec)throw new Error("Couldn't add them to the roster.");if(p.email&&!rec.email)rec.email=p.email;p.m=rec;save();r=destFor(p);if(r.err)throw new Error(r.err)}
+        const dest=r.d.id;it.role=lgRoleOf(dest);it.sub=unitName()+" · Accounted For"+(so.as==="login"?" login":"");
         if(so.as==="link"){if(!links[dest]){const hh=await lgHash(dest,true);if(!hh)throw new Error("That page isn't available on this phone.");links[dest]=PUB()+"#"+hh}
           it.text=linkText(it.role,r.d.l,links[dest])}
         else{let L=findLogin(dest,r.mid);if(L)reused++;

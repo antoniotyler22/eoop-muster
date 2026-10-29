@@ -33,8 +33,8 @@ function rowDet(m){if(m.status==="On Hand")return null;
 {const _rs=renderSection;renderSection=function(code){_rs.apply(this,arguments);const main=$("#main");if(!main)return;
   const hd=main.querySelector(".sechead");if(hd&&code!=="ATT")hd.insertAdjacentHTML("afterend",`<p class="note secupd" style="margin:2px 4px 6px">↻ ${esc(updTxt(secAt(code)))}</p>`);
   main.querySelectorAll(".m").forEach(row=>{const p=row.querySelector("[data-pcard]");const m=p&&S.roster.find(x=>x.id===p.dataset.pcard);if(!m)return;const t=rowDet(m);if(t==null)return;
-    let d=row.querySelector(".det");if(!t){if(d)d.remove();return}if(!d){d=document.createElement("div");d.className="det";const rm=row.querySelector(".who .rm");rm?rm.before(d):row.querySelector(".who").appendChild(d)}d.textContent=t;
-    if(!m.start&&!m.end&&!m.loc&&canEdit())d.insertAdjacentHTML("beforeend",` <button class="chip" data-stdet="${esc(m.id)}" style="cursor:pointer">+ Dates, location</button>`)})}}
+    let d=row.querySelector(".det");if(!t&&!canEdit()){if(d)d.remove();return}if(!d){d=document.createElement("div");d.className="det";const rm=row.querySelector(".who .rm");rm?rm.before(d):row.querySelector(".who").appendChild(d)}d.textContent=t;
+    if(canEdit())d.insertAdjacentHTML("beforeend",` <button class="chip" data-stdet="${esc(m.id)}" style="cursor:pointer">${!m.start&&!m.end&&!m.loc?"+ Dates, location":"✎ Edit"}</button>`)})}}
 {const _rb=renderBoard;renderBoard=function(){_rb.apply(this,arguments);
   for(const [k] of SECTIONS){const t=secAt(k);
     const g=[...document.querySelectorAll("#main .sgrid button")].find(x=>x.dataset.go===k.toLowerCase());if(g&&t&&!g.querySelector(".sgupd"))g.insertAdjacentHTML("beforeend",`<small class="sgupd" style="display:block;font-size:10px;opacity:.75;font-weight:600">↻ ${hhmm(t)}</small>`);
@@ -57,7 +57,7 @@ function stDetSheet(id){const m=S.roster.find(x=>x.id===id);if(!m)return;sheetCt
   $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl>
     <div class="row2"><div><label for="sdF">From</label><input type="date" id="sdF" value="${esc(isoOf(m.start)||dkey())}" style="${inp}"></div><div><label for="sdT">To</label><input type="date" id="sdT" value="${esc(isoOf(m.end))}" style="${inp}"></div></div>
     <label for="sdL">Location</label>${m.status==="Appointment"?`<div class="evts" style="margin-bottom:6px"><button type="button" class="chip" data-sdloc="On base">🏠 On base</button><button type="button" class="chip" data-sdloc="Off base">🚗 Off base</button></div>`:""}<input type="text" id="sdL" maxlength="60" value="${esc(m.loc||"")}" placeholder="${m.status==="Appointment"?"On base · clinic, or Off base · city, address":"City, clinic, base, address"}">
-    <label for="sdD">Detail (optional)</label><input type="text" id="sdD" maxlength="80" value="${esc(m.detail||"")}" placeholder="Reason, who they're with, phone">
+    <label for="sdD">${m.status==="Other"?"What's going on?":"Detail (optional)"}</label><input type="text" id="sdD" maxlength="80" value="${esc(m.detail||"")}" placeholder="${m.status==="Other"?"Write it in: sick call, car trouble, at the shop…":"Reason, who they're with, phone"}">
     <div class="row2"><button class="btn" id="sdSave">Save</button><button class="btn alt" data-sclose="1">Skip</button></div></div>`;
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")))}
 document.addEventListener("click",e=>{const lb=e.target.closest&&e.target.closest("[data-sdloc]");if(!lb||!sheetCtx||sheetCtx.kind!=="stdet")return;e.stopImmediatePropagation();const el=$("#sdL");if(!el)return;
@@ -76,7 +76,7 @@ function ckState(x){const D=S.me&&S.me.d;const r=D&&(D.cks||[]).find(c=>c.cid===
 function ckExampleHTML(){const inp="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)";const d0=dkey(),d1=dkey(new Date(Date.now()+3*86400000));
   return `<div class="card" id="ckCard" style="gap:8px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">CHECK IN</span><span class="chip">Example</span></div>
     <p class="note" style="margin:0">They tap <b>📍 Check in</b> and see this:</p>
-    <div class="evts">${STATUSES.concat(CK_OTHER).map(s=>`<button disabled aria-pressed="${s==="Leave"}">${s===CK_OTHER?"✎ Other":`<span class="dot" style="background:var(${SVAR[s]})"></span>${esc(SHORT[s]||s)}`}</button>`).join("")}</div>
+    <div class="evts">${STATUSES.map(s=>`<button disabled aria-pressed="${s==="Leave"}">${s===CK_OTHER?"✎ Other":`<span class="dot" style="background:var(${SVAR[s]})"></span>${esc(SHORT[s]||s)}`}</button>`).join("")}</div>
     <div class="row2"><div><label>From</label><input type="date" disabled value="${d0}" style="${inp}"></div><div><label>To</label><input type="date" disabled value="${d1}" style="${inp}"></div></div>
     <label>Location</label><input type="text" disabled value="Honolulu" style="${inp}">
     <button class="btn" disabled>Send check-in</button><p class="note" style="margin:0">You get it in Check-ins and tap Confirm. Their page then shows <b>✓ Confirmed</b>.</p></div>`}
@@ -86,7 +86,7 @@ function ckCardHTML(){const f=ckFeed();const last=(S.myCks||[])[0];
   if(!f){h+=`<p class="note" style="margin:0">Check-in turns on when your page is connected to your leader's Feed. Pull down to refresh, or ask your leader for a new link.</p></div>`;return h}
   if(!ck.open){h+=`<button class="btn" id="ckOpen" style="min-height:52px;font-size:17px">📍 Check in</button><p class="note" style="margin:0">Tell your leader where you are. They confirm it.</p></div>`;return h}
   const v=ck.v;const inp="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)";
-  h+=`<div class="evts" role="radiogroup" aria-label="Your status">${STATUSES.concat(CK_OTHER).map(s=>`<button data-ckst="${esc(s)}" aria-pressed="${ck.st===s}" role="radio" aria-checked="${ck.st===s}">${s===CK_OTHER?"✎ Other":`<span class="dot" style="background:var(${SVAR[s]})"></span>${esc(SHORT[s]||s)}`}</button>`).join("")}</div>`;
+  h+=`<div class="evts" role="radiogroup" aria-label="Your status">${STATUSES.map(s=>`<button data-ckst="${esc(s)}" aria-pressed="${ck.st===s}" role="radio" aria-checked="${ck.st===s}">${s===CK_OTHER?"✎ Other":`<span class="dot" style="background:var(${SVAR[s]})"></span>${esc(SHORT[s]||s)}`}</button>`).join("")}</div>`;
   if(ck.st===CK_OTHER)h+=`<label for="ckO">What's going on?</label><input type="text" id="ckO" maxlength="80" value="${esc(v.oth||"")}" placeholder="Write it in: sick call, car trouble, at the shop…">`;
   if(ck.st&&ck.st!=="On Hand")h+=`<div class="row2"><div><label for="ckF">From</label><input type="date" id="ckF" value="${esc(v.from||dkey())}" style="${inp}"></div><div><label for="ckT">To</label><input type="date" id="ckT" value="${esc(v.to||"")}" style="${inp}"></div></div>
     <label for="ckL">Location</label><input type="text" id="ckL" maxlength="60" value="${esc(v.loc||"")}" placeholder="Where you are: base, city, clinic">`;

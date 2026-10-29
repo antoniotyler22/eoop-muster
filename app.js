@@ -1,7 +1,7 @@
 /* Accounted For app. Loaded by index.html after the PIN lock (if on) opens the vault. */
-const STATUSES=["On Hand","Appointment","Company Duties","Duty Recovery","At PT","Operation","TAD","Leave"];
-const SHORT={"On Hand":"On Hand","Appointment":"Appt","Company Duties":"Co Duties","Duty Recovery":"Duty Rec","At PT":"At PT","Operation":"Operation","TAD":"TAD","Leave":"Leave"};
-const SVAR={"On Hand":"--s-onhand","Appointment":"--s-aob","Company Duties":"--s-duty","Duty Recovery":"--s-aoff","At PT":"--s-pt","Operation":"--s-op","TAD":"--s-tad","Leave":"--s-leave"};
+const STATUSES=["On Hand","Appointment","Company Duties","Duty Recovery","At PT","SIQ","Operation","TAD","Leave","Other"];
+const SHORT={"On Hand":"On Hand","Appointment":"Appt","Company Duties":"Co Duties","Duty Recovery":"Duty Rec","At PT":"At PT","SIQ":"SIQ","Operation":"Operation","TAD":"TAD","Leave":"Leave","Other":"Other"};
+const SVAR={"On Hand":"--s-onhand","Appointment":"--s-aob","Company Duties":"--s-duty","Duty Recovery":"--s-aoff","At PT":"--s-pt","SIQ":"--s-siq","Operation":"--s-op","TAD":"--s-tad","Leave":"--s-leave","Other":"--s-other"};
 const PRESENT=["On Hand","Appointment","Company Duties","Duty Recovery","At PT"];
 /* An appointment counts as present on deck unless its location says off base. Duty Recovery counts as present (on base, not usable). */
 const apptOff=m=>!!m&&((m.status==="Appointment"&&/\boff\b/i.test(String(m.loc||"")))||(m.status==="Duty Recovery"&&typeof S==="object"&&S&&S.mode&&S.mode!=="military"));
@@ -83,7 +83,7 @@ const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 function modeDict(md){const v=md.v;if(!v)return null;const t=[];const add=(a,b)=>{if(b!=null&&b!==a)t.push([a,b])};
   add("EOP Numbers",md.title);add("EOOP",v.eo);
   add("Present on deck",v.deck);add("on deck","present");add("off deck","away");
-  add("On Hand",v.here);add("Appointment",v.aob);add("Appt",v.aobS);add("Duty Recovery",v.aoff);add("Duty Rec",v.aoffS);add("At PT",v.pt);
+  add("On Hand",v.here);add("Appointment",v.aob);add("Appt",v.aobS);add("Duty Recovery",v.aoff);add("Duty Rec",v.aoffS);add("At PT",v.pt);add("SIQ",v.siq||"Out Sick");
   add("Company Duties",v.cod);add("Co Duties",v.codS);add("Operation",v.opS||v.op);add("TAD",v.tadS||v.tad);add("Leave",v.lv);
   add("Full Duty",v.fd);add("Light Duty",v.ld);add("LIMDU",v.lim);
   add("FAP in, TAD to us, attachments",v.fap);add("TAD/FAP",v.tadS||v.tad||"TAD");add("FAP in","loaned in");add("FAP","loan");
@@ -489,7 +489,7 @@ function renderData(){
     <li>Muster history, saved 6Ws and the last-report snapshot stay on this phone; they are not in the backup file.</li>
     <li>Light Duty / LIMDU settings carry over when you load a new MOL list (matched by name).</li>
     <li>Attached Marines (ATT tab) stay in the app when you load a new MOL list.</li>
-    <li>MOL status mapping: Present for Duty → On Hand, Leave → Leave, TAD/FAP → TAD, Field Duty → Operation, Medical/SIQ → Appointment (on base). EE section → HE; no section → HQ.</li>
+    <li>MOL status mapping: Present for Duty → On Hand, Leave → Leave, TAD/FAP → TAD, Field Duty → Operation, SIQ → SIQ, Medical → Appointment (on base). EE section → HE; no section → HQ.</li>
   </ul></div>
   <h2>Put it on your home screen</h2><div class="panel"><ul class="plain">
     <li><b>iPhone:</b> open this page's web address in Safari → Share → Add to Home Screen.</li>
@@ -588,7 +588,7 @@ const dayDiff=d=>Math.round((d-today0())/86400000);
 const short=d=>String(d.getDate()).padStart(2,"0")+" "+MON[d.getMonth()];
 
 /* ---------- alerts: overdue, returning, departing ---------- */
-const AWAY=["Leave","TAD","Operation","Appointment","Duty Recovery"];
+const AWAY=["Leave","TAD","Operation","Appointment","Duty Recovery","SIQ","Other"];
 function alerts(){const over=[],ret=[],dep=[];
   for(const m of S.roster){const e=parseD(m.end);
     if(e){const dd=dayDiff(e);
@@ -699,7 +699,7 @@ function changeLines(){const sn=S.snap;if(!sn)return [];const cur={};S.roster.fo
 function markSent(kind){S.snap=snapNow();S.hist=(S.hist||[]).concat({type:kind,t:S.snap.t}).slice(-60);save()}
 
 /* ---------- section leader rollup ---------- */
-const SCODE={"Appointment":"APPT","Company Duties":"DUTY","Duty Recovery":"REC","At PT":"PT","Operation":"OP","TAD":"TAD","Leave":"LV"};
+const SCODE={"Appointment":"APPT","Company Duties":"DUTY","Duty Recovery":"REC","At PT":"PT","SIQ":"SIQ","Operation":"OP","TAD":"TAD","Leave":"LV","Other":"OTH"};
 const SDEC=Object.assign({AOB:"Appointment",AOFF:"Appointment"},Object.fromEntries(Object.entries(SCODE).map(([a,b])=>[b,a])));
 function tok(m){const [last,rest]=m.name.split(",");const first=((rest||"").trim().split(/\s+/)[0]||"").replace(/[^A-Z]/gi,"").slice(0,3);
   return (m.rank+"."+(last||"").trim()+"."+first).toUpperCase().replace(/[;|=]/g,"")}
@@ -1949,7 +1949,7 @@ function upcomingConflicts(n){n=n||14;const out=[];const t=today0();
 function cfRow(c){const dd=parseD(c.d);return `<div class="rrow" style="--sc:var(${cfCol(c.cf)})"><div class="who"><b>${DOW[dd.getDay()]} ${short(dd)} · ${esc(c.what)}</b><div class="ph"><span data-pcard="${c.m.id}" style="cursor:pointer;text-decoration:underline">${esc(c.m.rank+" "+c.m.name)}</span> · ${esc(c.m.sec)}</div><div class="ph">${cfLine(c.cf)}</div></div>${c.kind==="duty"?`<button class="chip" data-go="duty" style="cursor:pointer">Fix in DUTY</button>`:""}</div>`}
 
 /* ---------- DUTY roster ---------- */
-const DUTY_SKIP=["Leave","TAD","Operation","Appointment","Duty Recovery"];let dSel=null,dSetup=false,dSwap=null;
+const DUTY_SKIP=["Leave","TAD","Operation","Appointment","Duty Recovery","SIQ","Other"];let dSel=null,dSetup=false,dSwap=null;
 function dCur(){return S.duty.rosters.find(r=>r.id===dSel)||S.duty.rosters[0]||null}
 function dPool(r){const ex=r.excl||{};return sorted(S.roster.filter(m=>(m.sec==="ATT"?r.att:r.secs.includes(m.sec))&&!ex[m.id]))}
 function dOrder(r){const pool=dPool(r);const ids=new Set(pool.map(m=>m.id));r.order=(r.order||[]).filter(id=>ids.has(id));for(const m of pool)if(!r.order.includes(m.id))r.order.push(m.id);return r.order}
@@ -2163,7 +2163,7 @@ async function fdCreate(){const f={id:rndId(14),mk:rndId(32),lk:rndId(32),ek:b64
   await SB.rpc("create_feed",{p_id:f.id,p_member_key:f.mk,p_leader_key:f.lk});S.feeds.unshift(f);fdSel=f.id;save()}
 async function fdPoll(f,full){const ackN={};const after=full?0:Math.max(0,f.ctl||0,...(f.posts||[]).map(p=>p.id));
   const rows=await SB.rpc("feed_get",{p_feed:f.id,p_member_key:f.mk,p_after:after});let fresh=0;const keep=full?[]:(f.posts||[]);const have=new Set(keep.map(p=>p.id));
-  let ctlTop=full?0:(f.ctl||0);for(const r of [...(rows||[])].sort((a,b)=>a.id-b.id)){if(have.has(+r.id))continue;const o=await fdDec(f.ek,r.ct);if(!o)continue;if(o.c==="pin"){if(+r.id>=ctlTop){ctlTop=+r.id;f.pins=Array.isArray(o.ids)?o.ids.map(Number).slice(0,5):[]}continue}const to=o.to&&["all","secs","one"].includes(o.to.k)?o.to:{k:"all"};if(to.k==="secs"&&!Array.isArray(to.s))to.s=[];if(o.sa&&!f.lk)f.secsAll=o.sa;const post={id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,1500),urg:!!o.u,to};if(o.pod&&o.pod.d)post.pod={d:String(o.pod.d).slice(0,10)};if(o.by)post.by=String(o.by).slice(0,30);if(typeof o.ci==="string"&&/^https:\/\/[^\s]+#ci=/.test(o.ci))post.ci=o.ci.slice(0,500);if(o.sl)post.sl=String(o.sl).replace(/[^A-Z0-9]/g,"").slice(0,6);if(Array.isArray(o.img))post.img=o.img.filter(x=>/^[a-z0-9]{6,24}$/i.test(String(x))).slice(0,4);keep.push(post);if(f.lk&&post.sl&&+r.id>(f.actTop||0)){f.actTop=+r.id;if(!full||f.actInit)actAdd("✎",post.sl+" leader "+(post.by||"")+" posted"+(post.to&&post.to.k==="secs"?" to "+fdToLabel(post.to):" to everyone")+": “"+post.txt.slice(0,80)+(post.txt.length>80?"…":"")+"”","feed")}if(+r.id>(f.seen||0)&&(f.lk||post.to.k!=="one"||fdForMe(f,post)))fresh++}
+  let ctlTop=full?0:(f.ctl||0);for(const r of [...(rows||[])].sort((a,b)=>a.id-b.id)){if(have.has(+r.id))continue;const o=await fdDec(f.ek,r.ct);if(!o)continue;if(o.c==="pin"){if(+r.id>=ctlTop){ctlTop=+r.id;f.pins=Array.isArray(o.ids)?o.ids.map(Number).slice(0,5):[]}continue}const to=o.to&&["all","secs","one"].includes(o.to.k)?o.to:{k:"all"};if(to.k==="secs"&&!Array.isArray(to.s))to.s=[];if(o.sa&&!f.lk)f.secsAll=o.sa;const post={id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,1500),urg:!!o.u,to};if(o.pod&&o.pod.d)post.pod={d:String(o.pod.d).slice(0,10)};if(o.by)post.by=String(o.by).slice(0,30);if(typeof o.ci==="string"&&/^https:\/\/[^\s]+#ci=/.test(o.ci))post.ci=o.ci.slice(0,500);if(o.sl)post.sl=String(o.sl).replace(/[^A-Z0-9]/g,"").slice(0,6);if(Array.isArray(o.poll)&&o.poll.length>=2)post.poll=o.poll.slice(0,6).map(x=>String(x).slice(0,40));if(Array.isArray(o.img))post.img=o.img.filter(x=>/^[a-z0-9]{6,24}$/i.test(String(x))).slice(0,4);keep.push(post);if(f.lk&&post.sl&&+r.id>(f.actTop||0)){f.actTop=+r.id;if(!full||f.actInit)actAdd("✎",post.sl+" leader "+(post.by||"")+" posted"+(post.to&&post.to.k==="secs"?" to "+fdToLabel(post.to):" to everyone")+": “"+post.txt.slice(0,80)+(post.txt.length>80?"…":"")+"”","feed")}if(+r.id>(f.seen||0)&&(f.lk||post.to.k!=="one"||fdForMe(f,post)))fresh++}
   f.actInit=1;f.posts=keep.sort((a,b)=>b.id-a.id).slice(0,200);f.ctl=ctlTop;if(full&&!ctlTop)f.pins=[];f.err="";
   if(f.lk){try{const rq=await SB.rpc("feed_reqs_get",{p_feed:f.id,p_leader_key:f.lk,p_after:f.reqAfter||0});let nr=0;
       for(const r of rq||[]){f.reqAfter=Math.max(f.reqAfter||0,+r.id);const o=await fdDec(f.ek,r.ct);if(o&&o.k==="rep"&&typeof repIn==="function"){repIn(f,o,r);continue}if(o&&o.k==="ck"&&typeof ckIn==="function"){ckIn(f,o,r);continue}if(o&&(o.k==="who"||o.k==="join")&&typeof whoIn==="function"){whoIn(f,o,r);continue}if(!o||o.k!=="req"||S.reqs.some(x=>x.rid===o.rid))continue;const m=matchMarine(String(o.me||""));
@@ -2661,7 +2661,7 @@ function parseCSV(text){const rows=[];let row=[],f="",q=false;
 }
 function mapStatus(d){d=fixStatus(d||"");if(STATUSES.includes(d))return d;const l=d.toLowerCase();
   if(l.startsWith("leave"))return"Leave";if(l.startsWith("tad")||l.startsWith("fap"))return"TAD";
-  if(l.startsWith("field"))return"Operation";if(l.startsWith("medical")||l.includes("siq")||l.includes("appt")||l.includes("appointment"))return"Appointment";if(l.includes("recover"))return"Duty Recovery";if(l==="pt"||l.startsWith("pt ")||l.includes(" pt"))return"At PT";return"On Hand"}
+  if(l.startsWith("field"))return"Operation";if(l.includes("siq")||l.includes("sick"))return"SIQ";if(l.startsWith("medical")||l.includes("appt")||l.includes("appointment"))return"Appointment";if(l.includes("recover"))return"Duty Recovery";if(l==="pt"||l.startsWith("pt ")||l.includes(" pt"))return"At PT";return"On Hand"}
 function mapSec(u){const t=(u||"").toUpperCase().split("-").pop();const v={HQ:"HQ",EE:"HE",HE:"HE",CE:"CE",ORD:"ORD",UT:"UT"}[t]||t;return SECTIONS.some(s=>s[0]===v)?v:(SECTIONS.find(s=>s[1].toUpperCase()===(u||"").toUpperCase())||SECTIONS[0])[0]}
 function fmtD(s){if(!s)return"";const m=s.match(/(\d{4})[\/-](\d{2})[\/-](\d{2})/);if(!m)return s;
   const M=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];return m[3]+" "+M[+m[2]-1]+" "+m[1].slice(2)}
@@ -2833,7 +2833,7 @@ document.addEventListener("click",e=>{
     if(D.to==="secs"){if(!D.secs.length&&!D.att){toast("Pick at least one section.");return}to={k:"secs",s:D.secs.slice(),att:D.att}}
     let wP=Promise.resolve(null);if(D.to==="one"){const m=S.roster.find(x=>x.id===D.mid);if(!m){toast("Pick the person.");return}to={k:"one",mid:m.id,n:m.rank+" "+lastOf(m),w:[]};wP=Promise.all(SB.words(m.rank+" "+lastOf(m)).map(w=>SB.h(f.id,w)))}
     e.target.disabled=true;e.target.textContent="Posting…";
-    wP.then(w=>{if(w)to.w=w;return fdEnc(f.ek,{t:txt,u:urg,to,sa:SECTIONS.map(x=>x[0]),by:fdBy(f)})}).then(ct=>SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct})).then(id=>{SB.notify(null,{feed:f.id,lk:f.lk,urg});f.posts=[{id:+id,t:Date.now(),txt,urg,to,by:fdBy(f)}].concat(f.posts||[]);if(D.ra){f.ra=f.ra||{};f.ra[+id]=D.ra}fdDraft={txt:"",urg:false,to:D.to,secs:D.secs,att:D.att,mid:"",ra:D.ra};save();renderFeed();window.scrollTo(0,0);toast("Posted")})
+    wP.then(w=>{if(w)to.w=w;const poll=typeof fdPollOpts==="function"?fdPollOpts():null;return fdEnc(f.ek,Object.assign({t:txt,u:urg,to,sa:SECTIONS.map(x=>x[0]),by:fdBy(f)},poll?{poll}:{})).then(ct=>[ct,poll])}).then(([ct,poll])=>SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct}).then(id=>[id,poll])).then(([id,poll])=>{SB.notify(null,{feed:f.id,lk:f.lk,urg});f.posts=[Object.assign({id:+id,t:Date.now(),txt,urg,to,by:fdBy(f)},poll?{poll}:{})].concat(f.posts||[]);if(D.ra){f.ra=f.ra||{};f.ra[+id]=D.ra}fdDraft={txt:"",urg:false,to:D.to,secs:D.secs,att:D.att,mid:"",ra:D.ra};save();renderFeed();window.scrollTo(0,0);toast("Posted")})
       .catch(err=>{e.target.disabled=false;e.target.textContent="Post";toast("Couldn't post: "+(err.message||err))});return}
   const slt=e.target.closest("[data-fdslto]");if(slt){fdSlDraft.txt=($("#fdSlTxt")||{}).value||fdSlDraft.txt;fdSlDraft.urg=!!($("#fdSlUrg")||{}).checked;fdSlDraft.to=slt.dataset.fdslto;const y=window.scrollY;renderFeed();window.scrollTo(0,y);return}
   if(e.target.id==="fdSlPost"){const f=fdCur();if(!f||!f.pk)return;const txt=($("#fdSlTxt").value||"").trim();if(!txt){toast("Type the word first.");return}if(!f.me){toast("Set your name first (Change).");return}
