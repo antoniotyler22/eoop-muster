@@ -47,8 +47,7 @@ declare o jsonb := '{}'::jsonb; q jsonb; begin
   o := o || jsonb_build_object('calls', q);
   select coalesce(jsonb_agg(jsonb_build_object('t', created, 'code', status_code, 'msg', left(coalesce(error_msg, content::text, ''), 100)) order by created desc), '[]'::jsonb)
     into q from (select * from net._http_response where created > now() - interval '24 hours'
-      and (coalesce(status_code, 0) >= 400 or timed_out or error_msg is not null)
-      and coalesce(content::text, '') not like '%Requested function was not found%' order by created desc limit 8) x;
+      and (coalesce(status_code, 0) >= 400 or timed_out or error_msg is not null) order by created desc limit 8) x;
   o := o || jsonb_build_object('fails', q);
   -- the push queue
   begin

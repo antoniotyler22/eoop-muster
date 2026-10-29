@@ -7,7 +7,9 @@
 //    even when the sender's phone loses signal right after saving.
 //  {drain:1}: pg_cron (part 27) while the "push" queue has work. Handles Feed posts queued by the database
 //    ({kind:"feed"}) and retries of alerts that failed ({kind:"retry"}: 30 s, 1, 2, 4, 8 min, then dropped).
-//  4.10.1
+//  {whoami:1}: setup part 31 asks both names once; the deployed one writes its name into app_cfg.notify_fn so the
+//    database calls only that name from then on. Cron calls (escalate, drain) refresh it too.
+//  4.10.2
 // Payloads carry no names. Turn OFF "Enforce JWT verification" (the function validates input itself).
 // Secrets: VAPID_PUBLIC, VAPID_PRIVATE (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are built in).
 // iPhone app (optional): APNS_KEY (the .p8 file contents), APNS_KEY_ID, APNS_TEAM_ID, APNS_TOPIC (bundle id; default com.antoniotyler.accountedfor).
@@ -268,13 +270,25 @@ async function drain() {
   return out(JSON.stringify({ read: msgs.length, done: done.length, ...tally }));
 }
 
+// Tell the database the name this function is deployed under (part 31), so it calls only that name. At most once
+// every 10 min per instance; failures (part 31 not run yet) are ignored.
+let namedAt = 0;
+async function remember(req: Request) {
+  if (Date.now() - namedAt < 10 * 60000) return;
+  namedAt = Date.now();
+  const name = new URL(req.url).pathname.split("/").filter(Boolean).pop() || "";
+  if (name !== "notify" && name !== "Notify") return;
+  try { await db.rpc("notify_fn_set", { p_name: name }); } catch { /* part 31 not run yet */ }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return out("ok");
   if (req.method !== "POST") return out("method", 405);
-  let body: { recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown; drain?: unknown; team?: unknown; k?: unknown; what?: unknown; skip?: unknown } = {};
+  let body: { recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown; drain?: unknown; team?: unknown; k?: unknown; what?: unknown; skip?: unknown; whoami?: unknown } = {};
   try { body = await req.json(); } catch { return out("bad", 400); }
-  if (body.escalate === 1) return escalate();
-  if (body.drain === 1) return drain();
+  if (body.whoami === 1) { namedAt = 0; await remember(req); return out("ok"); }
+  if (body.escalate === 1) { remember(req); return escalate(); }
+  if (body.drain === 1) { remember(req); return drain(); }
   const skip = typeof body.skip === "string" ? body.skip.slice(0, 600) : "";
   if (typeof body.team === "string" && /^[a-z0-9]{10,20}$/.test(body.team) && typeof body.k === "string" && /^[a-z0-9]{24,40}$/.test(body.k))
     return team(body.team, body.k, Array.isArray(body.what) ? body.what.filter((w): w is string => typeof w === "string").slice(0, 8) : [], skip);

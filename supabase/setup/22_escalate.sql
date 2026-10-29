@@ -54,16 +54,28 @@ grant execute on function public.esc_set(text, text, timestamptz, int) to anon;
 revoke all on function public.esc_due() from public, anon, authenticated;
 grant execute on function public.esc_due() to service_role;
 
--- Every minute: ask the notify function to send any due alerts. The function may be deployed as "notify" or "Notify";
--- both names are called and the one that doesn't exist just answers 404.
+-- The notify function's URL. Its deployed name ("notify" or "Notify") lives in app_cfg.notify_fn (part 31); until
+-- part 29 adds app_cfg, "notify". One call per alert — calling both names doubled every call and 404'd one of them.
+create or replace function public.notify_url()
+returns text language plpgsql stable security definer set search_path = public as $$
+declare n text;
+begin
+  begin
+    select notify_fn into n from public.app_cfg where id = 1;
+  exception when undefined_table or undefined_column then n := null;
+  end;
+  return 'https://vdhxhvklwbimjpoomnui.supabase.co/functions/v1/' || coalesce(n, 'notify');
+end $$;
+revoke all on function public.notify_url() from public, anon, authenticated;
+
+-- Every minute: ask the notify function to send any due alerts.
 select cron.unschedule(jobid) from cron.job where jobname = 'accounted-for-escalate';
 select cron.schedule('accounted-for-escalate', '* * * * *', $job$
   select net.http_post(
-    url := 'https://vdhxhvklwbimjpoomnui.supabase.co/functions/v1/' || n,
+    url := public.notify_url(),
     headers := jsonb_build_object('Content-Type', 'application/json'),
     body := '{"escalate":1}'::jsonb,
-    timeout_milliseconds := 20000)
-  from unnest(array['notify', 'Notify']) as n;
+    timeout_milliseconds := 20000);
 $job$);
 
 notify pgrst, 'reload schema';

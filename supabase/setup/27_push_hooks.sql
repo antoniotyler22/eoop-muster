@@ -10,16 +10,15 @@
 create extension if not exists pgmq;
 select pgmq.create('push') where not exists (select 1 from pgmq.list_queues() where queue_name = 'push');
 
--- Calls notify (deployed as "notify" or "Notify"; the missing name just answers 404).
+-- Calls notify once, at the name app_cfg.notify_fn holds (notify_url, part 22; part 31 keeps the name current).
 create or replace function public.push_hook_call(p_body jsonb)
 returns void language plpgsql security definer set search_path = public as $$
 begin
   perform net.http_post(
-    url := 'https://vdhxhvklwbimjpoomnui.supabase.co/functions/v1/' || n,
+    url := public.notify_url(),
     headers := jsonb_build_object('Content-Type', 'application/json'),
     body := p_body,
-    timeout_milliseconds := 10000)
-  from unnest(array['notify', 'Notify']) as n;
+    timeout_milliseconds := 10000);
 end $$;
 
 create or replace function public.push_hook_checkin()
@@ -102,11 +101,10 @@ grant execute on function public.push_hooks_ok() to anon;
 select cron.unschedule(jobid) from cron.job where jobname = 'accounted-for-push-queue';
 select cron.schedule('accounted-for-push-queue', '20 seconds', $job$
   select net.http_post(
-    url := 'https://vdhxhvklwbimjpoomnui.supabase.co/functions/v1/' || n,
+    url := public.notify_url(),
     headers := jsonb_build_object('Content-Type', 'application/json'),
     body := '{"drain":1}'::jsonb,
     timeout_milliseconds := 30000)
-  from unnest(array['notify', 'Notify']) as n
   where exists (select 1 from pgmq.q_push where vt <= now());
 $job$);
 

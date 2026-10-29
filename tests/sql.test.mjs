@@ -106,6 +106,28 @@ test("missed check-in escalation: leader registers, server finds overdue recalls
   assert.equal(asServer(`select count(*) from public.esc_due()`), "0", "each recall escalates once");
 });
 
+test("one notify name (part 31): the server calls the name notify reported, once per alert, and only the server can set it", { skip }, () => {
+  const asServer = (sql) => pg.psql(`set role service_role; ${sql}`);
+  pg.psql(`select public.notify_fn_set('notify')`);
+  assert.equal(pg.psql(`select public.notify_url()`), "https://vdhxhvklwbimjpoomnui.supabase.co/functions/v1/notify");
+  assert.throws(() => anon(`select public.notify_fn_set('Notify')`), /permission denied/, "the public can't rename the target");
+  assert.throws(() => anon(`select public.notify_url()`), /permission denied/);
+  asServer(`select public.notify_fn_set('Notify')`);
+  assert.equal(pg.psql(`select public.notify_url()`), "https://vdhxhvklwbimjpoomnui.supabase.co/functions/v1/Notify", "notify told us its real name");
+  asServer(`select public.notify_fn_set('evil')`);
+  assert.equal(pg.psql(`select notify_fn from public.app_cfg`), "Notify", "an unknown name is ignored");
+  pg.psql(`truncate net.calls`);
+  pg.psql(`insert into public.recalls(id, read_key_hash, push_sub) values ('hookrc0003', 'x', '{"endpoint":"e"}')`);
+  pg.psql(`insert into public.checkins(recall_id, words, code) values ('hookrc0003', '{a}', 1)`);
+  assert.equal(pg.psql(`select count(*) || '|' || string_agg(url, ',') from net.calls`), "1|https://vdhxhvklwbimjpoomnui.supabase.co/functions/v1/Notify", "exactly one call, to the right name");
+  for (const job of ["accounted-for-escalate", "accounted-for-push-queue"]) {
+    const cmd = pg.psql(`select command from cron.job where jobname = ${q(job)}`);
+    assert.match(cmd, /public\.notify_url\(\)/, job + " calls notify_url()");
+    assert.doesNotMatch(cmd, /unnest|'Notify'/, job + " no longer calls both names");
+  }
+  asServer(`select public.notify_fn_set('notify')`);
+});
+
 test.after(() => pg && pg.stop());
 
 test("accounts: sign-in required, each person sees only their own; teams sent to an email or phone wait for them", { skip }, () => {
@@ -193,8 +215,8 @@ test("server push hooks (part 27): check-ins call notify, Feed posts wait on the
   pg.psql(`insert into public.recalls(id, read_key_hash, push_sub) values (${q(rid)}, 'x', '{"endpoint":"e"}'), ('hookrc0002', 'x', null)`);
   pg.psql(`insert into public.checkins(recall_id, words, code) values (${q(rid)}, '{a}', 1), ('hookrc0002', '{b}', 1)`);
   assert.equal(pg.psql(`select count(*) || '|' || min(body->>'recall') || '|' || string_agg(url, ',' order by url) from net.calls`),
-    `2|${rid}|https://vdhxhvklwbimjpoomnui.supabase.co/functions/v1/Notify,https://vdhxhvklwbimjpoomnui.supabase.co/functions/v1/notify`,
-    "one call to each spelling of notify, and none for a check-in nobody is watching");
+    `1|${rid}|https://vdhxhvklwbimjpoomnui.supabase.co/functions/v1/notify`,
+    "one call to notify, and none for a check-in nobody is watching");
   pg.psql(`insert into public.feeds(id, member_key_hash, leader_key_hash) values (${q(fid)}, 'm', 'l')`);
   pg.psql(`insert into public.feed_subs(feed_id, endpoint, sub) values (${q(fid)}, 'e1', '{}')`);
   const post = pg.psql(`insert into public.feed_posts(feed_id, ct) values (${q(fid)}, 'QQ==') returning id`);
