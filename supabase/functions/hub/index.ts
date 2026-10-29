@@ -235,7 +235,7 @@ const unurl=s=>b64d(s.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-s.length
 const fdKeys={};
 async function fdKey(ek){return fdKeys[ek]=fdKeys[ek]||await crypto.subtle.importKey("raw",unurl(ek),"AES-GCM",false,["encrypt","decrypt"])}
 async function fdEnc(ek,o){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},await fdKey(ek),new TextEncoder().encode(JSON.stringify(o))));const a=new Uint8Array(12+ct.length);a.set(iv);a.set(ct,12);return b64e(a)}
-async function fdDec(ek,s){try{const a=b64d(s);return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:a.slice(0,12)},await fdKey(ek),a.slice(12))))}catch(e){return null}}
+async function fdDec(ek,s){try{s=String(s||"");if(s.startsWith("c:"))s=s.slice(2);const a=b64d(s);return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:a.slice(0,12)},await fdKey(ek),a.slice(12))))}catch(e){return null}}
 function lastOf(m){return (m.name.split(",")[0]||"").trim().toUpperCase()}
 function rndId(n){const a=crypto.getRandomValues(new Uint8Array(n));return [...a].map(x=>"abcdefghijklmnopqrstuvwxyz0123456789"[x%36]).join("")}
   const DEF0 = DEF_SECS.map((s) => s.slice());

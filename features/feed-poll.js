@@ -54,8 +54,8 @@ async function publish(f){if(!f||!f.lk||!f.ek)return;f.tsent=f.tsent||{};const n
     const by=votesOf(f,p);const pool=fdPool(p);const ids=new Set(pool.map(m=>m.id));const cnt={};let n=0;
     for(const [id,v] of Object.entries(by))if(ids.has(id)){cnt[v]=(cnt[v]||0)+1;n++}
     const sg=JSON.stringify([cnt,n,pool.length]);if(f.tsent[p.id]===sg)continue;if(!n&&!f.tsent[p.id])continue;
-    if(now-(sentAt[f.id+":"+p.id]||0)<20000)continue;sentAt[f.id+":"+p.id]=now;
-    try{const ct=await fdEnc(f.ek,{c:"tally",pid:p.id,cnt,n,of:pool.length});await SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct});f.tsent[p.id]=sg;f.tally=f.tally||{};f.tally[p.id]={cnt,n,of:pool.length,t:now};rawSave()}catch(e){}}}
+    if(now-(sentAt[f.id+":"+p.id]||0)<60000)continue;sentAt[f.id+":"+p.id]=now;
+    try{const ct="c:"+await fdEnc(f.ek,{c:"tally",pid:p.id,cnt,n,of:pool.length});await SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct});f.tsent[p.id]=sg;f.tally=f.tally||{};f.tally[p.id]={cnt,n,of:pool.length,t:now};rawSave()}catch(e){}}}
 window.fdPollPublish=publish;
 {const _fp=fdPoll;fdPoll=async function(f){const r=await _fp.apply(this,arguments);try{if(f&&f.lk)await publish(f)}catch(e){}return r}}
 

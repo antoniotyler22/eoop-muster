@@ -37,3 +37,22 @@ test("team alerts connect: overlapping runs both finish instead of giving up", a
     assert.deepEqual([...n], [1, 1]);
   } finally { await a.close(); }
 });
+
+test("leader phone: team alerts mark the sub as lead and make the OIC's phone the leader alert phone", async () => {
+  const calls = [];
+  const a = await openApp({ rpc: (fn, args) => { calls.push([fn, args]); return null; } });
+  try {
+    await a.w.eval(`(async()=>{S.pushOn=true;S.feeds=[{id:"f1",mk:"m",lk:"l",ek:"e",posts:[]}];window.pushSub=async()=>({toJSON:()=>({endpoint:"e1"}),endpoint:"e1"});await taAttach(true)})()`);
+    const sub = calls.find(c => c[0] === "feed_sub");
+    assert.equal(sub[1].p_sub.lead, 1);
+    assert.ok(calls.some(c => c[0] === "set_feed_leader_sub" && c[1].p_leader_key === "l"));
+  } finally { await a.close(); }
+});
+
+test("pins and poll tallies are marked as control posts and still decode", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    const r = await a.w.eval(`(async()=>{const ek=b64url(crypto.getRandomValues(new Uint8Array(32)));const ct="c:"+await fdEnc(ek,{c:"tally",pid:1});const o=await fdDec(ek,ct);return o&&o.c})()`);
+    assert.equal(r, "tally");
+  } finally { await a.close(); }
+});

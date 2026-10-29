@@ -9,7 +9,7 @@
 //    ({kind:"feed"}) and retries of alerts that failed ({kind:"retry"}: 30 s, 1, 2, 4, 8 min, then dropped).
 //  {whoami:1}: setup part 31 asks both names once; the deployed one writes its name into app_cfg.notify_fn so the
 //    database calls only that name from then on. Cron calls (escalate, drain) refresh it too.
-//  4.10.2
+//  4.28.0
 // Payloads carry no names. Turn OFF "Enforce JWT verification" (the function validates input itself).
 // Secrets: VAPID_PUBLIC, VAPID_PRIVATE (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are built in).
 // iPhone app (optional): APNS_KEY (the .p8 file contents), APNS_KEY_ID, APNS_TEAM_ID, APNS_TOPIC (bundle id; default com.antoniotyler.accountedfor).
@@ -143,7 +143,9 @@ async function feed(id: string, lk: string, urg: boolean, skip = "") {
 // poster's own phone) normally wins and the queue only fills in when the poster's phone lost signal.
 // deno-lint-ignore no-explicit-any
 async function feedSend(f: any, urg: boolean, skip: string): Promise<string> {
-  const { data: p } = await db.from("feed_posts").select("id").eq("feed_id", f.id).order("id", { ascending: false }).limit(1).maybeSingle();
+  // control posts (pins, poll tallies) start with "c:" and never alert anyone
+  const { data: recent } = await db.from("feed_posts").select("id,ct").eq("feed_id", f.id).order("id", { ascending: false }).limit(20);
+  const p = (recent ?? []).find((x) => !String(x.ct ?? "").startsWith("c:"));
   if (!p || p.id <= (f.last_push_id ?? 0)) return "nothing new";
   const { data: claimed } = await db.from("feeds").update({ last_push_id: p.id })
     .eq("id", f.id).eq("last_push_id", f.last_push_id ?? 0).select("id");
@@ -173,9 +175,16 @@ async function team(id: string, k: string, what: string[], skip: string) {
 }
 
 // {alert: "req"|"prob"|"rep"|"ck", feed, mk}: a member sent a request, a check-in or reported a problem; buzz the OIC (at most every 15 s).
+// Goes to the OIC's phone (leader_sub) and every leader phone on the team list (co-leaders, editors: subs marked lead).
 async function alertOic(id: string, mk: string, kind: string) {
   const { data: f } = await db.from("feeds").select("*").eq("id", id).maybeSingle();
-  if (!f || !f.leader_sub) return out("no sub");
+  if (!f) return out("no feed");
+  const { data: ls } = await db.from("feed_subs").select("id,sub").eq("feed_id", id).limit(500);
+  // deno-lint-ignore no-explicit-any
+  const leads = (ls ?? []).filter((s: any) => s.sub && (s.sub.lead === 1 || s.sub.lead === "1"));
+  // deno-lint-ignore no-explicit-any
+  const keyOf = (s: any) => s?.apns ? "apns:" + s.apns : s?.endpoint ?? "";
+  if (!f.leader_sub && !leads.length) return out("no sub");
   const dig = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(mk)));
   const hex = Array.from(dig).map((b) => b.toString(16).padStart(2, "0")).join("");
   if (hex !== f.member_key_hash) return out("not allowed", 403);
@@ -189,10 +198,17 @@ async function alertOic(id: string, mk: string, kind: string) {
     ? { title: "⚠ Problem reported", body: "Someone flagged a problem with a Feed post. Open Feed to see who.", help: true, open: "feed" }
     : { title: "📨 New request", body: "Someone sent a leave, liberty or appointment request. Open Feed to approve.", help: false, open: "feed" };
   const urgent = kind !== "req" && kind !== "ck";
-  const r = await pushAny(f.leader_sub, payload, urgent, 86400);
-  if (r === "gone") await db.from("feeds").update({ leader_sub: null }).eq("id", id);
-  if (r === "fail" && await queueRetry("leader", id, payload, urgent, 86400)) return out("push failed, will retry");
-  return out(r === "ok" ? "sent" : "push failed");
+  let r = "none";
+  if (f.leader_sub) {
+    r = await pushAny(f.leader_sub, payload, urgent, 86400);
+    if (r === "gone") await db.from("feeds").update({ leader_sub: null }).eq("id", id);
+    if (r === "fail") await queueRetry("leader", id, payload, urgent, 86400);
+  }
+  const lk = f.leader_sub ? keyOf(f.leader_sub) : "";
+  // deno-lint-ignore no-explicit-any
+  const more = leads.filter((s: any) => keyOf(s.sub) !== lk);
+  const n = more.length ? await sendSubs(more, payload, urgent, 86400) : 0;
+  return out("sent " + ((r === "ok" ? 1 : 0) + n));
 }
 
 // {escalate:1}: every minute from pg_cron (setup part 22). Recalls whose deadline just passed with people still

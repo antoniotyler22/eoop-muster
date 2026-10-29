@@ -22,8 +22,12 @@ function attachAll(force){const go=()=>attachOnce(force);running=running.then(go
 async function attachOnce(force){if(!S.pushOn)return 0;let n=0;lastErr="";
   try{const s=await pushSub(false);if(!s){lastErr=window.__pushWhy==="notoken"?"this phone didn't get an alert token from Apple. Close the app fully, open it and try again.":window.__pushWhy==="noplugin"?"alerts aren't in this build of the app.":"alerts aren't allowed for this app in Settings.";return 0}
     const j=s.toJSON();myEnd=j.endpoint||myEnd;const M=subMap();
+    /* v2: leader phones are marked "lead" so member check-ins, requests and problem reports reach them (co-leaders
+       too), and the OIC's phone is also the feed's leader alert phone. Phones attached before re-attach once. */
+    if(M.__v!==2){force=true;M.__v=2}
     for(const f of S.feeds||[]){if(!f.mk)continue;if(!force&&M[f.id]===j.endpoint){f.push=true;continue}
-      try{await SB.rpc("feed_sub",{p_feed:f.id,p_member_key:f.mk,p_sub:j});M[f.id]=j.endpoint;f.push=true;n++}
+      try{await SB.rpc("feed_sub",{p_feed:f.id,p_member_key:f.mk,p_sub:f.lk?Object.assign({},j,{lead:1}):j});M[f.id]=j.endpoint;f.push=true;n++;
+        if(f.lk&&(!S.role||S.role==="oic"||S.role==="newoic"))try{await SB.rpc("set_feed_leader_sub",{p_feed:f.id,p_leader_key:f.lk,p_sub:j})}catch(e2){}}
       catch(e){const msg=String(e&&e.message||e);lastErr=/full/.test(msg)?"the team's alert list is full (500 phones).":/find the function|schema|does not exist/i.test(msg)?"alerts aren't set up on the server yet (DATA → System check).":/fetch|network|Failed/i.test(msg)?"no signal reaching the server. Try again.":msg.slice(0,80)}}
     putMap(M);if(n)rawSave()}catch(e){lastErr=String(e&&e.message||e).slice(0,80)}return n}
 window.taLastErr=()=>lastErr;

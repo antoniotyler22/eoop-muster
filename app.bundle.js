@@ -2142,7 +2142,7 @@ const unurl=s=>b64d(s.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-s.length
 const fdKeys={};let fdLimit=20,fdPend=0,fdShown=new Set(),fdIO=null,fdReqForm=false,fdPod=false,fdReqOpen=false,fdBusy=false,fdSel=null,fdOpen=null,fdNew=false,fdQ="",fdDraft={txt:"",urg:false,to:"all",secs:[],att:true,mid:"",ra:30};
 async function fdKey(ek){return fdKeys[ek]=fdKeys[ek]||await crypto.subtle.importKey("raw",unurl(ek),"AES-GCM",false,["encrypt","decrypt"])}
 async function fdEnc(ek,o){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},await fdKey(ek),new TextEncoder().encode(JSON.stringify(o))));const a=new Uint8Array(12+ct.length);a.set(iv);a.set(ct,12);return b64e(a)}
-async function fdDec(ek,s){try{const a=b64d(s);return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:a.slice(0,12)},await fdKey(ek),a.slice(12))))}catch(e){return null}}
+async function fdDec(ek,s){try{s=String(s||"");if(s.startsWith("c:"))s=s.slice(2);const a=b64d(s);return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:a.slice(0,12)},await fdKey(ek),a.slice(12))))}catch(e){return null}}
 const fdCur=()=>S.feeds.find(f=>f.id===fdSel)||S.feeds[0]||null;
 function fdUnread(){return S.feeds.reduce((a,f)=>a+(f.lk?0:fdVisible(f).filter(p=>p.id>(f.seen||0)).length),0)}
 function fdForMe(f,p){const to=p.to;if(!to||to.k==="all")return true;
@@ -2814,7 +2814,7 @@ document.addEventListener("click",e=>{
   if(e.target.id==="pdPost"){const f=fdCur();const o={d:$("#pdD").value,f:($("#pdF").value||"").trim(),u:($("#pdU").value||"").trim(),s:($("#pdS").value||"").trim(),du:($("#pdDu").value||"").trim(),n:($("#pdN").value||"").trim()};if(!o.d){toast("Pick the date.");return}
     S.podLast={f:o.f,u:o.u};const txt=podText(o);e.target.disabled=true;e.target.textContent="Posting…";
     fdEnc(f.ek,{t:txt,u:false,to:{k:"all"},pod:{d:o.d},sa:SECTIONS.map(x=>x[0]),by:fdBy(f)}).then(ct=>SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct})).then(async id=>{id=+id;SB.notify(null,{feed:f.id,lk:f.lk,urg:false});f.posts=[{id,t:Date.now(),txt,urg:false,to:{k:"all"},pod:{d:o.d},by:fdBy(f)}].concat(f.posts||[]);
-      const podIds=new Set(f.posts.filter(p=>p.pod).map(p=>p.id));const ids=[id].concat((f.pins||[]).filter(x=>!podIds.has(x))).slice(0,5);const ct2=await fdEnc(f.ek,{c:"pin",ids});const cid=await SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct2});f.pins=ids;f.ctl=Math.max(f.ctl||0,+cid);
+      const podIds=new Set(f.posts.filter(p=>p.pod).map(p=>p.id));const ids=[id].concat((f.pins||[]).filter(x=>!podIds.has(x))).slice(0,5);const ct2="c:"+await fdEnc(f.ek,{c:"pin",ids});const cid=await SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct2});f.pins=ids;f.ctl=Math.max(f.ctl||0,+cid);
       fdPod=false;save();renderFeed();window.scrollTo(0,0);toast("Plan of the Day posted and pinned")}).catch(err=>{e.target.disabled=false;e.target.textContent="Post and pin";toast("Couldn't post: "+(err.message||err))});return}
   const scf=e.target.closest("[data-scf]");if(scf){scCopy(scf.dataset.scf);return}
   if(e.target.id==="scNt"){scCopyNotify();return}
@@ -2822,7 +2822,7 @@ document.addEventListener("click",e=>{
   if(e.target.id==="fdPushOn"){const f=fdCur();e.target.disabled=true;e.target.textContent="Asking…";pushSub(true).then(sub=>{if(!sub){toast("Alerts not allowed");renderFeed();return}S.pushOn=true;save();fdPushAttach(f).then(()=>{renderFeed();toast(f.push?"Alerts on":"Couldn't connect alerts. Try again.")})}).catch(()=>{toast("Couldn't turn on alerts here.");renderFeed()});return}
   const fto=e.target.closest("[data-fdto]");if(fto){fdDraft.txt=($("#fdTxt")||{}).value||fdDraft.txt;fdDraft.to=fto.dataset.fdto;if(fdDraft.to==="secs"&&!fdDraft.secs.length)fdDraft.secs=SECTIONS.map(x=>x[0]);const y=window.scrollY;renderFeed();window.scrollTo(0,y);return}
   const fpin=e.target.closest("[data-fdpin]");if(fpin){const f=fdCur();const id=+fpin.dataset.fdpin;let ids=(f.pins||[]).slice();ids=ids.includes(id)?ids.filter(x=>x!==id):[id].concat(ids).slice(0,5);fpin.disabled=true;
-    fdEnc(f.ek,{c:"pin",ids}).then(ct=>SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct})).then(cid=>{f.pins=ids;f.ctl=Math.max(f.ctl||0,+cid);save();const y=window.scrollY;renderFeed();window.scrollTo(0,y);toast(ids.includes(id)?"Pinned for everyone":"Unpinned")}).catch(err=>{fpin.disabled=false;toast("Couldn't pin: "+(err.message||err))});return}
+    fdEnc(f.ek,{c:"pin",ids}).then(ct=>SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:"c:"+ct})).then(cid=>{f.pins=ids;f.ctl=Math.max(f.ctl||0,+cid);save();const y=window.scrollY;renderFeed();window.scrollTo(0,y);toast(ids.includes(id)?"Pinned for everyone":"Unpinned")}).catch(err=>{fpin.disabled=false;toast("Couldn't pin: "+(err.message||err))});return}
   const fdis=e.target.closest("[data-fddis]");if(fdis){const [fid,pid2]=fdis.dataset.fddis.split(":");const f=S.feeds.find(x=>x.id===fid);if(f){f.rdis=f.rdis||{};f.rdis[pid2]=1;save()}const y=window.scrollY;render();window.scrollTo(0,y);return}
   if(e.target.closest("#fdPill")){fdPend=0;renderFeed();window.scrollTo({top:0,behavior:RM()?"auto":"smooth"});return}
   const fpb=e.target.closest("[data-fdprob]");if(fpb){fdProbOpen=fdProbOpen===+fpb.dataset.fdprob?null:+fpb.dataset.fdprob;const y=window.scrollY;renderFeed();window.scrollTo(0,y);const i=$("#fdNote"+fpb.dataset.fdprob);if(i)i.focus();return}
@@ -6705,8 +6705,12 @@ function attachAll(force){const go=()=>attachOnce(force);running=running.then(go
 async function attachOnce(force){if(!S.pushOn)return 0;let n=0;lastErr="";
   try{const s=await pushSub(false);if(!s){lastErr=window.__pushWhy==="notoken"?"this phone didn't get an alert token from Apple. Close the app fully, open it and try again.":window.__pushWhy==="noplugin"?"alerts aren't in this build of the app.":"alerts aren't allowed for this app in Settings.";return 0}
     const j=s.toJSON();myEnd=j.endpoint||myEnd;const M=subMap();
+    /* v2: leader phones are marked "lead" so member check-ins, requests and problem reports reach them (co-leaders
+       too), and the OIC's phone is also the feed's leader alert phone. Phones attached before re-attach once. */
+    if(M.__v!==2){force=true;M.__v=2}
     for(const f of S.feeds||[]){if(!f.mk)continue;if(!force&&M[f.id]===j.endpoint){f.push=true;continue}
-      try{await SB.rpc("feed_sub",{p_feed:f.id,p_member_key:f.mk,p_sub:j});M[f.id]=j.endpoint;f.push=true;n++}
+      try{await SB.rpc("feed_sub",{p_feed:f.id,p_member_key:f.mk,p_sub:f.lk?Object.assign({},j,{lead:1}):j});M[f.id]=j.endpoint;f.push=true;n++;
+        if(f.lk&&(!S.role||S.role==="oic"||S.role==="newoic"))try{await SB.rpc("set_feed_leader_sub",{p_feed:f.id,p_leader_key:f.lk,p_sub:j})}catch(e2){}}
       catch(e){const msg=String(e&&e.message||e);lastErr=/full/.test(msg)?"the team's alert list is full (500 phones).":/find the function|schema|does not exist/i.test(msg)?"alerts aren't set up on the server yet (DATA → System check).":/fetch|network|Failed/i.test(msg)?"no signal reaching the server. Try again.":msg.slice(0,80)}}
     putMap(M);if(n)rawSave()}catch(e){lastErr=String(e&&e.message||e).slice(0,80)}return n}
 window.taLastErr=()=>lastErr;
@@ -8756,8 +8760,8 @@ async function publish(f){if(!f||!f.lk||!f.ek)return;f.tsent=f.tsent||{};const n
     const by=votesOf(f,p);const pool=fdPool(p);const ids=new Set(pool.map(m=>m.id));const cnt={};let n=0;
     for(const [id,v] of Object.entries(by))if(ids.has(id)){cnt[v]=(cnt[v]||0)+1;n++}
     const sg=JSON.stringify([cnt,n,pool.length]);if(f.tsent[p.id]===sg)continue;if(!n&&!f.tsent[p.id])continue;
-    if(now-(sentAt[f.id+":"+p.id]||0)<20000)continue;sentAt[f.id+":"+p.id]=now;
-    try{const ct=await fdEnc(f.ek,{c:"tally",pid:p.id,cnt,n,of:pool.length});await SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct});f.tsent[p.id]=sg;f.tally=f.tally||{};f.tally[p.id]={cnt,n,of:pool.length,t:now};rawSave()}catch(e){}}}
+    if(now-(sentAt[f.id+":"+p.id]||0)<60000)continue;sentAt[f.id+":"+p.id]=now;
+    try{const ct="c:"+await fdEnc(f.ek,{c:"tally",pid:p.id,cnt,n,of:pool.length});await SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct});f.tsent[p.id]=sg;f.tally=f.tally||{};f.tally[p.id]={cnt,n,of:pool.length,t:now};rawSave()}catch(e){}}}
 window.fdPollPublish=publish;
 {const _fp=fdPoll;fdPoll=async function(f){const r=await _fp.apply(this,arguments);try{if(f&&f.lk)await publish(f)}catch(e){}return r}}
 
