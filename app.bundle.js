@@ -4730,7 +4730,7 @@ const _al=alerts;
 alerts=function(){const r=_al.apply(this,arguments);const H=AH();
   return {over:r.over.filter(a=>!H[alKey(a.m,"over")]),ret:r.ret.filter(a=>!H[alKey(a.m,"ret")]),dep:r.dep.filter(a=>!H[alKey(a.m,"dep")])}};
 function backNow(m){const today=dkey();const was=m.status;
-  BL().unshift({id:m.id,t:Date.now(),status:m.status,start:m.start||"",end:m.end||"",cal:JSON.parse(JSON.stringify(m.cal||[]))});S.backLog=BL().slice(0,20);m.status="On Hand";delete m.start;delete m.end;
+  BL().unshift({id:m.id,t:Date.now(),status:m.status,start:m.start||"",end:m.end||"",cal:JSON.parse(JSON.stringify(m.cal||[]))});S.backLog=BL().slice(0,20);m.status="On Hand";delete m.start;delete m.end;delete m.loc;delete m.detail;
   // the rest of any leave/TAD on their calendar comes off
   for(const e of m.cal||[]){if(!["LEAVE","TAD"].includes(e.ty))continue;const end=e.end&&e.end>e.d?e.end:e.d;if(end<today)continue;
     if(e.d>=today)e.done=1;else{const y=new Date(today0());y.setDate(y.getDate()-1);e.end=dkey(y)}}
@@ -5009,7 +5009,11 @@ function rowDet(m){if(m.status==="On Hand")return null;
 /* the details sheet: picking anything but On Hand asks From, To, Location */
 let stPend=null;
 window.addEventListener("click",e=>{const so=e.target.closest&&e.target.closest("[data-sopt]");if(!so||!sheetCtx||sheetCtx.kind!=="s")return;
-  const st=so.dataset.sopt;const m=S.roster.find(x=>x.id===sheetCtx.id);if(!m||st==="On Hand"||!STATUSES.includes(st)||S.role==="view")return;
+  const st=so.dataset.sopt;const m=S.roster.find(x=>x.id===sheetCtx.id);if(!m||!STATUSES.includes(st)||S.role==="view")return;
+  // a new status starts clean: the last one's dates, location and detail come off (On Hand clears them for good;
+  // another status opens the sheet blank, and Skip or tapping out leaves it blank instead of carrying the old location)
+  if(st!==m.status){delete m.start;delete m.end;delete m.loc;delete m.detail}
+  if(st==="On Hand")return;
   stPend={id:m.id,st};setTimeout(()=>{const p=stPend;stPend=null;if(p)stDetSheet(p.id)},RM()?20:320)},true);
 document.addEventListener("click",e=>{const b=e.target.closest("[data-stdet]");if(b){e.stopImmediatePropagation();stDetSheet(b.dataset.stdet)}},true);
 function stDetSheet(id){const m=S.roster.find(x=>x.id===id);if(!m)return;sheetCtx={kind:"stdet",id};
@@ -5121,7 +5125,7 @@ window.ckIn=function(f,o,r){S.cks=S.cks||[];const cid=String(o.cid||"").slice(0,
   if(view==="checkins"){const y=window.scrollY;renderCk();window.scrollTo(0,y)}};
 function ckApply(x,st,by){const m=S.roster.find(y=>y.id===x.mid);if(!m)return false;
   if(STATUSES.includes(st))m.status=st;
-  if(m.status==="On Hand"){delete m.start;delete m.end;delete m.loc}
+  if(m.status==="On Hand"){delete m.start;delete m.end;delete m.loc;delete m.detail}
   else{if(x.from)m.start=x.from;if(x.to)m.end=x.to;else if(x.from)delete m.end;if(x.loc)m.loc=x.loc}
   const det=[x.oth,x.note].filter(Boolean).join(" · ");if(det)m.detail=det.slice(0,80);
   m.ckAt=Date.now();S.secAt=S.secAt||{};S.secAt[m.sec]=m.ckAt;x.state="ok";x.dt=Date.now();x.by=by||"";save();return true}

@@ -188,3 +188,16 @@ test("tour and examples: leaders see an example My page with Check in; members' 
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("status location resets: a new status starts blank, On Hand clears dates, location and detail", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    const r = a.w.eval(`(()=>{S.source="mol";S.leaderMode=true;S.welcomed=1;S.onb=true;save();
+      const m=S.roster[0];m.status="Leave";m.loc="Honolulu";m.start="2026-11-01";m.end="2026-11-05";m.detail="family";save();
+      sheetCtx={kind:"s",id:m.id};const b=document.createElement("button");b.dataset.sopt="TAD";document.body.appendChild(b);b.click();
+      const afterNew=[m.loc,m.start,m.end,m.detail].map(x=>x||"");
+      m.loc="Guam";sheetCtx={kind:"s",id:m.id};const c=document.createElement("button");c.dataset.sopt="On Hand";document.body.appendChild(c);c.click();
+      return [afterNew,[m.loc,m.start,m.end,m.detail].map(x=>x||"")]})()`);
+    assert.deepEqual([[...r[0]], [...r[1]]], [["", "", "", ""], ["", "", "", ""]]);
+  } finally { a.close(); }
+});

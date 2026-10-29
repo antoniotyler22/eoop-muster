@@ -40,7 +40,7 @@ const _al=alerts;
 alerts=function(){const r=_al.apply(this,arguments);const H=AH();
   return {over:r.over.filter(a=>!H[alKey(a.m,"over")]),ret:r.ret.filter(a=>!H[alKey(a.m,"ret")]),dep:r.dep.filter(a=>!H[alKey(a.m,"dep")])}};
 function backNow(m){const today=dkey();const was=m.status;
-  BL().unshift({id:m.id,t:Date.now(),status:m.status,start:m.start||"",end:m.end||"",cal:JSON.parse(JSON.stringify(m.cal||[]))});S.backLog=BL().slice(0,20);m.status="On Hand";delete m.start;delete m.end;
+  BL().unshift({id:m.id,t:Date.now(),status:m.status,start:m.start||"",end:m.end||"",cal:JSON.parse(JSON.stringify(m.cal||[]))});S.backLog=BL().slice(0,20);m.status="On Hand";delete m.start;delete m.end;delete m.loc;delete m.detail;
   // the rest of any leave/TAD on their calendar comes off
   for(const e of m.cal||[]){if(!["LEAVE","TAD"].includes(e.ty))continue;const end=e.end&&e.end>e.d?e.end:e.d;if(end<today)continue;
     if(e.d>=today)e.done=1;else{const y=new Date(today0());y.setDate(y.getDate()-1);e.end=dkey(y)}}
