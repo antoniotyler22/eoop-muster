@@ -20,8 +20,8 @@ function panel(){const {done,miss,out,of}=state();const all=of>0&&!miss.length;
   if(all)h+=`<p class="note" style="margin:4px 0 0;color:var(--s-onhand);font-weight:700">✓ Everyone expected today has checked in.</p>`;
   else{h+=`<div class="note" style="margin:6px 0 2px"><b style="color:var(--warn)">Haven't checked in (${miss.length})</b></div><div class="alist">`;
     const secs=[...new Set(miss.map(m=>m.sec))];
-    for(const s of secs){h+=`<div class="note" style="margin:6px 0 2px"><b>${esc(s)}</b></div>`;
-      for(const m of miss.filter(x=>x.sec===s))h+=`<div class="rrow" style="--sc:var(--warn)"><div class="who" data-pcard="${esc(m.id)}"><b>${esc(m.rank)}</b> ${esc(m.name)}<div class="ph">${m.pk?"Has My page":"Not on the app yet"}${m.ckAt?" · last "+esc(ago(m.ckAt)):""}</div></div>${m.phone?`<a class="call" href="${telHref(m.phone)}">Call</a>`:""}</div>`}
+    for(const s of secs){h+=`<div class="cm-sec">${esc(s)}</div>`;
+      for(const m of miss.filter(x=>x.sec===s))h+=`<div class="cm-row"><span class="cm-dot"></span><div class="cm-who" data-pcard="${esc(m.id)}"><b>${esc(m.rank)} ${esc(lastOf(m))}</b><span>${m.pk?"Has My page":"Not on the app yet"}${m.ckAt?" · last "+esc(ago(m.ckAt)):""}</span></div>${m.phone?`<a class="chip cm-call" href="${telHref(m.phone)}">📞 Call</a>`:""}</div>`}
     h+=`</div>`;const B=bcBatches(miss,unitName()+": you haven't checked in today. Open Accounted For → My page → 📍 Check in.");
     h+=B.length?B.map((x,i,a)=>`<a class="btn" href="${esc(x.href)}" style="margin-top:8px">📨 Text them a reminder${a.length>1?" · group "+(i+1):""} (${x.n})</a>`).join(""):"";
     const np=miss.filter(m=>!m.phone).length;if(np)h+=`<p class="note" style="margin:4px 0 0">${np} without a phone number.</p>`}
@@ -34,4 +34,8 @@ function panel(){const {done,miss,out,of}=state();const all=of>0&&!miss.length;
   if(view==="board"&&!$("#ckMissHome")){const {miss,of}=state();if(of&&(S.feeds||[]).length){const ck=$("#myCk");
     const line=`<button class="chip" id="ckMissHome" data-go="checkins" style="cursor:pointer;margin:8px 0 0;${miss.length?"color:var(--warn)":""}">${miss.length?"📍 "+miss.length+" not checked in today":"✓ Everyone checked in today"}</button>`;
     if(ck)ck.insertAdjacentHTML("beforebegin",line);else{const g=m.querySelector(".greet,.hero");if(g)g.insertAdjacentHTML("afterend",line)}}}}catch(e){}return r}}
+{const st=document.createElement("style");st.textContent=`#ckMiss .alist{display:block}.cm-sec{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--muted,#667);margin:10px 0 2px}
+.cm-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}.cm-sec+.cm-row{border-top:0}
+.cm-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--warn)}.cm-who{flex:1;min-width:0;cursor:pointer}.cm-who b{display:block}.cm-who span{display:block;font-size:12.5px;opacity:.75}
+.cm-call{flex:none;text-decoration:none;color:var(--ink);cursor:pointer}`;document.head.appendChild(st)}
 })();
