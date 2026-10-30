@@ -7907,11 +7907,11 @@ async function load(force){const X=N();if(X.off||busy)return;if(!force&&X.at&&Da
   catch(e){X.err=String(e.message||e).slice(0,60);rawSave();paint()}
   finally{busy=false}}
 window.newsLoad=load;
-function html(){const X=N();if(X.off||!isLeaderPhone()||(typeof appNewsOff==="function"&&appNewsOff()))return"";const L=cards();const c=L[i]||null;
+function html(){const X=N();if(X.off||!(isLeaderPhone()||view==="me")||(typeof appNewsOff==="function"&&appNewsOff()))return"";const L=cards();const c=L[i]||null;
   const body=c?`<button class="nw-main" data-nw-open${c.url?` data-nw-url="${esc(c.url)}"`:""} aria-label="Open"><span class="nw-g${c.k==="alert"?" nw-al":""}">${GL[c.k]}</span><span class="nw-tx"><span class="nw-t">${esc(c.t)}</span><span class="nw-s">${esc(c.s)}${c.at?" · "+ago(c.at):""}</span></span></button>`
     :`<div class="nw-main"><span class="nw-g">${GL.news}</span><span class="nw-tx"><span class="nw-t">${X.err==="setup"?"News isn't set up on your server":X.err?"Couldn't load the news":busy?"Loading…":"No news yet"}</span><span class="nw-s">${X.err==="setup"?"Leader: DATA → System check":X.err?"Check signal and pull to refresh":X.loc?"Weather, alerts and world news":"Turn on location for weather and alerts (⋯)"}</span></span></div>`;
   return `<div class="card nw" id="nwCard"><div class="nw-row">${body}<div class="nw-ctl"><button data-nw-prev aria-label="Previous">‹</button><span class="nw-n">${L.length?(i+1)+"/"+L.length:"–"}</span><button data-nw-next aria-label="Next">›</button><button data-nw-menu aria-label="News options">⋯</button></div></div>
-    <div class="nw-dots">${L.map((x,j)=>`<i${j===i?' class="on"':""}${x.k==="alert"?' style="background:var(--warn)"':""}></i>`).join("")}</div></div>`}
+    ${view==="me"&&!X.loc?`<div><button class="chip" data-nw-menu style="cursor:pointer">🌤 Add local weather</button></div>`:""}<div class="nw-dots">${L.map((x,j)=>`<i${j===i?' class="on"':""}${x.k==="alert"?' style="background:var(--warn)"':""}></i>`).join("")}</div></div>`}
 function paint(){const old=$("#nwCard");if(!old)return;const h=html();if(!h){old.remove();return}old.outerHTML=h}
 function step(d){const L=cards();if(!L.length)return;i=(i+d+L.length)%L.length;paint()}
 function place(){const m=$("#main");if(!m||$("#nwCard"))return;const h=html();if(!h)return;
@@ -7919,6 +7919,12 @@ function place(){const m=$("#main");if(!m||$("#nwCard"))return;const h=html();if
   if(after)after.insertAdjacentHTML("afterend",h);else m.insertAdjacentHTML("beforeend",h);
   if(!cards().length||Date.now()-(N().at||0)>10*60000)load(false)}
 {const _rb=renderBoard;renderBoard=function(){const r=_rb.apply(this,arguments);try{if(view==="board")place()}catch(e){}return r}}
+/* My page (members): the same card, under "Today for me". The page is rebuilt after it renders, so place it a tick later. */
+function placeMe(){if(view!=="me")return;const m=$("#main");if(!m||$("#nwCard"))return;const h=html();if(!h)return;
+  const hd=[...m.querySelectorAll(".sech")].find(x=>/^Today for me/i.test(x.textContent.trim()));const strip=hd?hd.nextElementSibling:null;
+  if(strip)strip.insertAdjacentHTML("afterend",h);else{const ck=$("#ckCard");if(ck)ck.insertAdjacentHTML("afterend",h);else m.insertAdjacentHTML("beforeend",h)}
+  if(!cards().length||Date.now()-(N().at||0)>10*60000)load(false)}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);if(view==="me")setTimeout(()=>{try{placeMe()}catch(e){}},0);return r}}
 
 /* swipe inside the card moves the card, not the tab (the tab swipe is a later listener; stop it here) */
 let x0=null;
@@ -7926,7 +7932,7 @@ document.addEventListener("touchstart",e=>{const c=e.target.closest&&e.target.cl
 document.addEventListener("touchend",e=>{if(x0==null)return;const dx=e.changedTouches[0].clientX-x0;x0=null;e.stopImmediatePropagation();if(Math.abs(dx)>40)step(dx<0?1:-1)},{passive:true,capture:true});
 
 /* taps */
-function menu(){const X=N();sheetCtx={kind:"news"};$("#sheetT").innerHTML=`News on Home<small>Local weather, safety alerts and world headlines, from free public sources.</small>`;
+function menu(){const X=N();sheetCtx={kind:"news"};$("#sheetT").innerHTML=`News and weather<small>Local weather, safety alerts and world headlines, from free public sources.</small>`;
   $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl>
     <p class="note">${X.loc?`Location on (rounded to about 1 km${X.loc.n?" · "+esc(X.loc.n):""}). It's only used to fetch weather and alerts, never stored.`:"Location is off, so the card shows world news only."}</p>
     <button class="btn" id="nwLoc">${X.loc?"Update my location":"Use my location for weather and alerts"}</button>
@@ -7952,8 +7958,8 @@ document.addEventListener("click",e=>{const t=e.target;
 {const _rt=renderTools;renderTools=function(){const r=_rt.apply(this,arguments);try{if(!N().off)return r;let g=[...document.querySelectorAll("#main .tgrid")].find(x=>x.id!=="sgGrid");if(!g){g=document.createElement("div");g.className="tgrid";$("#main").appendChild(g)}g.insertAdjacentHTML("beforeend",`<button id="nwOn"><span class="ic">🌐</span><span><b>News on Home</b><small>Hidden · tap to show</small></span></button>`);if(typeof sgRegroup==="function")sgRegroup()}catch(e){}return r}}
 document.addEventListener("click",e=>{if(!e.target.closest("#nwOn"))return;N().off=false;N().at=0;rawSave();view="board";render();toast("News card is back on Home")},true);
 
-every(10*60000,()=>{if(view==="board"&&!N().off)load(false)},"news");
-document.addEventListener("visibilitychange",()=>{if(!document.hidden&&view==="board"&&!N().off)load(false)});
+every(10*60000,()=>{if((view==="board"||view==="me")&&!N().off)load(false)},"news");
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&(view==="board"||view==="me")&&!N().off)load(false)});
 {const _ra=refreshAll;refreshAll=function(){const r=_ra.apply(this,arguments);try{N().at=0;load(true)}catch(e){}return r}}
 
 const css=document.createElement("style");css.textContent=`
