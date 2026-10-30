@@ -17,13 +17,29 @@ const freshId=()=>"a"+Date.now().toString(36)+rndId(4);
 const nk=m=>{const n=String(m&&m.name||"").toUpperCase().replace(/[^A-Z0-9,\s]/g," ").replace(/\s+/g," ").trim();let last,rest;
   if(n.includes(",")){const i=n.indexOf(",");last=n.slice(0,i).trim();rest=n.slice(i+1).trim()}else{const w=n.split(" ");last=w[w.length-1]||"";rest=w.slice(0,-1).join(" ")}
   return last.replace(/\b(JR|SR|II|III|IV)\b/g,"").replace(/\s+/g,"")+"|"+(rest.split(" ")[0]||"")};
-/* give `list` stable ids against `base` (the people already here): same name → same id; otherwise unique */
-function stableIds(list,base){if(!Array.isArray(list))return list;const byN={};const used=new Set();
-  for(const m of base||[]){if(!m)continue;const k=nk(m);if(!byN[k])byN[k]=m.id;used.add(String(m.id))}
-  const seen=new Set();
-  for(const m of list){if(!m)continue;const k=nk(m);const want=byN[k];
-    if(want&&!seen.has(want)){m.id=want}
-    else if(!m.id||seen.has(String(m.id))||(used.has(String(m.id))&&!want)){m.id=freshId()}
+/* How sure are we that a and b are the same person? Ids that only one person has beat rank, rank beats nothing. */
+const sameBits=(a,b)=>(a.uid&&a.uid===b.uid?4:0)+(a.pk&&a.pk===b.pk?4:0)+(a.mid&&a.mid===b.mid?4:0)+(String(a.phone||"").replace(/\D/g,"").slice(-10).length>=7&&String(a.phone||"").replace(/\D/g,"").slice(-10)===String(b.phone||"").replace(/\D/g,"").slice(-10)?4:0)+(a.rank&&a.rank===b.rank?2:0)+(a.sec&&a.sec===b.sec?1:0);
+/* Line `list` up to `base`: who in list is the same person as who in base. Returns Map(list person → base id).
+   Two people with the same name (two Garcia, Jose) used to be folded into one id, so one of them got a new id on
+   every sync and dropped off the numbers. Now: the same id with the same name always matches itself first; a name
+   that is on only one side once is the same person (promotions change rank); a name that appears more than once is
+   matched by rank / personal ids, and if nothing tells them apart they stay two people. */
+function lineUp(list,base){const byId={},byN={};for(const m of base||[]){if(!m)continue;byId[String(m.id)]=m;(byN[nk(m)]=byN[nk(m)]||[]).push(m)}
+  const cnt={};for(const m of list||[]){if(m)cnt[nk(m)]=(cnt[nk(m)]||0)+1}
+  const claimed=new Set(),res=new Map();
+  for(const r of list||[]){if(!r)continue;const l=byId[String(r.id)];if(l&&nk(l)===nk(r)&&!claimed.has(String(l.id))){claimed.add(String(l.id));res.set(r,l.id)}}
+  for(const r of list||[]){if(!r||res.has(r))continue;const k=nk(r);const c=(byN[k]||[]).filter(l=>!claimed.has(String(l.id)));if(!c.length)continue;
+    if(c.length===1&&cnt[k]===1&&(byN[k]||[]).length===1){claimed.add(String(c[0].id));res.set(r,c[0].id);continue}
+    let best=null,bs=-1;for(const l of c){const sc=sameBits(r,l);if(sc>bs){bs=sc;best=l}}
+    if(best&&bs>=2){claimed.add(String(best.id));res.set(r,best.id)}}
+  return {res,byId}}
+/* give `list` stable ids against `base` (the people already here): same person → same id; otherwise unique */
+function stableIds(list,base){if(!Array.isArray(list))return list;const {res}=lineUp(list,base);const used=new Set();
+  for(const m of base||[]){if(m)used.add(String(m.id))}
+  const assigned=new Set([...res.values()].map(String));const seen=new Set();
+  for(const m of list){if(!m)continue;const want=res.get(m);
+    if(want!=null){m.id=want}
+    else if(!m.id||seen.has(String(m.id))||used.has(String(m.id))||assigned.has(String(m.id))){m.id=freshId()}
     seen.add(String(m.id))}
   return list}
 window.stableIds=stableIds;
@@ -41,11 +57,10 @@ if(typeof restoreFrom==="function"){const _rf=restoreFrom;restoreFrom=function()
 
 /* 2) sync: line the other phone's people up to ours by name before merging */
 if(typeof mergeRemote==="function"){const _mr=mergeRemote;mergeRemote=function(R){try{if(R&&Array.isArray(R.roster)&&Array.isArray(S.roster)){
-    const byN={},byId={};for(const m of S.roster){byN[nk(m)]=byN[nk(m)]||m;byId[String(m.id)]=m}
-    const seen=new Set();
-    for(const r of R.roster){if(!r)continue;const l=byN[nk(r)];
-      if(l&&String(l.id)!==String(r.id)){r.id=l.id}                                    // same person, other id → ours
-      else if(!l&&byId[String(r.id)]&&nk(byId[String(r.id)])!==nk(r)){r.id=freshId()}  // different person, our id → fresh
+    const {res,byId}=lineUp(R.roster,S.roster);const assigned=new Set([...res.values()].map(String));const seen=new Set();
+    for(const r of R.roster){if(!r)continue;const want=res.get(r);
+      if(want!=null){if(String(want)!==String(r.id))r.id=want}                              // same person, other id → ours
+      else if(byId[String(r.id)]||assigned.has(String(r.id)))r.id=freshId();                // a different person has this id here → fresh
       if(seen.has(String(r.id)))r.id=freshId();seen.add(String(r.id))}
   }}catch(e){}return _mr.apply(this,arguments)}}
 
