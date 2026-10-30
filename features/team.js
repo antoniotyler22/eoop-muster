@@ -186,7 +186,7 @@ function ckApply(x,st,by){const m=S.roster.find(y=>y.id===x.mid);if(!m)return fa
   else{if(x.from)m.start=x.from;if(x.to)m.end=x.to;else if(x.from)delete m.end;if(x.loc)m.loc=x.loc}
   const det=[x.oth,x.note].filter(Boolean).join(" · ");if(det)m.detail=det.slice(0,80);
   m.ckAt=Date.now();S.secAt=S.secAt||{};S.secAt[m.sec]=m.ckAt;x.state="ok";x.dt=Date.now();x.by=by||"";save();return true}
-window.ckApply=ckApply;
+window.ckApply=ckApply;window.ckLine=ckLine;
 const ckOpen=()=>(S.cks||[]).filter(x=>x.state==="new");
 function ckRow(x){const m=x.mid&&S.roster.find(y=>y.id===x.mid);const open=x.state==="new";
   let h=`<div class="rrow" style="--sc:var(${open?"--brass":x.state==="ok"?"--s-onhand":"--warn"})"><div class="who"><b>${m?`<span data-pcard="${esc(m.id)}" style="cursor:pointer;text-decoration:underline;text-decoration-color:var(--line)">${esc(m.rank+" "+m.name)}</span>`:esc(x.who)}</b>${x.sec?` <span class="chip">${esc(x.sec)}</span>`:""}
