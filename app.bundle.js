@@ -5323,7 +5323,7 @@ if(typeof HELP==="object"){
 /* ===== features/feedseen.js ===== */
 /* ---------- Feed: "Confirm I saw it" on every post, for everyone ----------
    - Every post and every Plan of the Day has a Confirm button for whoever is reading it.
-   - The person who posted it sees "✓ I posted it" instead (OIC on their own posts, section leaders on theirs).
+   - The person who posted it sees "✓ I posted it" and still has the Confirm button (4.42.1: everyone confirms everything).
    - OIC: confirming a section leader's post stays on this phone (f.lseen); "Confirm all" sits above the posts.
    - Members: Confirm sends a normal Got it, so the OIC's count goes up. Posts aimed at another section have it too.
    - Today and My page: the Plan of the Day and new word carry the same Confirm button. */
@@ -5334,16 +5334,15 @@ function fsOpen(f){return f&&f.lk?fdVisible(f).filter(p=>fsNeeds(f,p)):[]}
 const fsChip=(txt,t)=>`<div class="fsok"><span class="fcchip" style="color:var(--s-onhand)">${txt}${t?` · <span data-ago="${t}">${ago(t)}</span>`:""}</span></div>`;
 
 {const _card=fdCard;fdCard=function(f,p){let h=_card.apply(this,arguments);
-  if(fsOwn(f,p)){
-    h=h.replace(/<div class="fcbtns"><button class="go" data-fdack=[\s\S]*?Problem<\/button><\/div>(<div class="addph">[\s\S]*?<\/div>)?/,"")
-       .replace(/<div><span class="fcchip" style="color:var\(--s-onhand\)">✓ Confirmed · [\s\S]*?<\/span><\/span><\/div>/,"");
-    return h.replace(/<\/article>$/,fsChip("✓ I posted it")+"</article>")}
+  /* everyone gets a Confirm on every post, the poster too (they also see "I posted it") */
+  const own=fsOwn(f,p),posted=own?fsChip("✓ I posted it"):"";
   if(f.lk){const t=(f.lseen||{})[p.id];
-    return h.replace(/<\/article>$/,(t?fsChip("✓ You confirmed",t):`<div class="fcbtns"><button class="go" data-fsok="${p.id}">${FS_LBL}</button></div>`)+"</article>")}
+    return h.replace(/<\/article>$/,posted+(t?fsChip("✓ You confirmed",t):`<div class="fcbtns"><button class="go" data-fsok="${p.id}">${FS_LBL}</button></div>`)+"</article>")}
   h=h.replace(`data-c="1">✓ Got it</button>`,`data-c="1">${FS_LBL}</button>`);
   const mine=(f.mine||{})[p.id];
-  return h.replace(/<div class="note" style="margin:0">For ([^<]*) · no Got it needed from you<\/div>/,()=>
-    (mine?fsChip("✓ Confirmed",mine.t):`<div class="fcbtns"><button class="go" data-fdack="${p.id}" data-c="1">${FS_LBL}</button></div>`)+`<div class="note" style="margin:0">For ${esc(fdToLabel(p.to))}</div>`)}}
+  h=h.replace(/<div class="note" style="margin:0">For ([^<]*) · no Got it needed from you<\/div>/,()=>
+    (mine?fsChip("✓ Confirmed",mine.t):`<div class="fcbtns"><button class="go" data-fdack="${p.id}" data-c="1">${FS_LBL}</button></div>`)+`<div class="note" style="margin:0">For ${esc(fdToLabel(p.to))}</div>`);
+  return posted?h.replace(/<\/article>$/,posted+"</article>"):h}}
 
 {const _rf=renderFeed;renderFeed=function(){_rf.apply(this,arguments);const f=fdCur();const n=fsOpen(f).length;if(!n)return;
   const first=document.querySelector("#main article.fc");if(!first||document.getElementById("fsAll"))return;
@@ -9347,9 +9346,9 @@ document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target&&e.target.i
 let open=null;
 const rep=(f,p)=>{const m=(f.mine||{})[p.id];return m&&m.c===1&&m.note?m:null};
 async function send(f,pid,text){
-  if(!f.me){toast("Add your rank and last name first.");return false}
+  const me=f.me||(f.lk?(S.postAs||S.myName||""):"");if(!me){toast("Add your rank and last name first.");return false}
   const note=String(text||"").replace(/[|#]/g," ").trim().slice(0,60);if(!note){toast("Type your reply first.");return false}
-  const hs=await Promise.all(SB.words(f.me).slice(0,f.mid?5:6).map(w=>SB.h(f.id,w)));if(f.mid)hs.push(await SB.h(f.id,"ID:"+f.mid));
+  const hs=await Promise.all(SB.words(me).slice(0,f.mid?5:6).map(w=>SB.h(f.id,w)));if(f.mid)hs.push(await SB.h(f.id,"ID:"+f.mid));
   await SB.rpc("feed_ack",{p_feed:f.id,p_member_key:f.mk,p_post:pid,p_words:hs,p_code:1,p_note:note});
   f.mine=f.mine||{};f.mine[pid]={c:1,note,t:Date.now()};save();return true}
 {const _card=fdCard;fdCard=function(f,p){let h=_card.apply(this,arguments);
@@ -9358,13 +9357,13 @@ async function send(f,pid,text){
       if(fdOpen===p.id&&!/data-fdrepl/.test(h)){const st=fdStats(f,p),pool=fdPool(p);
         const rs=sorted(pool.filter(m=>st.A[m.id]&&st.A[m.id].c===1&&st.A[m.id].note));
         if(rs.length)h=h.replace(/<button class="btn warn" data-fddel=/,`<div data-fdrepl="1"><b>💬 Replies (${rs.length})</b>${rs.map(m=>`<div class="rtop"><div class="who"><b>${esc(m.rank)}</b> ${esc(m.name)}<div class="ph">${esc(st.A[m.id].note)}</div></div>${m.phone?`<a class="call" href="${telHref(m.phone)}">Call</a>`:""}</div>`).join("")}</div><button class="btn warn" data-fddel=`)}
-      return h}
-    if(fsOwn(f,p)||!fdForMe(f,p))return h;
+    }
     const mine=(f.mine||{})[p.id];
     if(mine&&mine.c===2)return h;
+    if(!f.mk)return h;
     let add="";
     if(rep(f,p))add=`<div class="note" style="margin:4px 0 0">💬 You replied: “${esc(mine.note)}”</div>`;
-    else if(open===p.id)add=`<div class="addph"><input type="text" id="fdRep${p.id}" maxlength="60" placeholder="Your reply (your leader sees your name)" enterkeyhint="send"><button data-fdrepsend="${p.id}">Send</button></div>`;
+    else if(open===p.id)add=`<div class="addph"><input type="text" id="fdRep${p.id}" maxlength="60" placeholder="Your reply (shows your name)" enterkeyhint="send"><button data-fdrepsend="${p.id}">Send</button></div>`;
     else add=`<div class="fcbtns"><button data-fdrep="${p.id}">💬 Reply</button></div>`;
     return h.replace(/<\/article>$/,add+"</article>")
   }catch(e){return h}}}

@@ -6,15 +6,15 @@ import { openApp, sleep } from "./harness.mjs";
 const FEED = { id: "feedabcdef12", mk: "m".repeat(30), lk: "l".repeat(30) };
 const click = (a, sel) => { const el = a.$(sel); assert.ok(el, "found " + sel); el.click(); };
 
-test("leader confirms section leaders' posts one at a time or all at once; own posts have no button", async () => {
+test("leader confirms section leaders' posts one at a time or all at once; own posts also have the button", async () => {
   const a = await openApp();
   try {
     a.w.eval(`S.leaderMode=true;S.feeds=[{id:"${FEED.id}",mk:"${FEED.mk}",lk:"${FEED.lk}",ek:"x",unit:"1ST PLT",main:true,acks:{},un:{},mine:{},seen:0,
       posts:[{id:1,t:Date.now()-60000,txt:"Formation 0700",by:"1ST PLT"},{id:2,t:Date.now()-30000,txt:"HQ is at the range",by:"SGT HQ",sl:"HQ"},{id:3,t:Date.now(),txt:"1st sqd cleaning gear",by:"SGT ONE",sl:"1ST"}]}];
       fdSel="${FEED.id}";view="feed";render()`);
     const txt = () => a.$("#main").textContent;
-    assert.equal(a.$$("[data-fsok]").length, 2, "one button per section leader post");
-    assert.ok(!a.$('[data-fsok="1"]'), "no button on the leader's own post");
+    assert.equal(a.$$("[data-fsok]").length, 3, "a button on every post, the leader's own too");
+    assert.ok(a.$('[data-fsok="1"]'), "the leader's own post has Confirm as well");
     assert.match(a.$$("#main article.fc").find(c=>/Formation 0700/.test(c.textContent)).textContent, /I posted it/, "own post says I posted it");
     assert.match(txt(), /2 posts to confirm/);
     click(a, '[data-fsok="2"]');
@@ -22,7 +22,7 @@ test("leader confirms section leaders' posts one at a time or all at once; own p
     assert.match(txt(), /You confirmed/);
     assert.match(txt(), /1 post to confirm/);
     click(a, "#fsAll");
-    assert.equal(a.$$("[data-fsok]").length, 0);
+    assert.equal(a.$$("[data-fsok]").length, 1, "only the leader's own post is left");
     assert.ok(!a.$("#fsAll"), "Confirm all goes away once everything is confirmed");
     assert.ok(a.w.eval(`JSON.parse(localStorage.getItem(KEY)||"{}").feeds?.[0]?.lseen?.[3]>0 || !!(window.VAULT&&VAULT.on())`), "saved");
     assert.deepEqual(a.errors, []);
@@ -54,7 +54,7 @@ test("section leader sees I posted it on their own post; others get Confirm I sa
         {id:9,t:Date.now()-2000,txt:"Plan of the Day\\nFormation: 0700",by:"1ST PLT",pod:{d:"2026-10-27"}}]}];S.onb=true;S.welcomed=1;fdSel="${FEED.id}";view="feed";render()`);
     const card = (re) => a.$$("#main article.fc").find((c) => re.test(c.textContent));
     assert.match(card(/at the range/).textContent, /I posted it/);
-    assert.ok(!card(/at the range/).querySelector("[data-fdack]"), "no confirm on own post");
+    assert.ok(card(/at the range/).querySelector("[data-fdack]"), "own post has Confirm too");
     assert.match(card(/Formation 0700/).textContent, /Confirm I saw it/);
     assert.match(card(/Plan of the Day/).textContent, /Confirm I saw it/, "Plan of the Day too");
     assert.deepEqual(a.errors, []);

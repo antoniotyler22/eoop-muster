@@ -47,3 +47,23 @@ test("the leader sees replies by rank and name in the post's Who list", async ()
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("every role has Confirm and Reply on every post, the poster's own and one aimed at another section", async () => {
+  const a = await openApp();
+  try {
+    a.w.eval(`S.feeds=[{id:"${FEED.id}",mk:"${FEED.mk}",pk:"p".repeat(30),ek:"x",unit:"1ST PLT",me:"SGT HQ",sec:"HQ",mine:{},seen:0,
+      posts:[{id:7,t:Date.now(),txt:"HQ at the range",by:"SGT HQ",sl:"HQ"},{id:8,t:Date.now()-1000,txt:"Gear for UT only",by:"1ST PLT",to:{k:"secs",s:["UT"]}}]}];S.onb=true;S.welcomed=1;fdSel="${FEED.id}";view="feed";render()`);
+    for (const re of [/at the range/, /Gear for UT only/]) {
+      const c = a.$$("#main article.fc").find((x) => re.test(x.textContent));
+      assert.ok(c.querySelector("[data-fdack]"), "Confirm on " + re);
+      assert.ok(c.querySelector("[data-fdrep]"), "Reply on " + re);
+    }
+    // leader phone: Confirm and Reply on its own post too
+    a.w.eval(`S.leaderMode=true;S.feeds=[{id:"${FEED.id}",mk:"${FEED.mk}",lk:"${FEED.lk}",ek:"x",unit:"1ST PLT",main:true,un:{},mine:{},seen:0,acks:{},posts:[{id:1,t:Date.now(),txt:"Formation 0700",by:"1ST PLT"}]}];fdSel="${FEED.id}";render()`);
+    const c = a.$$("#main article.fc")[0];
+    assert.match(c.textContent, /I posted it/);
+    assert.ok(c.querySelector("[data-fsok]"), "leader Confirm on own post");
+    assert.ok(c.querySelector("[data-fdrep]"), "leader Reply on own post");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});

@@ -1,6 +1,6 @@
 /* ---------- Feed: "Confirm I saw it" on every post, for everyone ----------
    - Every post and every Plan of the Day has a Confirm button for whoever is reading it.
-   - The person who posted it sees "✓ I posted it" instead (OIC on their own posts, section leaders on theirs).
+   - The person who posted it sees "✓ I posted it" and still has the Confirm button (4.42.1: everyone confirms everything).
    - OIC: confirming a section leader's post stays on this phone (f.lseen); "Confirm all" sits above the posts.
    - Members: Confirm sends a normal Got it, so the OIC's count goes up. Posts aimed at another section have it too.
    - Today and My page: the Plan of the Day and new word carry the same Confirm button. */
@@ -11,16 +11,15 @@ function fsOpen(f){return f&&f.lk?fdVisible(f).filter(p=>fsNeeds(f,p)):[]}
 const fsChip=(txt,t)=>`<div class="fsok"><span class="fcchip" style="color:var(--s-onhand)">${txt}${t?` · <span data-ago="${t}">${ago(t)}</span>`:""}</span></div>`;
 
 {const _card=fdCard;fdCard=function(f,p){let h=_card.apply(this,arguments);
-  if(fsOwn(f,p)){
-    h=h.replace(/<div class="fcbtns"><button class="go" data-fdack=[\s\S]*?Problem<\/button><\/div>(<div class="addph">[\s\S]*?<\/div>)?/,"")
-       .replace(/<div><span class="fcchip" style="color:var\(--s-onhand\)">✓ Confirmed · [\s\S]*?<\/span><\/span><\/div>/,"");
-    return h.replace(/<\/article>$/,fsChip("✓ I posted it")+"</article>")}
+  /* everyone gets a Confirm on every post, the poster too (they also see "I posted it") */
+  const own=fsOwn(f,p),posted=own?fsChip("✓ I posted it"):"";
   if(f.lk){const t=(f.lseen||{})[p.id];
-    return h.replace(/<\/article>$/,(t?fsChip("✓ You confirmed",t):`<div class="fcbtns"><button class="go" data-fsok="${p.id}">${FS_LBL}</button></div>`)+"</article>")}
+    return h.replace(/<\/article>$/,posted+(t?fsChip("✓ You confirmed",t):`<div class="fcbtns"><button class="go" data-fsok="${p.id}">${FS_LBL}</button></div>`)+"</article>")}
   h=h.replace(`data-c="1">✓ Got it</button>`,`data-c="1">${FS_LBL}</button>`);
   const mine=(f.mine||{})[p.id];
-  return h.replace(/<div class="note" style="margin:0">For ([^<]*) · no Got it needed from you<\/div>/,()=>
-    (mine?fsChip("✓ Confirmed",mine.t):`<div class="fcbtns"><button class="go" data-fdack="${p.id}" data-c="1">${FS_LBL}</button></div>`)+`<div class="note" style="margin:0">For ${esc(fdToLabel(p.to))}</div>`)}}
+  h=h.replace(/<div class="note" style="margin:0">For ([^<]*) · no Got it needed from you<\/div>/,()=>
+    (mine?fsChip("✓ Confirmed",mine.t):`<div class="fcbtns"><button class="go" data-fdack="${p.id}" data-c="1">${FS_LBL}</button></div>`)+`<div class="note" style="margin:0">For ${esc(fdToLabel(p.to))}</div>`);
+  return posted?h.replace(/<\/article>$/,posted+"</article>"):h}}
 
 {const _rf=renderFeed;renderFeed=function(){_rf.apply(this,arguments);const f=fdCur();const n=fsOpen(f).length;if(!n)return;
   const first=document.querySelector("#main article.fc");if(!first||document.getElementById("fsAll"))return;
