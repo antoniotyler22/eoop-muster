@@ -8026,7 +8026,8 @@ function html(){if(!tok())return `<h2>App owner</h2><div class="panel"><p class=
       <p class="note">Counts only. Rosters, posts and messages are encrypted on phones; the server (and this console) can't read them.${s.at?" · "+when(s.at):""}</p><div class="row2"><button class="btn alt" id="owRefresh">Refresh</button><button class="btn alt" id="owOut">Sign out</button></div>`}
   if(tab==="ann"){const c=cfg||{};h+=`<div class="panel"><label for="owAnn">Announcement on every phone's Home</label><textarea id="owAnn" maxlength="300" rows="3" placeholder="e.g. Maintenance tonight 2200–2300. Alerts may be late.">${esc(c.announce||"")}</textarea>
       <label for="owUrl">Link (optional)</label><input type="url" id="owUrl" placeholder="https://" value="${esc(c.announce_url||"")}">
-      <div class="row2"><button class="btn" id="owAnnPost">${c.announce?"Update":"Post"}</button><button class="btn alt" id="owAnnClear"${c.announce?"":" disabled"}>Take it down</button></div>${c.announce_at?`<p class="note">Showing since ${when(c.announce_at)}.</p>`:`<p class="note">Nothing showing.</p>`}
+      <div class="row2"><button class="btn" id="owAnnPost">${c.announce?"Update":"Post"}</button><button class="btn alt" id="owAnnClear"${c.announce?"":" disabled"}>Take it down</button></div>
+      <button class="btn warn" id="owAnnPush" style="width:100%;margin-top:6px">${pushArm?"Tap again: post and alert every phone":"Post and also push an alert to every phone"}</button><p class="note">The push goes to every phone that has alerts on, once. Phones without alerts on only see the banner. One send a minute.</p>${c.announce_at?`<p class="note">Showing since ${when(c.announce_at)}.</p>`:`<p class="note">Nothing showing.</p>`}
       <label class="tog"><input type="checkbox" id="owAsk"${c.ask_off?" checked":""}> Turn Ask (AI) off for everyone</label>
       <label class="tog"><input type="checkbox" id="owNews"${c.news_off?" checked":""}> Hide the news card for everyone</label><p class="note">Phones pick these up within an hour, or on their next open.</p></div>`}
   if(tab==="mod"){h+=`<div class="panel"><p class="note">Removing a team's Feed, board, page, login or company deletes it on the server for good; phones that had it lose the connection. Ids come from the person reporting a problem (their link or share sheet), or from a report emailed to you.</p>
@@ -8066,6 +8067,7 @@ function paint(){if(view!=="owner")return;const m=$("#main");if(m)m.innerHTML=ht
 {const _r=render;render=function(){if(view==="owner"){renderTabs();paint();if(typeof animateView==="function")animateView();return}return _r.apply(this,arguments)}}
 {const _rt=renderTools;renderTools=function(){const r=_rt.apply(this,arguments);try{let g=[...document.querySelectorAll("#main .tgrid")].find(x=>x.id!=="sgGrid");if(!g){g=document.createElement("div");g.className="tgrid";$("#main").appendChild(g)}g.insertAdjacentHTML("beforeend",`<button data-go="owner"><span class="ic">🛡</span><span><b>App owner</b><small>${tok()?"Signed in":"Owner sign-in"}</small></span></button>`);if(typeof sgRegroup==="function")sgRegroup()}catch(e){}return r}}
 async function drawQr(){const box=$("#owQr");if(!box||!totp)return;try{await loadLib("lib/qrcode.js","qrcode");const q=qrcode(0,"M");q.addData(totp.uri);q.make();box.innerHTML=q.createSvgTag({cellSize:4,margin:2,scalable:true});const sv=box.querySelector("svg");if(sv){sv.style.width="100%";sv.style.height="auto"}}catch(e){box.textContent="Enter the code below by hand."}}
+let pushArm=0;
 async function act(fn){busy="work";paint();try{await fn();msg=""}catch(e){msg=String(e.message||e)}busy="";paint()}
 document.addEventListener("click",e=>{const t=e.target;if(view!=="owner")return;const tb=t.closest("[data-owtab]");
   if(tb){tab=tb.dataset.owtab;busy="";rm=null;paint();if(tab==="pro"&&!comps)act(async()=>{comps=(await call({op:"comps"})).rows});if(tab==="health"&&!hl)act(async()=>{hl=(await call({op:"health"})).h;al=await call({op:"alerts"})});if(tab==="log"&&!lg)act(async()=>{lg=(await call({op:"log"})).rows});if(tab==="sec"&&totp)setTimeout(drawQr,30);return}
@@ -8084,6 +8086,10 @@ document.addEventListener("click",e=>{const t=e.target;if(view!=="owner")return;
   if(t.closest("#owRefresh")){refresh();return}
   if(t.closest("#owOut")){setTok(null);view="tools";render();toast("Signed out");return}
   if(t.closest("#owAnnPost")){const announce=($("#owAnn").value||"").trim(),announce_url=($("#owUrl").value||"").trim();act(async()=>{cfg=(await call({op:"setcfg",announce,announce_url})).cfg;toast("Announcement posted")});return}
+  if(t.closest("#owAnnPush")){const announce=($("#owAnn").value||"").trim(),announce_url=($("#owUrl").value||"").trim();
+    if(!announce){msg="Type the announcement first.";paint();return}
+    if(!pushArm){pushArm=1;const b=$("#owAnnPush");if(b)b.textContent="Tap again: post and alert every phone";return}pushArm=0;
+    act(async()=>{cfg=(await call({op:"setcfg",announce,announce_url})).cfg;const r=await call({op:"broadcast",title:"📣 Accounted For",body:announce});toast("Pushed to "+r.sent+" of "+r.phones+" phones")});return}
   if(t.closest("#owAnnClear")){act(async()=>{cfg=(await call({op:"setcfg",announce:"",announce_url:""})).cfg;toast("Taken down")});return}
   if(t.closest("#owRemove")){const kind=$("#owKind").value,id=($("#owId").value||"").trim();if(!id){toast("Paste the id first.");return}if(busy!=="armrm"){busy="armrm";rm={kind,id};paint();return}act(async()=>{const r=await call({op:"remove",kind,id});rm=null;toast(r.removed?"Removed":"Nothing with that id")});return}
   if(t.closest("#owComp")){const days=+$("#owDays").value||365,note=$("#owNote").value||"";act(async()=>{newComp=await call({op:"comp",days,note});comps=(await call({op:"comps"})).rows});return}

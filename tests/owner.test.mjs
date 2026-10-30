@@ -161,3 +161,25 @@ test("2-step: the Sign in screen asks for the code, then opens the console; Secu
     assert.equal(a.w.eval("ownerOn()"), false);
   } finally { a.close(); }
 });
+
+test("Post and push needs a second tap, then posts and sends one broadcast", async () => {
+  const calls = [];
+  const a = await openApp({ fn: (name, body) => {
+    if (name !== "owner") return { status: 404, body: "x" };
+    calls.push(body.op);
+    if (body.op === "broadcast") { calls.push(body.title + "|" + body.body); return { status: 200, body: { phones: 4, sent: 3, gone: 1, failed: 0 } }; }
+    if (body.op === "setcfg") return { status: 200, body: { cfg: { announce: body.announce, announce_at: new Date().toISOString() } } };
+    return { status: 200, body: { cfg: {} } }; } });
+  try {
+    a.w.eval(`localStorage.setItem("af-owner",JSON.stringify({tok:"${TOK}",exp:${Date.now() + 3600000}}));` + HOME);
+    a.w.eval(`view="owner";render()`);
+    a.$("[data-owtab=ann]").click();
+    a.$("#owAnn").value = "Formation moved to 0700.";
+    a.$("#owAnnPush").click();
+    assert.ok(!calls.includes("broadcast"), "first tap only arms it");
+    assert.match(a.$("#owAnnPush").textContent, /Tap again/);
+    a.$("#owAnnPush").click();
+    await until(() => calls.includes("broadcast"));
+    assert.ok(calls.some(c => /Formation moved to 0700/.test(c)), JSON.stringify(calls));
+  } finally { a.close(); }
+});
