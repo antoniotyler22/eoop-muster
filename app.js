@@ -3222,7 +3222,7 @@ async function lgCreate(dest,user,pw,opt){opt=opt||{};if(!isOwner())throw new Er
   S.logins=(S.logins||[]).filter(x=>x.uid!==L.uid);S.logins.unshift(L);save();return L}
 let lgBusy=false;
 async function lgRefresh(){if(lgBusy||!isOwner()||!S.lgOwner||!(S.logins||[]).length)return;lgBusy=true;let ch=false;
-  try{for(const L of S.logins){const h=await lgHash(L.dest,false);if(!h){if(!L.gone){L.gone=1;ch=true}continue}if(L.gone){delete L.gone;ch=true}
+  try{for(const L of S.logins){if(L.vis)continue;/* visitor logins carry their end time in the link */const h=await lgHash(L.dest,false);if(!h){if(!L.gone){L.gone=1;ch=true}continue}if(L.gone){delete L.gone;ch=true}
     if(h!==L.h){try{await lgPut(L,h);L.h=h;delete L.err;ch=true}catch(e){L.err=lgErr(e);ch=true}}}}
   finally{lgBusy=false;if(ch){save();if(view==="logins")renderLogins()}}}
 function lgText(L){return unitName()+" · Accounted For login\nUsername: "+L.user+"\nPassword: "+L.pw+"\n\niPhone app: "+STORE_URL.ios+" (open it and tap Sign in)\nOr on the web: "+PUB()+"#login\n\nRole: "+(L.role||lgRoleOf(L.dest))+" · "+L.label+". Keep these private."}
@@ -3272,6 +3272,7 @@ async function lgSignIn(from){const R=lgScope(from),q=s=>R.querySelector(s);cons
   try{const K=await lgKeys(U.value,P.value);const r=await SB.rpc("login_get",{p_uid:K.uid,p_vf:K.vf});const row=Array.isArray(r)?r[0]:r;
     if(!row||!row.ct){o.textContent=row&&row.wait>0?"Too many tries. Wait "+Math.ceil(row.wait/60)+" min, then try again.":"Username or password is wrong. Check with whoever gave it to you.";return}
     const X=await lgOpen(K,row.ct);if(!X||typeof X.h!=="string"||!/^[a-z]+=/.test(X.h))throw new Error("This login is damaged. Ask for a new one.");
+    if(X.until&&+X.until<=Date.now()){o.textContent="This visitor login ended "+new Date(+X.until).toLocaleString([],{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",hour12:false})+". Ask your host for a new one.";return}
     if(/^me=/.test(X.h)&&typeof isLeaderPhone==="function"&&isLeaderPhone()&&!S.lgSelf&&S.source!=="sample"){o.textContent="That login is for "+(X.l||"a member")+". This phone runs your board, so sign in on their phone instead. Nothing changed here.";return}
     S.lgSelf={uid:K.uid,vf:K.vf,l:String(X.l||"").slice(0,60),user:lgNormU(U.value),h:X.h,at:Date.now()};S.lgUnlocked=Date.now();save();if(typeof window.lgAfterSignIn==="function")setTimeout(window.lgAfterSignIn,900);if(!S.mode&&X.m&&MODES[X.m]){setMode(X.m);if(!S.mode){S.mode=X.m;save()}}
     o.textContent="Opening "+(X.l||"your page")+"…";closeSheet();
