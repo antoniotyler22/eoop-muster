@@ -90,11 +90,13 @@ function stale(){const R=real();return R.filter(m=>{const Ls=(S.logins||[]).filt
 if(typeof renderBoard==="function"){const _rb=renderBoard;renderBoard=function(){const r=_rb.apply(this,arguments);try{if(!own()||S.source==="sample")return r;const m=$("#main");
   const st=stale();const snooze=S.oaSnooze&&Date.now()-S.oaSnooze<DAY;
   if(st.length&&!snooze)m.insertAdjacentHTML("afterbegin",`<div class="banner" id="oaNudge" style="border-color:var(--warn)"><span><b>🔔 ${st.length} haven't signed in</b> a day after getting their login.</span><button type="button" id="oaRemind">Remind</button><button type="button" id="oaLater" class="alt">Later</button></div>`);
-  const D=oaData();if(D.R.length&&D.off.length&&!document.getElementById("oaPanel")){const qa=m.querySelector(".qa");const html=oaHTML(false);if(qa)qa.insertAdjacentHTML("afterend",html)}}catch(e){}return r}}
+  }catch(e){}return r}}
 
 /* ---------- Invite: the QR panel under Send out ---------- */
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(view==="invite"&&own()&&!document.getElementById("qjPanel")){const b=document.getElementById("soBox");if(b)b.insertAdjacentHTML("afterend",qHTML())}
-  if(view==="access"&&!document.getElementById("oaPanel")){const h2=document.querySelector("#main .sechead");if(h2)h2.insertAdjacentHTML("afterend",oaHTML(true))}}catch(e){}return r}}
+  if(view==="access"&&!document.getElementById("oaPanel")){const h2=document.querySelector("#main .sechead");if(h2)h2.insertAdjacentHTML("afterend",oaHTML(true))}
+  /* 4.49: "On the app" lives in Settings (the Data screen), not on Home */
+  if(view==="data"&&own()&&S.source!=="sample"&&!document.getElementById("oaPanel")){const D=oaData();if(D.R.length&&D.off.length){const m=document.getElementById("main");if(m)m.insertAdjacentHTML("afterbegin",oaHTML(true))}}}catch(e){}return r}}
 new MutationObserver(()=>{if(view==="invite"&&own()&&!document.getElementById("qjPanel")){const b=document.getElementById("soBox");if(b)b.insertAdjacentHTML("afterend",qHTML())}}).observe(document.getElementById("main")||document.body,{childList:true,subtree:false});
 
 /* ---------- 4) company asks buzz the platoon ---------- */

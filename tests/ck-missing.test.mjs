@@ -15,7 +15,7 @@ test("co-leader's Check-ins shows who hasn't checked in today", async () => {
     assert.ok(a.$("#ckMiss"), "panel on Check-ins");
     assert.match(a.$("#ckMiss").textContent, /Haven't checked in/);
     a.w.eval(`view="board";render()`);
-    assert.match(a.$("#ckMissHome").textContent, /didn.t check in today/);
+    assert.ok(!a.$("#ckMissHome"), "not on Home any more");
   } finally { await a.close(); }
 });
 
@@ -39,11 +39,12 @@ test("co-leader phone: check-ins arrive over sync, and Home names who didn't che
     assert.equal(a.w.eval("S.cks.find(x=>x.cid==='new2').state"), "new");
     assert.notEqual(a.w.eval("S.pgAfter"), 99, "read marker doesn't sync");
     await a.w.eval(`view="board";render()`); await sleep(40);
-    const home = a.$("#ckMissHome"); assert.ok(home, "Home shows the didn't-check-in card");
-    assert.match(home.textContent, /1 didn't check in today/);
-    assert.match(home.textContent, /LCPL MUNIZ/, "names who");
-    assert.doesNotMatch(home.textContent, /ORTIZ/, "a waiting check-in counts as checked in");
+    assert.ok(!a.$("#ckMissHome"), "Home no longer shows the didn't-check-in card");
     await a.w.eval(`view="checkins";render()`); await sleep(40);
+    const pan = a.$("#ckMiss"); assert.ok(pan, "Check-ins shows who is missing");
+    const rows = [...pan.querySelectorAll(".cm-row")].map(x => x.textContent).join(" ");
+    assert.match(rows, /MUNIZ/i, "names who");
+    assert.doesNotMatch(rows, /ORTIZ/i, "a waiting check-in counts as checked in");
     assert.match(a.$("#main").textContent, /CPL ORTIZ/, "co-leader sees the check-in to confirm");
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }

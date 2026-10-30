@@ -18,6 +18,7 @@ const GROUPS=[
   {k:"feed",l:"Feed",s:"Post, text, messages, pages",ic:"feed",keys:["feed","send","dms","pages"]},
   {k:"people",l:"People & access",s:"Invite, logins, accounts, who has access",ic:"people",keys:["invite","access","logins","live","acct"]},
   {k:"reports",l:"Reports",s:"Headcount, PDF, incident report, trends, HARP",ic:"text",keys:["text","pdfReport","w6","trends","harp"]},
+  {k:"utilities",l:"Utilities",s:"Ask your roster, need a hand, tour",ic:"help",keys:["utilities"]},
   {k:"plan",l:"Calendar",s:"Calendar, events, duty, meetings",ic:"cal",keys:["cal","events","duty","pt"]},
   {k:"ready",l:"Readiness",s:"Who's due for what",ic:"ready",keys:["ready"]},
   {k:"recall",l:"Recall",s:"Call or text everyone",ic:"recall",keys:["recall"]},

@@ -30,11 +30,13 @@ test("answers who is out, who has no phone, counts and a name lookup, and splits
   } finally { await a.close(); }
 });
 
-test("the box shows on Home for a leader and answers when asked", async () => {
+test("the box shows in Utilities (not Home) for a leader and answers when asked", async () => {
   const a = await openApp({ rpc: () => null });
   try {
     a.w.eval(SETUP); a.w.eval(`view="board";render()`); await sleep(50);
-    assert.ok(a.$("#arCard"), "card is on Home");
+    assert.ok(!a.$("#arCard"), "not on Home");
+    a.w.eval(`view="utilities";render()`); await sleep(50);
+    assert.ok(a.$("#arCard"), "card is in Utilities");
     a.$("#arQ").value = "who is missing a phone number"; a.$("#arGo").click();
     assert.match(a.$("#arOut").textContent, /Jones/);
     assert.match(a.$("#arOut").textContent, /Park/);
@@ -46,5 +48,16 @@ test("members never get the roster box", async () => {
   try {
     a.w.eval(SETUP); a.w.eval(`S.source="sample";view="board";render()`); await sleep(50);
     assert.ok(!a.$("#arCard"));
+  } finally { await a.close(); }
+});
+
+test("Tools has a Utilities tile that opens the screen", async () => {
+  const a = await openApp({ rpc: () => null });
+  try {
+    a.w.eval(SETUP); a.w.eval(`view="tools";render()`); await sleep(50);
+    const t = a.$('[data-go="utilities"]'); assert.ok(t, "tile in Tools"); t.click(); await sleep(80);
+    assert.equal(a.w.eval("view"), "utilities");
+    assert.ok(a.$("#arCard") && a.$("#hmAsk"));
+    assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });

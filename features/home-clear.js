@@ -100,10 +100,6 @@ function homeFix(){const main=$("#main");if(!main||view!=="board")return;
   const live=main.querySelector('.att[data-go="live"]'),oa=main.querySelector("#oaPanel"),qa=main.querySelector(".qa");
   const spot=live?live.nextElementSibling:null;
   if(oa){const anchor=spot&&spot.isConnected&&spot!==oa?spot:main.querySelector("details.card");if(anchor&&anchor!==oa)anchor.insertAdjacentElement("beforebegin",oa)}
-  if(main.querySelector("#hmAsk")){if(live)main.querySelector("#hmAsk").insertAdjacentElement("afterend",live);return}const ask=typeof akHidden==="function"&&akHidden()?"":`<button class="btn alt" data-go="ask">💬 Ask a question</button>`;
-  main.insertAdjacentHTML("beforeend",`<div class="panel" id="hmAsk" style="margin-top:14px"><b>Need a hand?</b><p class="note" style="margin:2px 0 8px">Ask about your team, orders or anything, or learn how to do something in this app.</p>
-    <div class="row2">${ask}<button class="btn alt" data-go="support">❓ How do I…</button></div>
-    <div class="row2" style="margin-top:6px"><button class="btn alt" data-trfull="1">👆 Take the tour</button><a class="btn alt" href="help.html" target="_blank" rel="noopener">📖 Guide</a></div></div>`);
   if(live)main.insertAdjacentElement("beforeend",live)}
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{homeFix();if(view==="board"){const m=$("#main");if(m){todayFix(m);nyFix(m)}}}catch(e){}return r}}
 

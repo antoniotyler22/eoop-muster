@@ -56,11 +56,11 @@ window.askRoster=function(text){const parts=String(text||"").split(/\s+(?:and|al
 function card(){return `<div class="panel" id="arCard"><b>🔎 Ask your roster</b><p class="note" style="margin:2px 0 6px">Plain questions, answered on this phone. Nothing is sent anywhere.</p>
   <div style="display:flex;gap:8px"><input id="arQ" type="search" enterkeyhint="search" autocomplete="off" placeholder="${esc(EX[0])}" style="flex:1;min-width:0"><button class="btn" id="arGo" style="width:auto;padding:0 16px">Ask</button></div>
   <div id="arOut"></div>${used?"":`<div class="note" style="margin-top:6px">${EX.slice(1).map(x=>`<a href="#" data-arex="${esc(x)}">${esc(x)}</a>`).join(" · ")}</div>`}</div>`}
+window.askRosterCard=()=>leader()?card():"";
 function run(t){const o=$("#arOut");if(!o)return;o.innerHTML=askRoster(t);used=1}
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{
   if(!leader())return r;const m=$("#main");if(!m||$("#arCard"))return r;
-  if(view==="board"){const a=$("#ckMissHome")||$("#myCk");if(a)a.insertAdjacentHTML("beforebegin",card());else{const g=m.querySelector(".greet,.hero");if(g)g.insertAdjacentHTML("afterend",card())}}
-  else if(view==="checkins"){const hd=m.querySelector(".sechead");if(hd)hd.insertAdjacentHTML("afterend",card())}
+  if(view==="checkins"){const hd=m.querySelector(".sechead");if(hd)hd.insertAdjacentHTML("afterend",card())}
   }catch(e){}return r}}
 document.addEventListener("click",e=>{const t=e.target;
   const ex=t.closest&&t.closest("[data-arex]");if(ex){e.preventDefault();const q=$("#arQ");if(q)q.value=ex.dataset.arex;run(ex.dataset.arex);return}

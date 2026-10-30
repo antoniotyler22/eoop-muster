@@ -31,7 +31,7 @@ function panel(){const {done,miss,out,of}=state();const all=of>0&&!miss.length;
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{
   if(!leader())return r;const m=$("#main");if(!m)return r;
   if(view==="checkins"&&!$("#ckMiss")){const hd=m.querySelector(".sechead");if(hd)hd.insertAdjacentHTML("afterend",panel());else m.insertAdjacentHTML("afterbegin",panel())}
-  if(view==="board"&&!$("#ckMissHome")){const {miss,of,done}=state();if(of){const ck=$("#myCk");
+  if(false&&view==="board"&&!$("#ckMissHome")){const {miss,of,done}=state();if(of){const ck=$("#myCk");
     const names=miss.slice(0,6).map(x=>`<span class="cm-chip" data-pcard="${esc(x.id)}">${esc(x.rank+" "+lastOf(x))}</span>`).join("")+(miss.length>6?`<span class="cm-chip">+${miss.length-6} more</span>`:"");
     const line=miss.length?`<div class="card" id="ckMissHome" style="gap:6px;border-color:var(--warn)"><div style="display:flex;justify-content:space-between;align-items:baseline"><b style="color:var(--warn)">📍 ${miss.length} didn't check in today</b><button class="chip" data-go="checkins" style="cursor:pointer">See all · ${done.length}/${of} in</button></div><div class="cm-chips">${names}</div></div>`
       :`<button class="chip" id="ckMissHome" data-go="checkins" style="cursor:pointer;margin:8px 0 0;color:var(--s-onhand)">✓ Everyone checked in today (${done.length}/${of})</button>`;
