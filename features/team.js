@@ -162,14 +162,14 @@ window.ckIn=function(f,o,r){S.cks=S.cks||[];const cid=String(o.cid||"").slice(0,
   const clean=(v,n)=>String(v||"").replace(/[<>]/g,"").slice(0,n);const date=v=>/^\d{4}-\d{2}-\d{2}$/.test(String(v||""))?String(v):"";
   const x={cid,feed:f.id,mid:m?m.id:"",who,sec:clean(o.sec,6),st,oth:clean(o.oth,80),from:date(o.from),to:date(o.to),loc:clean(o.loc,60),note:clean(o.note,120),t:Date.parse(r&&r.created_at)||+o.at||Date.now(),state:"new"};
   S.cks.unshift(x);S.cks=S.cks.slice(0,300);S.seen=S.seen||{};S.seen[x.mid||"n:"+who.toUpperCase()]={t:x.t,who,how:"check-in"};
-  if(S.ckAuto&&m&&st!==CK_OTHER){ckApply(x,st,"auto");actAdd("📍",who+" checked in: "+ckLine(x)+" · put on the roster","checkins")}
+  if(S.ckAuto&&m&&st!==CK_OTHER&&canEdit()){ckApply(x,st,"auto");actAdd("📍",who+" checked in: "+ckLine(x)+" · put on the roster","checkins")}
   else actAdd("📍",who+" checked in: "+ckLine(x)+(m?"":" · not matched to your roster"),"checkins");
   toast("📍 "+who+" checked in");try{navigator.vibrate&&navigator.vibrate([80,60,80])}catch(e){}
-  localAlert("📍 "+who+" checked in",ckLine(x)+". Open Check-ins to confirm.","checkins");
+  localAlert("📍 "+who+" checked in",ckLine(x)+(canEdit()?". Open Check-ins to confirm.":". Open Check-ins to see it."),"checkins");
   if(view==="checkins"){const y=window.scrollY;renderCk();window.scrollTo(0,y)}};
 /* leader: pull check-ins dropped on My pages (members with no Feed on their page). One call for every page. */
 const pgK={};let pgBusy=false;
-async function pgPoll(){if(pgBusy||!leaderHere()||!canEdit())return;const L=S.roster.filter(m=>m.pk);if(!L.length)return;pgBusy=true;
+async function pgPoll(){if(pgBusy||!leaderHere())return;const L=S.roster.filter(m=>m.pk);if(!L.length)return;pgBusy=true;
   try{const ids=[],wks=[],by={};for(const m of L){const K=pgK[m.pk]||(pgK[m.pk]=await mpKeys(m.pk));ids.push(K.id);wks.push(K.wk);by[K.id]=K}
     const rows=await SB.rpc("page_reqs_get",{p_ids:ids,p_wks:wks,p_after:S.pgAfter||0});let got=0;
     for(const r of [...(rows||[])].sort((a,b)=>a.id-b.id)){S.pgAfter=Math.max(S.pgAfter||0,+r.id);const K=by[r.page_id];if(!K)continue;
