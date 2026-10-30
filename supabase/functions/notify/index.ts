@@ -12,7 +12,8 @@
 //  {team, k, what:["test"]}: the leader's "Test alert to my team" (leader or poster key only): one buzz to every phone on the list.
 //  {health:1}: reads one row with the service role; answers "ok" or "db denied" (System check). Database errors now answer 500, never "no sub".
 //  {drain:1} also handles {kind:"req"} (part 36): one rolled-up leader alert for every check-in or request since the last alert.
-//  4.31.0
+//  {stalled:1} and the minute job: if check-ins sit unalerted for 6 min or the database refuses us, the owner phone gets "Alerts not going out" (once an hour).
+//  4.32.0
 // Payloads carry no names. Turn OFF "Enforce JWT verification" (the function validates input itself).
 // Secrets: VAPID_PUBLIC, VAPID_PRIVATE (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are built in).
 // iPhone app (optional): APNS_KEY (the .p8 file contents), APNS_KEY_ID, APNS_TEAM_ID, APNS_TOPIC (bundle id; default com.antoniotyler.accountedfor).
@@ -26,7 +27,7 @@ const cors = {
 };
 webpush.setVapidDetails("mailto:antoniotyler22@gmail.com", Deno.env.get("VAPID_PUBLIC")!, Deno.env.get("VAPID_PRIVATE")!);
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-const VER = "4.31.0";
+const VER = "4.32.0";
 const out = (t: string, status = 200) => new Response(t, { status, headers: cors });
 // A database error (for example the service role lost its table rights) must never read as "no sub": that hid a
 // week of dead alerts. Log it and answer 500 so the failure shows in the logs and the owner's Health tab.
@@ -277,7 +278,31 @@ async function alertOic(id: string, mk: string, kind: string) {
 
 // {escalate:1}: every minute from pg_cron (setup part 22). Recalls whose deadline just passed with people still
 // missing get one alert to the leader's phone. Counts only; the server never has names.
+/* Alerts that are not going out: the database refuses us, or check-ins/requests older than 6 minutes that no alert claimed.
+   Returns "" when fine. The minute job (escalate) runs this every 5 minutes and buzzes the owner's phone at most once an hour. */
+async function stalledNow(): Promise<string> {
+  const { error } = await db.from("feeds").select("id").limit(1);
+  if (error) return "database denied";
+  const old = new Date(Date.now() - 6 * 60000).toISOString();
+  const { data: rq, error: e1 } = await db.from("feed_reqs").select("id,feed_id").lt("created_at", old).gt("created_at", new Date(Date.now() - 6 * 3600000).toISOString()).order("id", { ascending: false }).limit(200);
+  if (e1) return "database denied";
+  // deno-lint-ignore no-explicit-any
+  const ids = [...new Set((rq ?? []).map((r: any) => r.feed_id))].slice(0, 50); let n = 0;
+  if (ids.length) { const { data: fs } = await db.from("feeds").select("id,last_req_push_id").in("id", ids); for (const f of fs ?? []) if ((rq ?? []).some((r: any) => r.feed_id === f.id && r.id > (f.last_req_push_id ?? 0))) n++; }
+  return n ? "check-ins waiting in " + n + " team" + (n > 1 ? "s" : "") + " with no alert sent" : "";
+}
+async function watchOwner() {
+  if (new Date().getUTCMinutes() % 5 !== 0) return;
+  try {
+    const w = await stalledNow(); if (!w) return;
+    const { data } = await db.from("app_cfg").select("owner_sub,alert_at").eq("id", 1).maybeSingle();
+    if (!data?.owner_sub || (data.alert_at && Date.now() - Date.parse(data.alert_at) < 3600000)) return;
+    await db.from("app_cfg").update({ alert_at: new Date().toISOString() }).eq("id", 1);
+    await pushAny(data.owner_sub, { title: "⚠ Alerts not going out", body: "Accounted For: " + w + ". Open the Owner console → System check.", help: true, open: "owner" }, true, 3600);
+  } catch (e) { console.error("watchOwner", e); }
+}
 async function escalate() {
+  await watchOwner();
   const { data, error } = await db.rpc("esc_due");
   if (error) return out("no escalations table");
   let sent = 0;
@@ -367,7 +392,7 @@ async function remember(req: Request) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return out("ok");
   if (req.method !== "POST") return out("method", 405);
-  let body: { ver?: unknown; test?: unknown; sub?: unknown; recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown; drain?: unknown; team?: unknown; k?: unknown; what?: unknown; skip?: unknown; whoami?: unknown; health?: unknown } = {};
+  let body: { ver?: unknown; test?: unknown; sub?: unknown; recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown; drain?: unknown; team?: unknown; k?: unknown; what?: unknown; skip?: unknown; whoami?: unknown; health?: unknown; stalled?: unknown } = {};
   try { body = await req.json(); } catch { return out("bad", 400); }
   if (body.whoami === 1) { namedAt = 0; await remember(req); return out("ok"); }
   // {ver:1}: which version is deployed (System check).  {test:1, sub}: one "Test alert" to the asking phone only.
@@ -384,6 +409,7 @@ Deno.serve(async (req) => {
     const { error } = await db.from("feeds").select("id").limit(1);
     return out(error ? "db denied" : "ok", error ? 500 : 200);
   }
+  if (body.stalled === 1) { const w = await stalledNow(); return out(w || "ok", w ? 503 : 200); }
   if (body.escalate === 1) { remember(req); return escalate(); }
   if (body.drain === 1) { remember(req); return drain(); }
   const skip = typeof body.skip === "string" ? body.skip.slice(0, 600) : "";

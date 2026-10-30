@@ -10,10 +10,10 @@ test("System check tells you when the server can't read its own tables", async (
   const a = await openApp({ rpc: () => null });
   try {
     const st = (nt) => JSON.parse(a.w.eval(`JSON.stringify(ntState(${JSON.stringify(nt)}))`));
-    const r = st({ s: 400, t: "bad", s2: 500, s3: 200, s4: 200, v: "4.31.0", hs: 500, h: "db denied" });
+    const r = st({ s: 400, t: "bad", s2: 500, s3: 200, s4: 200, v: "4.32.0", hs: 500, h: "db denied" });
     assert.equal(r.ok, 0);
     assert.match(r.msg, /part 35/);
-    assert.equal(st({ s: 400, t: "bad", s2: 200, s3: 200, s4: 200, v: "4.31.0", hs: 200, h: "ok" }).ok, 1);
+    assert.equal(st({ s: 400, t: "bad", s2: 200, s3: 200, s4: 200, v: "4.32.0", hs: 200, h: "ok" }).ok, 1);
   } finally { await a.close(); }
 });
 
@@ -34,7 +34,7 @@ test("a page check-in with the Feed keys on the page also sends the leader alert
 
 test("notify never turns a database error into 'no sub', and has a health check", () => {
   const t = readFileSync(new URL("../supabase/functions/notify/index.ts", import.meta.url), "utf8");
-  assert.match(t, /VER = "4\.31\.0"/);
+  assert.match(t, /VER = "4\.32\.0"/);
   assert.match(t, /if \(e0\) return dbErr\(e0\)/);
   assert.match(t, /body\.health === 1/);
   assert.equal((t.match(/dbErr\(e0\)/g) || []).length, 5,"recall, board, feed, team and alertOic all check the read");
@@ -60,8 +60,26 @@ test("setup part 36 queues a rolled-up job per check-in and notify sends one ale
   assert.match(sql, /create trigger af_push_req after insert on public\.feed_reqs/);
   assert.match(sql, /'kind', 'req'/);
   const t = readFileSync(new URL("../supabase/functions/notify/index.ts", import.meta.url), "utf8");
-  assert.match(t, /VER = "4\.31\.0"/);
+  assert.match(t, /VER = "4\.32\.0"/);
   assert.match(t, /m\.kind === "req"/);
   assert.match(t, /new check-ins or requests/);
   assert.match(t, /last_req_push_id/);
+});
+
+test("owner is buzzed when alerts stall, and a member is asked for alerts after checking in", async () => {
+  const n = readFileSync(new URL("../supabase/functions/notify/index.ts", import.meta.url), "utf8");
+  assert.match(n, /body\.stalled === 1/);
+  assert.match(n, /Alerts not going out/);
+  assert.match(n, /await watchOwner\(\)/);
+  const a = await openApp({ rpc: () => null });
+  try {
+    await a.w.eval(`(async()=>{const m=S.roster[0];const D=mpDigest(m);D.feed={id:"abcdefghij1234",mk:"m".repeat(30),ek:"e".repeat(40),unit:"UT",secs:[]};D.cofeed=null;D.cks=[];
+      S.feeds=[];S.pushOn=false;S.myCks=[{t:Date.now(),st:"On Hand",ct:"x"}];S.me={pk:"${"p".repeat(28)}",unit:"UT",d:D,t:Date.now()};S.onb=true;S.welcomed=1;view="me";render()})()`);
+    await sleep(50);
+    assert.ok(a.$("#ckAl"), "prompt shows after a check-in when alerts are off");
+    assert.match(a.$("#ckAl").textContent, /Turn on alerts/);
+    a.w.eval(`S.pushOn=true;render()`);
+    await sleep(50);
+    assert.ok(!a.$("#ckAl"));
+  } finally { await a.close(); }
 });

@@ -87,6 +87,7 @@ function ckExampleHTML(){const inp="width:100%;padding:9px;border:1px solid var(
 function ckCardHTML(){const f=ckFeed();const last=(S.myCks||[])[0];
   let h=`<div class="card" id="ckCard" style="gap:8px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">CHECK IN</span>${last?`<span class="chip">Last ${esc(ago(last.t))}</span>`:""}</div>`;
   if(last){const s=ckState(last);h+=`<div class="note" style="margin:0"><b>${esc(ckLine(last))}</b> · ${s.state==="ok"?`<span style="color:var(--s-onhand);font-weight:700">✓ Confirmed</span>`:s.state==="no"?`<span style="color:var(--warn);font-weight:700">✕ Not confirmed</span>${s.dnote?" · "+esc(s.dnote):""}`:"Sent · waiting for your leader"}</div>`}
+  if(last&&!S.pushOn&&!(typeof Notification!=="undefined"&&Notification.permission==="denied"))h+=`<div class="note" id="ckAl" style="margin:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:160px">🔔 Get your leader's confirmation on this phone.</span><button class="btn" id="taOn" style="min-height:40px">Turn on alerts</button></div>`;
   const P=f?null:ckPage();
   if(!f&&!P){h+=`<p class="note" style="margin:0">Check-in turns on once your page loads. Pull down to refresh, or ask your leader for a new link.</p></div>`;return h}
   if(!ck.open){h+=`<button class="btn" id="ckOpen" style="min-height:52px;font-size:17px">📍 Check in</button><p class="note" style="margin:0">Tell your leader where you are. They confirm it.</p></div>`;return h}

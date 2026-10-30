@@ -88,7 +88,7 @@ if(typeof renderMe==="function"){const _rm=renderMe;renderMe=function(){_rm.appl
 document.addEventListener("click",e=>{if(!e.target.closest("#taOn"))return;e.stopImmediatePropagation();const b=e.target.closest("#taOn");b.disabled=true;b.textContent="Asking…";
   pushSub(true).then(async sub=>{if(!sub){toast(window.__pushWhy==="notoken"?"Apple didn't send an alert token. Close the app fully and try again.":window.__pushWhy==="noplugin"?"Alerts aren't in this build of the app yet.":"Alerts are off for this app. Turn them on in Settings → Notifications → Accounted For.");b.disabled=false;b.textContent="Turn on team alerts";return}
     S.pushOn=true;save();await attachAll(true);try{if(S.board&&typeof boardPush==="function")await boardPush()}catch(e){}
-    const c=$("#taCard");if(c)c.remove();if(hasAlerts())toast("🔔 Team alerts on");else{toast("Couldn't connect alerts: "+(lastErr||"try again."));const y=window.scrollY;render();window.scrollTo(0,y)}})
+    const c=$("#taCard");if(c)c.remove();const q=$("#ckAl");if(q)q.remove();if(hasAlerts())toast("🔔 Team alerts on");else{toast("Couldn't connect alerts: "+(lastErr||"try again."));const y=window.scrollY;render();window.scrollTo(0,y)}})
   .catch(()=>{toast("Couldn't turn on alerts here.");b.disabled=false;b.textContent="Turn on team alerts"})},true);
 
 /* keep the list current: new feeds (joined, synced) and refreshed phone tokens */

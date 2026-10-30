@@ -1599,7 +1599,7 @@ function akState(a){if(!a)return null;if(a.err)return {ok:0,msg:"Couldn't reach 
   if(a.ok&&!a.key)return {ok:0,msg:"Deployed, but the ANTHROPIC_API_KEY secret is missing."};if(a.ok&&!a.db)return {ok:0,msg:"Deployed, but the usage table is missing. Run part 10."};if(a.ok&&!a.ctl)return {ok:0,msg:"Ready, but OIC controls aren't set up. Run part 10b."};if(a.ok)return {ok:1,msg:"Ready"+(a.admin?" · OIC controls on":" · add AI_ADMIN_KEY to use OIC controls")+" · "+(a.on===false?"turned OFF":a.who==="feed"?"Feed members only":a.who==="leaders"?"leaders only":"open to everyone")+"."};return {ok:0,msg:"Unexpected answer ("+a.s+")."}}
 function nwState(a){if(!a)return null;if(a.err)return {ok:0,msg:"Couldn't reach it. Check signal."};if(a.s===404)return {ok:0,msg:"Optional. Not set up: create the Edge Function named news and paste supabase/functions/news/index.ts. No secrets needed."};
   if(a.s===401||a.s===403)return {ok:0,msg:"JWT checking is on. Open news → Details and turn off Enforce JWT verification."};if(a.s>=500)return {ok:0,msg:"It crashed. Usually the code was cut off when pasted."};if(a.ok)return {ok:1,msg:"Ready: weather, alerts and world news on Home."};return {ok:0,msg:"Unexpected answer ("+a.s+")."}}
-const NOTIFY_VER="4.31.0";
+const NOTIFY_VER="4.32.0";
 function ntState(nt){if(!nt)return null;if(nt.err)return {ok:0,msg:"Couldn't reach it. Check signal."};if(nt.hs===500&&/denied/.test(nt.h||""))return {ok:0,msg:"The server can't read its own tables, so no alert can go out. Run setup part 35 (supabase/setup/35_service_role_grants.sql), then check again."};if(nt.s===404)return {ok:0,msg:"Not deployed. Create the Edge Function named notify."};
   if(nt.s===401||nt.s===403)return {ok:0,msg:"JWT checking is on. Open notify → Details and turn off Enforce JWT verification."};
   if(nt.s>=500)return {ok:0,msg:"It crashed. Usually the VAPID_PUBLIC / VAPID_PRIVATE secrets are missing, or the code was cut off when pasted."};
@@ -5088,6 +5088,7 @@ function ckExampleHTML(){const inp="width:100%;padding:9px;border:1px solid var(
 function ckCardHTML(){const f=ckFeed();const last=(S.myCks||[])[0];
   let h=`<div class="card" id="ckCard" style="gap:8px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">CHECK IN</span>${last?`<span class="chip">Last ${esc(ago(last.t))}</span>`:""}</div>`;
   if(last){const s=ckState(last);h+=`<div class="note" style="margin:0"><b>${esc(ckLine(last))}</b> · ${s.state==="ok"?`<span style="color:var(--s-onhand);font-weight:700">✓ Confirmed</span>`:s.state==="no"?`<span style="color:var(--warn);font-weight:700">✕ Not confirmed</span>${s.dnote?" · "+esc(s.dnote):""}`:"Sent · waiting for your leader"}</div>`}
+  if(last&&!S.pushOn&&!(typeof Notification!=="undefined"&&Notification.permission==="denied"))h+=`<div class="note" id="ckAl" style="margin:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:160px">🔔 Get your leader's confirmation on this phone.</span><button class="btn" id="taOn" style="min-height:40px">Turn on alerts</button></div>`;
   const P=f?null:ckPage();
   if(!f&&!P){h+=`<p class="note" style="margin:0">Check-in turns on once your page loads. Pull down to refresh, or ask your leader for a new link.</p></div>`;return h}
   if(!ck.open){h+=`<button class="btn" id="ckOpen" style="min-height:52px;font-size:17px">📍 Check in</button><p class="note" style="margin:0">Tell your leader where you are. They confirm it.</p></div>`;return h}
@@ -6830,7 +6831,7 @@ if(typeof renderMe==="function"){const _rm=renderMe;renderMe=function(){_rm.appl
 document.addEventListener("click",e=>{if(!e.target.closest("#taOn"))return;e.stopImmediatePropagation();const b=e.target.closest("#taOn");b.disabled=true;b.textContent="Asking…";
   pushSub(true).then(async sub=>{if(!sub){toast(window.__pushWhy==="notoken"?"Apple didn't send an alert token. Close the app fully and try again.":window.__pushWhy==="noplugin"?"Alerts aren't in this build of the app yet.":"Alerts are off for this app. Turn them on in Settings → Notifications → Accounted For.");b.disabled=false;b.textContent="Turn on team alerts";return}
     S.pushOn=true;save();await attachAll(true);try{if(S.board&&typeof boardPush==="function")await boardPush()}catch(e){}
-    const c=$("#taCard");if(c)c.remove();if(hasAlerts())toast("🔔 Team alerts on");else{toast("Couldn't connect alerts: "+(lastErr||"try again."));const y=window.scrollY;render();window.scrollTo(0,y)}})
+    const c=$("#taCard");if(c)c.remove();const q=$("#ckAl");if(q)q.remove();if(hasAlerts())toast("🔔 Team alerts on");else{toast("Couldn't connect alerts: "+(lastErr||"try again."));const y=window.scrollY;render();window.scrollTo(0,y)}})
   .catch(()=>{toast("Couldn't turn on alerts here.");b.disabled=false;b.textContent="Turn on team alerts"})},true);
 
 /* keep the list current: new feeds (joined, synced) and refreshed phone tokens */
