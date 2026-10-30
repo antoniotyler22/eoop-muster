@@ -8301,6 +8301,11 @@ if(typeof HELP==="object"&&HELP.recall&&Array.isArray(HELP.recall[2]))HELP.recal
    those lines from the Activity list (the full list has its own Clear too).
    Tools: a search box at the top finds any screen or feature by name or description and opens it in one tap. */
 (()=>{
+/* ---------- 4.51: system status as one icon. Blue = all systems working and the server answered; reddish black =
+   something needs attention. Tap it to open the Dashboard. ---------- */
+function sysIcon(ok,inline){const t=ok?"All systems working"+(SB.okAt?" · server reached "+ago(SB.okAt):""):"Something needs attention";
+  return `<button type="button" class="sysic ${ok?"ok":"bad"}" id="sysIc" data-go="dash" aria-label="${esc(t)}. Open the Dashboard" title="${esc(t)}"${inline?"":' style="margin:10px 4px 0"'}><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${ok?'<path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>':'<path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M12 8v5"/><path d="M12 16.5v.01"/>'}</svg></button>`}
+window.sysIcon=sysIcon;
 /* ---------- Needs attention: hide ---------- */
 const hid=()=>{S.hideHealth=S.hideHealth&&typeof S.hideHealth==="object"?S.hideHealth:{};return S.hideHealth};
 const hk=x=>String(x.t||"").slice(0,120);
@@ -8308,9 +8313,9 @@ let showHidden=false;
 if(typeof healthCard==="function"){const _hc=healthCard;healthCard=function(){let I;try{I=healthIssues()}catch(e){return _hc.apply(this,arguments)}
   const H=hid();const keys=new Set(I.map(hk));let ch=false;for(const k of Object.keys(H))if(!keys.has(k)&&H[k]!=="never"){delete H[k];ch=true}if(ch)rawSave();
   const hidden=I.filter(x=>H[hk(x)]&&H[hk(x)]!=="never").length;const show=(showHidden?I:I.filter(x=>!H[hk(x)])).filter(x=>H[hk(x)]!=="never");
-  if(!show.length){if(!I.length||!hidden)return `<div class="note" style="margin:10px 4px 0;color:var(--s-onhand);font-weight:700">● All systems working${SB.okAt?" · server reached "+ago(SB.okAt):""}</div>`;
-    return `<div class="note" style="margin:10px 4px 0;display:flex;gap:8px;align-items:center"><span style="color:var(--s-onhand);font-weight:700">● ${hidden} hidden</span><button class="chip" id="hhShow" style="cursor:pointer">Show</button></div>`}
-  return `<div class="sech"><h2>Needs attention</h2><span style="display:flex;gap:6px;align-items:center"><span class="note" style="margin:0">${show.length}</span>${show.length>1?`<button class="chip" id="hhAll" style="cursor:pointer">Hide all</button>`:""}${hidden&&!showHidden?`<button class="chip" id="hhShow" style="cursor:pointer">${hidden} hidden</button>`:""}</span></div>
+  if(!show.length){if(!I.length||!hidden)return sysIcon(true);
+    return `<div style="margin:10px 4px 0;display:flex;gap:8px;align-items:center">${sysIcon(false,true)}<span class="note" style="margin:0;font-weight:700">${hidden} hidden</span><button class="chip" id="hhShow" style="cursor:pointer">Show</button></div>`}
+  return sysIcon(false)+`<div class="sech"><h2>Needs attention</h2><span style="display:flex;gap:6px;align-items:center"><span class="note" style="margin:0">${show.length}</span>${show.length>1?`<button class="chip" id="hhAll" style="cursor:pointer">Hide all</button>`:""}${hidden&&!showHidden?`<button class="chip" id="hhShow" style="cursor:pointer">${hidden} hidden</button>`:""}</span></div>
     <div class="card ny">${show.map(x=>`<div class="hc-row"><button class="lrow" data-go="${esc(x.go||"")}" style="flex:1;text-align:left;background:none;border:0;cursor:pointer;color:inherit;border-top:0"><span class="n tone-r">!</span><span class="t" style="flex:1">${esc(x.t)}</span></button><button class="hc-x" data-hgone="${esc(hk(x))}" aria-label="Delete" title="Delete for good">🗑</button><button class="hc-x" data-hhide="${esc(hk(x))}" aria-label="Hide" title="Hide until it comes back">×</button></div>`).join("")}</div>`}}
 /* ---------- Activity on Home: clear ---------- */
 let armedAct=false;
@@ -8403,6 +8408,10 @@ function homeFix(){const main=$("#main");if(!main||view!=="board")return;
 {const st=document.createElement("style");st.textContent=`.hc-row{display:flex;align-items:stretch;border-top:1px solid var(--line)}.hc-row:first-child{border-top:0}.hc-row .lrow{min-width:0}
 .hc-x{flex:0 0 44px;border:0;background:none;color:var(--muted,inherit);opacity:.7;font-size:22px;line-height:1;cursor:pointer}.hc-x:active{opacity:1}
 .strip>*{position:relative}.hc-tx{position:absolute;top:4px;right:8px;font-size:18px;line-height:1;color:var(--muted);opacity:.7;cursor:pointer;padding:2px 4px}
+.sysic{display:inline-grid;place-items:center;width:44px;height:44px;border-radius:50%;border:0;cursor:pointer;color:#fff;flex:0 0 44px}
+.sysic.ok{background:#2f6fde;box-shadow:0 0 0 4px rgba(47,111,222,.18)}
+.sysic.bad{background:linear-gradient(145deg,#6b1414,#1c0707);box-shadow:0 0 0 4px rgba(107,20,20,.2)}
+.sysic:active{transform:scale(.94)}
 .hc-search{margin:10px 0 4px}.hc-search .search{margin:0 0 8px}#tsRes{margin:0}`;document.head.appendChild(st)}
 })();
 

@@ -121,3 +121,17 @@ test("home: Needs you lines hide until tomorrow; Today cards show by time of day
     assert.equal(a.w.eval("S.todayHide.d"), a.w.eval("new Date().toISOString().slice(0,10)"));
   } finally { a.close(); }
 });
+
+test("system status is one icon: blue when working, reddish black when not; tap opens the Dashboard", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    a.w.eval(LEAD + `healthIssues=()=>[];view="board";render();`);
+    const ic = a.$("#sysIc"); assert.ok(ic, "icon on Home");
+    assert.ok(ic.classList.contains("ok")); assert.match(ic.getAttribute("aria-label"), /All systems working/);
+    assert.doesNotMatch(a.$("#main").textContent, /All systems working/, "no text line any more");
+    ic.click(); assert.equal(a.w.eval("view"), "dash");
+    a.w.eval(`healthIssues=()=>[{t:"Alerts are off",go:"alerts"}];view="board";render();`);
+    assert.ok(a.$("#sysIc.bad"), "reddish black when something is wrong");
+    a.$("#sysIc").click(); assert.equal(a.w.eval("view"), "dash");
+  } finally { a.close(); }
+});
