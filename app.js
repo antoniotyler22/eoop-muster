@@ -1562,6 +1562,7 @@ const SC=[
  {k:"rq",n:"Requests",f:["08_requests"],t:[["feed_req",{p_feed:"zz",p_member_key:"x",p_ct:"QQ=="}],["feed_reqs_get",{p_feed:"zz",p_leader_key:"x",p_after:0}]]},
  {k:"bk",n:"Backup and sync",f:["06a_backup_put","06b_backup_read"],t:[["backup_put",{p_id:"zz",p_key:"x",p_ct:"QQ==",p_base:null}],["backup_get",{p_id:"zz",p_key:"x"}],["backup_ver",{p_id:"zz",p_key:"x"}],["backup_delete",{p_id:"zz",p_key:"x"}]]},
  {k:"mp",n:"My page",f:["07_my_page"],t:[["put_page",{p_id:"zz",p_wk:"x",p_ct:"QQ=="}],["get_page",{p_id:"zz"}],["delete_page",{p_id:"zz",p_wk:"x"}]]},
+ {k:"pc",n:"My page check-in (no Feed needed)",f:["34_page_checkin"],t:[["page_req",{p_id:"zz",p_ct:"QQ=="}],["page_reqs_get",{p_ids:["zz"],p_wks:["x"],p_after:0}]]},
  {k:"cy",n:"Company board",f:["14a_company_tables","14b_company_report"],t:[["create_company",{p_id:"zz",p_read_key:"x",p_write_key:"x"}],["put_unit",{p_company:"zz",p_write_key:"x",p_unit:"zzzzzz",p_ct:"QQ=="}],["get_units",{p_company:"zz",p_read_key:"x"}]]},
  {k:"oa",n:"OIC alerts for requests and problems",f:["13_oic_alerts"],t:[["set_feed_leader_sub",{p_feed:"zz",p_leader_key:"x",p_sub:{}}]]},
  {k:"sk",n:"Replace one section link",f:["12a_section_keys","12b_section_checks"],t:[["set_sec_key",{p_board:"zz",p_read_key:"x",p_sec:"HQ",p_key:"x"}]]},
@@ -1632,6 +1633,8 @@ async function mpPublish(force){if(mpBusy){clearTimeout(mpT);mpT=setTimeout(()=>
   finally{mpBusy=false}return n}
 /* the link only goes out once their page is really on the server, so it never opens to "not published yet" */
 async function mpTurnOn(m){if(!m.pk){m.pk=rndId(28);m.pkSig="";save()}
+  /* a page should always carry the Feed keys so Check in works the fast way; start the unit Feed if there is none yet */
+  if(!mainFeed()&&isLeaderPhone()&&canEdit()&&S.source!=="sample"){try{await fdCreate();const f=mainFeed();if(f)f.main=true;save()}catch(e){}}
   for(let i=0;i<3;i++){try{await mpPutOne(m);S.mpErr="";rawSave();return mpLink(m)}catch(e){S.mpErr=String(e.message||e).slice(0,80);rawSave();if(i<2)await new Promise(r=>setTimeout(r,800*(i+1)))}}
   throw new Error("Couldn't publish their page: "+S.mpErr)}
 async function mpFetch(){const M=S.me;if(!M)return;try{const K=await mpKeys(M.pk);const rows=await SB.rpc("get_page",{p_id:K.id});const r=rows&&rows[0];

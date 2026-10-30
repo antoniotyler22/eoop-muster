@@ -71,6 +71,9 @@ document.addEventListener("click",e=>{if(e.target.id!=="sdSave"||!sheetCtx||shee
 let ck={open:false,st:"",busy:false,v:{}};
 function ckFeed(){const D=S.me&&S.me.d;if(D&&D.feed&&D.feed.id){const f=S.feeds.find(x=>x.id===D.feed.id&&!x.lk);if(f)return f}
   if(view==="feed"){const f=fdCur();if(f&&!f.lk)return f}return S.feeds.find(x=>!x.lk)||null}
+/* No Feed on the page yet? The page itself is the channel: sealed with the page key, read by the leader's page write key.
+   So anyone with a My page always has a Check in button. */
+const ckPage=()=>S.me&&S.me.d&&String(S.me.pk)!=="preview"?S.me:null;
 function ckGrab(){for(const [k,id] of [["from","ckF"],["to","ckT"],["loc","ckL"],["oth","ckO"],["note","ckN"]]){const el=document.getElementById(id);if(el)ck.v[k]=el.value}}
 function ckState(x){const D=S.me&&S.me.d;const r=D&&(D.cks||[]).find(c=>c.cid===x.cid);return r?r:{state:"sent"}}
 function ckExampleHTML(){const inp="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)";const d0=dkey(),d1=dkey(new Date(Date.now()+3*86400000));
@@ -83,7 +86,8 @@ function ckExampleHTML(){const inp="width:100%;padding:9px;border:1px solid var(
 function ckCardHTML(){const f=ckFeed();const last=(S.myCks||[])[0];
   let h=`<div class="card" id="ckCard" style="gap:8px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">CHECK IN</span>${last?`<span class="chip">Last ${esc(ago(last.t))}</span>`:""}</div>`;
   if(last){const s=ckState(last);h+=`<div class="note" style="margin:0"><b>${esc(ckLine(last))}</b> · ${s.state==="ok"?`<span style="color:var(--s-onhand);font-weight:700">✓ Confirmed</span>`:s.state==="no"?`<span style="color:var(--warn);font-weight:700">✕ Not confirmed</span>${s.dnote?" · "+esc(s.dnote):""}`:"Sent · waiting for your leader"}</div>`}
-  if(!f){h+=`<p class="note" style="margin:0">Check-in turns on when your page is connected to your leader's Feed. Pull down to refresh, or ask your leader for a new link.</p></div>`;return h}
+  const P=f?null:ckPage();
+  if(!f&&!P){h+=`<p class="note" style="margin:0">Check-in turns on once your page loads. Pull down to refresh, or ask your leader for a new link.</p></div>`;return h}
   if(!ck.open){h+=`<button class="btn" id="ckOpen" style="min-height:52px;font-size:17px">📍 Check in</button><p class="note" style="margin:0">Tell your leader where you are. They confirm it.</p></div>`;return h}
   const v=ck.v;const inp="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)";
   h+=`<div class="evts" role="radiogroup" aria-label="Your status">${STATUSES.map(s=>`<button data-ckst="${esc(s)}" aria-pressed="${ck.st===s}" role="radio" aria-checked="${ck.st===s}">${s===CK_OTHER?"✎ Other":`<span class="dot" style="background:var(${SVAR[s]})"></span>${esc(SHORT[s]||s)}`}</button>`).join("")}</div>`;
@@ -92,20 +96,22 @@ function ckCardHTML(){const f=ckFeed();const last=(S.myCks||[])[0];
     <label for="ckL">Location</label><input type="text" id="ckL" maxlength="60" value="${esc(v.loc||"")}" placeholder="Where you are: base, city, clinic">`;
   if(ck.st)h+=`<label for="ckN">Note (optional)</label><input type="text" id="ckN" maxlength="120" value="${esc(v.note||"")}" placeholder="Anything your leader should know">`;
   h+=`<div class="row2"><button class="btn" id="ckSend"${!ck.st||ck.busy?" disabled":""}>${ck.busy?"Sending…":"Send check-in"}</button><button class="btn alt" id="ckX">Cancel</button></div>
-    <p class="note" style="margin:0">Goes to ${esc(f.unit||"your leader")}, encrypted. Your leader confirms it and your page updates.</p></div>`;
+    <p class="note" style="margin:0">Goes to ${esc((f?f.unit:P.d.unit)||"your leader")}, encrypted. Your leader confirms it and your page updates.</p></div>`;
   return h}
 function ckRedraw(){const el=document.getElementById("ckCard");if(el){el.outerHTML=ckCardHTML()}else{const y=window.scrollY;render();window.scrollTo(0,y)}}
-async function ckSend(){ckGrab();const f=ckFeed();if(!f)return;const v=ck.v;const st=ck.st;
-  if(!f.me){toast("Set your name in the Feed first.");return}
+async function ckSend(){ckGrab();const f=ckFeed();const P=f?null:ckPage();if(!f&&!P)return;const v=ck.v;const st=ck.st;
+  if(f&&!f.me){toast("Set your name in the Feed first.");return}
   if(st===CK_OTHER&&!String(v.oth||"").trim()){toast("Write what's going on.");return}
   if(st!=="On Hand"){if(!v.from){toast("Pick the From date.");return}if(v.to&&v.to<v.from){toast("To can't be before From.");return}}
-  const o={k:"ck",cid:"c"+Date.now().toString(36)+rndId(4),me:f.me,mid:f.mid||"",sec:f.sec||"",st,oth:st===CK_OTHER?String(v.oth).trim().slice(0,80):"",
+  const D=P&&P.d;const pgMe=D?String((D.rank||"")+" "+((String(D.name||"").split(",")[0])||D.name||"")).trim().toUpperCase().slice(0,30):"";
+  const o={k:"ck",cid:"c"+Date.now().toString(36)+rndId(4),me:f?f.me:pgMe,mid:f?(f.mid||""):String(D.mid||""),sec:f?(f.sec||""):String(D.sec||""),st,oth:st===CK_OTHER?String(v.oth).trim().slice(0,80):"",
     from:st==="On Hand"?"":String(v.from||"").slice(0,10),to:st==="On Hand"?"":String(v.to||"").slice(0,10),loc:st==="On Hand"?"":String(v.loc||"").trim().slice(0,60),note:String(v.note||"").trim().slice(0,120),at:Date.now()};
   ck.busy=true;ckRedraw();
-  try{const ct=await fdEnc(f.ek,o);const meta={alert:{alert:"ck",feed:f.id,mk:f.mk}};const r=await SB.rpc("feed_req",{p_feed:f.id,p_member_key:f.mk,p_ct:ct},meta);
-    if(r!==null)try{SB.notify(null,meta.alert)}catch(e){}
+  try{let r;
+    if(f){const ct=await fdEnc(f.ek,o);const meta={alert:{alert:"ck",feed:f.id,mk:f.mk}};r=await SB.rpc("feed_req",{p_feed:f.id,p_member_key:f.mk,p_ct:ct},meta);if(r!==null)try{SB.notify(null,meta.alert)}catch(e){}}
+    else{const K=await mpKeys(P.pk);const ct=await sealObj(K,o);r=await SB.rpc("page_req",{p_id:K.id,p_ct:ct})}
     S.myCks=[{cid:o.cid,st:o.st,oth:o.oth,from:o.from,to:o.to,loc:o.loc,t:o.at}].concat(S.myCks||[]).slice(0,20);ck={open:false,st:"",busy:false,v:{}};save();buzz();if(r!==null)toast("📍 Checked in. Your leader confirms it.")}
-  catch(e){ck.busy=false;toast(/find the function|schema/i.test(String(e&&e.message))?"Check-in isn't set up on your leader's server yet.":"Couldn't send. Check signal and try again.")}
+  catch(e){ck.busy=false;toast(/find the function|schema/i.test(String(e&&e.message))?"Check-in isn't set up on your leader's server yet. Tell your leader: setup part 34.":"Couldn't send. Check signal and try again.")}
   finally{ck.busy=false;ckRedraw()}}
 document.addEventListener("click",e=>{const t=e.target;
   if(t.closest("#ckOpen")){ck.open=true;ck.st="";ck.v={};ckRedraw();return}
@@ -158,6 +164,19 @@ window.ckIn=function(f,o,r){S.cks=S.cks||[];const cid=String(o.cid||"").slice(0,
   toast("📍 "+who+" checked in");try{navigator.vibrate&&navigator.vibrate([80,60,80])}catch(e){}
   localAlert("📍 "+who+" checked in",ckLine(x)+". Open Check-ins to confirm.","checkins");
   if(view==="checkins"){const y=window.scrollY;renderCk();window.scrollTo(0,y)}};
+/* leader: pull check-ins dropped on My pages (members with no Feed on their page). One call for every page. */
+const pgK={};let pgBusy=false;
+async function pgPoll(){if(pgBusy||!leaderHere()||!canEdit())return;const L=S.roster.filter(m=>m.pk);if(!L.length)return;pgBusy=true;
+  try{const ids=[],wks=[],by={};for(const m of L){const K=pgK[m.pk]||(pgK[m.pk]=await mpKeys(m.pk));ids.push(K.id);wks.push(K.wk);by[K.id]=K}
+    const rows=await SB.rpc("page_reqs_get",{p_ids:ids,p_wks:wks,p_after:S.pgAfter||0});let got=0;
+    for(const r of [...(rows||[])].sort((a,b)=>a.id-b.id)){S.pgAfter=Math.max(S.pgAfter||0,+r.id);const K=by[r.page_id];if(!K)continue;
+      let o=null;try{o=await openBlob(K,r.ct)}catch(e){}if(!o||o.k!=="ck")continue;ckIn({id:"page:"+r.page_id},o,r);got++}
+    if(got||rows&&rows.length)rawSave();S.pgErr=""}
+  catch(e){const t=String(e&&e.message||e);S.pgErr=/find the function|schema|PGRST202/i.test(t)?"Run setup part 34 so My page check-ins reach you.":"";}
+  finally{pgBusy=false}}
+window.pgPoll=pgPoll;
+every(60000,()=>{pgPoll()},"page-checkins");
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)pgPoll()});
 function ckApply(x,st,by){const m=S.roster.find(y=>y.id===x.mid);if(!m)return false;
   if(STATUSES.includes(st))m.status=st;
   if(m.status==="On Hand"){delete m.start;delete m.end;delete m.loc;delete m.detail}
@@ -179,7 +198,8 @@ function renderCk(){let h=banner()+`<div class="sechead" style="margin-top:12px"
   if(!leaderHere()){$("#main").innerHTML=h+`<div class="panel"><p class="note">Check in from your My page. Your leader sees it here.</p></div>`;return}
   const open=ckOpen(),done=(S.cks||[]).filter(x=>x.state!=="new").slice(0,30);
   h+=`<div class="panel"><label class="tog"><input type="checkbox" id="ckAuto"${S.ckAuto?" checked":""}> Confirm check-ins from people on my roster by themselves</label><p class="note" style="margin:0">Off: you confirm each one before it changes the roster. Other always waits for you.</p></div>`;
-  if(!(S.feeds||[]).some(f=>f.lk))h+=`<div class="panel"><p class="note">Check-ins come in through your unit Feed. Start it in Live sections, then send people their My page or Feed link (Tools → Invite).</p><button class="btn alt" data-go="invite">Invite</button></div>`;
+  if(S.pgErr)h+=`<div class="panel" style="border-color:var(--warn)"><p class="note" style="margin:0">⚠️ ${esc(S.pgErr)} (DATA → System check → My page check-in)</p></div>`;
+  if(!(S.feeds||[]).some(f=>f.lk)&&!S.roster.some(m=>m.pk))h+=`<div class="panel"><p class="note">Check-ins come in from My pages and the Feed. Send people their My page link (Tools → Invite) and the Check in button is on their page.</p><button class="btn alt" data-go="invite">Invite</button></div>`;
   h+=open.length?`<div class="sech"><h2>To confirm · ${open.length}</h2>${open.length>1?`<button class="chip" id="ckAll" style="cursor:pointer">Confirm all matched</button>`:""}</div><div class="alist">${open.map(ckRow).join("")}</div>`:`<div class="panel"><p class="note">Nothing to confirm. New check-ins show up here and in Activity.</p></div>`;
   if(done.length)h+=`<details class="panel"><summary class="note">Confirmed and not confirmed (${done.length})</summary><div class="alist">${done.map(ckRow).join("")}</div></details>`;
   $("#main").innerHTML=h}
