@@ -66,6 +66,7 @@ export const SOURCES = [
   "features/harp.js",
   "features/ck-missing.js",
   "features/visitor-login.js",
+  "features/move.js",
 ];
 
 export function build() {
