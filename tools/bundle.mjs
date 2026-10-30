@@ -72,6 +72,7 @@ export const SOURCES = [
   "features/one-feed.js",
   "features/feed-chat.js",
   "features/notif-open.js",
+  "features/slide-check.js",
   "features/visitor-login.js",
   "features/move.js",
   "features/stable-ids.js",
