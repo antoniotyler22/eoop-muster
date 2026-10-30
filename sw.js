@@ -1,6 +1,6 @@
 // Offline cache. The app opens from the phone instantly; a newer version is fetched in the background.
 // Everything the app uses is served from this site: no outside fonts, scripts or trackers.
-const CACHE = "eop-numbers-v122";
+const CACHE = "eop-numbers-v123";
 const CORE = ["./", "./index.html", "./app.bundle.js", "./terms.html", "./app.css", "./native.js", "./privacy.html", "./support.html", "./help.html", "./manifest.webmanifest",
   "./icon-180.png", "./icon-192.png", "./icon-512.png",
   "./fonts/pjs-400.woff2", "./fonts/pjs-500.woff2", "./fonts/pjs-600.woff2", "./fonts/pjs-700.woff2", "./fonts/pjs-800.woff2"];
@@ -65,14 +65,21 @@ self.addEventListener("push", e => {
   const title = d.title || "New check-in";
   e.waitUntil(self.registration.showNotification(title, {
     body: d.body || "Open the recall to see who.", tag: d.open === "feed" ? "feed" : d.open === "board" ? "team" : d.help ? "recall-help" : (d.open === "live" ? "board" : "recall"), renotify: true,
-    icon: "./icon-192.png", badge: "./icon-192.png", requireInteraction: !!d.help, data: { open: ["live", "feed", "board", "checkins"].includes(d.open) ? d.open : "recall" }, vibrate: d.help ? [300, 100, 300, 100, 300] : [120]
+    icon: "./icon-192.png", badge: "./icon-192.png", requireInteraction: !!d.help, data: { open: ["live", "feed", "board", "checkins", "co", "owner", "recall"].includes(d.open) ? d.open : "recall" }, vibrate: d.help ? [300, 100, 300, 100, 300] : [120]
   }));
 });
 self.addEventListener("notificationclick", e => {
   e.notification.close();
-  const dest = "./#" + ((e.notification.data && e.notification.data.open) || "recall");
+  const open = (e.notification.data && e.notification.data.open) || "recall";
+  const dest = "./#" + open;
   e.waitUntil(clients.matchAll({ type: "window", includeUncontrolled: true }).then(ws => {
-    for (const w of ws) { if (w.url.includes(self.registration.scope)) { w.navigate(dest).catch(() => {}); return w.focus(); } }
+    for (const w of ws) {
+      if (w.url.includes(self.registration.scope)) {
+        /* tell the open app where to go (works even when the address already ends in the same #word), then bring it forward */
+        try { w.postMessage({ type: "open", open }); } catch (x) {}
+        return w.focus();
+      }
+    }
     return clients.openWindow(dest);
   }));
 });
