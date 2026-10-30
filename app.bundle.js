@@ -808,8 +808,8 @@ async function linkPush(force){const L=S.link;if(!L||lkBusy)return;if(L.rk2&&!L.
     if(force||st!==L.sig){const me=await Promise.all(SB.words(L.me).map(w=>SB.h(L.board,w)));
       await SB.rpc("push_update",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_sender:me,p_strength:ms.length,p_items:items});
       L.sig=st;L.sent=Date.now();L.lsig=lsigOf(ms);L.err="";save();SB.notify(null,{board:L.board})}
-    if(L.ek){const cal=ms.flatMap(m=>(m.cal||[]).filter(e=>(e.end||e.d)>=dkey(new Date(Date.now()-30*86400000))).map(e=>({nk:fullK(m),d:e.d,tm:e.tm||"",end:e.end||"",ty:e.ty,ti:e.ti,no:e.no||""})));const dt=ms.map(m=>({nk:fullK(m),id:m.uid||m.id,sb:L.whole&&m.sec!=="ATT"?m.sec:undefined,st:m.status,s:m.start||"",e:m.end||"",l:m.loc||"",x:m.detail||"",du:m.due||{}}));const wx=typeof whoCalExtra==="function"?whoCalExtra():{};const cs=sigF([cal,dt,wx]);
-      if(force||cs!==L.calSig){const ct=await fdEnc(L.ek,Object.assign({e:cal,d:dt},wx));await SB.rpc("push_cal",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_ct:ct});L.calSig=cs;L.err="";rawSave()}}}
+    if(L.ek){const cal=ms.flatMap(m=>(m.cal||[]).filter(e=>(e.end||e.d)>=dkey(new Date(Date.now()-30*86400000))).map(e=>({nk:fullK(m),d:e.d,tm:e.tm||"",end:e.end||"",ty:e.ty,ti:e.ti,no:e.no||""})));const dt=ms.map(m=>({nk:fullK(m),id:m.uid||m.id,sb:L.whole&&m.sec!=="ATT"?m.sec:undefined,st:m.status,s:m.start||"",e:m.end||"",l:m.loc||"",x:m.detail||"",du:m.due||{}}));const wx=typeof whoCalExtra==="function"?whoCalExtra():{};const ko=typeof ckOut==="function"?ckOut():[];const cs=sigF([cal,dt,wx,ko]);
+      if(force||cs!==L.calSig){const ct=await fdEnc(L.ek,Object.assign({e:cal,d:dt},wx,ko.length?{k:ko}:{}));await SB.rpc("push_cal",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_ct:ct});L.calSig=cs;L.err="";rawSave()}}}
   catch(e){const t=String(e.message||e);L.err=/link not valid/i.test(t)?"This link was replaced by your OIC. Ask them for the new one.":t.slice(0,80);save();clearTimeout(lkTimer);if(!/replaced/.test(L.err))lkTimer=setTimeout(linkPush,60000)}
   finally{lkBusy=false;if(view==="live"||view===(L.mysec||"").toLowerCase()){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;render();window.scrollTo(0,y)}}}}
 function linkStatus(){const L=S.link;if(!L)return"";if(L.err)return `<span style="color:var(--warn)">Not sent yet (${esc(L.err)}). Retrying.</span>`;
@@ -823,8 +823,17 @@ function boardPushHTML(){if(!pushOK())return isIOS()&&!standalone()?`<p class="n
   if(S.pushOn&&Notification.permission==="granted"&&S.board.push)return `<p class="note" style="color:var(--s-onhand);font-weight:700">🔔 Alerts on: this phone buzzes when a section updates</p>`;
   return `<button class="btn alt" id="bpushOn">🔔 Alert me when a section updates, even when locked</button>`}
 async function boardCreate(){const id=rndId(14),rk=rndId(32),wk=rndId(32);await SB.rpc("create_board",{p_id:id,p_read_key:rk,p_write_key:wk});S.board={id,rk,wk,ek:b64url(crypto.getRandomValues(new Uint8Array(32))),after:0,last:{}};save()}
+/* a section leader confirmed (or marked not right) check-ins for their own section: the result rides the sealed calendar blob (o.k).
+   Only that section's own check-ins can be touched, and only while they're still waiting. The status itself already arrives with the
+   section's normal update; this settles the check-in row so it leaves "To confirm", the member's page flips, and other leaders see it. */
+function ckFromLeader(sec,list){if(!S.board||!Array.isArray(list))return false;const cl=(v,n)=>String(v||"").replace(/[<>]/g,"").slice(0,n);let n=0;
+  for(const o of list.slice(0,60)){const x=(S.cks||[]).find(c=>c&&c.cid===cl(o.cid,20));if(!x||x.state!=="new")continue;
+    const m=x.mid&&S.roster.find(y=>y.id===x.mid);if((m?m.sec:x.sec)!==sec)continue;const st=o.state==="ok"?"ok":o.state==="no"?"no":"";if(!st)continue;
+    x.state=st;x.dt=+o.dt||Date.now();x.by=cl(o.by,24)||sec+" leader";x.dnote=cl(o.dnote,80);if(st==="ok"&&m)m.ckAt=x.dt;n++;
+    actAdd(st==="ok"?"✓":"✕",(m?m.rank+" "+lastOf(m):x.who)+" check-in "+(st==="ok"?"confirmed":"marked not right")+" by "+x.by+" ("+sec+")","checkins")}
+  if(n){save();try{mpSchedule()}catch(e){}try{rpSchedule()}catch(e){}}return n>0}
 async function livePollCal(){const B=S.board;if(!B||!B.ek)return;try{const rows=await SB.rpc("get_cal",{p_board:B.id,p_read_key:B.rk});let ch=false;
-  for(const r of rows||[]){const t=Date.parse(r.updated_at)||0;if(S.secCal[r.sec]&&S.secCal[r.sec].t>=t)continue;const o=await fdDec(B.ek,r.ct);if(!o||!Array.isArray(o.e))continue;try{if(whoCalApply(r.sec,o))ch=true}catch(e){}const calCh=!S.secCal[r.sec]||sigF(S.secCal[r.sec].e)!==sigF(o.e.slice(0,2000));if(S.secCal[r.sec]&&calCh)actAdd("🗓",r.sec+" section calendar updated","cal");S.secCal[r.sec]={t,e:o.e.slice(0,2000)};ch=true;
+  for(const r of rows||[]){const t=Date.parse(r.updated_at)||0;if(S.secCal[r.sec]&&S.secCal[r.sec].t>=t)continue;const o=await fdDec(B.ek,r.ct);if(!o||!Array.isArray(o.e))continue;try{if(Array.isArray(o.k)&&ckFromLeader(r.sec,o.k))ch=true}catch(e){}try{if(whoCalApply(r.sec,o))ch=true}catch(e){}const calCh=!S.secCal[r.sec]||sigF(S.secCal[r.sec].e)!==sigF(o.e.slice(0,2000));if(S.secCal[r.sec]&&calCh)actAdd("🗓",r.sec+" section calendar updated","cal");S.secCal[r.sec]={t,e:o.e.slice(0,2000)};ch=true;
     if(Array.isArray(o.d)){const ms=S.roster.filter(m=>m.sec===r.sec);const by={};ms.forEach(m=>(by[fullK(m)]=by[fullK(m)]||[]).push(m));const who=[];
       const dueWho=[];for(const x of o.d.slice(0,600)){const byId=x.id?ms.find(m=>m.id===String(x.id)):null;const hit=byId?[byId]:by[String(x.nk)];if(!hit||hit.length!==1)continue;const m=hit[0];let c=false;if(x.sb&&/^[A-Z0-9]{1,6}$/.test(x.sb)&&m.sub!==x.sb){m.sub=x.sb;c=true}
         if(x.du&&typeof x.du==="object"){const nd=sanDue(x.du);if(JSON.stringify(nd)!==JSON.stringify(sanDue(m.due||{}))){const chg=Object.keys(nd).filter(k=>JSON.stringify(nd[k])!==JSON.stringify((m.due||{})[k]));m.due=nd;dueWho.push(m.rank+" "+lastOf(m)+(chg.length?" ("+chg.slice(0,2).join(", ")+")":""))}}
@@ -9460,12 +9469,13 @@ if(typeof rpPublish==="function"){const _rp2=rpPublish;rpPublish=function(){try{
 })();
 
 /* ===== features/sec-checkins.js ===== */
-/* Accounted For 4.31: section (squad) leaders see check-ins as they land.
-   The OIC's phone already seals each section's roster for that section leader (put_roster, section key). It now packs
-   that section's check-ins from the last 36 h into the same blob (ckPack in app.js); the leader's phone pulls it every
-   30 s, on foreground and on a live push (rosterPull), and hands the list to ckFromOIC below.
-   On the leader's phone those rows are read-only: the OIC confirms, and the row flips to ✓ Confirmed on the next pull.
-   OIC side: a check-in arriving, being confirmed or marked not right republishes the roster (debounced). */
+/* Accounted For 4.31/4.33: section (squad) leaders see check-ins as they land, and confirm their own section's.
+   The OIC's phone (or the server hub) seals each section's roster for that section leader (put_roster, section key) and packs that
+   section's check-ins from the last 36 h into the same blob (ckPack in app.js); the leader's phone pulls it every 30 s, on foreground
+   and on a live push (rosterPull), and hands the list to ckFromOIC below.
+   4.33: the leader confirms or marks "Not right" on their own phone, exactly like the OIC. A confirm puts the status on the leader's
+   roster (it already reaches the OIC with the section update) and rides the section's sealed calendar blob (ckOut -> ckFromLeader in
+   app.js) so the OIC's check-in row settles, the member's page flips, and every other role sees it. If the OIC decides first, the OIC wins. */
 (()=>{
 const secLeaderPhone=()=>!!(S.link&&S.link.rk2&&!S.board);
 const oicName=()=>String((S.link&&S.link.unit)||"OIC").slice(0,24);
@@ -9476,9 +9486,11 @@ window.ckFromOIC=function(list,unit){if(!Array.isArray(list)||!secLeaderPhone())
   const clean=(v,n)=>String(v||"").replace(/[<>]/g,"").slice(0,n);let fresh=[],chg=false;
   for(const o of list.slice(0,60)){const cid=clean(o.cid,20);if(!cid)continue;const st=["new","ok","no"].includes(o.state)?o.state:"new";
     const m=o.mid&&S.roster.find(y=>y.uid===String(o.mid)||y.id===String(o.mid));const cur=by[cid];
-    if(!cur){const x={cid,src:"oic",mid:m?m.id:"",who:clean(o.who||"Someone",30),sec:clean(o.sec,6),st:clean(o.st,30),oth:clean(o.oth,80),from:clean(o.from,10),to:clean(o.to,10),loc:clean(o.loc,60),note:clean(o.note,120),t:+o.t||Date.now(),state:st,dt:+o.dt||0,by:clean(o.by,24),dnote:clean(o.dnote,80)};
+    if(!cur){const x={oic:st!=="new"?1:0,cid,src:"oic",mid:m?m.id:"",who:clean(o.who||"Someone",30),sec:clean(o.sec,6),st:clean(o.st,30),oth:clean(o.oth,80),from:clean(o.from,10),to:clean(o.to,10),loc:clean(o.loc,60),note:clean(o.note,120),t:+o.t||Date.now(),state:st,dt:+o.dt||0,by:clean(o.by,24),dnote:clean(o.dnote,80)};
       S.cks.push(x);by[cid]=x;chg=true;if(st==="new")fresh.push(x);continue}
     if(cur.src!=="oic")continue;  // this phone's own check-in rows stay its own
+    if(cur.state!=="new"&&!cur.oic&&st==="new")continue;  // confirmed here, the OIC hasn't caught up yet: keep it
+    if(st!=="new")cur.oic=1;
     if(cur.state!==st||(cur.dnote||"")!==clean(o.dnote,80)||(!cur.mid&&m)){cur.state=st;cur.dt=+o.dt||cur.dt||0;cur.by=clean(o.by,24);cur.dnote=clean(o.dnote,80);if(m)cur.mid=m.id;chg=true}}
   if(!chg)return;S.cks.sort((a,b)=>(b.t||0)-(a.t||0));S.cks=S.cks.slice(0,300);
   for(const x of fresh){const line=typeof ckLine==="function"?ckLine(x):x.st;actAdd("📍",x.who+" checked in: "+line+" · "+(unit||oicName())+" confirms","checkins")}
@@ -9487,20 +9499,15 @@ window.ckFromOIC=function(list,unit){if(!Array.isArray(list)||!secLeaderPhone())
     try{if(typeof localAlert==="function")localAlert("📍 "+(fresh.length===1?fresh[0].who+" checked in":fresh.length+" check-ins"),(typeof ckLine==="function"&&fresh.length===1?ckLine(fresh[0])+". ":"")+(unit||oicName())+" confirms.","checkins")}catch(e){}}
   if(view==="checkins"||view==="board"||view==="act"){const y=window.scrollY;render();window.scrollTo(0,y)}};
 
-/* ---- section leader phone: the Check-ins screen is read-only for the OIC's rows ---- */
-function trimScreen(){if(view!=="checkins"||!secLeaderPhone())return;const m=$("#main");if(!m)return;const U=esc(oicName());
-  const rows=(S.cks||[]).filter(x=>x.src==="oic");if(!rows.length)return;
-  for(const x of rows){const sel=document.getElementById("ckSt"+x.cid);const row=sel&&sel.closest(".rrow");if(!row)continue;
-    row.querySelectorAll("label,select,input,[data-ckok],[data-ckno]").forEach(el=>el.remove());
-    row.insertAdjacentHTML("beforeend",`<div class="ph sc-wait">⏳ Waiting on ${U} to confirm</div>`)}
-  if(!(S.cks||[]).some(x=>x.state==="new"&&x.src!=="oic")){const all=$("#ckAll");if(all)all.remove();const auto=$("#ckAuto");if(auto){const p=auto.closest(".panel");if(p)p.remove()}
-    m.querySelectorAll(".sech h2").forEach(h=>{if(/^To confirm/.test(h.textContent))h.textContent=h.textContent.replace(/^To confirm/,"Waiting on "+oicName())})}
+/* ---- section leader phone: what this phone settled goes back out with the section's calendar blob ---- */
+window.ckOut=function(){if(!secLeaderPhone())return[];const now=Date.now();
+  return (S.cks||[]).filter(x=>x&&x.src==="oic"&&x.state!=="new"&&!x.oic&&now-(+x.t||0)<36*3600000).slice(0,40).map(x=>({cid:x.cid,state:x.state,dt:+x.dt||0,by:x.by||"",dnote:x.dnote||""}))};
+/* ---- section leader phone: Check-ins screen is the OIC's, minus the OIC-only panels ---- */
+function trimScreen(){if(view!=="checkins"||!secLeaderPhone())return;const m=$("#main");if(!m)return;
+  const auto=$("#ckAuto");if(auto){const p=auto.closest(".panel");if(p)p.remove()}
   const inv=m.querySelector('.panel [data-go="invite"]');if(inv&&inv.closest(".panel"))inv.closest(".panel").remove();  // inviting is the OIC's job
-  const sub=m.querySelector(".sechead .note");if(sub)sub.textContent="Your people's check-ins, as "+oicName()+" gets them"}
+  const sub=m.querySelector(".sechead .note");if(sub)sub.textContent="Confirm your people's check-ins. "+oicName()+" sees what you decide"}
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{trimScreen()}catch(e){}try{oicRepublish()}catch(e){}return r}}
-{const _b=banner;banner=function(){let h=_b.apply(this,arguments);try{if(secLeaderPhone()&&view!=="checkins"&&view!=="act"&&/check-in/.test(h)&&(S.cks||[]).some(x=>x.state==="new"&&x.src==="oic")&&!(S.cks||[]).some(x=>x.state==="new"&&x.src!=="oic"))
-  h=h.replace(/ to confirm\.<\/span><button data-go="checkins">Confirm<\/button>/,` waiting on ${esc(oicName())}.</span><button data-go="checkins">See</button>`)}catch(e){}return h}}
-document.addEventListener("click",e=>{if(e.target.id!=="ckAll"||!secLeaderPhone())return;if((S.cks||[]).some(x=>x.state==="new"&&x.src==="oic")&&!(S.cks||[]).some(x=>x.state==="new"&&x.src!=="oic")){e.stopImmediatePropagation();toast(oicName()+" confirms these")}},true);
 
 /* ---- OIC phone: check-in changes reach section leaders ---- */
 let lastSig="";
@@ -9508,7 +9515,7 @@ function ckSig(){return (S.cks||[]).slice(0,80).map(x=>x.cid+":"+x.state+":"+(x.
 function oicRepublish(){if(!S.board||!S.board.sk||typeof rpSchedule!=="function")return;const s=ckSig();if(s===lastSig)return;lastSig=s;rpSchedule()}
 if(typeof window.ckIn==="function"){const _ci=window.ckIn;window.ckIn=function(){const r=_ci.apply(this,arguments);try{oicRepublish()}catch(e){}return r}}
 if(typeof window.ckApply==="function"){const _ca=window.ckApply;window.ckApply=function(){const r=_ca.apply(this,arguments);try{oicRepublish()}catch(e){}return r}}
-if(typeof HELP==="object"&&HELP.checkins&&Array.isArray(HELP.checkins[2]))HELP.checkins[2].push("Section leaders see their people's check-ins on their own phone as they come in; you still confirm.");
+if(typeof HELP==="object"&&HELP.checkins&&Array.isArray(HELP.checkins[2]))HELP.checkins[2].push("Section leaders see their people's check-ins on their own phone as they come in and can confirm their own section's. Whichever of you confirms first settles it.");
 {const st=document.createElement("style");st.textContent=`.sc-wait{color:var(--brass);font-weight:700;margin-top:6px}`;document.head.appendChild(st)}
 })();
 

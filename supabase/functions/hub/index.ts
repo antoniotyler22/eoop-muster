@@ -129,8 +129,14 @@ function unitName(){return cleanName(S.unit)||(MODE().v?MODE().v.eo:"UNIT")}
 let lvBusy=false,lkBusy=false,lkTimer=null,lvIdx={};
 const lf=m=>tok(m).split(".").slice(1).join(".");
 const fullK=m=>String(m.name).toUpperCase().replace(/[^A-Z0-9]+/g," ").trim();
+function ckFromLeader(sec,list){if(!S.board||!Array.isArray(list))return false;const cl=(v,n)=>String(v||"").replace(/[<>]/g,"").slice(0,n);let n=0;
+  for(const o of list.slice(0,60)){const x=(S.cks||[]).find(c=>c&&c.cid===cl(o.cid,20));if(!x||x.state!=="new")continue;
+    const m=x.mid&&S.roster.find(y=>y.id===x.mid);if((m?m.sec:x.sec)!==sec)continue;const st=o.state==="ok"?"ok":o.state==="no"?"no":"";if(!st)continue;
+    x.state=st;x.dt=+o.dt||Date.now();x.by=cl(o.by,24)||sec+" leader";x.dnote=cl(o.dnote,80);if(st==="ok"&&m)m.ckAt=x.dt;n++;
+    actAdd(st==="ok"?"✓":"✕",(m?m.rank+" "+lastOf(m):x.who)+" check-in "+(st==="ok"?"confirmed":"marked not right")+" by "+x.by+" ("+sec+")","checkins")}
+  if(n){save();try{mpSchedule()}catch(e){}try{rpSchedule()}catch(e){}}return n>0}
 async function livePollCal(){const B=S.board;if(!B||!B.ek)return;try{const rows=await SB.rpc("get_cal",{p_board:B.id,p_read_key:B.rk});let ch=false;
-  for(const r of rows||[]){const t=Date.parse(r.updated_at)||0;if(S.secCal[r.sec]&&S.secCal[r.sec].t>=t)continue;const o=await fdDec(B.ek,r.ct);if(!o||!Array.isArray(o.e))continue;try{if(whoCalApply(r.sec,o))ch=true}catch(e){}const calCh=!S.secCal[r.sec]||sigF(S.secCal[r.sec].e)!==sigF(o.e.slice(0,2000));if(S.secCal[r.sec]&&calCh)actAdd("🗓",r.sec+" section calendar updated","cal");S.secCal[r.sec]={t,e:o.e.slice(0,2000)};ch=true;
+  for(const r of rows||[]){const t=Date.parse(r.updated_at)||0;if(S.secCal[r.sec]&&S.secCal[r.sec].t>=t)continue;const o=await fdDec(B.ek,r.ct);if(!o||!Array.isArray(o.e))continue;try{if(Array.isArray(o.k)&&ckFromLeader(r.sec,o.k))ch=true}catch(e){}try{if(whoCalApply(r.sec,o))ch=true}catch(e){}const calCh=!S.secCal[r.sec]||sigF(S.secCal[r.sec].e)!==sigF(o.e.slice(0,2000));if(S.secCal[r.sec]&&calCh)actAdd("🗓",r.sec+" section calendar updated","cal");S.secCal[r.sec]={t,e:o.e.slice(0,2000)};ch=true;
     if(Array.isArray(o.d)){const ms=S.roster.filter(m=>m.sec===r.sec);const by={};ms.forEach(m=>(by[fullK(m)]=by[fullK(m)]||[]).push(m));const who=[];
       const dueWho=[];for(const x of o.d.slice(0,600)){const byId=x.id?ms.find(m=>m.id===String(x.id)):null;const hit=byId?[byId]:by[String(x.nk)];if(!hit||hit.length!==1)continue;const m=hit[0];let c=false;if(x.sb&&/^[A-Z0-9]{1,6}$/.test(x.sb)&&m.sub!==x.sb){m.sub=x.sb;c=true}
         if(x.du&&typeof x.du==="object"){const nd=sanDue(x.du);if(JSON.stringify(nd)!==JSON.stringify(sanDue(m.due||{}))){const chg=Object.keys(nd).filter(k=>JSON.stringify(nd[k])!==JSON.stringify((m.due||{})[k]));m.due=nd;dueWho.push(m.rank+" "+lastOf(m)+(chg.length?" ("+chg.slice(0,2).join(", ")+")":""))}}
