@@ -67,6 +67,7 @@ export const SOURCES = [
   "features/ck-missing.js",
   "features/visitor-login.js",
   "features/move.js",
+  "features/stable-ids.js",
 ];
 
 export function build() {

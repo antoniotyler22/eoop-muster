@@ -14,6 +14,7 @@ function delPerson(id){const m=S.roster.find(x=>x.id===id);if(!m)return;
   else if(m.pk){const pk=m.pk;mpKeys(pk).then(K=>SB.rpc("delete_page",{p_id:K.id,p_wk:K.wk})).catch(()=>{})}
   if(keep){if(!keep.phone&&m.phone)keep.phone=m.phone;if(!keep.phone2&&m.phone2)keep.phone2=m.phone2;if(!keep.email&&m.email)keep.email=m.email}
   for(const r of (S.duty&&S.duty.rosters)||[])for(const d of Object.keys(r.assign||{}))if(r.assign[d]===id){if(keep)r.assign[d]=keep.id;else delete r.assign[d]}
+  if(typeof kdDelete==="function")try{kdDelete(id)}catch(e){}  // record the delete before the row goes, so sync carries it and the 60-second window never stays open
   S.roster=S.roster.filter(x=>x.id!==id);armed=null;
   if(typeof logLoad==="function")try{logLoad("Removed people",m.rank+" "+lastOf(m))}catch(e){}
   save();try{if(S.board)rpPublish(true)}catch(e){}
