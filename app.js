@@ -69,7 +69,7 @@ const JOBS=[];function every(ms,fn,name){JOBS.push({ms,fn,name,next:Date.now()+M
 function runDue(stagger){const t=Date.now();let k=0;for(const j of JOBS){if(t<j.next)continue;j.next=t+j.ms;const go=()=>{try{j.fn()}catch(e){}};if(stagger)setTimeout(go,(k++)*300);else go()}}
 setInterval(()=>{if(!document.hidden)runDue(false)},2000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)runDue(true)});
-const APP_VER=window.AV||"3.5.0";const APP_BUILD="2026-10-28";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const APP_VER=window.AV||"3.5.0";const APP_BUILD="2026-10-29";const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
 const DISCLAIMER="Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.";
 /* Custom: a version people name themselves (5K, field trip, class, shift…). Starts from Civilian; labels come from S.customV. */
 MODES.custom=Object.assign(JSON.parse(JSON.stringify(MODES.civilian)),{name:"Custom",desc:"Name it yourself: 5K, field trip, class, shift, anything",title:"Accounted For"});
