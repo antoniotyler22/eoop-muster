@@ -110,7 +110,7 @@ async function ckSend(){ckGrab();const f=ckFeed();const P=f?null:ckPage();if(!f&
   ck.busy=true;ckRedraw();
   try{let r;
     if(f){const ct=await fdEnc(f.ek,o);const meta={alert:{alert:"ck",feed:f.id,mk:f.mk}};r=await SB.rpc("feed_req",{p_feed:f.id,p_member_key:f.mk,p_ct:ct},meta);if(r!==null)try{SB.notify(null,meta.alert)}catch(e){}}
-    else{const K=await mpKeys(P.pk);const ct=await sealObj(K,o);r=await SB.rpc("page_req",{p_id:K.id,p_ct:ct})}
+    else{const K=await mpKeys(P.pk);const ct=await sealObj(K,o);r=await SB.rpc("page_req",{p_id:K.id,p_ct:ct});const F=D&&D.feed;if(r!==null&&F&&F.id&&F.mk)try{SB.notify(null,{alert:"ck",feed:F.id,mk:F.mk})}catch(e){}}
     S.myCks=[{cid:o.cid,st:o.st,oth:o.oth,from:o.from,to:o.to,loc:o.loc,t:o.at}].concat(S.myCks||[]).slice(0,20);ck={open:false,st:"",busy:false,v:{}};save();buzz();if(r!==null)toast("📍 Checked in. Your leader confirms it.")}
   catch(e){ck.busy=false;toast(/find the function|schema/i.test(String(e&&e.message))?"Check-in isn't set up on your leader's server yet. Tell your leader: setup part 34.":"Couldn't send. Check signal and try again.")}
   finally{ck.busy=false;ckRedraw()}}

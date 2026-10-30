@@ -9,7 +9,9 @@
 //    ({kind:"feed"}) and retries of alerts that failed ({kind:"retry"}: 30 s, 1, 2, 4, 8 min, then dropped).
 //  {whoami:1}: setup part 31 asks both names once; the deployed one writes its name into app_cfg.notify_fn so the
 //    database calls only that name from then on. Cron calls (escalate, drain) refresh it too.
-//  4.28.0
+//  {team, k, what:["test"]}: the leader's "Test alert to my team" (leader or poster key only): one buzz to every phone on the list.
+//  {health:1}: reads one row with the service role; answers "ok" or "db denied" (System check). Database errors now answer 500, never "no sub".
+//  4.30.0
 // Payloads carry no names. Turn OFF "Enforce JWT verification" (the function validates input itself).
 // Secrets: VAPID_PUBLIC, VAPID_PRIVATE (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are built in).
 // iPhone app (optional): APNS_KEY (the .p8 file contents), APNS_KEY_ID, APNS_TEAM_ID, APNS_TOPIC (bundle id; default com.antoniotyler.accountedfor).
@@ -23,8 +25,12 @@ const cors = {
 };
 webpush.setVapidDetails("mailto:antoniotyler22@gmail.com", Deno.env.get("VAPID_PUBLIC")!, Deno.env.get("VAPID_PRIVATE")!);
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-const VER = "4.28.0";
+const VER = "4.30.0";
 const out = (t: string, status = 200) => new Response(t, { status, headers: cors });
+// A database error (for example the service role lost its table rights) must never read as "no sub": that hid a
+// week of dead alerts. Log it and answer 500 so the failure shows in the logs and the owner's Health tab.
+// deno-lint-ignore no-explicit-any
+const dbErr = (e: any) => { console.error("notify db error:", e?.code, e?.message); return out("db error: " + String(e?.message ?? e).slice(0, 80), 500); };
 
 // ---- Apple push (iPhone app). A subscription from the app looks like {apns: "<device token>"}. ----
 let apnsJwt = "", apnsAt = 0;
@@ -94,7 +100,8 @@ async function sendSubs(list: { id: number; sub: any }[], payload: Record<string
 }
 
 async function recall(id: string) {
-  const { data: r } = await db.from("recalls").select("push_sub,last_push_id,expires_at").eq("id", id).maybeSingle();
+  const { data: r, error: e0 } = await db.from("recalls").select("push_sub,last_push_id,expires_at").eq("id", id).maybeSingle();
+  if (e0) return dbErr(e0);
   if (!r || !r.push_sub || new Date(r.expires_at) < new Date()) return out("no sub");
   const { data: rows } = await db.from("checkins").select("id,code").eq("recall_id", id)
     .gt("id", r.last_push_id ?? 0).order("id", { ascending: true }).limit(200);
@@ -110,7 +117,8 @@ async function recall(id: string) {
 }
 
 async function board(id: string) {
-  const { data: b } = await db.from("boards").select("push_sub,last_push_id,last_push_at").eq("id", id).maybeSingle();
+  const { data: b, error: e0 } = await db.from("boards").select("push_sub,last_push_id,last_push_at").eq("id", id).maybeSingle();
+  if (e0) return dbErr(e0);
   if (!b || !b.push_sub) return out("no sub");
   // At most one alert a minute per board; later updates roll into the next alert.
   if (b.last_push_at && Date.now() - new Date(b.last_push_at).getTime() < 60000) return out("throttled");
@@ -131,7 +139,8 @@ const hexOf = async (s: string) => Array.from(new Uint8Array(await crypto.subtle
 const isSkip = (s: any, skip: string) => !!skip && (s?.endpoint === skip || (typeof s?.apns === "string" && "apns:" + s.apns === skip));
 
 async function feed(id: string, lk: string, urg: boolean, skip = "") {
-  const { data: f } = await db.from("feeds").select("*").eq("id", id).maybeSingle();
+  const { data: f, error: e0 } = await db.from("feeds").select("*").eq("id", id).maybeSingle();
+  if (e0) return dbErr(e0);
   if (!f) return out("no feed");
   const dig = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(lk)));
   const hex = Array.from(dig).map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -160,25 +169,33 @@ async function feedSend(f: any, urg: boolean, skip: string): Promise<string> {
 
 const WHAT: Record<string, string> = { roster: "People were added or removed", status: "Statuses changed", cal: "The calendar changed", duty: "The duty roster changed", ready: "Due-outs changed", events: "Events changed", sec: "A section sent an update", ask: "The company sent your platoon an ask" };
 async function team(id: string, k: string, what: string[], skip: string) {
-  const { data: f } = await db.from("feeds").select("*").eq("id", id).maybeSingle();
+  const { data: f, error: e0 } = await db.from("feeds").select("*").eq("id", id).maybeSingle();
+  if (e0) return dbErr(e0);
   if (!f) return out("no feed");
   const hex = await hexOf(k);
-  if (hex !== f.member_key_hash && hex !== f.leader_key_hash && !(f.poster_key_hash && hex === f.poster_key_hash)) return out("not allowed", 403);
-  // one alert every 90 s per team; works before setup part 24 too (then without the limit)
-  if (f.team_push_at && Date.now() - new Date(f.team_push_at).getTime() < 90000) return out("throttled");
+  const lead = hex === f.leader_key_hash || !!(f.poster_key_hash && hex === f.poster_key_hash);
+  if (hex !== f.member_key_hash && !lead) return out("not allowed", 403);
+  const isTest = what.includes("test");
+  if (isTest && !lead) return out("not allowed", 403);
+  // one alert every 90 s per team; works before setup part 24 too (then without the limit). A test waits 30 s.
+  if (f.team_push_at && Date.now() - new Date(f.team_push_at).getTime() < (isTest ? 30000 : 90000)) return out("throttled");
   if ("team_push_at" in f) await db.from("feeds").update({ team_push_at: new Date().toISOString() }).eq("id", id);
   const lines = [...new Set(what.map((w) => WHAT[w]).filter(Boolean))].slice(0, 3);
-  const payload = what.includes("ask")
+  const payload = isTest
+    ? { title: "🔔 Test alert", body: "Your leader is checking alerts. You're set: nothing to do.", help: false, open: "board" }
+    : what.includes("ask")
     ? { title: "📋 Company ask", body: "The company sent your platoon an ask. Open Company to answer.", help: false, open: "co" }
     : { title: "📋 Team update", body: (lines.length ? lines.join(". ") : "Something changed") + ". Open the app to see.", help: false, open: "board" };
   const { data: subs } = await db.from("feed_subs").select("id,sub").eq("feed_id", id).limit(500);
-  return out("sent " + await sendSubs((subs ?? []).filter((s) => !isSkip(s.sub, skip)), payload, false, 21600));
+  const list = (subs ?? []).filter((s) => isTest || !isSkip(s.sub, skip));
+  return out("sent " + await sendSubs(list, payload, false, isTest ? 600 : 21600) + (isTest ? " of " + list.length : ""));
 }
 
 // {alert: "req"|"prob"|"rep"|"ck", feed, mk}: a member sent a request, a check-in or reported a problem; buzz the OIC (at most every 15 s).
 // Goes to the OIC's phone (leader_sub) and every leader phone on the team list (co-leaders, editors: subs marked lead).
 async function alertOic(id: string, mk: string, kind: string) {
-  const { data: f } = await db.from("feeds").select("*").eq("id", id).maybeSingle();
+  const { data: f, error: e0 } = await db.from("feeds").select("*").eq("id", id).maybeSingle();
+  if (e0) return dbErr(e0);
   if (!f) return out("no feed");
   const { data: ls } = await db.from("feed_subs").select("id,sub").eq("feed_id", id).limit(500);
   // deno-lint-ignore no-explicit-any
@@ -301,7 +318,7 @@ async function remember(req: Request) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return out("ok");
   if (req.method !== "POST") return out("method", 405);
-  let body: { ver?: unknown; test?: unknown; sub?: unknown; recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown; drain?: unknown; team?: unknown; k?: unknown; what?: unknown; skip?: unknown; whoami?: unknown } = {};
+  let body: { ver?: unknown; test?: unknown; sub?: unknown; recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown; drain?: unknown; team?: unknown; k?: unknown; what?: unknown; skip?: unknown; whoami?: unknown; health?: unknown } = {};
   try { body = await req.json(); } catch { return out("bad", 400); }
   if (body.whoami === 1) { namedAt = 0; await remember(req); return out("ok"); }
   // {ver:1}: which version is deployed (System check).  {test:1, sub}: one "Test alert" to the asking phone only.
@@ -313,6 +330,10 @@ Deno.serve(async (req) => {
     if (!ok) return out("bad sub", 400);
     const r = await pushAny(sub, { title: "🔔 Test alert", body: "Alerts work on this phone.", help: false, open: "board" }, true, 300);
     return out(r === "ok" ? "sent" : r === "gone" ? "phone token expired" : "push failed");
+  }
+  if (body.health === 1) {
+    const { error } = await db.from("feeds").select("id").limit(1);
+    return out(error ? "db denied" : "ok", error ? 500 : 200);
   }
   if (body.escalate === 1) { remember(req); return escalate(); }
   if (body.drain === 1) { remember(req); return drain(); }
