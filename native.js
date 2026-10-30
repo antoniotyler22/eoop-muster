@@ -19,6 +19,31 @@
     set: function (k, v) { try { v == null ? localStorage.removeItem(KP + "-" + k) : localStorage.setItem(KP + "-" + k, v); } catch (e) {} }
   };
 
+  /* ---- Home-screen widget (Android): hand it the headcount whenever it changes ---- */
+  if (N.platform === "android") {
+    var Widget = P("HeadcountWidget"); N.Widget = Widget;
+    var lastW = "";
+    N.widget = function () {
+      try {
+        if (typeof counts !== "function" || !window.S || !Array.isArray(S.roster) || S.source === "sample") return;
+        var T = counts().T; var n = T["On Hand"] || 0, t = T.total || 0;
+        if (window.S.rc && S.rc.open && typeof recallPool === "function") {
+          var pool = recallPool(); var ok = pool.filter(function (m) { return (S.rc.res || {})[m.id] === "ok" || (S.rc.ci || {})[m.id]; }).length;
+          n = ok; t = pool.length;
+        }
+        var d = new Date(); var when = String(d.getHours()).padStart(2, "0") + String(d.getMinutes()).padStart(2, "0");
+        var unit = typeof unitName === "function" ? String(unitName() || "") : "";
+        var label = S.rc && S.rc.open ? "checked in" : "accounted for";
+        var key = n + "|" + t + "|" + unit + "|" + label;
+        if (key === lastW) return; lastW = key;
+        Widget.update({ n: n, t: t, unit: unit, when: when, label: label }).catch(function () {});
+      } catch (e) {}
+    };
+    setInterval(N.widget, 15000);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) N.widget(); });
+    window.addEventListener("load", function () { setTimeout(N.widget, 2500); });
+  }
+
   /* ---- Accounted For Pro: subscription status from Apple, cached for offline starts ---- */
   var Pro = P("ProStore"); N.Pro = Pro;
   N.pro = { active: store.get("pro") === "1", exp: +store.get("proexp") || 0 };

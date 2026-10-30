@@ -4,4 +4,5 @@
     <string name="title_activity_main">Accounted For</string>
     <string name="package_name">com.antoniotyler.accountedfor</string>
     <string name="custom_url_scheme">com.antoniotyler.accountedfor</string>
+    <string name="widget_desc">Live headcount: who is accounted for, right on your home screen.</string>
 </resources>
