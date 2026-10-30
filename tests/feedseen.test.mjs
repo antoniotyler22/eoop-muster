@@ -13,7 +13,7 @@ test("leader confirms section leaders' posts one at a time or all at once; own p
       posts:[{id:1,t:Date.now()-60000,txt:"Formation 0700",by:"1ST PLT"},{id:2,t:Date.now()-30000,txt:"HQ is at the range",by:"SGT HQ",sl:"HQ"},{id:3,t:Date.now(),txt:"1st sqd cleaning gear",by:"SGT ONE",sl:"1ST"}]}];
       fdSel="${FEED.id}";view="feed";render()`);
     const txt = () => a.$("#main").textContent;
-    assert.equal(a.$$("[data-fsok]").length, 3, "a button on every post, the leader's own too");
+    assert.equal(a.$$("article [data-fsok]").length, 3, "a button on every post, the leader's own too");
     assert.ok(a.$('[data-fsok="1"]'), "the leader's own post has Confirm as well");
     assert.match(a.$$("#main article.fc").find(c=>/Formation 0700/.test(c.textContent)).textContent, /I posted it/, "own post says I posted it");
     assert.match(txt(), /2 posts to confirm/);

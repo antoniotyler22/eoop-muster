@@ -490,3 +490,21 @@ body.v12noai [data-go="ask"],body.v12noai [data-tab="ask"]{display:none!importan
 #tour .tr-x{background:none;border:0;color:var(--muted,#667);font-size:13px;padding:4px;align-self:center;cursor:pointer;text-decoration:underline}
 #tour .tr-x[hidden]{display:none}
 .panel>b+.chip,.who>b+.chip{display:inline-flex;width:auto;vertical-align:middle;margin-left:4px}
+
+/* 4.45 Feed as a conversation */
+#main.fchat article.fc.bub{border-radius:18px 18px 18px 6px;background:var(--surface-2);border-color:transparent;max-width:94%;margin-right:auto;padding:10px 12px;margin-top:8px;box-shadow:none}
+#main.fchat article.fc.bub.own{border-radius:18px 18px 6px 18px;background:var(--olive);color:var(--olive-ink);margin-left:auto;margin-right:0}
+#main.fchat article.fc.bub.own .tm,#main.fchat article.fc.bub.own .note{color:rgba(255,255,255,.8)}
+#main.fchat article.fc.bub.own .fci{background:rgba(255,255,255,.14);color:inherit}
+#main.fchat article.fc .bd{font-size:15.5px}
+.fstack{margin-top:12px}
+.fstack.ok{background:var(--surface-2);border-radius:14px;padding:10px 14px;font-weight:800;color:var(--s-onhand)}
+.fstack .fsp{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:6px}
+.fstack .fsbar{display:flex;gap:4px}.fstack .fsbar i{width:16px;height:5px;border-radius:3px;background:var(--line)}.fstack .fsbar i.on{background:var(--olive)}
+.fstack .fscard{background:var(--surface);border:1.5px solid var(--olive);border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 6px 18px rgba(0,0,0,.12);animation:fsin .28s ease-out}
+.fstack .fscard.urg{border-color:var(--warn)}
+.fstack .fscard .bd{font-size:17px;line-height:1.4;white-space:pre-wrap;word-wrap:break-word}
+.fstack .fsbtns{display:flex;gap:8px}.fstack .fsbtns button{flex:1;min-height:48px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:800;font-size:16px}
+.fstack .fsbtns button.go{flex:2;background:var(--olive);color:var(--olive-ink);border-color:var(--olive)}
+@keyframes fsin{from{transform:translateX(28px);opacity:0}to{transform:none;opacity:1}}
+@media(prefers-reduced-motion:reduce){.fstack .fscard{animation:none}}

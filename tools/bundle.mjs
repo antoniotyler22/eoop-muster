@@ -68,6 +68,7 @@ export const SOURCES = [
   "features/ask-roster.js",
   "features/feed-reply.js",
   "features/one-feed.js",
+  "features/feed-chat.js",
   "features/visitor-login.js",
   "features/move.js",
   "features/stable-ids.js",
