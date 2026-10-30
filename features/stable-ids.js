@@ -14,7 +14,9 @@
    5) Only sections that still exist are published; old section keys from renamed tabs no longer publish an empty list. */
 (()=>{
 const freshId=()=>"a"+Date.now().toString(36)+rndId(4);
-const nk=m=>typeof fullK==="function"?fullK(m):String(m&&m.name||"").toUpperCase();
+const nk=m=>{const n=String(m&&m.name||"").toUpperCase().replace(/[^A-Z0-9,\s]/g," ").replace(/\s+/g," ").trim();let last,rest;
+  if(n.includes(",")){const i=n.indexOf(",");last=n.slice(0,i).trim();rest=n.slice(i+1).trim()}else{const w=n.split(" ");last=w[w.length-1]||"";rest=w.slice(0,-1).join(" ")}
+  return last.replace(/\b(JR|SR|II|III|IV)\b/g,"").replace(/\s+/g,"")+"|"+(rest.split(" ")[0]||"")};
 /* give `list` stable ids against `base` (the people already here): same name → same id; otherwise unique */
 function stableIds(list,base){if(!Array.isArray(list))return list;const byN={};const used=new Set();
   for(const m of base||[]){if(!m)continue;const k=nk(m);if(!byN[k])byN[k]=m.id;used.add(String(m.id))}

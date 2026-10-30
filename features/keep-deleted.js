@@ -46,7 +46,7 @@ if(typeof logLoad==="function"){const _ll=logLoad;logLoad=function(kind){if(/^(R
 
 /* the add box in a section: no doubles */
 document.addEventListener("submit",e=>{if(!e.target||e.target.id!=="addf")return;const name=(($("#aName")||{}).value||"").trim().toUpperCase();if(!name)return;
-  const x=S.roster.find(m=>fullK(m)===fullK({name}));if(x){e.preventDefault();e.stopImmediatePropagation();toast(x.rank+" "+lastOf(x)+" is already on the roster in "+x.sec+". Not added twice.")}},true);
+  const rank=(($("#aRank")||{}).value||"").toUpperCase();const x=S.roster.find(m=>fullK(m)===fullK({name})||(typeof sameNameLoose==="function"&&sameNameLoose(m,{rank:m.rank,name})&&(!rank||String(m.rank).toUpperCase()===rank)));if(x){e.preventDefault();e.stopImmediatePropagation();toast(x.rank+" "+lastOf(x)+" is already on the roster in "+x.sec+". Not added twice.")}},true);
 
 /* Delete beside every name */
 const delBtn=id=>`<button type="button" class="chip kdDel" data-pddel="${esc(id)}" style="cursor:pointer;color:var(--warn);margin-left:6px;flex:none">${armed==="pdd"+id?"Tap again":"Delete"}</button>`;
