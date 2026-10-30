@@ -118,6 +118,7 @@ test("2-step: the Sign in screen asks for the code, then opens the console; Secu
     if (body.op === "login") { if (body.pass !== "pw") return { status: 401, body: { error: "wrong" } }; if (!body.code) return { status: 200, body: { need: "code" } }; return body.code === "246810" ? { status: 200, body: { tok: TOK, exp: Date.now() + 3600000 } } : { status: 401, body: { error: "That code isn't right." } }; }
     if (body.op === "ping") return { status: 200, body: { ok: 1, totp: true, p30: true } };
     if (body.op === "setpass") return body.cur === "pw" && body.next.length >= 12 ? { status: 200, body: { tok: "9".repeat(13) + ".new", exp: Date.now() + 3600000 } } : { status: 401, body: { error: "The current password is wrong." } };
+    if (body.op === "alerts") return { status: 200, body: { state: "ok", owner: false, phones: 41 } };
     if (body.op === "health") return { status: 200, body: { h: { cron: [{ name: "accounted-for-hub", schedule: "* * * * *", active: true, last: new Date().toISOString(), status: "succeeded" }], calls: { n: 40, bad: 0, n1h: 3, bad1h: 0, last: new Date().toISOString() }, fails: [], queue: { n: 0, ready: 0, retried: 0, oldest: null }, hubs: { n: 1, err: 0, last: new Date().toISOString(), saved: null, errs: [] }, crash: { h1: 0, h24: 1, d7: 4, vers: { "4.13.0": 4 }, plats: { ios: 4 } }, db: { bytes: 42 * 1048576, tables: [{ t: "feed_posts", b: 20 * 1048576 }] }, ask: { today: 2, d7: 9 }, at: new Date().toISOString() } } };
     return { status: 200, body: { cfg: {}, rows: [] } }; } });
   try {
@@ -139,6 +140,7 @@ test("2-step: the Sign in screen asks for the code, then opens the console; Secu
     a.$("[data-owtab=health]").click();
     await until(() => /Scheduled jobs/.test(a.$("#main").textContent));
     assert.match(a.$("#main").textContent, /✅ Scheduled jobs · 1[\s\S]*✅ Server calls[\s\S]*42 MB of 500 MB/);
+    assert.match(a.$("#main").textContent, /Alerts going out[\s\S]*NOT set to be warned[\s\S]*41 phones have alerts on/);
     // Security: change password
     a.$("[data-owtab=sec]").click();
     await until(() => a.$("#owPass"));

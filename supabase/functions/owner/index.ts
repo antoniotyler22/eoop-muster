@@ -8,8 +8,10 @@
 //  {op:"login", user, pass[, code]} -> {tok, exp} or {need:"code"} when 2-step is on.
 //    12-hour token, 5 wrong tries lock an address for 15 minutes. Every sign-in is logged and pushed to the owner's phone.
 //  every other op carries {tok}: stats | errors | cfg | setcfg {announce,announce_url,ask_off,news_off} |
-//  remove {kind,id} | comp {days,note} | comps | endcomp {id} | health | log | setpass {cur,next} | signoutall |
-//  totp_start | totp_on {code} | totp_off {code} | setsub {sub} | ping.   {op:"cron", key}: every 10 min from pg_cron.
+//  remove {kind,id} | comp {days,note} | comps | endcomp {id} | health | alerts | log | setpass {cur,next} | signoutall |
+//  totp_start | totp_on {code} | totp_off {code} | setsub {sub} | ping | subcount | broadcast {title, body, test}.   {op:"cron", key}: every 10 min from pg_cron.
+//  alerts: asks the Notify function whether alerts are going out ({stalled:1}) and whether this owner's phone is set to be warned.
+//  The "alerts not going out" buzz itself is sent by Notify's minute job (4.32.0), so it works even if this function is down.
 import webpush from "npm:web-push@3.6.7";
 const URL0 = Deno.env.get("SUPABASE_URL") ?? "";
 const SRK = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -62,8 +64,11 @@ const newCode = () => { const a = crypto.getRandomValues(new Uint8Array(10)); re
 /* ---- the audit log and the owner's phone ---- */
 async function log(ip: string, op: string, detail = "", ok = true) { try { await rest("owner_log", { method: "POST", body: JSON.stringify({ ip: ip.slice(0, 64), op: op.slice(0, 24), detail: String(detail).slice(0, 300), ok }), headers: { Prefer: "return=minimal" } }); } catch { /* before part 30 */ } }
 let vapid = false;
-async function push(o: Own, title: string, body: string) {
-  const sub = o.owner_sub as { endpoint?: string; apns?: string } | null; if (!sub || typeof sub !== "object") return "no sub";
+async function push(o: Own, title: string, body: string) { return pushTo(o.owner_sub, title, body, "owner"); }
+/* one alert to one subscription ({apns} from the iPhone app, or a browser push subscription). "gone" = the phone's
+   token is dead and the row should go. */
+async function pushTo(sub0: unknown, title: string, body: string, open = "board", urgent = true) {
+  const sub = sub0 as { endpoint?: string; apns?: string } | null; if (!sub || typeof sub !== "object") return "no sub";
   try {
     if (typeof sub.apns === "string") {
       const pem = (Deno.env.get("APNS_KEY") ?? "").replace(/-----[^-]+-----/g, "").replace(/\s+/g, ""); if (!pem) return "no apns";
@@ -73,11 +78,58 @@ async function push(o: Own, title: string, body: string) {
       const jwt = hd + "." + bd + "." + b64u(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, k, te.encode(hd + "." + bd)));
       const host = Deno.env.get("APNS_SANDBOX") === "1" ? "api.sandbox.push.apple.com" : "api.push.apple.com";
       const r = await fetch(`https://${host}/3/device/${sub.apns}`, { method: "POST", headers: { authorization: "bearer " + jwt, "apns-topic": Deno.env.get("APNS_TOPIC") || "com.antoniotyler.accountedfor", "apns-push-type": "alert", "apns-priority": "10", "content-type": "application/json" }, body: JSON.stringify({ aps: { alert: { title, body }, sound: "default" }, open: "owner" }) });
-      return r.ok ? "ok" : "fail " + r.status;
+      return r.ok ? "ok" : (r.status === 410 || r.status === 400 ? "gone" : "fail " + r.status);
     }
     if (!vapid) { webpush.setVapidDetails("mailto:antoniotyler22@gmail.com", Deno.env.get("VAPID_PUBLIC")!, Deno.env.get("VAPID_PRIVATE")!); vapid = true; }
-    await webpush.sendNotification(sub as never, JSON.stringify({ title, body, help: true, open: "owner" }), { TTL: 3600, urgency: "high" }); return "ok";
-  } catch (e) { return "fail " + String((e as Error).message || e).slice(0, 40); }
+    await webpush.sendNotification(sub as never, JSON.stringify({ title, body, help: urgent, open }), { TTL: 3600, urgency: urgent ? "high" : "normal" }); return "ok";
+  } catch (e) { const c = (e as { statusCode?: number }).statusCode; if (c === 404 || c === 410) return "gone"; return "fail " + String((e as Error).message || e).slice(0, 40); }
+}
+/* ---- every phone that has alerts on: team lists (feed_subs), leader phones (feeds.leader_sub), recall and live-board
+   phones, and the owner's. One phone can sit on several lists; it is counted and sent to once. ---- */
+type SubRow = { where: string; id: string | number; sub: { endpoint?: string; apns?: string } };
+async function allSubs(): Promise<SubRow[]> {
+  const rows: SubRow[] = [];
+  const page = async (path: string, where: string, idk: string, subk: string) => {
+    for (let off = 0; off < 20000; off += 1000) {
+      const r = await rest(path + "&limit=1000&offset=" + off).catch(() => []) as Record<string, unknown>[];
+      for (const x of r || []) if (x[subk] && typeof x[subk] === "object") rows.push({ where, id: x[idk] as string | number, sub: x[subk] as SubRow["sub"] });
+      if (!r || r.length < 1000) break;
+    }
+  };
+  await page("feed_subs?select=id,sub&order=id", "feed_subs", "id", "sub");
+  await page("feeds?select=id,leader_sub&leader_sub=not.is.null&order=id", "feeds", "id", "leader_sub");
+  await page("recalls?select=id,push_sub&push_sub=not.is.null&expires_at=gt." + new Date().toISOString() + "&order=id", "recalls", "id", "push_sub");
+  await page("boards?select=id,push_sub&push_sub=not.is.null&order=id", "boards", "id", "push_sub");
+  try { const o = await rest("app_cfg?select=owner_sub&id=eq.1"); if (o && o[0] && o[0].owner_sub) rows.push({ where: "owner", id: 1, sub: o[0].owner_sub }); } catch { /* no row */ }
+  return rows;
+}
+const subKey = (s: SubRow["sub"]) => typeof s.apns === "string" ? "a:" + s.apns : typeof s.endpoint === "string" ? "w:" + s.endpoint : "";
+function distinct(rows: SubRow[]) { const by = new Map<string, SubRow[]>(); for (const r of rows) { const k = subKey(r.sub); if (!k) continue; const l = by.get(k); if (l) l.push(r); else by.set(k, [r]); } return by; }
+let bcastAt = 0;
+/* {op:"broadcast", title, body, test} → one alert to every distinct phone. Dead tokens are removed from the rows they
+   came from. At most one broadcast a minute. */
+async function broadcast(b: Record<string, unknown>) {
+  if (Date.now() - bcastAt < 60000) throw new Error("Wait a minute between sends.");
+  const title = String(b.title ?? "").replace(/[<>]/g, "").trim().slice(0, 80), body = String(b.body ?? "").replace(/[<>]/g, "").trim().slice(0, 240);
+  if (!title) throw new Error("Give the alert a title.");
+  bcastAt = Date.now();
+  const by = distinct(await allSubs()); const phones = [...by.entries()];
+  let sent = 0, gone = 0, failed = 0; const dead: SubRow[] = [];
+  for (let i = 0; i < phones.length; i += 25) {
+    await Promise.allSettled(phones.slice(i, i + 25).map(async ([, rows]) => {
+      const r = await pushTo(rows[0].sub, title, body, "board", !b.test);
+      if (r === "ok") sent++; else if (r === "gone") { gone++; dead.push(...rows); } else failed++;
+    }));
+  }
+  for (const d of dead) {
+    try {
+      if (d.where === "feed_subs") await rest("feed_subs?id=eq." + d.id, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+      else if (d.where === "feeds") await rest("feeds?id=eq." + encodeURIComponent(String(d.id)), { method: "PATCH", body: JSON.stringify({ leader_sub: null }), headers: { Prefer: "return=minimal" } });
+      else if (d.where === "recalls") await rest("recalls?id=eq." + encodeURIComponent(String(d.id)), { method: "PATCH", body: JSON.stringify({ push_sub: null }), headers: { Prefer: "return=minimal" } });
+      else if (d.where === "boards") await rest("boards?id=eq." + encodeURIComponent(String(d.id)), { method: "PATCH", body: JSON.stringify({ push_sub: null }), headers: { Prefer: "return=minimal" } });
+    } catch { /* next */ }
+  }
+  return { phones: phones.length, sent, gone, failed, at: Date.now() };
 }
 const fails = new Map<string, { n: number; at: number }>();
 function locked(ip: string) { const f = fails.get(ip); return !!f && f.n >= 5 && Date.now() - f.at < 15 * 60000; }
@@ -111,6 +163,19 @@ async function comp(days: unknown, note: unknown) {
 async function comps() { return (await rest("pro_ents?select=id,product,expires_at,revoked,created_at&id=like.stripe:comp_*&order=created_at.desc&limit=100").catch(() => [])) ?? []; }
 async function health() { return await rest("rpc/owner_health", { method: "POST", body: "{}" }); }
 async function logs() { return (await rest("owner_log?select=id,t,ip,op,detail,ok&order=id.desc&limit=100").catch(() => [])) ?? []; }
+/* Are alerts going out? Asks Notify ({stalled:1}: 200 "ok", 503 "check-ins waiting…", 500 "database denied") and says whether the
+   owner's phone is set to be warned (Notify's minute job does the warning) and how many phones have alerts on. */
+async function alerts(o: Own) {
+  let state = "ok";
+  try {
+    const cfgRow = await rest("app_cfg?select=notify_fn&id=eq.1").catch(() => null); const fn = (cfgRow && cfgRow[0] && cfgRow[0].notify_fn) || "notify";
+    const r = await fetch(URL0 + "/functions/v1/" + fn, { method: "POST", headers: hdrs(), body: JSON.stringify({ stalled: 1 }) }); const t = (await r.text()).slice(0, 100);
+    state = r.status === 200 ? "ok" : r.status === 503 ? t : r.status === 500 ? "The database is refusing the alert server (run setup part 35)." : "The alert server answered " + r.status + ". Is it deployed with the latest code?";
+  } catch { state = "The alert server didn't answer."; }
+  let phones = 0; try { phones = distinct(await allSubs()).size; } catch { /* leave 0 */ }
+  const sub = o.owner_sub as { endpoint?: string; apns?: string } | null;
+  return { state, owner: !!(sub && typeof sub === "object" && (sub.endpoint || sub.apns)), phones };
+}
 async function cronCheck(o: Own) {
   const s = await rest("rpc/owner_stats", { method: "POST", body: "{}" }); const h1 = +s.crash_h1 || 0, h7 = +s.crash_prev6 || 0;
   const base = h7 / 6; const spike = (h1 ?? 0) >= 8 && (h1 ?? 0) >= 3 * Math.max(base, 1);
@@ -156,6 +221,9 @@ Deno.serve(async (req) => {
       case "comps": return json({ rows: await comps() });
       case "endcomp": { const r = await endcomp(b.id); await log(ip, "endcomp", String(b.id)); return json(r); }
       case "health": return json({ h: await health() });
+      case "alerts": return json(await alerts(o));
+      case "subcount": { const by = distinct(await allSubs()); let apns = 0; for (const k of by.keys()) if (k.startsWith("a:")) apns++; return json({ phones: by.size, iphone: apns, web: by.size - apns }); }
+      case "broadcast": { const r = await broadcast(b); await log(ip, "broadcast", (b.test ? "test · " : "") + String(b.title ?? "").slice(0, 60) + " · " + r.sent + "/" + r.phones + " sent, " + r.gone + " gone, " + r.failed + " failed"); return json(r); }
       case "log": return json({ rows: await logs() });
       case "setpass": {
         const cur = String(b.cur ?? ""), nx = String(b.next ?? "");

@@ -7998,7 +7998,7 @@ let pend=null;
 document.addEventListener("click",e=>{if(e.target.closest("[data-sclose],#lgGo"))return;if(pend&&!document.querySelector("#lgCode"))pend=null},true);
 
 /* ---- the console ---- */
-let st=null,cfg=null,errs=null,comps=null,busy="",msg="",tab="use",newComp=null,rm=null,hl=null,lg=null,totp=null,codes=null,ping=null;
+let st=null,cfg=null,errs=null,comps=null,busy="",msg="",tab="use",newComp=null,rm=null,hl=null,al=null,lg=null,totp=null,codes=null,ping=null;
 function open(){view="owner";render();window.scrollTo(0,0);refresh()}
 async function refresh(){if(!tok())return;busy="load";paint();try{[st,cfg,ping]=await Promise.all([call({op:"stats"}),call({op:"cfg"}).then(o=>o.cfg),call({op:"ping"})]);msg=""}catch(e){msg=String(e.message||e)}busy="";paint()}
 const MB=b=>b==null?"–":(b/1048576).toFixed(b<10485760?2:0)+" MB";
@@ -8028,7 +8028,8 @@ function html(){if(!tok())return `<h2>App owner</h2><div class="panel"><p class=
   if(tab==="health"){const H=hl;if(!H)h+=`<div class="panel"><p class="note">${busy?"Loading…":"Not loaded."}</p>${busy?"":`<button class="btn alt" id="owHealth">Load</button>`}</div>`;
     else{const warn=(x)=>`style="--sc:var(${x?"--warn":"--s-onhand"})"`;const cr=H.crash||{},ca=H.calls||{},q=H.queue,hb=H.hubs,db=H.db||{},ask=H.ask;const dbMax=500*1048576;
       const cronBad=(H.cron||[]).filter(j=>j.active===false||(j.status&&j.status!=="succeeded")||!j.last||Date.now()-Date.parse(j.last)>3*3600000);
-      h+=`<div class="alist">
+      const A=al;h+=`<div class="alist">
+        <div class="rrow" ${warn(!A||A.state!=="ok"||!A.owner)}><div class="who"><b>${!A?"–":A.state==="ok"?"✅":"❌"} Alerts going out</b><div class="ph">${!A?"Checking…":A.state==="ok"?"Nothing is waiting without an alert.":esc(A.state)} · ${A&&A.owner?"your phone gets a buzz if they stop":"your phone is NOT set to be warned: turn on owner alerts in Security"}${A?` · ${n(A.phones)} phones have alerts on`:""}</div></div>
         <div class="rrow" ${warn(cronBad.length)}><div class="who"><b>${cronBad.length?"❌":"✅"} Scheduled jobs · ${(H.cron||[]).length}</b><div class="ph">${(H.cron||[]).map(j=>`${esc(j.name.replace(/^accounted-for-/,""))}: ${j.active===false?"paused":esc(j.status||"no run yet")}${j.last?" "+agoS(j.last):""}`).join(" · ")||"none"}</div>${cronBad.length?`<div class="ph">${cronBad.map(j=>esc(j.name.replace(/^accounted-for-/,""))+(j.msg?": "+esc(j.msg):"")).join(" · ")}</div>`:""}</div></div>
         <div class="rrow" ${warn(ca.bad1h>0||(ca.n&&ca.bad>ca.n/4))}><div class="who"><b>${ca.bad1h>0?"❌":"✅"} Server calls (push, hub, queue) · 24 h</b><div class="ph">${n(ca.n)} calls, ${n(ca.bad)} failed · last hour: ${n(ca.n1h)} calls, ${n(ca.bad1h)} failed · last ${agoS(ca.last)}</div>${(H.fails||[]).length?`<div class="ph">${H.fails.slice(0,4).map(f=>esc((f.code||"")+" "+f.msg)).join(" · ")}</div>`:""}</div></div>
         <div class="rrow" ${warn(q&&(q.ready>20||(q.oldest&&Date.now()-Date.parse(q.oldest)>3600000)))}><div class="who"><b>${q?(q.ready>20?"❌":"✅"):"–"} Alert queue</b><div class="ph">${q?`${q.n} waiting, ${q.ready} ready now, ${q.retried} on retry · oldest ${agoS(q.oldest)}`:"Not set up (part 27)"}</div></div></div>
@@ -8055,8 +8056,8 @@ function paint(){if(view!=="owner")return;const m=$("#main");if(m)m.innerHTML=ht
 async function drawQr(){const box=$("#owQr");if(!box||!totp)return;try{await loadLib("lib/qrcode.js","qrcode");const q=qrcode(0,"M");q.addData(totp.uri);q.make();box.innerHTML=q.createSvgTag({cellSize:4,margin:2,scalable:true});const sv=box.querySelector("svg");if(sv){sv.style.width="100%";sv.style.height="auto"}}catch(e){box.textContent="Enter the code below by hand."}}
 async function act(fn){busy="work";paint();try{await fn();msg=""}catch(e){msg=String(e.message||e)}busy="";paint()}
 document.addEventListener("click",e=>{const t=e.target;if(view!=="owner")return;const tb=t.closest("[data-owtab]");
-  if(tb){tab=tb.dataset.owtab;busy="";rm=null;paint();if(tab==="pro"&&!comps)act(async()=>{comps=(await call({op:"comps"})).rows});if(tab==="health"&&!hl)act(async()=>{hl=(await call({op:"health"})).h});if(tab==="log"&&!lg)act(async()=>{lg=(await call({op:"log"})).rows});if(tab==="sec"&&totp)setTimeout(drawQr,30);return}
-  if(t.closest("#owHealth")){act(async()=>{hl=(await call({op:"health"})).h});return}
+  if(tb){tab=tb.dataset.owtab;busy="";rm=null;paint();if(tab==="pro"&&!comps)act(async()=>{comps=(await call({op:"comps"})).rows});if(tab==="health"&&!hl)act(async()=>{hl=(await call({op:"health"})).h;al=await call({op:"alerts"})});if(tab==="log"&&!lg)act(async()=>{lg=(await call({op:"log"})).rows});if(tab==="sec"&&totp)setTimeout(drawQr,30);return}
+  if(t.closest("#owHealth")){act(async()=>{hl=(await call({op:"health"})).h;al=await call({op:"alerts"})});return}
   if(t.closest("#owLog")){act(async()=>{lg=(await call({op:"log"})).rows});return}
   if(t.closest("#owSub")){act(async()=>{const s=await pushSub(true);if(!s){throw new Error("Alerts aren't available on this phone yet. Allow notifications first.")}const j=s.toJSON?s.toJSON():s;const r=await call({op:"setsub",sub:j});S.ownerSubAt=Date.now();rawSave();toast(r.test==="ok"?"On. A test alert was sent.":"On. Test alert: "+String(r.test))});return}
   if(t.closest("#owSubOff")){act(async()=>{await call({op:"setsub",sub:null});delete S.ownerSubAt;rawSave();toast("Alerts off")});return}

@@ -83,3 +83,8 @@ test("owner is buzzed when alerts stall, and a member is asked for alerts after 
     assert.ok(!a.$("#ckAl"));
   } finally { await a.close(); }
 });
+
+test("owner function in the repo is the deployed one plus the alerts op", () => {
+  const o = readFileSync(new URL("../supabase/functions/owner/index.ts", import.meta.url), "utf8");
+  for (const s of ["case \"alerts\"", "case \"broadcast\"", "case \"subcount\"", "async function pushTo", "async function allSubs", "{ stalled: 1 }"]) assert.ok(o.includes(s), s);
+});
