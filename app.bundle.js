@@ -3162,7 +3162,7 @@ if(S.sync&&S.sync.on)setTimeout(()=>syncPull(),700);
 if(S.feeds.length){S.feeds.filter(f=>!f.lk&&f.me&&!f.meH).forEach(fdMeHash);setTimeout(()=>fdPollAll(true),900);if(S.pushOn)setTimeout(()=>S.feeds.filter(f=>!f.lk&&!f.push).forEach(fdPushAttach),1600)}
 if(bcActive())setTimeout(bcPoll,1000);
 if(S.board){setTimeout(livePollBoard,800);if(S.pushOn&&!S.board.push)setTimeout(boardPush,1500)}if(S.link)setTimeout(()=>linkPush(),1200);
-if(firstPick)setTimeout(()=>openModeSheet(true),350);
+if(firstPick)setTimeout(()=>{if(S.mode)return;const sh=$("#sheet");if(sh&&!sh.hidden)return;openModeSheet(true)},350); // skip if a version got set or another sheet opened in the meantime
 if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",ev=>{if(ev.data&&ev.data.type==="updated"){if(/(^|[#&])(join|me|feed|ci|sync|coj|cov)=/.test(H0)&&Date.now()-T0<30000){location.replace(location.pathname+H0);return}{const ae=document.activeElement;if(!(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName))&&!document.querySelector("#sheet.open")){location.reload();return}}const el=$("#toast");el.innerHTML='New version ready. <button id="updNow" style="margin-left:8px;border:0;border-radius:99px;padding:6px 12px;font-weight:800;background:var(--brass);color:#111">Reload</button>';el.hidden=false;clearTimeout(toast.t)}});
 document.addEventListener("click",e=>{if(e.target.id==="updNow")location.reload()});
 if("serviceWorker" in navigator&&document.querySelector("link[rel=manifest]")&&(location.protocol==="https:"||location.hostname==="localhost")){navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(()=>{const o=document.getElementById("offStat");if(o&&navigator.serviceWorker.controller)o.textContent="Ready: this app opens and works with no signal. Text reports once you have service."}).catch(()=>{})}
@@ -3668,7 +3668,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="v11WL
   g.insertAdjacentHTML("beforeend",`<button id="v11SignInTool"><span class="ic">${svg("key")}</span><span><b>Sign in / welcome</b><small>Username, invite link, get the app</small></span></button><button id="v11ShareApp"><span class="ic">${svg("send")}</span><span><b>Share the app</b><small>iPhone + web links</small></span></button>`)}}
 if(typeof WS_GLOBAL==="object"&&Array.isArray(WS_GLOBAL))WS_GLOBAL.push("welcomed");
 /* first open: show it (also if the version sheet already opened before this file loaded) */
-if(!S.mode&&!S.welcomed&&!/(^|[#&])(join|me|feed|ci|sync|coj|cov|bc|qr|pg)=/.test(location.hash||"")){setTimeout(()=>{const sh=$("#sheet");if(sheetCtx&&sheetCtx.kind==="mode")closeSheet();showWelcome()},sh0())}
+if(!S.mode&&!S.welcomed&&!/(^|[#&])(join|me|feed|ci|sync|coj|cov|bc|qr|pg)=/.test(location.hash||"")){setTimeout(()=>{if(S.mode||S.welcomed)return;if(sheetCtx&&sheetCtx.kind==="mode")closeSheet();showWelcome()},sh0())} // re-check: a join/invite link or a tap may have set things up during the delay
 function sh0(){return 380}
 if(S.mode&&!S.welcomed){S.welcomed=1;save()}
 
