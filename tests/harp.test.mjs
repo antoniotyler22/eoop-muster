@@ -10,7 +10,9 @@ test("leader: new form for a Marine, fill every section, PDF is valid and carrie
   const a = await openApp({ rpc: () => [] });
   try {
     a.w.eval(lead + `view="board";render()`);
-    assert.ok(a.$("#hpGo"), "button on Home");
+    assert.ok(!a.$("#hpGo") && !a.$('[data-go="harp"]'), "not on Home");
+    a.w.eval(`view="tools";render();openToolGroup("reports")`);
+    assert.ok(a.$('#sheetOpts [data-go="harp"]'), "HARP is under Tools > Reports");
     a.w.eval(`view="harp";render()`);
     const mid = a.w.eval("S.roster[0].id");
     a.w.eval(`$("#hpFor").value=${JSON.stringify(mid)}`);

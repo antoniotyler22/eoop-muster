@@ -1,5 +1,5 @@
 /* Accounted For 4.26: HARP — Holiday Accident Reduction Program form, filled out on the phone.
-   Everyone has it (leaders from Home and Tools, members from My page). Every block of the paper form:
+   Everyone has it (leaders from Tools → Reports, members from My page). Every block of the paper form:
    - Part A (the Marine): date, name, rank, age, shop, period covered, occasion, SNCOIC, OIC, location, mode of travel.
    - Part B (the small unit leader, while counseling): destinations, travel/contingency plan, driving alone, the
      activity/hazard table (initial risk, control measures, resultant risk), drugs/alcohol talk, valid license,
@@ -239,10 +239,8 @@ async function out(send){const h=cur;if(!h)return;keep();const miss=missing(h);
 window.harpPDF=h=>build(h||cur);window.harpOpen=()=>{view="harp";cur=null;render();window.scrollTo(0,0)};
 /* ---------- ways in: Home, Tools, My page ---------- */
 const btn=`<button class="btn alt" data-go="harp" id="hpGo" style="width:100%;margin-top:10px">📝 HARP form (holiday safety brief)</button>`;
-{const _rb=renderBoard;renderBoard=function(){const r=_rb.apply(this,arguments);try{const m=$("#main");if(m&&!$("#hpGo")&&S.mode!=="civilian"){const ck=$("#myCk");if(ck)ck.insertAdjacentHTML("afterend",btn);else m.insertAdjacentHTML("beforeend",btn)}}catch(e){}return r}}
 if(typeof renderMe==="function"){const _rm=renderMe;renderMe=function(){const r=_rm.apply(this,arguments);try{const m=$("#main");if(m&&!$("#hpGo"))m.insertAdjacentHTML("beforeend",btn)}catch(e){}return r}}
-if(typeof renderTools==="function"){const _rt=renderTools;renderTools=function(){const r=_rt.apply(this,arguments);try{const m=$("#main");if(m&&!$("#hpGo")){const s=m.querySelector(".hc-search");if(s)s.insertAdjacentHTML("afterend",btn);else m.insertAdjacentHTML("afterbegin",btn)}}catch(e){}return r}}
-if(typeof HELP==="object")HELP.harp=["HARP form","Holiday Accident Reduction Program, filled out and signed on the phone, then sent as a PDF.",["Home, Tools or My page → HARP form → New.","Part A for the Marine, Part B for the small unit leader, the POV checklist (All SAT for a clean car) and the Pre-Trip checklist.","Everyone signs with a finger. Email / Share sends the PDF from Mail."]];
+if(typeof HELP==="object")HELP.harp=["HARP form","Holiday Accident Reduction Program, filled out and signed on the phone, then sent as a PDF.",["Tools → Reports → HARP form (or My page) → New.","Part A for the Marine, Part B for the small unit leader, the POV checklist (All SAT for a clean car) and the Pre-Trip checklist.","Everyone signs with a finger. Email / Share sends the PDF from Mail."]];
 {const st=document.createElement("style");st.textContent=`.hp-sec{display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:10px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface);font:inherit;font-weight:800;color:var(--ink);cursor:pointer;text-align:left}
 .hp-sec.on{border-color:var(--brass);border-bottom-left-radius:0;border-bottom-right-radius:0}.hp-sec+.hp-body{margin-top:0;border-top-left-radius:0;border-top-right-radius:0;border-color:var(--brass)}
 .hp-body label{margin-top:10px}.hp-act,.hp-pov,.hp-pre,.hp-sig{padding:10px 0;border-top:1px solid var(--line)}.hp-act:first-of-type{border-top:0}

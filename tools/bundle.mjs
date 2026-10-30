@@ -27,6 +27,7 @@ export const SOURCES = [
   "features/feedseen.js",
   "features/tour.js",
   "features/tiles17.js",
+  "features/harp-tile.js",
   "features/simple.js",
   "features/wow.js",
   "features/es.js",
