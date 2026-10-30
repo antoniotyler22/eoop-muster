@@ -24,7 +24,7 @@ test("a page check-in with the Feed keys on the page also sends the leader alert
     await a.w.eval(`(async()=>{SB.notify=(rid,b)=>{(window.__al=window.__al||[]).push(b)};const m=S.roster[0];const D=mpDigest(m);D.feed={id:"abcdefghij1234",mk:"m".repeat(30),ek:"e".repeat(40),unit:"UT",secs:[]};D.cofeed=null;D.cks=[];
       S.feeds=[];S.me={pk:"${"p".repeat(28)}",unit:"UT",d:D,t:Date.now()};S.onb=true;S.welcomed=1;view="me";render()})()`);
     await sleep(50);
-    a.$("#ckOpen").click(); a.$('[data-ckst="On Hand"]').click(); a.$("#ckSend").click();
+    a.$('[data-ckst="On Hand"]').click(); a.$("#ckSend").click();
     await waitFor(() => sent.length === 1);
     await waitFor(() => a.w.eval("(window.__al||[]).length") >= 1);
     const al = JSON.parse(a.w.eval("JSON.stringify(window.__al[0])"));

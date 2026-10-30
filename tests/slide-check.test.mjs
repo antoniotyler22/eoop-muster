@@ -11,9 +11,9 @@ test("pick a status, then the slider (keyboard or drag) checks you in; before a 
     a.w.eval(lead);
     const id = a.w.eval("S.roster[0].id");
     a.w.eval(`{const s=$("#myWho");s.value=${JSON.stringify(id)};s.dispatchEvent(new Event("change",{bubbles:true}))}`);
-    a.$("#myCkOpen").click(); await sleep(20);
-    assert.ok(a.$("#myCk .slck.off"), "greyed out before a status is picked");
-    assert.match(a.$("#myCk .slck").textContent, /Pick a status/);
+    await sleep(20);
+    assert.ok(a.$("#myCk [data-myst][aria-pressed=true]"), "your current status is picked already");
+    assert.ok(a.$("#myCk .slck:not(.off)"), "slider ready right away");
     assert.ok(a.$("#myCkSend").hidden, "the old button is hidden");
     a.$('[data-myst="SIQ"]').click(); await sleep(20);
     const sl = a.$("#myCk .slck"); assert.ok(sl && !sl.classList.contains("off"), "slider ready after picking");
@@ -34,7 +34,7 @@ test("a short slide springs back and sends nothing", async () => {
     a.w.eval(lead);
     const id = a.w.eval("S.roster[0].id");
     a.w.eval(`{const s=$("#myWho");s.value=${JSON.stringify(id)};s.dispatchEvent(new Event("change",{bubbles:true}))}`);
-    a.$("#myCkOpen").click(); await sleep(20); a.$('[data-myst="Leave"]').click(); await sleep(20);
+    await sleep(20); a.$('[data-myst="Leave"]').click(); await sleep(20);
     const k = a.$("#myCk .slck-knob");
     const PE = a.w.PointerEvent || a.w.MouseEvent;
     k.dispatchEvent(new PE("pointerdown", { clientX: 10, bubbles: true }));

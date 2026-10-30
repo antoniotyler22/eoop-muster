@@ -15,9 +15,8 @@ test("member with a page but no Feed still gets Check in, and it goes out on the
     await a.w.eval(`(async()=>{const m=S.roster[0];const D=mpDigest(m);D.feed=null;D.cofeed=null;D.cks=[];window.__mid=m.id;
       S.feeds=[];S.me={pk:"${PK}",unit:"UTILITIES",d:D,t:Date.now()};S.onb=true;S.welcomed=1;view="me";render()})()`);
     await sleep(50);
-    assert.ok(a.$("#ckOpen"), "Check in button is there with no Feed");
+    assert.ok(a.$("#ckSend"), "Check in is there with no Feed");
     assert.doesNotMatch(a.$("#ckCard").textContent, /connected to your leader's Feed/);
-    click(a, "#ckOpen");
     click(a, '[data-ckst="Leave"]');
     setVal(a, "#ckF", "2026-10-30"); setVal(a, "#ckT", "2026-11-02"); setVal(a, "#ckL", "Maui");
     click(a, "#ckSend");

@@ -24,7 +24,7 @@ test("member checks in from My page: Other needs words, dates and location ride 
   const sent = [];
   const a = await memberApp((fn, body) => { if (fn === "feed_req") { sent.push(body); return 7; } return []; });
   try {
-    click(a, "#ckOpen");
+    assert.ok(!a.$("#ckOpen"), "choices show right away");
     click(a, '[data-ckst="Other"]');
     assert.ok(a.$("#ckO"), "Other asks what's going on");
     setVal(a, "#ckF", "2026-10-26");
@@ -44,7 +44,7 @@ test("member checks in from My page: Other needs words, dates and location ride 
     assert.equal(o.mid, a.w.eval("window.__mid"));
     await waitFor(() => /waiting for your leader/.test(a.$("#ckCard").textContent));
     // On Hand needs no dates
-    click(a, "#ckOpen"); click(a, '[data-ckst="On Hand"]');
+    click(a, '[data-ckst="On Hand"]');
     assert.equal(a.$("#ckF"), null, "On Hand doesn't ask for dates");
     assert.ok(a.$("#meOff").previousElementSibling, "start your own team + help sit above Remove");
     assert.match(a.$("#main").textContent, /Start my own team/);

@@ -56,6 +56,10 @@ const st=document.createElement("style");st.textContent=`
 .slck.nudge .slck-knob{animation:slckNudge .6s ease}
 @keyframes slckNudge{30%{transform:translateX(26px)}60%{transform:translateX(-4px)}100%{transform:none}}
 .slck-row{grid-template-columns:1fr!important}
+.slck-row:not(:has(button:not([hidden]))){display:none}
+#myCk .evts,#ckCard .evts{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -4px;padding:2px 4px;-webkit-overflow-scrolling:touch}
+#myCk .evts::-webkit-scrollbar,#ckCard .evts::-webkit-scrollbar{display:none}
+#myCk .evts button,#ckCard .evts button{flex:0 0 auto}
 .slck-row .slck-cancel{background:none!important;border:0!important;color:var(--muted)!important;min-height:40px!important;box-shadow:none!important}
 @media (prefers-reduced-motion:reduce){.slck-txt{animation:none}.slck.nudge .slck-knob{animation:none}}`;
 document.head.appendChild(st);

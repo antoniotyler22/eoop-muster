@@ -5091,14 +5091,15 @@ function ckCardHTML(){const f=ckFeed();const last=(S.myCks||[])[0];
   if(last&&!S.pushOn&&!(typeof Notification!=="undefined"&&Notification.permission==="denied"))h+=`<div class="note" id="ckAl" style="margin:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:160px">🔔 Get your leader's confirmation on this phone.</span><button class="btn" id="taOn" style="min-height:40px">Turn on alerts</button></div>`;
   const P=f?null:ckPage();
   if(!f&&!P){h+=`<p class="note" style="margin:0">Check-in turns on once your page loads. Pull down to refresh, or ask your leader for a new link.</p></div>`;return h}
-  if(!ck.open){h+=`<button class="btn" id="ckOpen" style="min-height:52px;font-size:17px">📍 Check in</button><p class="note" style="margin:0">Tell your leader where you are. They confirm it.</p></div>`;return h}
+  /* 4.53: no "Check in" button to open first: the choices and the slider show right away, On Hand picked */
+  if(!ck.open){ck.open=true;ck.st=ck.st||"On Hand";ck.v=ck.v||{};ck.auto=1}
   const v=ck.v;const inp="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)";
   h+=`<div class="evts" role="radiogroup" aria-label="Your status">${STATUSES.map(s=>`<button data-ckst="${esc(s)}" aria-pressed="${ck.st===s}" role="radio" aria-checked="${ck.st===s}">${s===CK_OTHER?"✎ Other":`<span class="dot" style="background:var(${SVAR[s]})"></span>${esc(SHORT[s]||s)}`}</button>`).join("")}</div>`;
   if(ck.st===CK_OTHER)h+=`<label for="ckO">What's going on?</label><input type="text" id="ckO" maxlength="80" value="${esc(v.oth||"")}" placeholder="Write it in: sick call, car trouble, at the shop…">`;
   if(ck.st&&ck.st!=="On Hand")h+=`<div class="row2"><div><label for="ckF">From</label><input type="date" id="ckF" value="${esc(v.from||dkey())}" style="${inp}"></div><div><label for="ckT">To</label><input type="date" id="ckT" value="${esc(v.to||"")}" style="${inp}"></div></div>
     <label for="ckL">Location</label><input type="text" id="ckL" maxlength="60" value="${esc(v.loc||"")}" placeholder="Where you are: base, city, clinic">`;
   if(ck.st)h+=`<label for="ckN">Note (optional)</label><input type="text" id="ckN" maxlength="120" value="${esc(v.note||"")}" placeholder="Anything your leader should know">`;
-  h+=`<div class="row2"><button class="btn" id="ckSend"${!ck.st||ck.busy?" disabled":""}>${ck.busy?"Sending…":"Send check-in"}</button><button class="btn alt" id="ckX">Cancel</button></div>
+  h+=`<div class="row2"><button class="btn" id="ckSend"${!ck.st||ck.busy?" disabled":""}>${ck.busy?"Sending…":"Send check-in"}</button>${ck.auto?"":`<button class="btn alt" id="ckX">Cancel</button>`}</div>
     <p class="note" style="margin:0">Goes to ${esc((f?f.unit:P.d.unit)||"your leader")}, encrypted. Your leader confirms it and your page updates.</p></div>`;
   return h}
 function ckRedraw(){const el=document.getElementById("ckCard");if(el){el.outerHTML=ckCardHTML()}else{const y=window.scrollY;render();window.scrollTo(0,y)}}
@@ -8952,14 +8953,16 @@ function cardHTML(){const m=me();
       <p class="note" style="margin:0">Not on the list? Add yourself in your section first.</p></div>`;return h}
   const cur=`<span class="dot" style="background:var(${SVAR[m.status]||"--line"})"></span> <b>${esc(SHORT[m.status]||m.status)}</b>${m.end?" thru "+esc(fmtD(isoOf(m.end)||m.end)):""}${m.loc?" · 📍 "+esc(m.loc):""}`;
   h+=`<div class="note" style="margin:0">${esc(m.rank+" "+m.name)} · ${cur}</div>`;
-  if(!c.open)return h+`<button class="btn" id="myCkOpen" style="min-height:52px;font-size:17px">📍 Check in</button>${viewOnly()?`<p class="note" style="margin:0">Goes to your leader to confirm.</p>`:""}<button class="chip" id="myCkWho" style="cursor:pointer;align-self:flex-start">Not you? Change</button></div>`;
+  /* 4.53: the choices and the slider show right away, with your current status picked */
+  if(!c.open){const st=STATUSES.includes(m.status)?m.status:"On Hand";const io=x=>x?(typeof isoOf==="function"&&isoOf(x))||String(x):"";
+    c={open:true,st,v:st==="On Hand"?{}:{from:io(m.start),to:io(m.end),loc:m.loc||"",note:m.detail||""},auto:1}}
   const v=c.v;
   h+=`<div class="evts" role="radiogroup" aria-label="Your status">${STATUSES.map(s=>`<button type="button" data-myst="${esc(s)}" aria-pressed="${c.st===s}" role="radio" aria-checked="${c.st===s}">${s==="Other"?"✎ Other":`<span class="dot" style="background:var(${SVAR[s]})"></span>${esc(SHORT[s]||s)}`}</button>`).join("")}</div>`;
   if(c.st==="Other")h+=`<label for="myO">What's going on?</label><input type="text" id="myO" maxlength="80" value="${esc(v.oth||"")}" placeholder="Write it in">`;
   if(c.st&&c.st!=="On Hand")h+=`<div class="row2"><div><label for="myF">From</label><input type="date" id="myF" value="${esc(v.from||dkey())}" style="${inp}"></div><div><label for="myT">To</label><input type="date" id="myT" value="${esc(v.to||"")}" style="${inp}"></div></div>
     <label for="myL">Location</label><input type="text" id="myL" maxlength="60" value="${esc(v.loc||"")}" placeholder="Where you are: base, city, clinic">`;
   if(c.st)h+=`<label for="myN">Note (optional)</label><input type="text" id="myN" maxlength="80" value="${esc(v.note||"")}" placeholder="Anything the team should know">`;
-  return h+`<div class="row2"><button class="btn" id="myCkSend"${c.st?"":" disabled"}>Check in</button><button class="btn alt" id="myCkX">Cancel</button></div></div>`}
+  return h+`<div class="row2"><button class="btn" id="myCkSend"${c.st?"":" disabled"}>Check in</button>${c.auto?"":`<button class="btn alt" id="myCkX">Cancel</button>`}</div>${viewOnly()?`<p class="note" style="margin:0">Goes to your leader to confirm.</p>`:""}<button class="chip" id="myCkWho" style="cursor:pointer;align-self:flex-start">Not you? Change</button></div>`}
 function grab(){for(const [k,id] of [["from","myF"],["to","myT"],["loc","myL"],["oth","myO"],["note","myN"]]){const el=document.getElementById(id);if(el)c.v[k]=el.value}}
 function redraw(){const el=document.getElementById("myCk");if(el)el.outerHTML=cardHTML()}
 function place(){if(!show())return;const main=$("#main");if(!main||$("#myCk"))return;
@@ -9574,6 +9577,10 @@ const st=document.createElement("style");st.textContent=`
 .slck.nudge .slck-knob{animation:slckNudge .6s ease}
 @keyframes slckNudge{30%{transform:translateX(26px)}60%{transform:translateX(-4px)}100%{transform:none}}
 .slck-row{grid-template-columns:1fr!important}
+.slck-row:not(:has(button:not([hidden]))){display:none}
+#myCk .evts,#ckCard .evts{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -4px;padding:2px 4px;-webkit-overflow-scrolling:touch}
+#myCk .evts::-webkit-scrollbar,#ckCard .evts::-webkit-scrollbar{display:none}
+#myCk .evts button,#ckCard .evts button{flex:0 0 auto}
 .slck-row .slck-cancel{background:none!important;border:0!important;color:var(--muted)!important;min-height:40px!important;box-shadow:none!important}
 @media (prefers-reduced-motion:reduce){.slck-txt{animation:none}.slck.nudge .slck-knob{animation:none}}`;
 document.head.appendChild(st);
