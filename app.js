@@ -1175,10 +1175,16 @@ function coFeedDown(){const L=S.link;if(!L||!L.whole)return null;const f=S.feeds
 function joinCoFeed(C,me,mid){if(!C||!C.id||S.feeds.some(f=>f.id===C.id))return false;const nf={id:String(C.id).slice(0,20),mk:String(C.mk).slice(0,40),ek:String(C.ek).slice(0,60),unit:String(C.unit||"Company").slice(0,30),me:String(me||"").slice(0,30),sec:String(C.sec||"").slice(0,6),secsLink:[String(C.sec||"")],posts:[],seen:0,mine:{},hub2:1};if(mid)nf.mid=String(mid).slice(0,40);
   S.feeds=S.feeds.filter(f=>!f.hub2||f.lk);S.feeds.push(nf);fdMeHash(nf).then(()=>{fdPollAll(true);if(typeof fdPushAttach==="function")fdPushAttach(nf)});return true}
 function rpSchedule(){if(!S.board||!S.board.sk||S.role==="view")return;clearTimeout(rpT);rpT=setTimeout(rpPublish,4000)}
+/* check-ins for one section, packed for that section leader's phone (36 h, newest first). Matched people carry this phone's id,
+   which the leader's phone knows as uid. The hub server has no check-ins, so it packs none. */
+function ckPack(sec){try{const now=Date.now(),L=Array.isArray(S.cks)?S.cks:[];const out=[];
+  for(const x of L){if(!x||!x.cid||now-(+x.t||0)>36*3600000)continue;const m=x.mid&&S.roster.find(y=>y.id===x.mid);const sc=m?m.sec:x.sec;if(sc!==sec)continue;
+    out.push({cid:x.cid,who:x.who,mid:m?m.id:"",sec:sc,st:x.st,oth:x.oth||"",from:x.from||"",to:x.to||"",loc:x.loc||"",note:x.note||"",t:+x.t||0,state:x.state||"new",dt:+x.dt||0,by:x.by||"",dnote:x.dnote||""});if(out.length>=40)break}
+  return out}catch(e){return []}}
 async function rpPublish(force){const B=S.board;if(!B||!B.sk||rpBusy||S.role==="view")return;rpBusy=true;
   try{const f=mainFeed();const feed=f&&f.pk?{id:f.id,mk:f.mk,ek:f.ek,pk:f.pk,unit:f.unit}:null;B.rsig=B.rsig||{};let n=0;
     for(const [sec,k] of Object.entries(B.sk)){const ms=S.roster.filter(m=>m.sec===sec).map(m=>{const o={};for(const x of RPF)if(m[x]!=null&&m[x]!=="")o[x]=x==="duty"?dutyOf(m):m[x];o.duty=dutyOf(m);return o});
-      const body0={v:1,lvl:S.level==="co"?"co":"plt",unit:unitName(),sec,secName:((SECTIONS.find(x=>x[0]===sec)||[])[1]||sec),secs:SECTIONS.map(x=>x[0]),sl:SECTIONS.map(x=>x.slice()),mode:S.mode||"military",ri:readyItems().map(it=>({n:it.n,mo:it.mo||0})),acks:secAcks(sec),cofeed:coFeedDown(),ms,feed};const sg=sigF(body0);B.rat=B.rat||{};
+      const body0={v:1,lvl:S.level==="co"?"co":"plt",unit:unitName(),sec,secName:((SECTIONS.find(x=>x[0]===sec)||[])[1]||sec),secs:SECTIONS.map(x=>x[0]),sl:SECTIONS.map(x=>x.slice()),mode:S.mode||"military",ri:readyItems().map(it=>({n:it.n,mo:it.mo||0})),acks:secAcks(sec),cofeed:coFeedDown(),ms,feed,cks:ckPack(sec)};const sg=sigF(body0);B.rat=B.rat||{};
       if(!force&&B.rsig[sec]===sg&&Date.now()-(B.rat[sec]||0)<6*3600000)continue;const body=Object.assign({hb:Date.now()},body0);
       if(S.source==="sample")continue;
       await SB.rpc("put_roster",{p_board:B.id,p_read_key:B.rk,p_sec:sec,p_ct:await fdEnc(k,body)});B.rsig[sec]=sg;B.rat[sec]=Date.now();n++}
@@ -1231,7 +1237,7 @@ async function rosterPull(force){const L=S.link;if(!L||!L.rk2||rpullBusy)return;
     if(o.cofeed&&joinCoFeed(o.cofeed,L.me||S.myName,""))toast("You're in the "+o.cofeed.unit+" Feed too");
     if(!whole&&S.source==="link"&&Array.isArray(o.sl)&&o.sl.length&&o.sl.every(x=>Array.isArray(x)&&x[0])){const nw=o.sl.slice(0,10).map(x=>[String(x[0]).replace(/[^A-Z0-9]/g,"").slice(0,6),String(x[1]||x[0]).slice(0,30)]);if(JSON.stringify(nw)!==JSON.stringify(SECTIONS)){SECTIONS.splice(0,SECTIONS.length,...nw);S.secs=nw}}
     if(!own)S.roster=whole?next:S.roster.filter(m=>m.sec!==L.mysec).concat(next);
-    L.unit=String(o.unit||L.unit).slice(0,24);L.pt=t;if(o.hb)L.hb=+o.hb||0;L.pulled=true;L.perr="";L.lsig=lsigOf(next);
+    L.unit=String(o.unit||L.unit).slice(0,24);L.pt=t;try{if(Array.isArray(o.cks)&&typeof ckFromOIC==="function")ckFromOIC(o.cks,L.unit)}catch(e){}if(o.hb)L.hb=+o.hb||0;L.pulled=true;L.perr="";L.lsig=lsigOf(next);
     if(takeSt&&!own){try{const items=await itemsFor(L.board,next);L.sig=next.length+"|"+items.join(",")}catch(e){}}
     if(own)setTimeout(()=>linkPush(),1500);
     if(o.feed&&o.feed.id){const F=o.feed;const own=S.feeds.find(f=>f.id===F.id);
