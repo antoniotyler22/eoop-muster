@@ -31,11 +31,28 @@ function panel(){const {done,miss,out,of}=state();const all=of>0&&!miss.length;
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{
   if(!leader())return r;const m=$("#main");if(!m)return r;
   if(view==="checkins"&&!$("#ckMiss")){const hd=m.querySelector(".sechead");if(hd)hd.insertAdjacentHTML("afterend",panel());else m.insertAdjacentHTML("afterbegin",panel())}
-  if(view==="board"&&!$("#ckMissHome")){const {miss,of}=state();if(of&&(S.feeds||[]).length){const ck=$("#myCk");
-    const line=`<button class="chip" id="ckMissHome" data-go="checkins" style="cursor:pointer;margin:8px 0 0;${miss.length?"color:var(--warn)":""}">${miss.length?"📍 "+miss.length+" not checked in today":"✓ Everyone checked in today"}</button>`;
+  if(view==="board"&&!$("#ckMissHome")){const {miss,of,done}=state();if(of){const ck=$("#myCk");
+    const names=miss.slice(0,6).map(x=>`<span class="cm-chip" data-pcard="${esc(x.id)}">${esc(x.rank+" "+lastOf(x))}</span>`).join("")+(miss.length>6?`<span class="cm-chip">+${miss.length-6} more</span>`:"");
+    const line=miss.length?`<div class="card" id="ckMissHome" style="gap:6px;border-color:var(--warn)"><div style="display:flex;justify-content:space-between;align-items:baseline"><b style="color:var(--warn)">📍 ${miss.length} didn't check in today</b><button class="chip" data-go="checkins" style="cursor:pointer">See all · ${done.length}/${of} in</button></div><div class="cm-chips">${names}</div></div>`
+      :`<button class="chip" id="ckMissHome" data-go="checkins" style="cursor:pointer;margin:8px 0 0;color:var(--s-onhand)">✓ Everyone checked in today (${done.length}/${of})</button>`;
     if(ck)ck.insertAdjacentHTML("beforebegin",line);else{const g=m.querySelector(".greet,.hero");if(g)g.insertAdjacentHTML("afterend",line)}}}}catch(e){}return r}}
+
+/* co-leaders and editors see every check-in too: the list of check-ins merges across synced phones by check-in id
+   (confirmed beats waiting, newest wins otherwise), and a phone's own "already read up to here" markers don't sync,
+   so no phone skips rows another phone already fetched. New ones arriving over sync buzz this phone like a live one. */
+if(typeof SYNC_SKIP==="object"&&Array.isArray(SYNC_SKIP)&&!SYNC_SKIP.includes("pgAfter"))SYNC_SKIP.push("pgAfter");
+{const _mr=mergeRemote;mergeRemote=function(R){const mine=Array.isArray(S.cks)?S.cks.slice():[];const theirs=R&&Array.isArray(R.cks)?R.cks:[];const had=new Set(mine.map(x=>x.cid));
+  const r=_mr.apply(this,arguments);
+  try{if(theirs.length||mine.length){const by={};const rank=x=>x.state==="new"?0:1;
+    for(const x of theirs.concat(mine)){if(!x||!x.cid)continue;const c=by[x.cid];if(!c||rank(x)>rank(c)||(rank(x)===rank(c)&&(+x.dt||+x.t||0)>(+c.dt||+c.t||0)))by[x.cid]=x}
+    S.cks=Object.values(by).sort((a,b)=>(b.t||0)-(a.t||0)).slice(0,300);
+    const fresh=S.cks.filter(x=>!had.has(x.cid)&&x.state==="new");
+    if(fresh.length&&leader()){toast("📍 "+(fresh.length===1?fresh[0].who+" checked in":fresh.length+" new check-ins"));try{navigator.vibrate&&navigator.vibrate([80,60,80])}catch(e){}
+      try{if(typeof localAlert==="function")localAlert("📍 "+(fresh.length===1?fresh[0].who+" checked in":fresh.length+" check-ins"),"Open Check-ins to confirm.","checkins")}catch(e){}}}}catch(e){}
+  return r}}
 {const st=document.createElement("style");st.textContent=`#ckMiss .alist{display:block}.cm-sec{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--muted,#667);margin:10px 0 2px}
 .cm-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}.cm-sec+.cm-row{border-top:0}
 .cm-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--warn)}.cm-who{flex:1;min-width:0;cursor:pointer}.cm-who b{display:block}.cm-who span{display:block;font-size:12.5px;opacity:.75}
+.cm-chips{display:flex;flex-wrap:wrap;gap:6px}.cm-chip{font-size:12.5px;font-weight:700;padding:4px 9px;border-radius:999px;background:var(--surface-2,#eef0f3);border:1px solid var(--line);cursor:pointer}
 .cm-call{flex:none;text-decoration:none;color:var(--ink);cursor:pointer}`;document.head.appendChild(st)}
 })();

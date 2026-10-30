@@ -15,6 +15,7 @@ const stLabel=x=>x.st===CK_OTHER?(x.oth?"Other: "+x.oth:"Other"):(SHORT[x.st]||x
 const rangeTxt=(from,to)=>(from?"From "+fmtD(from):"")+(to?(from?" – ":"")+"To "+fmtD(to):"");
 const ckLine=x=>[stLabel(x),x.st!=="On Hand"?rangeTxt(x.from,x.to):"",x.loc?"📍 "+x.loc:""].filter(Boolean).join(" · ");
 const leaderHere=()=>typeof isLeaderPhone==="function"&&isLeaderPhone()&&!(typeof memberMode==="function"&&memberMode());
+window.localAlert=localAlert;
 function localAlert(title,body,open){if(!document.hidden)return;
   try{if(window.MBN&&MBN.on&&MBN.Local)MBN.Local.now({title,body,open});else if("Notification" in window&&Notification.permission==="granted")navigator.serviceWorker.ready.then(r=>r.showNotification(title,{body,data:{open},icon:"./icon-192.png"})).catch(()=>{})}catch(e){}}
 
