@@ -3,12 +3,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { openApp, sleep } from "./harness.mjs";
 
-test("Tools shows at most 12 groups and every old tool is still inside one", async () => {
+test("Tools shows at most 13 groups (12 + Utilities) and every old tool is still inside one", async () => {
   const a = await openApp();
   try {
     a.w.eval(`S.welcomed=1;S.onb=true;S.leaderMode=true;view="tools";render()`);
     const groups = a.$$("#sgGrid > *");
-    assert.ok(groups.length > 0 && groups.length <= 12, "groups: " + groups.length);
+    assert.ok(groups.length > 0 && groups.length <= 13, "groups: " + groups.length);
     assert.ok(!a.$("#main #v11Em"), "emergency check-in is on Home only");
     for (const k of ["invite", "checkins", "access", "support", "dms", "integ", "data"]) {
       const g = a.w.eval(`(()=>{for(const k of ["checkin","feed","people","reports","plan","home","help","settings","rollup"]){openToolGroup(k);if(document.querySelector('#sheetOpts [data-go="${k}"]'))return k}return ""})()`);

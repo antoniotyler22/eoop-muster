@@ -20,7 +20,7 @@ let armedAct=false;
 if(typeof actCard==="function"){actCard=function(){const A=S.act||[];if(!A.length)return"";const n=typeof actNew==="function"?actNew():0;
   return `<div class="sech"><h2>Activity</h2><span style="display:flex;gap:6px;align-items:center"><button class="chip" id="haClear" style="cursor:pointer">${armedAct?"Tap again to clear":"Clear"}</button><button class="chip" data-go="act" style="cursor:pointer">${n?`<b style="color:var(--brass)">${n} new</b> · `:""}See all ▸</button></span></div>
     <div class="card ny">${A.slice(0,4).map((a,i)=>`<div class="hc-row"><button class="lrow" data-go="${esc(a.go||"act")}" style="flex:1;text-align:left;background:none;border:0;cursor:pointer;color:inherit;border-top:0;min-width:0"><span class="n tone-${a.t>(S.actSeen||0)?"a":"b"}">${esc(a.ic)}</span><span style="flex:1;min-width:0"><span class="t" style="display:block">${esc(a.txt)}</span><span class="s" style="display:block">${ago(a.t)}</span></span></button><button class="hc-x" data-ahide="${i}" aria-label="Remove" title="Remove">×</button></div>`).join("")}</div>`}}
-function home(){if(view==="board"||view==="dash"){const y=window.scrollY;render();window.scrollTo(0,y)}}
+function home(){if(view==="board"||view==="dash"||view==="utilities"){const y=window.scrollY;render();window.scrollTo(0,y)}}
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;
   const d=t.closest("[data-hgone]");if(d){e.stopImmediatePropagation();hid()[d.dataset.hgone]="never";rawSave();home();toast("Deleted. It won't show again.");return}
   const h=t.closest("[data-hhide]");if(h){e.stopImmediatePropagation();hid()[h.dataset.hhide]=Date.now();rawSave();home();toast("Hidden until it comes back");return}
@@ -101,7 +101,7 @@ function homeFix(){const main=$("#main");if(!main||view!=="board")return;
   const spot=live?live.nextElementSibling:null;
   if(oa){const anchor=spot&&spot.isConnected&&spot!==oa?spot:main.querySelector("details.card");if(anchor&&anchor!==oa)anchor.insertAdjacentElement("beforebegin",oa)}
   if(live)main.insertAdjacentElement("beforeend",live)}
-{const _r=render;render=function(){const r=_r.apply(this,arguments);try{homeFix();if(view==="board"){const m=$("#main");if(m){todayFix(m);nyFix(m)}}}catch(e){}return r}}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{homeFix();if(view==="utilities"){const m=$("#main");if(m)nyFix(m)}if(view==="board"){const m=$("#main");if(m){todayFix(m);nyFix(m)}}}catch(e){}return r}}
 
 {const st=document.createElement("style");st.textContent=`.hc-row{display:flex;align-items:stretch;border-top:1px solid var(--line)}.hc-row:first-child{border-top:0}.hc-row .lrow{min-width:0}
 .hc-x{flex:0 0 44px;border:0;background:none;color:var(--muted,inherit);opacity:.7;font-size:22px;line-height:1;cursor:pointer}.hc-x:active{opacity:1}

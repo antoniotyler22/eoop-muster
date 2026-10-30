@@ -98,11 +98,14 @@ test("home: Needs you lines hide until tomorrow; Today cards show by time of day
     a.w.eval(LEAD + `S.rc.open=true;S.rc.start=Date.now();S.rc.rid="x1";S.rc.res={};S.rc.ci={};S.rc.live=null;
       const k=dkey();S.duty.rosters.push({id:"d1",name:"Duty NCO",secs:[],att:false,skip:[],order:[],ptr:0,assign:{[k]:S.roster[0].id},excl:{}});
       const m=S.roster[1];m.cal=[{id:"c1",d:k,tm:"23:59",ty:"APPT",ti:"Dentist"},{id:"c2",d:k,tm:"",ty:"APPT",ti:"Allday"}];save();view="board";render();`);
-    assert.ok(a.$("[data-nyhide]"), "needs-you rows get an ×");
+    assert.ok(!a.$("[data-nyhide]") && !/Needs you/.test(a.$("#main").textContent), "Needs you is not on Home");
+    a.w.eval(`view="utilities";render()`);
+    assert.ok(a.$("[data-nyhide]"), "needs-you rows get an × in Utilities");
     const n = a.w.eval("document.querySelectorAll('[data-nyhide]').length");
     a.$("[data-nyhide]").click();
     assert.equal(a.w.eval("document.querySelectorAll('[data-nyhide]').length"), n - 1);
     assert.equal(a.w.eval("Object.keys(S.nyHide.h).length"), 1);
+    a.w.eval(`view="board";render()`);
     // Today: the all-day item shows; the 23:59 appointment is hidden unless it's late; duty depends on the hour
     const now = a.w.eval("new Date().getHours()*60+new Date().getMinutes()");
     const vis = a.w.eval("[...document.querySelectorAll('#main .strip [data-tdk]')].filter(c=>!c.hidden).map(c=>c.dataset.tdk)");
