@@ -36,7 +36,9 @@ function enhance(btn){if(!btn||btn.dataset.slid)return;btn.dataset.slid="1";
   /* a tap on the track (not a slide) shows how */
   wrap.addEventListener("click",e=>{if(done||e.target.closest(".slck-knob"))return;wrap.classList.remove("nudge");void wrap.offsetWidth;wrap.classList.add("nudge")});
   set(0,false)}
-function scan(){for(const id of TARGETS){const b=document.getElementById(id);if(b&&!b.dataset.slid)enhance(b)}}
+function scan(){for(const id of TARGETS){const b=document.getElementById(id);if(b&&!b.dataset.slid)enhance(b)}
+  /* the chosen status is always in view in the sideways row */
+  document.querySelectorAll("#ckCard .evts,#myCk .evts").forEach(r=>{if(r.dataset.sc)return;const on=r.querySelector('[aria-pressed="true"]');if(!on)return;r.dataset.sc="1";r.scrollLeft=Math.max(0,on.offsetLeft-r.offsetLeft-12)})}
 window.slideCheckScan=scan;
 const main=document.getElementById("main");
 if(main&&"MutationObserver" in window)new MutationObserver(()=>scan()).observe(main,{childList:true,subtree:true});
@@ -56,6 +58,9 @@ const st=document.createElement("style");st.textContent=`
 .slck.nudge .slck-knob{animation:slckNudge .6s ease}
 @keyframes slckNudge{30%{transform:translateX(26px)}60%{transform:translateX(-4px)}100%{transform:none}}
 .slck-row{grid-template-columns:1fr!important}
+#ckCard .row2>*,#myCk .row2>*{min-width:0}
+#ckCard input[type=date],#myCk input[type=date]{min-width:0;max-width:100%;width:100%;display:block;-webkit-appearance:none;appearance:none;box-sizing:border-box}
+#meUpd .lrow>button.chip,#meUpd .lrow>.chip{width:auto!important;flex:0 0 auto!important;border-top:0!important;padding:7px 12px!important;align-self:center;white-space:nowrap}
 .slck-row:not(:has(button:not([hidden]))){display:none}
 #myCk .evts,#ckCard .evts{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -4px;padding:2px 4px;-webkit-overflow-scrolling:touch}
 #myCk .evts::-webkit-scrollbar,#ckCard .evts::-webkit-scrollbar{display:none}

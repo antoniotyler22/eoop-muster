@@ -5080,11 +5080,11 @@ function ckGrab(){for(const [k,id] of [["from","ckF"],["to","ckT"],["loc","ckL"]
 function ckState(x){const D=S.me&&S.me.d;const r=D&&(D.cks||[]).find(c=>c.cid===x.cid);return r?r:{state:"sent"}}
 function ckExampleHTML(){const inp="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)";const d0=dkey(),d1=dkey(new Date(Date.now()+3*86400000));
   return `<div class="card" id="ckCard" style="gap:8px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">CHECK IN</span><span class="chip">Example</span></div>
-    <p class="note" style="margin:0">They tap <b>📍 Check in</b> and see this:</p>
+    <p class="note" style="margin:0">They pick where they are, then slide to check in:</p>
     <div class="evts">${STATUSES.map(s=>`<button disabled aria-pressed="${s==="Leave"}">${s===CK_OTHER?"✎ Other":`<span class="dot" style="background:var(${SVAR[s]})"></span>${esc(SHORT[s]||s)}`}</button>`).join("")}</div>
     <div class="row2"><div><label>From</label><input type="date" disabled value="${d0}" style="${inp}"></div><div><label>To</label><input type="date" disabled value="${d1}" style="${inp}"></div></div>
     <label>Location</label><input type="text" disabled value="Honolulu" style="${inp}">
-    <button class="btn" disabled>Send check-in</button><p class="note" style="margin:0">You get it in Check-ins and tap Confirm. Their page then shows <b>✓ Confirmed</b>.</p></div>`}
+    <div class="slck" aria-hidden="true"><div class="slck-fill"></div><div class="slck-txt">slide to check in</div><div class="slck-knob"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div></div><p class="note" style="margin:0">You get it in Check-ins and tap Confirm. Their page then shows <b>✓ Confirmed</b>.</p></div>`}
 function ckCardHTML(){const f=ckFeed();const last=(S.myCks||[])[0];
   let h=`<div class="card" id="ckCard" style="gap:8px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">CHECK IN</span>${last?`<span class="chip">Last ${esc(ago(last.t))}</span>`:""}</div>`;
   if(last){const s=ckState(last);h+=`<div class="note" style="margin:0"><b>${esc(ckLine(last))}</b> · ${s.state==="ok"?`<span style="color:var(--s-onhand);font-weight:700">✓ Confirmed</span>`:s.state==="no"?`<span style="color:var(--warn);font-weight:700">✕ Not confirmed</span>${s.dnote?" · "+esc(s.dnote):""}`:"Sent · waiting for your leader"}</div>`}
@@ -9557,7 +9557,9 @@ function enhance(btn){if(!btn||btn.dataset.slid)return;btn.dataset.slid="1";
   /* a tap on the track (not a slide) shows how */
   wrap.addEventListener("click",e=>{if(done||e.target.closest(".slck-knob"))return;wrap.classList.remove("nudge");void wrap.offsetWidth;wrap.classList.add("nudge")});
   set(0,false)}
-function scan(){for(const id of TARGETS){const b=document.getElementById(id);if(b&&!b.dataset.slid)enhance(b)}}
+function scan(){for(const id of TARGETS){const b=document.getElementById(id);if(b&&!b.dataset.slid)enhance(b)}
+  /* the chosen status is always in view in the sideways row */
+  document.querySelectorAll("#ckCard .evts,#myCk .evts").forEach(r=>{if(r.dataset.sc)return;const on=r.querySelector('[aria-pressed="true"]');if(!on)return;r.dataset.sc="1";r.scrollLeft=Math.max(0,on.offsetLeft-r.offsetLeft-12)})}
 window.slideCheckScan=scan;
 const main=document.getElementById("main");
 if(main&&"MutationObserver" in window)new MutationObserver(()=>scan()).observe(main,{childList:true,subtree:true});
@@ -9577,6 +9579,9 @@ const st=document.createElement("style");st.textContent=`
 .slck.nudge .slck-knob{animation:slckNudge .6s ease}
 @keyframes slckNudge{30%{transform:translateX(26px)}60%{transform:translateX(-4px)}100%{transform:none}}
 .slck-row{grid-template-columns:1fr!important}
+#ckCard .row2>*,#myCk .row2>*{min-width:0}
+#ckCard input[type=date],#myCk input[type=date]{min-width:0;max-width:100%;width:100%;display:block;-webkit-appearance:none;appearance:none;box-sizing:border-box}
+#meUpd .lrow>button.chip,#meUpd .lrow>.chip{width:auto!important;flex:0 0 auto!important;border-top:0!important;padding:7px 12px!important;align-self:center;white-space:nowrap}
 .slck-row:not(:has(button:not([hidden]))){display:none}
 #myCk .evts,#ckCard .evts{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -4px;padding:2px 4px;-webkit-overflow-scrolling:touch}
 #myCk .evts::-webkit-scrollbar,#ckCard .evts::-webkit-scrollbar{display:none}

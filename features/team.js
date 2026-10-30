@@ -79,11 +79,11 @@ function ckGrab(){for(const [k,id] of [["from","ckF"],["to","ckT"],["loc","ckL"]
 function ckState(x){const D=S.me&&S.me.d;const r=D&&(D.cks||[]).find(c=>c.cid===x.cid);return r?r:{state:"sent"}}
 function ckExampleHTML(){const inp="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)";const d0=dkey(),d1=dkey(new Date(Date.now()+3*86400000));
   return `<div class="card" id="ckCard" style="gap:8px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">CHECK IN</span><span class="chip">Example</span></div>
-    <p class="note" style="margin:0">They tap <b>📍 Check in</b> and see this:</p>
+    <p class="note" style="margin:0">They pick where they are, then slide to check in:</p>
     <div class="evts">${STATUSES.map(s=>`<button disabled aria-pressed="${s==="Leave"}">${s===CK_OTHER?"✎ Other":`<span class="dot" style="background:var(${SVAR[s]})"></span>${esc(SHORT[s]||s)}`}</button>`).join("")}</div>
     <div class="row2"><div><label>From</label><input type="date" disabled value="${d0}" style="${inp}"></div><div><label>To</label><input type="date" disabled value="${d1}" style="${inp}"></div></div>
     <label>Location</label><input type="text" disabled value="Honolulu" style="${inp}">
-    <button class="btn" disabled>Send check-in</button><p class="note" style="margin:0">You get it in Check-ins and tap Confirm. Their page then shows <b>✓ Confirmed</b>.</p></div>`}
+    <div class="slck" aria-hidden="true"><div class="slck-fill"></div><div class="slck-txt">slide to check in</div><div class="slck-knob"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div></div><p class="note" style="margin:0">You get it in Check-ins and tap Confirm. Their page then shows <b>✓ Confirmed</b>.</p></div>`}
 function ckCardHTML(){const f=ckFeed();const last=(S.myCks||[])[0];
   let h=`<div class="card" id="ckCard" style="gap:8px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">CHECK IN</span>${last?`<span class="chip">Last ${esc(ago(last.t))}</span>`:""}</div>`;
   if(last){const s=ckState(last);h+=`<div class="note" style="margin:0"><b>${esc(ckLine(last))}</b> · ${s.state==="ok"?`<span style="color:var(--s-onhand);font-weight:700">✓ Confirmed</span>`:s.state==="no"?`<span style="color:var(--warn);font-weight:700">✕ Not confirmed</span>${s.dnote?" · "+esc(s.dnote):""}`:"Sent · waiting for your leader"}</div>`}
