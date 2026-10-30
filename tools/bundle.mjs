@@ -66,6 +66,7 @@ export const SOURCES = [
   "features/harp.js",
   "features/ck-missing.js",
   "features/ask-roster.js",
+  "features/feed-reply.js",
   "features/visitor-login.js",
   "features/move.js",
   "features/stable-ids.js",
