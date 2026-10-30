@@ -68,6 +68,7 @@ export const SOURCES = [
   "features/visitor-login.js",
   "features/move.js",
   "features/stable-ids.js",
+  "features/sec-checkins.js",
 ];
 
 export function build() {
