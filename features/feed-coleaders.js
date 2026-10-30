@@ -8,7 +8,7 @@
 const KEYS=["lk","mk","ek","unit","by","secsLink"];
 const canPostRole=()=>S.sync&&S.sync.on&&["co","sncoic","oic","newoic"].includes(S.role||"oic");
 function mergeFeeds(remote){if(!Array.isArray(remote)||!canPostRole())return 0;S.feeds=Array.isArray(S.feeds)?S.feeds:[];let n=0;
-  for(const rf of remote){if(!rf||!rf.id||!rf.lk)continue;
+  for(const rf of remote){if(!rf||!rf.id||!rf.lk||(S.feedGone||{})[rf.id])continue;
     const mine=S.feeds.filter(f=>f.id===rf.id);let keep=mine.find(f=>f.lk)||mine[0];
     if(!keep){S.feeds.push(Object.assign({},rf,{seen:0}));n++;continue}
     for(const k of KEYS)if(rf[k]!=null&&keep[k]!==rf[k]&&(k!=="by"||!keep.by)){keep[k]=rf[k];if(k==="lk")n++}
