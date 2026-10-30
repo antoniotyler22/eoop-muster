@@ -196,10 +196,14 @@ const mainFeed=()=>S.feeds.find(f=>f.lk&&f.main)||S.feeds.find(f=>f.lk)||null;
 const RPF=["id","rank","name","sec","status","duty","phone","detail","loc","start","end","parent","due","sub"];
 function sanDue(o){const r={};if(!o||typeof o!=="object")return r;for(const [k,v] of Object.entries(o).slice(0,40)){if(!v||typeof v!=="object")continue;r[String(k).slice(0,40)]={due:String(v.due||"").slice(0,10),done:String(v.done||"").slice(0,10)};if(v.ack)r[String(k).slice(0,40)].ack=String(v.ack).slice(0,10)}return r}
 function coFeedDown(){const L=S.link;if(!L||!L.whole)return null;const f=S.feeds.find(x=>x.hub&&!x.lk);return f?{id:f.id,mk:f.mk,ek:f.ek,unit:f.unit,sec:L.sec}:null}
+function ckPack(sec){try{const now=Date.now(),L=Array.isArray(S.cks)?S.cks:[];const out=[];
+  for(const x of L){if(!x||!x.cid||now-(+x.t||0)>36*3600000)continue;const m=x.mid&&S.roster.find(y=>y.id===x.mid);const sc=m?m.sec:x.sec;if(sc!==sec)continue;
+    out.push({cid:x.cid,who:x.who,mid:m?m.id:"",sec:sc,st:x.st,oth:x.oth||"",from:x.from||"",to:x.to||"",loc:x.loc||"",note:x.note||"",t:+x.t||0,state:x.state||"new",dt:+x.dt||0,by:x.by||"",dnote:x.dnote||""});if(out.length>=40)break}
+  return out}catch(e){return []}}
 async function rpPublish(force){const B=S.board;if(!B||!B.sk||rpBusy||S.role==="view")return;rpBusy=true;
   try{const f=mainFeed();const feed=f&&f.pk?{id:f.id,mk:f.mk,ek:f.ek,pk:f.pk,unit:f.unit}:null;B.rsig=B.rsig||{};let n=0;
     for(const [sec,k] of Object.entries(B.sk)){const ms=S.roster.filter(m=>m.sec===sec).map(m=>{const o={};for(const x of RPF)if(m[x]!=null&&m[x]!=="")o[x]=x==="duty"?dutyOf(m):m[x];o.duty=dutyOf(m);return o});
-      const body0={v:1,lvl:S.level==="co"?"co":"plt",unit:unitName(),sec,secName:((SECTIONS.find(x=>x[0]===sec)||[])[1]||sec),secs:SECTIONS.map(x=>x[0]),sl:SECTIONS.map(x=>x.slice()),mode:S.mode||"military",ri:readyItems().map(it=>({n:it.n,mo:it.mo||0})),acks:secAcks(sec),cofeed:coFeedDown(),ms,feed};const sg=sigF(body0);B.rat=B.rat||{};
+      const body0={v:1,lvl:S.level==="co"?"co":"plt",unit:unitName(),sec,secName:((SECTIONS.find(x=>x[0]===sec)||[])[1]||sec),secs:SECTIONS.map(x=>x[0]),sl:SECTIONS.map(x=>x.slice()),mode:S.mode||"military",ri:readyItems().map(it=>({n:it.n,mo:it.mo||0})),acks:secAcks(sec),cofeed:coFeedDown(),ms,feed,cks:ckPack(sec)};const sg=sigF(body0);B.rat=B.rat||{};
       if(!force&&B.rsig[sec]===sg&&Date.now()-(B.rat[sec]||0)<6*3600000)continue;const body=Object.assign({hb:Date.now()},body0);
       if(S.source==="sample")continue;
       await SB.rpc("put_roster",{p_board:B.id,p_read_key:B.rk,p_sec:sec,p_ct:await fdEnc(k,body)});B.rsig[sec]=sg;B.rat[sec]=Date.now();n++}
