@@ -73,7 +73,14 @@ function card(){const f=teamFeed();if(!f||hasAlerts())return "";
   if(typeof pushOK==="function"&&!NATIVE&&!pushOK())return typeof isIOS==="function"&&isIOS()&&typeof standalone==="function"&&!standalone()?`<div class="panel" id="taCard"><b>🔔 Team alerts</b><p class="note" style="margin:2px 0 0">To get alerts when anything is posted or changed: Share → <b>Add to Home Screen</b>, then open the app from there.</p></div>`:"";
   if(typeof Notification!=="undefined"&&Notification.permission==="denied")return `<div class="panel" id="taCard"><b>🔔 Team alerts are blocked</b><p class="note" style="margin:2px 0 0">Turn notifications on for this app in your phone's Settings.</p></div>`;
   return `<div class="panel" id="taCard" style="border-color:var(--brass)"><b>🔔 Team alerts</b><p class="note" style="margin:2px 0 8px">Get an alert on this phone when anything is posted to the Feed or changed on the team.</p><button class="btn" id="taOn">Turn on team alerts</button></div>`}
-function place(){const m=$("#main");if(!m||$("#taCard"))return;const h=card();if(!h)return;m.insertAdjacentHTML("afterbegin",h)}
+/* leader only: how many phones are on the alert list, against the people on the roster */
+let stat=null,statAt=0,statBusy=false;
+async function loadStat(){const f=teamFeed();if(!f||!f.lk||statBusy||Date.now()-statAt<300000)return;statBusy=true;
+  try{const r=await SB.rpc("feed_sub_stats",{p_feed:f.id,p_leader_key:f.lk});const x=Array.isArray(r)?r[0]:r;if(x){stat={t:+x.total||0,l:+x.leads||0};statAt=Date.now();placeStat()}}catch(e){statAt=Date.now()}finally{statBusy=false}}
+function placeStat(){const m=$("#main");if(!m)return;const old=$("#taStat");if(old)old.remove();const f=teamFeed();if(!stat||!f||!f.lk)return;
+  const n=(S.roster||[]).length,low=n>0&&stat.t<n;
+  m.insertAdjacentHTML("afterbegin",`<div class="panel" id="taStat"${low?' style="border-color:var(--warn)"':""}><b>🔔 ${stat.t} phone${stat.t===1?"":"s"} get your alerts</b><p class="note" style="margin:2px 0 0">${stat.l} leader phone${stat.l===1?"":"s"}. Your roster has ${n} ${n===1?"person":"people"}.${low?" Some may not hear your Feed posts. Ask them to open the app and tap <b>Turn on team alerts</b>.":""}</p></div>`)}
+function place(){const m=$("#main");if(!m)return;if(!$("#taCard")){const h=card();if(h)m.insertAdjacentHTML("afterbegin",h)}placeStat();loadStat()}
 {const _rf=renderFeed;renderFeed=function(){_rf.apply(this,arguments);place()}}
 if(typeof renderToday==="function"){const _rt=renderToday;renderToday=function(){_rt.apply(this,arguments);place()}}
 if(typeof renderBoard==="function"){const _rb=renderBoard;renderBoard=function(){_rb.apply(this,arguments);if(teamFeed())place()}}

@@ -11,7 +11,8 @@
 //    database calls only that name from then on. Cron calls (escalate, drain) refresh it too.
 //  {team, k, what:["test"]}: the leader's "Test alert to my team" (leader or poster key only): one buzz to every phone on the list.
 //  {health:1}: reads one row with the service role; answers "ok" or "db denied" (System check). Database errors now answer 500, never "no sub".
-//  4.30.0
+//  {drain:1} also handles {kind:"req"} (part 36): one rolled-up leader alert for every check-in or request since the last alert.
+//  4.31.0
 // Payloads carry no names. Turn OFF "Enforce JWT verification" (the function validates input itself).
 // Secrets: VAPID_PUBLIC, VAPID_PRIVATE (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are built in).
 // iPhone app (optional): APNS_KEY (the .p8 file contents), APNS_KEY_ID, APNS_TEAM_ID, APNS_TOPIC (bundle id; default com.antoniotyler.accountedfor).
@@ -25,7 +26,7 @@ const cors = {
 };
 webpush.setVapidDetails("mailto:antoniotyler22@gmail.com", Deno.env.get("VAPID_PUBLIC")!, Deno.env.get("VAPID_PRIVATE")!);
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-const VER = "4.30.0";
+const VER = "4.31.0";
 const out = (t: string, status = 200) => new Response(t, { status, headers: cors });
 // A database error (for example the service role lost its table rights) must never read as "no sub": that hid a
 // week of dead alerts. Log it and answer 500 so the failure shows in the logs and the owner's Health tab.
@@ -191,6 +192,47 @@ async function team(id: string, k: string, what: string[], skip: string) {
   return out("sent " + await sendSubs(list, payload, false, isTest ? 600 : 21600) + (isTest ? " of " + list.length : ""));
 }
 
+// Newest check-in/request row of a feed, and how many are newer than the last alert (part 36; before it, 0 / 0).
+async function reqsSince(f: any): Promise<{ max: number; n: number }> {
+  const { data } = await db.from("feed_reqs").select("id").eq("feed_id", f.id).gt("id", f.last_req_push_id ?? 0).order("id", { ascending: false }).limit(200);
+  return { max: data?.[0]?.id ?? 0, n: data?.length ?? 0 };
+}
+// Marks rows up to `max` as alerted. False when another sender claimed them first.
+async function claimReqs(f: any, max: number): Promise<boolean> {
+  if (!("last_req_push_id" in f) || !max) return true;
+  const { data } = await db.from("feeds").update({ last_req_push_id: max, leader_push_at: new Date().toISOString() })
+    .eq("id", f.id).eq("last_req_push_id", f.last_req_push_id ?? 0).select("id");
+  return !!(data && data.length);
+}
+// One alert to the OIC's phone and every leader phone on the list.
+async function toLeaders(f: any, ls: any[], payload: Record<string, unknown>, urgent: boolean): Promise<number> {
+  const leads = (ls ?? []).filter((s: any) => s.sub && (s.sub.lead === 1 || s.sub.lead === "1"));
+  const keyOf = (s: any) => s?.apns ? "apns:" + s.apns : s?.endpoint ?? "";
+  let r = "none";
+  if (f.leader_sub) {
+    r = await pushAny(f.leader_sub, payload, urgent, 86400);
+    if (r === "gone") await db.from("feeds").update({ leader_sub: null }).eq("id", f.id);
+    if (r === "fail") await queueRetry("leader", f.id, payload, urgent, 86400);
+  }
+  const lk = f.leader_sub ? keyOf(f.leader_sub) : "";
+  const more = leads.filter((s: any) => keyOf(s.sub) !== lk);
+  return (r === "ok" ? 1 : 0) + (more.length ? await sendSubs(more, payload, urgent, 86400) : 0);
+}
+// {kind:"req"} from the queue: one rolled-up alert for everything new. Waits (re-queues) if an alert just went out.
+async function reqSend(f: any): Promise<string> {
+  if (!("last_req_push_id" in f)) return "run setup part 36";
+  const { max, n } = await reqsSince(f);
+  if (!n) return "nothing new";
+  if (f.leader_push_at && Date.now() - new Date(f.leader_push_at).getTime() < 15000) {
+    await db.rpc("push_q_send", { p_msg: { kind: "req", feed: f.id }, p_delay: 16 });
+    return "waiting";
+  }
+  if (!await claimReqs(f, max)) return "already sent";
+  const { data: ls } = await db.from("feed_subs").select("id,sub").eq("feed_id", f.id).limit(500);
+  const payload = { title: n === 1 ? "📍 New check-in" : "📍 " + n + " new check-ins or requests", body: "Open Check-ins to confirm.", help: false, open: "checkins" };
+  return "sent " + await toLeaders(f, ls ?? [], payload, false);
+}
+
 // {alert: "req"|"prob"|"rep"|"ck", feed, mk}: a member sent a request, a check-in or reported a problem; buzz the OIC (at most every 15 s).
 // Goes to the OIC's phone (leader_sub) and every leader phone on the team list (co-leaders, editors: subs marked lead).
 async function alertOic(id: string, mk: string, kind: string) {
@@ -206,8 +248,12 @@ async function alertOic(id: string, mk: string, kind: string) {
   const dig = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(mk)));
   const hex = Array.from(dig).map((b) => b.toString(16).padStart(2, "0")).join("");
   if (hex !== f.member_key_hash) return out("not allowed", 403);
-  if (f.leader_push_at && Date.now() - new Date(f.leader_push_at).getTime() < 15000) return out("throttled");
-  await db.from("feeds").update({ leader_push_at: new Date().toISOString() }).eq("id", id);
+  if (f.leader_push_at && Date.now() - new Date(f.leader_push_at).getTime() < 15000) return out("throttled"); // the queue (part 36) sends these rolled up
+  if (kind === "ck" || kind === "req") {
+    const { max } = await reqsSince(f);
+    if (max && max <= (f.last_req_push_id ?? 0)) return out("already sent");
+    if (!await claimReqs(f, max)) return out("already sent");
+  } else await db.from("feeds").update({ leader_push_at: new Date().toISOString() }).eq("id", id);
   const payload = kind === "ck"
     ? { title: "📍 New check-in", body: "Someone checked in from their phone. Open Check-ins to confirm.", help: false, open: "checkins" }
     : kind === "rep"
@@ -296,6 +342,9 @@ async function drain() {
     else if (m.kind === "feed" && typeof m.feed === "string") {
       const { data: f } = await db.from("feeds").select("*").eq("id", m.feed).maybeSingle();
       r = f ? (await feedSend(f, false, "")).replace(/ \d+$/, "") : "no feed";
+    } else if (m.kind === "req" && typeof m.feed === "string") {
+      const { data: f } = await db.from("feeds").select("*").eq("id", m.feed).maybeSingle();
+      r = f ? (await reqSend(f)).replace(/ \d+$/, "") : "no feed";
     } else if (m.kind === "retry") r = await retryOne(m);
     done.push(q.msg_id);
     tally[r] = (tally[r] ?? 0) + 1;

@@ -1579,6 +1579,7 @@ const SC=[
  {k:"mp",n:"My page",f:["07_my_page"],t:[["put_page",{p_id:"zz",p_wk:"x",p_ct:"QQ=="}],["get_page",{p_id:"zz"}],["delete_page",{p_id:"zz",p_wk:"x"}]]},
  {k:"pc",n:"My page check-in (no Feed needed)",f:["34_page_checkin"],t:[["page_req",{p_id:"zz",p_ct:"QQ=="}],["page_reqs_get",{p_ids:["zz"],p_wks:["x"],p_after:0}]]},
  {k:"cy",n:"Company board",f:["14a_company_tables","14b_company_report"],t:[["create_company",{p_id:"zz",p_read_key:"x",p_write_key:"x"}],["put_unit",{p_company:"zz",p_write_key:"x",p_unit:"zzzzzz",p_ct:"QQ=="}],["get_units",{p_company:"zz",p_read_key:"x"}]]},
+ {k:"rq",n:"Alerts when someone checks in (server sends them)",f:["36_req_alerts"],t:[["feed_sub_stats",{p_feed:"zz",p_leader_key:"x"}]]},
  {k:"oa",n:"OIC alerts for requests and problems",f:["13_oic_alerts"],t:[["set_feed_leader_sub",{p_feed:"zz",p_leader_key:"x",p_sub:{}}]]},
  {k:"sk",n:"Replace one section link",f:["12a_section_keys","12b_section_checks"],t:[["set_sec_key",{p_board:"zz",p_read_key:"x",p_sec:"HQ",p_key:"x"}]]},
  {k:"hub",n:"Unit hub (leader links pull your roster, one Feed)",f:["11a_hub_roster","11b_hub_feed"],t:[["put_roster",{p_board:"zz",p_read_key:"x",p_sec:"HQ",p_ct:"QQ=="}],["get_roster",{p_board:"zz",p_write_key:"x",p_sec:"HQ"}],["set_feed_poster",{p_feed:"zz",p_leader_key:"x",p_poster_key:"x"}],["feed_post_sl",{p_feed:"zz",p_poster_key:"x",p_ct:"QQ=="}]]}];
@@ -1595,7 +1596,7 @@ function akState(a){if(!a)return null;if(a.err)return {ok:0,msg:"Couldn't reach 
   if(a.ok&&!a.key)return {ok:0,msg:"Deployed, but the ANTHROPIC_API_KEY secret is missing."};if(a.ok&&!a.db)return {ok:0,msg:"Deployed, but the usage table is missing. Run part 10."};if(a.ok&&!a.ctl)return {ok:0,msg:"Ready, but OIC controls aren't set up. Run part 10b."};if(a.ok)return {ok:1,msg:"Ready"+(a.admin?" · OIC controls on":" · add AI_ADMIN_KEY to use OIC controls")+" · "+(a.on===false?"turned OFF":a.who==="feed"?"Feed members only":a.who==="leaders"?"leaders only":"open to everyone")+"."};return {ok:0,msg:"Unexpected answer ("+a.s+")."}}
 function nwState(a){if(!a)return null;if(a.err)return {ok:0,msg:"Couldn't reach it. Check signal."};if(a.s===404)return {ok:0,msg:"Optional. Not set up: create the Edge Function named news and paste supabase/functions/news/index.ts. No secrets needed."};
   if(a.s===401||a.s===403)return {ok:0,msg:"JWT checking is on. Open news → Details and turn off Enforce JWT verification."};if(a.s>=500)return {ok:0,msg:"It crashed. Usually the code was cut off when pasted."};if(a.ok)return {ok:1,msg:"Ready: weather, alerts and world news on Home."};return {ok:0,msg:"Unexpected answer ("+a.s+")."}}
-const NOTIFY_VER="4.30.0";
+const NOTIFY_VER="4.31.0";
 function ntState(nt){if(!nt)return null;if(nt.err)return {ok:0,msg:"Couldn't reach it. Check signal."};if(nt.hs===500&&/denied/.test(nt.h||""))return {ok:0,msg:"The server can't read its own tables, so no alert can go out. Run setup part 35 (supabase/setup/35_service_role_grants.sql), then check again."};if(nt.s===404)return {ok:0,msg:"Not deployed. Create the Edge Function named notify."};
   if(nt.s===401||nt.s===403)return {ok:0,msg:"JWT checking is on. Open notify → Details and turn off Enforce JWT verification."};
   if(nt.s>=500)return {ok:0,msg:"It crashed. Usually the VAPID_PUBLIC / VAPID_PRIVATE secrets are missing, or the code was cut off when pasted."};

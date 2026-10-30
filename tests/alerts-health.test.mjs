@@ -10,10 +10,10 @@ test("System check tells you when the server can't read its own tables", async (
   const a = await openApp({ rpc: () => null });
   try {
     const st = (nt) => JSON.parse(a.w.eval(`JSON.stringify(ntState(${JSON.stringify(nt)}))`));
-    const r = st({ s: 400, t: "bad", s2: 500, s3: 200, s4: 200, v: "4.30.0", hs: 500, h: "db denied" });
+    const r = st({ s: 400, t: "bad", s2: 500, s3: 200, s4: 200, v: "4.31.0", hs: 500, h: "db denied" });
     assert.equal(r.ok, 0);
     assert.match(r.msg, /part 35/);
-    assert.equal(st({ s: 400, t: "bad", s2: 200, s3: 200, s4: 200, v: "4.30.0", hs: 200, h: "ok" }).ok, 1);
+    assert.equal(st({ s: 400, t: "bad", s2: 200, s3: 200, s4: 200, v: "4.31.0", hs: 200, h: "ok" }).ok, 1);
   } finally { await a.close(); }
 });
 
@@ -34,11 +34,34 @@ test("a page check-in with the Feed keys on the page also sends the leader alert
 
 test("notify never turns a database error into 'no sub', and has a health check", () => {
   const t = readFileSync(new URL("../supabase/functions/notify/index.ts", import.meta.url), "utf8");
-  assert.match(t, /VER = "4\.30\.0"/);
+  assert.match(t, /VER = "4\.31\.0"/);
   assert.match(t, /if \(e0\) return dbErr\(e0\)/);
   assert.match(t, /body\.health === 1/);
   assert.equal((t.match(/dbErr\(e0\)/g) || []).length, 5,"recall, board, feed, team and alertOic all check the read");
   const sql = readFileSync(new URL("../supabase/setup/35_service_role_grants.sql", import.meta.url), "utf8");
   assert.match(sql, /to service_role/);
   assert.doesNotMatch(sql, /to (anon|authenticated|public)/i);
+});
+
+test("leader sees how many phones get alerts against the roster", async () => {
+  const a = await openApp({ rpc: (fn) => (fn === "feed_sub_stats" ? [{ total: 2, leads: 1 }] : null) });
+  try {
+    a.w.eval(`S.source="mol";S.leaderMode=true;S.welcomed=1;S.onb=true;S.role="oic";S.feeds=[{id:"feedabcdef12",mk:"${"m".repeat(30)}",lk:"${"l".repeat(30)}",ek:"${"e".repeat(43)}",unit:"1ST",main:1,posts:[],seen:0}];save();view="feed";render()`);
+    await waitFor(() => a.$("#taStat"));
+    const t = a.$("#taStat").textContent;
+    assert.match(t, /2 phones get your alerts/);
+    assert.match(t, /1 leader phone\./);
+    assert.match(t, /Turn on team alerts/, "warns when fewer phones than people");
+  } finally { a.close(); }
+});
+
+test("setup part 36 queues a rolled-up job per check-in and notify sends one alert for many", () => {
+  const sql = readFileSync(new URL("../supabase/setup/36_req_alerts.sql", import.meta.url), "utf8");
+  assert.match(sql, /create trigger af_push_req after insert on public\.feed_reqs/);
+  assert.match(sql, /'kind', 'req'/);
+  const t = readFileSync(new URL("../supabase/functions/notify/index.ts", import.meta.url), "utf8");
+  assert.match(t, /VER = "4\.31\.0"/);
+  assert.match(t, /m\.kind === "req"/);
+  assert.match(t, /new check-ins or requests/);
+  assert.match(t, /last_req_push_id/);
 });
