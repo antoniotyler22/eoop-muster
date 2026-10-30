@@ -156,7 +156,9 @@ const startTeamHTML=()=>`<div class="panel" style="margin-top:12px"><b>Run your 
 /* =============== 3. LEADER: check-ins in, Confirm puts them on the roster =============== */
 window.ckIn=function(f,o,r){S.cks=S.cks||[];const cid=String(o.cid||"").slice(0,20);if(!cid||S.cks.some(x=>x.cid===cid))return;
   const st=STATUSES.includes(fixStatus(o.st))?fixStatus(o.st):CK_OTHER;const who=String(o.me||"Someone").slice(0,30);
-  let m=o.mid&&S.roster.find(x=>x.id===String(o.mid));if(!m){const mm=typeof matchMarine==="function"?matchMarine(who):null;m=Array.isArray(mm)?(mm.length===1?mm[0]:null):mm||null}
+  let m=o.mid&&S.roster.find(x=>x.id===String(o.mid)||x.uid===String(o.mid));if(!m){const mm=typeof matchMarine==="function"?matchMarine(who):null;m=Array.isArray(mm)?(mm.length===1?mm[0]:null):mm||null}
+  if(!m&&typeof sameNameLoose==="function"){const w=who.toUpperCase().replace(/[^A-Z0-9\s]/g," ").trim().split(/\s+/);  // "LCPL REAM KYLE" → rank, last, first
+    if(w.length>=3){const guess={rank:w[0],name:w[1]+", "+w.slice(2).join(" ")};const hits=S.roster.filter(x=>sameNameLoose(x,guess));if(hits.length===1)m=hits[0]}}
   const clean=(v,n)=>String(v||"").replace(/[<>]/g,"").slice(0,n);const date=v=>/^\d{4}-\d{2}-\d{2}$/.test(String(v||""))?String(v):"";
   const x={cid,feed:f.id,mid:m?m.id:"",who,sec:clean(o.sec,6),st,oth:clean(o.oth,80),from:date(o.from),to:date(o.to),loc:clean(o.loc,60),note:clean(o.note,120),t:Date.parse(r&&r.created_at)||+o.at||Date.now(),state:"new"};
   S.cks.unshift(x);S.cks=S.cks.slice(0,300);S.seen=S.seen||{};S.seen[x.mid||"n:"+who.toUpperCase()]={t:x.t,who,how:"check-in"};
@@ -208,7 +210,7 @@ document.addEventListener("change",e=>{if(e.target.id==="ckAuto"){S.ckAuto=e.tar
   const w=e.target.closest("[data-ckwho]");if(w){const x=(S.cks||[]).find(c=>c.cid===w.dataset.ckwho);if(x){x.mid=w.value;save();const y=window.scrollY;renderCk();window.scrollTo(0,y)}}});
 document.addEventListener("click",e=>{const t=e.target;
   const ok=t.closest("[data-ckok]"),no=t.closest("[data-ckno]");
-  if(ok||no){if(!canEdit())return denyMsg();const x=(S.cks||[]).find(c=>c.cid===(ok||no).dataset[ok?"ckok":"ckno"]);if(!x)return;x.dnote=((document.getElementById("ckDn"+x.cid)||{}).value||"").trim().slice(0,80);
+  if(ok||no){if(!canEdit())return denyMsg();const cid=(ok||no).dataset[ok?"ckok":"ckno"];const all=(S.cks||[]).filter(c=>c.cid===cid);const x=all[0];if(!x)return;if(all.length>1)S.cks=(S.cks||[]).filter(c=>c.cid!==cid||c===x);x.dnote=((document.getElementById("ckDn"+x.cid)||{}).value||"").trim().slice(0,80);
     if(ok){const st=(document.getElementById("ckSt"+x.cid)||{}).value||x.st;if(x.mid){ckApply(x,st,S.unit||unitName());toast("✓ Confirmed · on the roster")}else{x.state="ok";x.dt=Date.now();save();toast("✓ Confirmed (not on your roster, so nothing changed)")}}
     else{x.state="no";x.dt=Date.now();save();toast("Marked not right"+(x.mid?". They see it on My page.":""))}
     if(typeof mpSchedule==="function")mpSchedule();const y=window.scrollY;render();window.scrollTo(0,y);return}

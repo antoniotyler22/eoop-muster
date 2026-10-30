@@ -41,6 +41,12 @@ function panel(){const {done,miss,out,of}=state();const all=of>0&&!miss.length;
    (confirmed beats waiting, newest wins otherwise), and a phone's own "already read up to here" markers don't sync,
    so no phone skips rows another phone already fetched. New ones arriving over sync buzz this phone like a live one. */
 if(typeof SYNC_SKIP==="object"&&Array.isArray(SYNC_SKIP)&&!SYNC_SKIP.includes("pgAfter"))SYNC_SKIP.push("pgAfter");
+/* one row per check-in id, on every save (a confirm sticks; a stale copy can't re-open it) */
+function ckDedupe(){if(!Array.isArray(S.cks)||S.cks.length<2)return;const by={};const rank=x=>x.state==="new"?0:1;
+  for(const x of S.cks){if(!x||!x.cid)continue;const c=by[x.cid];if(!c||rank(x)>rank(c)||(rank(x)===rank(c)&&(+x.dt||+x.t||0)>(+c.dt||+c.t||0)))by[x.cid]=x}
+  const out=Object.values(by);if(out.length!==S.cks.length)S.cks=out.sort((a,b)=>(b.t||0)-(a.t||0))}
+{const _save=save;save=function(){try{ckDedupe()}catch(e){}return _save.apply(this,arguments)}}
+try{ckDedupe()}catch(e){}
 {const _mr=mergeRemote;mergeRemote=function(R){const mine=Array.isArray(S.cks)?S.cks.slice():[];const theirs=R&&Array.isArray(R.cks)?R.cks:[];const had=new Set(mine.map(x=>x.cid));
   const r=_mr.apply(this,arguments);
   try{if(theirs.length||mine.length){const by={};const rank=x=>x.state==="new"?0:1;

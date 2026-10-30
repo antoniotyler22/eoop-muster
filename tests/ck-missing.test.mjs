@@ -48,3 +48,22 @@ test("co-leader phone: check-ins arrive over sync, and Home names who didn't che
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("confirming a check-in sticks: duplicates by id collapse and a stale 'new' copy over sync can't re-open it; 'LCPL REAM KYLE' matches REAM, KYLE A.", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    await a.w.eval(`S.leaderMode=true;S.mode="military";S.source="mol";S.role="oic";S.sync={on:true,code:"AAAA-BBBB-CCCC",ver:1,at:1,err:"",last:"",baseSig:{},baseMem:{}};
+      S.roster=[{id:"p1",rank:"LCPL",name:"REAM, KYLE A.",sec:"HE",status:"On Hand"}];
+      const t=Date.now();S.cks=[{cid:"c1",mid:"",who:"LCPL REAM KYLE",st:"On Hand",t,state:"new"},{cid:"c1",mid:"",who:"LCPL REAM KYLE",st:"On Hand",t,state:"new"}];save();view="checkins";render()`);
+    assert.equal(a.w.eval("S.cks.length"), 1, "duplicate rows collapsed on save");
+    a.$('[data-ckok="c1"]').click(); await sleep(60);
+    assert.equal(a.w.eval("S.cks.filter(x=>x.state==='new').length"), 0, "confirmed");
+    assert.doesNotMatch(a.$("#main").textContent, /To confirm/);
+    a.w.eval(`mergeRemote({cks:[{cid:"c1",mid:"",who:"LCPL REAM KYLE",st:"On Hand",t:Date.now()-5000,state:"new"}]});save();render()`); await sleep(40);
+    assert.equal(a.w.eval("S.cks.filter(x=>x.state==='new').length"), 0, "stale copy can't re-open it");
+    // a fresh check-in in "RANK LAST FIRST" form matches the roster row by itself
+    a.w.eval(`ckIn({id:"page:x"},{cid:"c2",me:"LCPL REAM KYLE",st:"Leave",from:"2026-10-30",to:"2026-11-01",at:Date.now()},{created_at:new Date().toISOString()})`);
+    assert.equal(a.w.eval("S.cks.find(x=>x.cid==='c2').mid"), "p1", "matched to REAM, KYLE A.");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
