@@ -14,9 +14,12 @@ const RULES=[
   {ctl:"[data-alhide]",tile:".arow",acts:[["hide","Hide","[data-alhide]"],["done","Done","[data-alback],[data-algone]"]]},
   {ctl:"[data-cxhide],[data-cdel]",tile:".rrow",acts:[["hide","Hide","[data-cxhide]"],["done","Done","[data-cxdone],[data-cxdue],[data-cxback]"],["del","Delete","[data-cdel],[data-cxdel]"]]}];
 const SR="sw-sr";const AW=76;let openW=null,quietUntil=0;
+/* 4.61.1: the app redraws Home every couple of minutes; remember which tile was open so it stays open */
+let openKey=null;
+function keyOf(tile,rule){for(const a of rule.acts){const b=tile.querySelector(a[2]);if(b){const at=[...b.attributes].find(x=>x.name.startsWith("data-"));if(at)return at.name+"="+at.value}}return null}
 /* a slide must never count as a tap: catch the click before any other handler sees it */
 window.addEventListener("click",e=>{if(Date.now()<quietUntil&&e.target.closest&&e.target.closest(".sw")){e.preventDefault();e.stopImmediatePropagation()}},true);
-function close(w){if(!w)return;w.classList.remove("open");const t=w.querySelector(":scope>.sw-t");if(t)t.style.transform="";if(openW===w)openW=null}
+function close(w){if(!w)return;if(w.isConnected)openKey=null;w.classList.remove("open");const t=w.querySelector(":scope>.sw-t");if(t)t.style.transform="";if(openW===w)openW=null}
 function press(tile,sel,kind){const b=tile.querySelector(sel);if(!b)return;const attr=[...b.attributes].find(a=>a.name.startsWith("data-"));b.click();
   /* deletes that ask for a second tap: the swipe button counts as that second tap */
   if(kind==="del"&&attr)setTimeout(()=>{const again=document.querySelector(`[${attr.name}="${CSS.escape(attr.value)}"]`);if(again&&again.isConnected)again.click()},40)}
@@ -25,7 +28,7 @@ function build(tile,rule){if(tile.closest(".sw")||tile.hidden)return;
   const w=document.createElement("div");w.className="sw";w.style.setProperty("--aw",AW*acts.length+"px");
   const A=document.createElement("div");A.className="sw-a";A.setAttribute("aria-hidden","true");
   A.innerHTML=acts.map(([k,l])=>`<button type="button" tabindex="-1" class="sw-b ${k}" data-swk="${k}">${k==="del"?"🗑":k==="done"?"✓":"🙈"}<span>${l}</span></button>`).join("");
-  tile.replaceWith(w);w.append(A,tile);tile.classList.add("sw-t");
+  tile.replaceWith(w);w.append(A,tile);tile.classList.add("sw-t");const myKey=keyOf(tile,rule);
   /* the old × / Hide stays for keyboards and screen readers, out of sight */
   rule.acts.forEach(a=>{if(a[0]!=="done")tile.querySelectorAll(a[2]).forEach(x=>x.classList.add(SR))});
   A.addEventListener("click",e=>{const b=e.target.closest("[data-swk]");if(!b)return;e.stopPropagation();const a=acts.find(x=>x[0]===b.dataset.swk);close(w);w.classList.add("sw-go");setTimeout(()=>press(tile,a[2],a[0]),160)});
@@ -35,10 +38,11 @@ function build(tile,rule){if(tile.closest(".sw")||tile.hidden)return;
     if(lock===null&&(Math.abs(mx)>8||Math.abs(my)>8)){lock=Math.abs(mx)>Math.abs(my)*1.2?"x":"y";if(lock==="x"){try{tile.setPointerCapture(e.pointerId)}catch(_){}tile.style.transition="none"}}
     if(lock!=="x")return;moved=true;quietUntil=Date.now()+600;dx=mx;const base=w.classList.contains("open")?-max:0;let v=base+dx;if(v>0)v=v/4;if(v<-max)v=-max+(v+max)/4;tile.style.transform=`translateX(${v}px)`});
   const end=()=>{if(!on)return;on=false;tile.style.transition="";if(lock!=="x")return;quietUntil=Date.now()+400;const base=w.classList.contains("open")?-max:0;const v=base+dx;
-    if(v<-max*.45){w.classList.add("open");tile.style.transform=`translateX(${-max}px)`;openW=w;try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}}else close(w)};
+    if(v<-max*.45){w.classList.add("open");tile.style.transform=`translateX(${-max}px)`;openW=w;openKey=myKey?{k:myKey,t:Date.now()}:null;try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}}else close(w)};
   tile.addEventListener("pointerup",end);tile.addEventListener("pointercancel",end);
   /* a slide is not a tap */
-  tile.addEventListener("click",e=>{if(moved){e.preventDefault();e.stopImmediatePropagation();moved=false;return}if(w.classList.contains("open")){e.preventDefault();e.stopImmediatePropagation();close(w)}},true)}
+  tile.addEventListener("click",e=>{if(moved){e.preventDefault();e.stopImmediatePropagation();moved=false;return}if(w.classList.contains("open")){e.preventDefault();e.stopImmediatePropagation();close(w)}},true);
+  if(openKey&&myKey===openKey.k&&Date.now()-openKey.t<120000&&(!openW||!openW.isConnected)){tile.style.transition="none";w.classList.add("open");tile.style.transform=`translateX(${-max}px)`;openW=w;requestAnimationFrame(()=>{tile.style.transition=""})}}
 function scan(){const m=document.getElementById("main");if(!m)return;let any=null;
   for(const r of RULES)m.querySelectorAll(r.ctl).forEach(c=>{const t=c.closest(r.tile);if(t&&!t.closest(".sw")){build(t,r);any=any||t.closest(".sw")}});
   m.querySelectorAll(".strip").forEach(s=>{if(s.querySelector(".sw"))s.classList.add("sw-list")});

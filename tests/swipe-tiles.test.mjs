@@ -18,3 +18,21 @@ test("Today cards and Needs-you rows get swipe choices; Hide works; the × is ou
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("4.61.1: an opened tile stays open when Home redraws", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    a.w.eval(LEAD + `const k=dkey();S.roster[1].cal=[{id:"c2",d:k,tm:"",ty:"LEAVE",ti:"Parental leave"}];S.roster[2].cal=[{id:"c3",d:k,tm:"",ty:"TAD",ti:"TAD 30 days"}];save();view="board";render();`);
+    await sleep(30);
+    const t = a.$(".strip .sw .sw-t");
+    const ev = (type, x) => t.dispatchEvent(new a.w.MouseEvent(type, { bubbles: true, clientX: x, clientY: 10, button: 0 }));
+    ev("pointerdown", 200); for (let i = 1; i <= 8; i++) ev("pointermove", 200 - i * 15); ev("pointerup", 80);
+    assert.ok(a.$(".strip .sw.open"), "slide opens it");
+    a.w.eval(`render()`); await sleep(30);
+    assert.ok(a.$(".strip .sw.open"), "still open after a redraw");
+    a.w.document.body.dispatchEvent(new a.w.MouseEvent("pointerdown", { bubbles: true }));
+    a.w.eval(`render()`); await sleep(30);
+    assert.ok(!a.$(".strip .sw.open"), "a tap elsewhere closes it for good");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
