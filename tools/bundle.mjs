@@ -55,6 +55,7 @@ export const SOURCES = [
   "features/owner.js",
   "features/rooms.js",
   "features/home-clear.js",
+  "features/act-ruler.js",
   "features/greet.js",
   "features/feed-photos.js",
   "features/me-page.js",
