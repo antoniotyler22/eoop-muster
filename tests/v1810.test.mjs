@@ -11,8 +11,8 @@ test("System check lists part 27 and flags a notify without the retry queue", as
     assert.deepEqual(JSON.parse(ph).f, ["27_push_hooks"]);
     assert.deepEqual(JSON.parse(ph).t, [["push_hooks_ok", {}]]);
     const st = (nt) => a.w.eval(`JSON.stringify(ntState(${JSON.stringify(nt)}))`);
-    assert.deepEqual(JSON.parse(st({ s: 400, t: "bad", s2: 200, s3: 200, s4: 200, v: "4.32.0" })), { ok: 1, msg: "Deployed and current (4.32.0)." });
-    assert.match(JSON.parse(st({ s: 400, t: "bad", s2: 200, s3: 200, s4: 200, v: "" })).msg, /older than 4\.32\.0/, "no version answer = older notify");
+    assert.deepEqual(JSON.parse(st({ s: 400, t: "bad", s2: 200, s3: 200, s4: 200, v: "4.33.0" })), { ok: 1, msg: "Deployed and current (4.33.0)." });
+    assert.match(JSON.parse(st({ s: 400, t: "bad", s2: 200, s3: 200, s4: 200, v: "" })).msg, /older than 4\.33\.0/, "no version answer = older notify");
     const old = JSON.parse(st({ s: 400, t: "bad", s2: 200, s3: 200, s4: 400 }));
     assert.equal(old.ok, 0);
     assert.match(old.msg, /aren't retried/);

@@ -13,7 +13,7 @@
 //  {health:1}: reads one row with the service role; answers "ok" or "db denied" (System check). Database errors now answer 500, never "no sub".
 //  {drain:1} also handles {kind:"req"} (part 36): one rolled-up leader alert for every check-in or request since the last alert.
 //  {stalled:1} and the minute job: if check-ins sit unalerted for 6 min or the database refuses us, the owner phone gets "Alerts not going out" (once an hour).
-//  4.32.0
+//  4.33.0: skips the posting phone by device id ("dev") and keeps one sign-up per phone.
 // Payloads carry no names. Turn OFF "Enforce JWT verification" (the function validates input itself).
 // Secrets: VAPID_PUBLIC, VAPID_PRIVATE (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are built in).
 // iPhone app (optional): APNS_KEY (the .p8 file contents), APNS_KEY_ID, APNS_TEAM_ID, APNS_TOPIC (bundle id; default com.antoniotyler.accountedfor).
@@ -27,7 +27,7 @@ const cors = {
 };
 webpush.setVapidDetails("mailto:antoniotyler22@gmail.com", Deno.env.get("VAPID_PUBLIC")!, Deno.env.get("VAPID_PRIVATE")!);
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-const VER = "4.32.0";
+const VER = "4.33.0";
 const out = (t: string, status = 200) => new Response(t, { status, headers: cors });
 // A database error (for example the service role lost its table rights) must never read as "no sub": that hid a
 // week of dead alerts. Log it and answer 500 so the failure shows in the logs and the owner's Health tab.
@@ -138,23 +138,38 @@ async function board(id: string) {
 const hexOf = async (s: string) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))).map((b) => b.toString(16).padStart(2, "0")).join("");
 // the sender's own phone doesn't need an alert for what it just did
 // deno-lint-ignore no-explicit-any
-const isSkip = (s: any, skip: string) => !!skip && (s?.endpoint === skip || (typeof s?.apns === "string" && "apns:" + s.apns === skip));
+const isSkip = (s: any, skip: string, dev = "") => (!!skip && (s?.endpoint === skip || (typeof s?.apns === "string" && "apns:" + s.apns === skip))) || (!!dev && s?.dev === dev);
+// 4.33: each phone tags its alert sign-up with a device id ("dev", kept on that phone only). The poster's phone is skipped
+// by that id, so an old sign-up from the same phone (a refreshed browser token, the app reinstalled) can't alert it.
+// A phone with several sign-ups on one team gets one alert (the newest), and the older copies are cleaned up.
+// deno-lint-ignore no-explicit-any
+function pickSubs(subs: { id: number; sub: any }[], skip: string, dev: string, keepAll = false) {
+  const newest = new Map<string, number>();
+  for (const s of subs) { const d = s.sub?.dev; if (typeof d === "string" && d) newest.set(d, Math.max(newest.get(d) ?? 0, s.id)); }
+  const stale: number[] = [];
+  const list = subs.filter((s) => {
+    const d = s.sub?.dev;
+    if (typeof d === "string" && d && newest.get(d) !== s.id) { stale.push(s.id); return false; }
+    return keepAll || !isSkip(s.sub, skip, dev);
+  });
+  return { list, stale };
+}
 
-async function feed(id: string, lk: string, urg: boolean, skip = "") {
+async function feed(id: string, lk: string, urg: boolean, skip = "", dev = "") {
   const { data: f, error: e0 } = await db.from("feeds").select("*").eq("id", id).maybeSingle();
   if (e0) return dbErr(e0);
   if (!f) return out("no feed");
   const dig = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(lk)));
   const hex = Array.from(dig).map((b) => b.toString(16).padStart(2, "0")).join("");
   if (hex !== f.leader_key_hash && !(f.poster_key_hash && hex === f.poster_key_hash)) return out("not allowed", 403);
-  return out(await feedSend(f, urg, skip));
+  return out(await feedSend(f, urg, skip, dev));
 }
 
 // Shared by the app's call (above) and the database queue (drain). Whichever comes first claims the newest post;
 // the other finds "already sent". The queue waits 20 s, so the app's call (which knows Urgent and skips the
 // poster's own phone) normally wins and the queue only fills in when the poster's phone lost signal.
 // deno-lint-ignore no-explicit-any
-async function feedSend(f: any, urg: boolean, skip: string): Promise<string> {
+async function feedSend(f: any, urg: boolean, skip: string, dev = ""): Promise<string> {
   // control posts (pins, poll tallies) start with "c:" and never alert anyone
   const { data: recent } = await db.from("feed_posts").select("id,ct").eq("feed_id", f.id).order("id", { ascending: false }).limit(20);
   const p = (recent ?? []).find((x) => !String(x.ct ?? "").startsWith("c:"));
@@ -166,11 +181,13 @@ async function feedSend(f: any, urg: boolean, skip: string): Promise<string> {
   const payload = urg
     ? { title: "⚠ URGENT: new word", body: "Open Feed to read it and tap Got it.", help: true, open: "feed" }
     : { title: "New word in Feed", body: "Open Feed to read it and tap Got it.", help: false, open: "feed" };
-  return "sent " + await sendSubs((subs ?? []).filter((s) => !isSkip(s.sub, skip)), payload, urg, 86400);
+  const { list, stale } = pickSubs(subs ?? [], skip, dev);
+  if (stale.length) await db.from("feed_subs").delete().in("id", stale);
+  return "sent " + await sendSubs(list, payload, urg, 86400);
 }
 
 const WHAT: Record<string, string> = { roster: "People were added or removed", status: "Statuses changed", cal: "The calendar changed", duty: "The duty roster changed", ready: "Due-outs changed", events: "Events changed", sec: "A section sent an update", ask: "The company sent your platoon an ask" };
-async function team(id: string, k: string, what: string[], skip: string) {
+async function team(id: string, k: string, what: string[], skip: string, dev = "") {
   const { data: f, error: e0 } = await db.from("feeds").select("*").eq("id", id).maybeSingle();
   if (e0) return dbErr(e0);
   if (!f) return out("no feed");
@@ -189,7 +206,8 @@ async function team(id: string, k: string, what: string[], skip: string) {
     ? { title: "📋 Company ask", body: "The company sent your platoon an ask. Open Company to answer.", help: false, open: "co" }
     : { title: "📋 Team update", body: (lines.length ? lines.join(". ") : "Something changed") + ". Open the app to see.", help: false, open: "board" };
   const { data: subs } = await db.from("feed_subs").select("id,sub").eq("feed_id", id).limit(500);
-  const list = (subs ?? []).filter((s) => isTest || !isSkip(s.sub, skip));
+  const { list, stale } = pickSubs(subs ?? [], skip, dev, isTest);
+  if (stale.length) await db.from("feed_subs").delete().in("id", stale);
   return out("sent " + await sendSubs(list, payload, false, isTest ? 600 : 21600) + (isTest ? " of " + list.length : ""));
 }
 
@@ -392,7 +410,7 @@ async function remember(req: Request) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return out("ok");
   if (req.method !== "POST") return out("method", 405);
-  let body: { ver?: unknown; test?: unknown; sub?: unknown; recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown; drain?: unknown; team?: unknown; k?: unknown; what?: unknown; skip?: unknown; whoami?: unknown; health?: unknown; stalled?: unknown } = {};
+  let body: { ver?: unknown; test?: unknown; sub?: unknown; recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown; drain?: unknown; team?: unknown; k?: unknown; what?: unknown; skip?: unknown; dev?: unknown; whoami?: unknown; health?: unknown; stalled?: unknown } = {};
   try { body = await req.json(); } catch { return out("bad", 400); }
   if (body.whoami === 1) { namedAt = 0; await remember(req); return out("ok"); }
   // {ver:1}: which version is deployed (System check).  {test:1, sub}: one "Test alert" to the asking phone only.
@@ -413,13 +431,14 @@ Deno.serve(async (req) => {
   if (body.escalate === 1) { remember(req); return escalate(); }
   if (body.drain === 1) { remember(req); return drain(); }
   const skip = typeof body.skip === "string" ? body.skip.slice(0, 600) : "";
+  const dev = typeof body.dev === "string" && /^[a-z0-9]{8,40}$/.test(body.dev) ? body.dev : "";
   if (typeof body.team === "string" && /^[a-z0-9]{10,20}$/.test(body.team) && typeof body.k === "string" && /^[a-z0-9]{24,40}$/.test(body.k))
-    return team(body.team, body.k, Array.isArray(body.what) ? body.what.filter((w): w is string => typeof w === "string").slice(0, 8) : [], skip);
+    return team(body.team, body.k, Array.isArray(body.what) ? body.what.filter((w): w is string => typeof w === "string").slice(0, 8) : [], skip, dev);
   if ((body.alert === "req" || body.alert === "prob" || body.alert === "rep" || body.alert === "ck") && typeof body.feed === "string" && /^[a-z0-9]{10,20}$/.test(body.feed) && typeof body.mk === "string" && /^[a-z0-9]{24,40}$/.test(body.mk))
     return alertOic(body.feed, body.mk, body.alert);
   if (typeof body.recall === "string" && /^[a-z0-9]{8,16}$/.test(body.recall)) return recall(body.recall);
   if (typeof body.board === "string" && /^[a-z0-9]{10,20}$/.test(body.board)) return board(body.board);
   if (typeof body.feed === "string" && /^[a-z0-9]{10,20}$/.test(body.feed) && typeof body.lk === "string" && /^[a-z0-9]{24,40}$/.test(body.lk))
-    return feed(body.feed, body.lk, body.urg === true, skip);
+    return feed(body.feed, body.lk, body.urg === true, skip, dev);
   return out("bad", 400);
 });

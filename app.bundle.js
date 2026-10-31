@@ -1599,7 +1599,7 @@ function akState(a){if(!a)return null;if(a.err)return {ok:0,msg:"Couldn't reach 
   if(a.ok&&!a.key)return {ok:0,msg:"Deployed, but the ANTHROPIC_API_KEY secret is missing."};if(a.ok&&!a.db)return {ok:0,msg:"Deployed, but the usage table is missing. Run part 10."};if(a.ok&&!a.ctl)return {ok:0,msg:"Ready, but OIC controls aren't set up. Run part 10b."};if(a.ok)return {ok:1,msg:"Ready"+(a.admin?" · OIC controls on":" · add AI_ADMIN_KEY to use OIC controls")+" · "+(a.on===false?"turned OFF":a.who==="feed"?"Feed members only":a.who==="leaders"?"leaders only":"open to everyone")+"."};return {ok:0,msg:"Unexpected answer ("+a.s+")."}}
 function nwState(a){if(!a)return null;if(a.err)return {ok:0,msg:"Couldn't reach it. Check signal."};if(a.s===404)return {ok:0,msg:"Optional. Not set up: create the Edge Function named news and paste supabase/functions/news/index.ts. No secrets needed."};
   if(a.s===401||a.s===403)return {ok:0,msg:"JWT checking is on. Open news → Details and turn off Enforce JWT verification."};if(a.s>=500)return {ok:0,msg:"It crashed. Usually the code was cut off when pasted."};if(a.ok)return {ok:1,msg:"Ready: weather, alerts and world news on Home."};return {ok:0,msg:"Unexpected answer ("+a.s+")."}}
-const NOTIFY_VER="4.32.0";
+const NOTIFY_VER="4.33.0";
 function ntState(nt){if(!nt)return null;if(nt.err)return {ok:0,msg:"Couldn't reach it. Check signal."};if(nt.hs===500&&/denied/.test(nt.h||""))return {ok:0,msg:"The server can't read its own tables, so no alert can go out. Run setup part 35 (supabase/setup/35_service_role_grants.sql), then check again."};if(nt.s===404)return {ok:0,msg:"Not deployed. Create the Edge Function named notify."};
   if(nt.s===401||nt.s===403)return {ok:0,msg:"JWT checking is on. Open notify → Details and turn off Enforce JWT verification."};
   if(nt.s>=500)return {ok:0,msg:"It crashed. Usually the VAPID_PUBLIC / VAPID_PRIVATE secrets are missing, or the code was cut off when pasted."};
@@ -6788,6 +6788,10 @@ const teamFeed=()=>{const F=S.feeds||[];return F.find(f=>f.lk&&f.main)||F.find(f
 const subMap=()=>{try{return JSON.parse(localStorage.getItem(LS)||"{}")||{}}catch(e){return {}}};
 const putMap=m=>{try{localStorage.setItem(LS,JSON.stringify(m))}catch(e){}};
 let myEnd="";
+/* 4.56: a device id kept on this phone only (not synced), so the server can skip the phone that posted even when it
+   has an older alert sign-up too, and keep one sign-up per phone */
+function devId(){let d="";try{d=localStorage.getItem("af-dev")||""}catch(e){}if(!/^[a-z0-9]{8,40}$/.test(d)){d=rndId(20);try{localStorage.setItem("af-dev",d)}catch(e){}}return d}
+window.afDevId=devId;
 async function endpoint(){if(myEnd)return myEnd;try{const s=await pushSub(false);myEnd=s&&(s.endpoint||(s.toJSON&&s.toJSON().endpoint))||""}catch(e){}return myEnd}
 
 /* 1) put this phone on the alert list of every feed it's on, leader phones included */
@@ -6796,10 +6800,10 @@ let running=Promise.resolve(0),lastErr="";
 function attachAll(force){const go=()=>attachOnce(force);running=running.then(go,go);return running}
 async function attachOnce(force){if(!S.pushOn)return 0;let n=0;lastErr="";
   try{const s=await pushSub(false);if(!s){lastErr=window.__pushWhy==="notoken"?"this phone didn't get an alert token from Apple. Close the app fully, open it and try again.":window.__pushWhy==="noplugin"?"alerts aren't in this build of the app.":"alerts aren't allowed for this app in Settings.";return 0}
-    const j=s.toJSON();myEnd=j.endpoint||myEnd;const M=subMap();
+    const j=Object.assign({},s.toJSON(),{dev:devId()});myEnd=j.endpoint||myEnd;const M=subMap();
     /* v2: leader phones are marked "lead" so member check-ins, requests and problem reports reach them (co-leaders
        too), and the OIC's phone is also the feed's leader alert phone. Phones attached before re-attach once. */
-    if(M.__v!==2){force=true;M.__v=2}
+    if(M.__v!==3){force=true;M.__v=3}
     for(const f of S.feeds||[]){if(!f.mk)continue;if(!force&&M[f.id]===j.endpoint){f.push=true;continue}
       try{await SB.rpc("feed_sub",{p_feed:f.id,p_member_key:f.mk,p_sub:f.lk?Object.assign({},j,{lead:1}):j});M[f.id]=j.endpoint;f.push=true;n++;
         if(f.lk&&(!S.role||S.role==="oic"||S.role==="newoic"))try{await SB.rpc("set_feed_leader_sub",{p_feed:f.id,p_leader_key:f.lk,p_sub:j})}catch(e2){}}
@@ -6841,7 +6845,9 @@ document.addEventListener("visibilitychange",()=>{if(document.hidden&&pend.size)
   try{if(SL.includes(fn)&&S.link&&!S.board&&Date.now()-touchT<60000){pend.add(fn==="push_cal"?"cal":"sec");clearTimeout(sendT);sendT=setTimeout(flush,30000)}}catch(e){}return r}}
 
 /* Feed posts: skip the phone that posted (it already knows) */
-{const _n=SB.notify.bind(SB);SB.notify=function(rid,body){if(body&&body.feed&&body.lk&&!body.skip&&!body.team){endpoint().then(sk=>_n(rid,sk?Object.assign({},body,{skip:sk}):body));return}return _n(rid,body)}}
+{const _n=SB.notify.bind(SB);SB.notify=function(rid,body){
+  if(body&&(body.team||(body.feed&&body.lk))&&!body.dev)body=Object.assign({},body,{dev:devId()});
+  if(body&&body.feed&&body.lk&&!body.skip&&!body.team){myEnd="";endpoint().then(sk=>_n(rid,sk?Object.assign({},body,{skip:sk}):body));return}return _n(rid,body)}}
 
 /* 3) the switch */
 function card(){const f=teamFeed();if(!f||hasAlerts())return "";
