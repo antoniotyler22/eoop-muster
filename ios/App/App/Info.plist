@@ -55,6 +55,8 @@
 	<string>Pick people from your contacts to add to your team. Only the names, numbers and emails you pick are added, and they stay on your phone.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Take a photo of a roster or document to load it into Accounted For.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Talk uses the microphone only while you hold the Talk button, to send a voice message to your team.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Pick a roster file or image to load into Accounted For.</string>
 	<key>UILaunchStoryboardName</key>
