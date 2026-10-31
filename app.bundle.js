@@ -5608,7 +5608,7 @@ function needs(){if(typeof needsYou!=="function")return "";const ny=needsYou();
   return `<div class="sech"><h2>Needs you</h2>${ny.length?`<span class="note" style="margin:0">${ny.length}</span>`:""}</div>`+(ny.length?`<div class="card ny">${ny.map(x=>`<button data-go="${x.go}"><span class="n tone-${x.tone}">${x.n}</span><span style="flex:1;min-width:0"><span class="t" style="display:block">${esc(x.t)}</span><span class="s" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.s)}</span></span>${svg("chev",18)}</button>`).join("")}</div>`
     :`<div class="card" style="align-items:center;text-align:center"><b style="color:var(--s-onhand)">✓ Nothing needs you right now</b></div>`)}
 function renderUtilities(){const m=$("#main");if(!m)return;
-  m.innerHTML=`<div class="sechead" style="margin-top:12px"><h2>Utilities</h2></div>${leader()?needs():""}${typeof window.askRosterCard==="function"?window.askRosterCard():""}${hand()}`}
+  m.innerHTML=`<div class="sechead" style="margin-top:12px"><h2>Utilities</h2></div>${leader()?needs():""}${typeof window.askRosterCard==="function"?window.askRosterCard():""}${hand()}`;if(leader()&&typeof window.taPlaceStat==="function")window.taPlaceStat()}
 {const _r=render;render=function(){if(view==="utilities"){renderTabs();renderUtilities();if(typeof animateView==="function")animateView();return}const r=_r.apply(this,arguments);
   /* Home no longer shows "Needs you" (it is in Utilities) */
   try{if(view==="board"){const m=$("#main"),h2=m&&[...m.querySelectorAll(".sech h2")].find(x=>/^Needs you$|^Pendiente$/.test(x.textContent.trim()));
@@ -6995,10 +6995,12 @@ function card(){const f=teamFeed();if(!f||hasAlerts())return "";
 let stat=null,statAt=0,statBusy=false;
 async function loadStat(){const f=teamFeed();if(!f||!f.lk||statBusy||Date.now()-statAt<300000)return;statBusy=true;
   try{const r=await SB.rpc("feed_sub_stats",{p_feed:f.id,p_leader_key:f.lk});const x=Array.isArray(r)?r[0]:r;if(x){stat={t:+x.total||0,l:+x.leads||0};statAt=Date.now();placeStat()}}catch(e){statAt=Date.now()}finally{statBusy=false}}
-function placeStat(){const m=$("#main");if(!m)return;const old=$("#taStat");if(old)old.remove();const f=teamFeed();if(!stat||!f||!f.lk)return;
+/* 4.66: lives in Utilities, not at the top of Home / Feed */
+function placeStat(){const m=$("#main");if(!m)return;const old=$("#taStat");if(old)old.remove();const f=teamFeed();if(!stat||!f||!f.lk||view!=="utilities")return;
   const n=(S.roster||[]).length,low=n>0&&stat.t<n;
-  m.insertAdjacentHTML("afterbegin",`<div class="panel" id="taStat"${low?' style="border-color:var(--warn)"':""}><b>🔔 ${stat.t} phone${stat.t===1?"":"s"} get your alerts</b><p class="note" style="margin:2px 0 0">${stat.l} leader phone${stat.l===1?"":"s"}. Your roster has ${n} ${n===1?"person":"people"}.${low?" Some may not hear your Feed posts. Ask them to open the app and tap <b>Turn on team alerts</b>.":""}</p></div>`)}
+  const hd=m.querySelector(".sechead");(hd||m).insertAdjacentHTML(hd?"afterend":"afterbegin",`<div class="panel" id="taStat"${low?' style="border-color:var(--warn)"':""}><b>🔔 ${stat.t} phone${stat.t===1?"":"s"} get your alerts</b><p class="note" style="margin:2px 0 0">${stat.l} leader phone${stat.l===1?"":"s"}. Your roster has ${n} ${n===1?"person":"people"}.${low?" Some may not hear your Feed posts. Ask them to open the app and tap <b>Turn on team alerts</b>.":""}</p></div>`)}
 function place(){const m=$("#main");if(!m)return;if(!$("#taCard")){const h=card();if(h)m.insertAdjacentHTML("afterbegin",h)}placeStat();loadStat()}
+window.taPlaceStat=()=>{try{placeStat();loadStat()}catch(e){}};
 {const _rf=renderFeed;renderFeed=function(){_rf.apply(this,arguments);place()}}
 if(typeof renderToday==="function"){const _rt=renderToday;renderToday=function(){_rt.apply(this,arguments);place()}}
 if(typeof renderBoard==="function"){const _rb=renderBoard;renderBoard=function(){_rb.apply(this,arguments);if(teamFeed())place()}}
@@ -7154,7 +7156,7 @@ if(typeof HELP==="object"&&HELP.cal&&Array.isArray(HELP.cal[2]))HELP.cal[2].push
    - Under the month, the picked day shows three tiles: Leave, TAD and Appts (plus Other when there is any), each
      with a count and faces. Tap a tile to open its people with Back ✓ / Hide / Done, exactly as before.
    - Anything with a time that day sits on a timeline with a red now line. Tap one to open that person's card.
-   The day list, buttons and Next 14 days are the same rows as before, just organized. */
+   The day list and buttons are the same rows as before, just organized. 4.66: the "Next 14 days" list is gone. */
 (()=>{
 if(typeof renderCal!=="function")return;
 let mode="month";try{mode=localStorage.getItem("af-calmode")||"month"}catch(e){}
@@ -7205,7 +7207,8 @@ function day(main){const h2=[...main.querySelectorAll("h2")].find(x=>x.querySele
       t+=`<button type="button" class="cm-e" ${e.m?`data-pcard="${e.m.id}"`:""} style="top:${top}px;--c:var(${c})">${esc(e.tm.replace(":",""))} · ${esc(e.ti)}<span>${e.m?esc(e.m.rank+" "+lastOf(e.m)+" · "+e.m.sec):esc(e.grp||"Unit")}</span></button>`});
     if(calDay===dkey()){const d=new Date();const nm=d.getHours()*60+d.getMinutes();if(nm>=lo*60&&nm<=hi*60)t+=`<span class="cm-now" style="top:${(nm/60-lo)*HH}px"></span>`}
     t+="</div>";list.insertAdjacentHTML("afterend",t)}}
-{const _rc=renderCal;renderCal=function(){const r=_rc.apply(this,arguments);try{const m=$("#main");if(m&&(view==="cal"||m.querySelector("[data-cday]"))){heat(m);day(m)}}catch(e){console.warn(e)}return r}}
+function noNext(m){const h=[...m.querySelectorAll("h2")].find(x=>/^Next 14 days/.test(x.textContent.trim()));if(!h)return;const l=h.nextElementSibling;if(l&&l.classList.contains("alist"))l.remove();h.remove()}
+{const _rc=renderCal;renderCal=function(){const r=_rc.apply(this,arguments);try{const m=$("#main");if(m&&(view==="cal"||m.querySelector("[data-cday]"))){noNext(m);heat(m);day(m)}}catch(e){console.warn(e)}return r}}
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;
   const md=t.closest("[data-cmmode]");if(md){e.stopImmediatePropagation();mode=md.dataset.cmmode;try{localStorage.setItem("af-calmode",mode)}catch(_){}const y=window.scrollY;renderCal();window.scrollTo(0,y);return}
   const g=t.closest("[data-cmg]");if(g){e.stopImmediatePropagation();open=open===g.dataset.cmg?"":g.dataset.cmg;openDay=calDay;const y=window.scrollY;renderCal();window.scrollTo(0,y);return}},true);

@@ -30,6 +30,7 @@ test("heat month, tiles, open a tile to see its rows, timeline", async () => {
     const shown = a.$$(".cm-grid [data-cday]").filter(b => !b.hidden).length; assert.ok(shown <= 7 && shown >= 1, "week shows one row");
     a.$('[data-cmmode="month"]').click(); await sleep(10);
     assert.ok(a.$$(".cm-grid [data-cday]").filter(b => !b.hidden).length >= 28);
+    assert.doesNotMatch(a.$("#main").textContent, /Next 14 days/, "no Next 14 days list");
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });

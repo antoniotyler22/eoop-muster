@@ -43,10 +43,13 @@ test("notify never turns a database error into 'no sub', and has a health check"
   assert.doesNotMatch(sql, /to (anon|authenticated|public)/i);
 });
 
-test("leader sees how many phones get alerts against the roster", async () => {
+test("leader sees how many phones get alerts against the roster, in Utilities", async () => {
   const a = await openApp({ rpc: (fn) => (fn === "feed_sub_stats" ? [{ total: 2, leads: 1 }] : null) });
   try {
     a.w.eval(`S.source="mol";S.leaderMode=true;S.welcomed=1;S.onb=true;S.role="oic";S.feeds=[{id:"feedabcdef12",mk:"${"m".repeat(30)}",lk:"${"l".repeat(30)}",ek:"${"e".repeat(43)}",unit:"1ST",main:1,posts:[],seen:0}];save();view="feed";render()`);
+    await new Promise(r => setTimeout(r, 300));
+    assert.equal(a.$("#taStat"), null, "not at the top of the Feed or Home any more");
+    a.w.eval(`view="utilities";render()`);
     await waitFor(() => a.$("#taStat"));
     const t = a.$("#taStat").textContent;
     assert.match(t, /2 phones get your alerts/);

@@ -11,7 +11,7 @@ function needs(){if(typeof needsYou!=="function")return "";const ny=needsYou();
   return `<div class="sech"><h2>Needs you</h2>${ny.length?`<span class="note" style="margin:0">${ny.length}</span>`:""}</div>`+(ny.length?`<div class="card ny">${ny.map(x=>`<button data-go="${x.go}"><span class="n tone-${x.tone}">${x.n}</span><span style="flex:1;min-width:0"><span class="t" style="display:block">${esc(x.t)}</span><span class="s" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.s)}</span></span>${svg("chev",18)}</button>`).join("")}</div>`
     :`<div class="card" style="align-items:center;text-align:center"><b style="color:var(--s-onhand)">✓ Nothing needs you right now</b></div>`)}
 function renderUtilities(){const m=$("#main");if(!m)return;
-  m.innerHTML=`<div class="sechead" style="margin-top:12px"><h2>Utilities</h2></div>${leader()?needs():""}${typeof window.askRosterCard==="function"?window.askRosterCard():""}${hand()}`}
+  m.innerHTML=`<div class="sechead" style="margin-top:12px"><h2>Utilities</h2></div>${leader()?needs():""}${typeof window.askRosterCard==="function"?window.askRosterCard():""}${hand()}`;if(leader()&&typeof window.taPlaceStat==="function")window.taPlaceStat()}
 {const _r=render;render=function(){if(view==="utilities"){renderTabs();renderUtilities();if(typeof animateView==="function")animateView();return}const r=_r.apply(this,arguments);
   /* Home no longer shows "Needs you" (it is in Utilities) */
   try{if(view==="board"){const m=$("#main"),h2=m&&[...m.querySelectorAll(".sech h2")].find(x=>/^Needs you$|^Pendiente$/.test(x.textContent.trim()));

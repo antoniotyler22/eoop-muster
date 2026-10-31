@@ -85,10 +85,12 @@ function card(){const f=teamFeed();if(!f||hasAlerts())return "";
 let stat=null,statAt=0,statBusy=false;
 async function loadStat(){const f=teamFeed();if(!f||!f.lk||statBusy||Date.now()-statAt<300000)return;statBusy=true;
   try{const r=await SB.rpc("feed_sub_stats",{p_feed:f.id,p_leader_key:f.lk});const x=Array.isArray(r)?r[0]:r;if(x){stat={t:+x.total||0,l:+x.leads||0};statAt=Date.now();placeStat()}}catch(e){statAt=Date.now()}finally{statBusy=false}}
-function placeStat(){const m=$("#main");if(!m)return;const old=$("#taStat");if(old)old.remove();const f=teamFeed();if(!stat||!f||!f.lk)return;
+/* 4.66: lives in Utilities, not at the top of Home / Feed */
+function placeStat(){const m=$("#main");if(!m)return;const old=$("#taStat");if(old)old.remove();const f=teamFeed();if(!stat||!f||!f.lk||view!=="utilities")return;
   const n=(S.roster||[]).length,low=n>0&&stat.t<n;
-  m.insertAdjacentHTML("afterbegin",`<div class="panel" id="taStat"${low?' style="border-color:var(--warn)"':""}><b>🔔 ${stat.t} phone${stat.t===1?"":"s"} get your alerts</b><p class="note" style="margin:2px 0 0">${stat.l} leader phone${stat.l===1?"":"s"}. Your roster has ${n} ${n===1?"person":"people"}.${low?" Some may not hear your Feed posts. Ask them to open the app and tap <b>Turn on team alerts</b>.":""}</p></div>`)}
+  const hd=m.querySelector(".sechead");(hd||m).insertAdjacentHTML(hd?"afterend":"afterbegin",`<div class="panel" id="taStat"${low?' style="border-color:var(--warn)"':""}><b>🔔 ${stat.t} phone${stat.t===1?"":"s"} get your alerts</b><p class="note" style="margin:2px 0 0">${stat.l} leader phone${stat.l===1?"":"s"}. Your roster has ${n} ${n===1?"person":"people"}.${low?" Some may not hear your Feed posts. Ask them to open the app and tap <b>Turn on team alerts</b>.":""}</p></div>`)}
 function place(){const m=$("#main");if(!m)return;if(!$("#taCard")){const h=card();if(h)m.insertAdjacentHTML("afterbegin",h)}placeStat();loadStat()}
+window.taPlaceStat=()=>{try{placeStat();loadStat()}catch(e){}};
 {const _rf=renderFeed;renderFeed=function(){_rf.apply(this,arguments);place()}}
 if(typeof renderToday==="function"){const _rt=renderToday;renderToday=function(){_rt.apply(this,arguments);place()}}
 if(typeof renderBoard==="function"){const _rb=renderBoard;renderBoard=function(){_rb.apply(this,arguments);if(teamFeed())place()}}
