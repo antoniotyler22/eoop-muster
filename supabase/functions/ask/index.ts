@@ -6,7 +6,7 @@
 // AI_REQUIRE_PRO (default 1: only Pro teams, the admin and allow-listed FEEDs; set 0 to let anyone ask), AI_PER_TEAM (default 100/day per Pro team),
 // AI_SERVER_CAP (default 5000/day across everyone), AI_PER_TEST_TEAM (default 10/day for TestFlight/Sandbox purchases). Needs SQL part 20 for Pro.
 // Question text is never stored. Only daily counters are kept (ai_usage table).
-// {scan:1, img, statuses}: reads a photo of a paper roster or whiteboard and returns rows (name, rank, status). The photo
+// {scan:1, img, statuses, kind}: reads a photo. kind "roster" (default): rows (name, rank, status); "text": {title, text}; "harp": HARP form fields. The photo
 // is sent to the AI for this one answer and not stored. Limits: AI_SCAN_PER_DEVICE (default 15/day), shares the server cap.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -145,8 +145,8 @@ async function support(body: any, req: Request, key: string): Promise<Response> 
 // ---- Snap the paper roster: one photo in, rows out ----
 // deno-lint-ignore no-explicit-any
 async function scan(body: any, req: Request, key: string): Promise<Response> {
-  if ((Deno.env.get("AI_SCAN") ?? "1") === "0") return json({ error: "Roster scan is turned off on the server.", off: true }, 403);
-  if (!key) return json({ error: "Roster scan isn't set up yet (no AI key on the server)." }, 503);
+  if ((Deno.env.get("AI_SCAN") ?? "1") === "0") return json({ error: "Scan is turned off on the server.", off: true }, 403);
+  if (!key) return json({ error: "Scan isn't set up yet (no AI key on the server)." }, 503);
   const img = typeof body.img === "string" ? body.img : "";
   const m = img.match(/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/);
   if (!m) return json({ error: "That photo couldn't be read. Try again." }, 400);
@@ -157,40 +157,53 @@ async function scan(body: any, req: Request, key: string): Promise<Response> {
   const dev = await sha(devId + "|" + (Deno.env.get("SUPABASE_URL") ?? ""));
   const bump = async (k: string) => { const r = await db.rpc("ai_bump", { p_k: k }); if (r.error) throw new Error("setup"); return r.data as number; };
   try {
-    if ((await bump("scan:" + dev)) > Number(Deno.env.get("AI_SCAN_PER_DEVICE") ?? 15)) return json({ error: "You've reached today's roster scan limit on this phone." }, 429);
-    if ((await bump("server")) > Number(Deno.env.get("AI_SERVER_CAP") ?? 5000)) return json({ error: "Roster scan is very busy today. Try again tomorrow." }, 429);
+    if ((await bump("scan:" + dev)) > Number(Deno.env.get("AI_SCAN_PER_DEVICE") ?? 15)) return json({ error: "You've reached today's scan limit on this phone." }, 429);
+    if ((await bump("server")) > Number(Deno.env.get("AI_SERVER_CAP") ?? 5000)) return json({ error: "Scan is very busy today. Try again tomorrow." }, 429);
   } catch {
-    return json({ error: "Roster scan isn't set up yet (usage table missing)." }, 503);
+    return json({ error: "Scan isn't set up yet (usage table missing)." }, 503);
   }
-  const sys = `You read photos of paper muster sheets, accountability rosters and whiteboards for a team accountability app.
+  const kind = body.kind === "text" || body.kind === "harp" ? body.kind : "roster";
+  const sysRoster = `You read photos of paper muster sheets, accountability rosters and whiteboards for a team accountability app.
 Return ONLY JSON: {"rows":[{"rank":"","name":"","status":"","note":""}]}.
 - One row per person you can read. name: as written (LAST, FIRST or LAST). rank: if written (e.g. SGT, CPL, LCPL), else "".
 - status: map what is written to exactly one of: ${statuses.join(", ") || "On Hand, Leave, TAD, SIQ, Appointment, Other"}. A check mark, "P", "present", "here" or "OH" means On Hand. "L" or leave means Leave. Blank or unreadable: "".
 - note: short extra text next to the name (place, dates), else "".
 - Skip headings, totals and anything that isn't a person. Never invent people. If the photo isn't a roster, return {"rows":[]}.`;
+  const sysText = `You transcribe photos of documents, notes, whiteboards and forms. Return ONLY JSON: {"title":"","text":""}.
+- title: a short name for the document (under 8 words).
+- text: everything readable, in reading order, keeping line breaks, lists and simple tables as plain text (use " | " between table cells). Don't add anything that isn't there. Mark unreadable words as [?].`;
+  const sysHarp = `You read photos of a filled-in Holiday Accident Reduction Program (HARP) form. Return ONLY JSON with the fields you can read; use "" for blank or unreadable:
+{"a":{"date":"YYYYMMDD","name":"LAST, FIRST","rank":"","age":"","shop":"","from":"YYYYMMDD","to":"YYYYMMDD","occ":"Holiday|Annual|Emergency LV","sncoic":"","oic":"","loc":"On Island|Off Island|Out of Country","trav":["Car|Motorcycle|Airplane|Boat|Bus|Train"]},
+ "b":{"dest":"","plan":"","alone":"Yes|No|N/A","acts":[{"act":"","ir":"Low|Moderate|High|Very High","ctl":"","rr":"Low|Moderate|High|Very High"}],"drugs":"Yes|No|N/A","lic":"Yes|No|N/A","licN":"","offl":"Yes|No|N/A","offN":"","risk":"Low|Moderate|High|Very High","veh":"Yes|No|N/A"}}
+- Pick only from the listed values where a list is given. Up to 3 activities. Never invent anything. Signatures are not read.`;
+  const sys = kind === "text" ? sysText : kind === "harp" ? sysHarp : sysRoster;
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: Deno.env.get("AI_SCAN_MODEL") || Deno.env.get("AI_MODEL") || "claude-sonnet-5-5", max_tokens: 3000, system: sys,
-        messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: "image/" + m[1], data: m[2] } }, { type: "text", text: "Read this roster." }] }] }),
+      body: JSON.stringify({ model: Deno.env.get("AI_SCAN_MODEL") || Deno.env.get("AI_MODEL") || "claude-sonnet-5-5", max_tokens: kind === "text" ? 6000 : 3000, system: sys,
+        messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: "image/" + m[1], data: m[2] } }, { type: "text", text: kind === "text" ? "Transcribe this." : kind === "harp" ? "Read this HARP form." : "Read this roster." }] }] }),
     });
     const out = await r.json();
     if (!r.ok) {
       const msg = String(out?.error?.message ?? "");
       if (/credit|billing/i.test(msg)) return json({ error: "The AI account is out of credit." }, 503);
-      return json({ error: r.status === 429 || r.status === 529 ? "Roster scan is busy. Try again in a minute." : "Roster scan had a problem. Try again." }, 503);
+      return json({ error: r.status === 429 || r.status === 529 ? "Scan is busy. Try again in a minute." : "Scan had a problem. Try again." }, 503);
     }
     // deno-lint-ignore no-explicit-any
     const text = (out.content ?? []).filter((b: any) => b.type === "text").map((b: any) => b.text).join("");
     const j = text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1);
-    let rows: unknown[] = [];
-    try { const o = JSON.parse(j); rows = Array.isArray(o.rows) ? o.rows : []; } catch { rows = []; }
+    // deno-lint-ignore no-explicit-any
+    let o: any = {};
+    try { o = JSON.parse(j); } catch { o = {}; }
+    if (kind === "text") return json({ title: String(o.title ?? "").slice(0, 80), text: String(o.text ?? "").slice(0, 20000) });
+    if (kind === "harp") return json({ a: o.a && typeof o.a === "object" ? o.a : {}, b: o.b && typeof o.b === "object" ? o.b : {} });
+    const rows: unknown[] = Array.isArray(o.rows) ? o.rows : [];
     // deno-lint-ignore no-explicit-any
     const clean = rows.slice(0, 300).map((x: any) => ({ rank: String(x?.rank ?? "").slice(0, 8), name: String(x?.name ?? "").slice(0, 60), status: String(x?.status ?? "").slice(0, 30), note: String(x?.note ?? "").slice(0, 80) })).filter((x) => x.name.trim());
     return json({ rows: clean });
   } catch {
-    return json({ error: "Couldn't reach roster scan. Try again." }, 502);
+    return json({ error: "Couldn't reach the scanner. Try again." }, 502);
   }
 }
 

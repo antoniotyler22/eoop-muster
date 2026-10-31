@@ -50,7 +50,7 @@ const doneS=h=>["sup","mar","snco"].filter(k=>h.sig[k].img).length+"/3";
 function listHTML(){const H=L();const R=S.source!=="sample"?sorted(S.roster||[]):[];
   let h=`<div class="sech"><h2>HARP forms</h2></div><div class="panel"><p class="note" style="margin:0 0 8px">Holiday Accident Reduction Program. Fill it out here, sign with your finger, then make the PDF and email it. Forms stay on this phone.</p>`;
   if(!isMember()&&R.length)h+=`${lab("New form for","hpFor")}<select id="hpFor" class="wsel"><option value="">Myself</option>${R.map(m=>`<option value="${esc(m.id)}">${esc(m.rank+" "+m.name+" · "+m.sec)}</option>`).join("")}</select>`;
-  h+=`<button class="btn" id="hpNew" style="width:100%;margin-top:8px">+ New HARP form</button></div>`;
+  h+=`<button class="btn" id="hpNew" style="width:100%;margin-top:8px">+ New HARP form</button>${typeof window.scanOpen==="function"?`<button class="btn alt" id="hpScan" style="width:100%;margin-top:6px">📷 Scan a paper HARP form</button>`:""}</div>`;
   if(H.length)h+=`<div class="card ny">${H.map(x=>`<div class="hc-row"><button class="lrow" data-hpopen="${x.id}" style="flex:1;text-align:left;background:none;border:0;cursor:pointer;color:inherit;border-top:0"><span class="n tone-${x.pdfAt?"g":"a"}">${x.pdfAt?"✓":"✎"}</span><span style="flex:1;min-width:0"><span class="t" style="display:block">${esc((x.a.rank+" "+x.a.name).trim()||"No name yet")}</span><span class="s" style="display:block">${esc(x.a.date)} · ${esc(x.a.occ||"")}${x.a.from?" · "+esc(x.a.from.replace("T"," "))+" to "+esc((x.a.to||"").replace("T"," ")):""}${x.pdfAt?" · sent "+esc(ago(x.pdfAt)):""}</span></span></button><button class="hc-x" data-hpdel="${x.id}" title="Delete">${armed2==="del"+x.id?"✓?":"🗑"}</button></div>`).join("")}</div>`;
   return h}
 function formHTML(h){const a=h.a,b=h.b;
@@ -123,6 +123,7 @@ document.addEventListener("input",e=>{const id=e.target&&e.target.dataset&&e.tar
 document.addEventListener("change",e=>{const id=e.target&&e.target.dataset&&e.target.dataset.hp;if(!id||view!=="harp")return;setVal(id,e.target.value);keep()});
 /* ---------- taps ---------- */
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest||view!=="harp")return;let b;
+  if(t.closest("#hpScan")){window.scanOpen("harp");return}
   if(t.closest("#hpNew")){const id=($("#hpFor")||{}).value;const m=id?S.roster.find(x=>x.id===id):null;cur=blank(m);L().unshift(cur);S.harps=L().slice(0,60);sec="a";rawSave();draw(false);window.scrollTo(0,0);return}
   if((b=t.closest("[data-hpopen]"))){cur=L().find(x=>x.id===b.dataset.hpopen)||null;sec="a";draw(false);window.scrollTo(0,0);return}
   if((b=t.closest("[data-hpdel]"))){const id=b.dataset.hpdel;if(armed2!=="del"+id){armed2="del"+id;draw();setTimeout(()=>{if(armed2==="del"+id){armed2="";draw()}},4000);return}armed2="";S.harps=L().filter(x=>x.id!==id);rawSave();draw();toast("Form deleted");return}
@@ -236,7 +237,18 @@ async function out(send){const h=cur;if(!h)return;keep();const miss=missing(h);
   const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),60000);
   if(send){h.pdfAt=Date.now();keep();setTimeout(()=>{location.href="mailto:"+encodeURIComponent(h.to||"").replace(/%40/g,"@").replace(/%2C/g,",")+"?subject="+encodeURIComponent(subj)+"&body="+encodeURIComponent(body+"\n\n(Attach "+name+" from your Downloads.)")},400);toast("PDF saved. Attach it to the email that opens.")}
   else toast("PDF saved: "+name)}
-window.harpPDF=h=>build(h||cur);window.harpOpen=()=>{view="harp";cur=null;render();window.scrollTo(0,0)};
+window.harpPDF=h=>build(h||cur);
+/* 4.60: a new form filled from a scanned paper HARP form (fields the scan could read; everything stays editable) */
+window.harpFromScan=function(x){x=x||{};const A=x.a||{},B=x.b||{};const nm=String(A.name||"").trim();
+  const m=nm&&typeof matchMarine==="function"?matchMarine((A.rank?A.rank+" ":"")+nm):null;const h=blank(m);
+  const pick=(v,list)=>list.includes(v)?v:"";const d8=v=>/^\d{8}$/.test(String(v||""))?String(v):"";const str=(v,n)=>String(v==null?"":v).slice(0,n);
+  if(nm&&!m)h.a.name=str(nm,60);if(A.rank&&!m)h.a.rank=str(A.rank,8);
+  Object.assign(h.a,Object.fromEntries(Object.entries({date:d8(A.date)||h.a.date,age:str(A.age,3),shop:str(A.shop,60)||h.a.shop,from:d8(A.from),to:d8(A.to),occ:pick(A.occ,OCC)||h.a.occ,sncoic:str(A.sncoic,60)||h.a.sncoic,oic:str(A.oic,60)||h.a.oic,loc:pick(A.loc,LOC)}).filter(([k,v])=>v!=="")));
+  if(Array.isArray(A.trav))h.a.trav=A.trav.filter(t=>TRAV.includes(t));
+  for(const k of ["dest","plan"])if(B[k])h.b[k]=str(B[k],300);for(const k of ["licN","offN"])if(B[k])h.b[k]=str(B[k],120);
+  for(const k of ["alone","drugs","lic","offl","veh"])if(YN.includes(B[k]))h.b[k]=B[k];if(RISK.includes(B.risk))h.b.risk=B.risk;
+  if(Array.isArray(B.acts))B.acts.slice(0,3).forEach((a,i)=>{if(!a)return;h.b.acts[i]={act:str(a.act,60),ir:pick(a.ir,RISK),ctl:str(a.ctl,120),rr:pick(a.rr,RISK)}});
+  h.scanned=1;cur=h;L().unshift(h);S.harps=L().slice(0,60);sec="a";rawSave();view="harp";render();window.scrollTo(0,0);return h};window.harpOpen=()=>{view="harp";cur=null;render();window.scrollTo(0,0)};
 /* ---------- ways in: Home, Tools, My page ---------- */
 const btn=`<button class="btn alt" data-go="harp" id="hpGo" style="width:100%;margin-top:10px">📝 HARP form (holiday safety brief)</button>`;
 if(typeof renderMe==="function"){const _rm=renderMe;renderMe=function(){const r=_rm.apply(this,arguments);try{const m=$("#main");if(m&&!$("#hpGo"))m.insertAdjacentHTML("beforeend",btn)}catch(e){}return r}}

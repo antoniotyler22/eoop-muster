@@ -16,8 +16,8 @@ const leader=()=>!(typeof memberMode==="function"&&memberMode());
 const GROUPS=[
   {k:"checkin",l:"Muster",s:"Check people in, visitors, confirm check-ins",ic:"muster",keys:["muster","checkins","alerts","visitors"]},
   {k:"feed",l:"Feed",s:"Post, text, messages, pages",ic:"feed",keys:["feed","send","dms","pages"]},
-  {k:"people",l:"People & access",s:"Invite, logins, accounts, who has access",ic:"people",keys:["invite","access","logins","live","acct","scan"]},
-  {k:"reports",l:"Reports",s:"Headcount, PDF, incident report, trends, HARP",ic:"text",keys:["text","pdfReport","w6","trends","harp"]},
+  {k:"people",l:"People & access",s:"Invite, logins, accounts, who has access",ic:"people",keys:["invite","access","logins","live","acct"]},
+  {k:"reports",l:"Reports",s:"Headcount, PDF, incident report, HARP, scan",ic:"text",keys:["text","pdfReport","w6","trends","harp","scan"]},
   {k:"utilities",l:"Utilities",s:"Needs you, ask your roster, help",ic:"help",keys:["utilities"]},
   {k:"plan",l:"Calendar",s:"Calendar, events, duty, meetings",ic:"cal",keys:["cal","events","duty","pt"]},
   {k:"ready",l:"Readiness",s:"Who's due for what",ic:"ready",keys:["ready"]},
