@@ -22,17 +22,33 @@ test("compose: Question and choice boxes, + Add a choice, post carries question 
   } finally { await a.close(); }
 });
 
-test("member: buttons before voting, bar graph after, tally fills the counts", async () => {
+test("member: tappable choices with percentages before voting, your pick marked after, tally fills the counts", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     a.w.eval(`S.welcomed=1;S.onb=true;S.feeds=[{id:"f2",mk:"m".repeat(32),ek:"e",unit:"1ST",me:"CPL SMITH",posts:[{id:5,t:Date.now(),txt:"Run time?",pq:"Run time?",poll:["0600","0630"],to:{k:"all"}}],mine:{}}];fdSel="f2";view="feed";save();render()`);
-    assert.equal(a.$$('#main .pollr.pick').length, 2, "choices as buttons");
+    assert.equal(a.$$('#main button.pollr[data-fdvote="5"]').length, 2, "choices are tappable before voting");
+    assert.match(a.$("#main").textContent, /0% · 0/, "percentages show before voting");
     a.$('#main [data-fdvote="5"][data-opt="0630"]').click();
-    for (let i = 0; i < 50 && !a.$("#main .pollf"); i++) await sleep(20);
-    assert.ok(a.$("#main .pollf"), "bar graph after voting");
+    for (let i = 0; i < 50 && !/You picked/.test(a.$("#main").textContent); i++) await sleep(20);
+    assert.ok(a.$("#main .pollr.on"), "your pick marked after voting");
     assert.match(a.$("#main").textContent, /100% · 1/);
     a.w.eval(`S.feeds[0].tally={5:{cnt:{"0600":3,"0630":1},n:4,of:10,t:Date.now()+1000}};renderFeed()`);
     assert.match(a.$("#main").textContent, /75% · 3/);
     assert.match(a.$("#main").textContent, /4 votes of 10/);
+  } finally { await a.close(); }
+});
+
+test("leader can vote on the poll too, and sees percentages", async () => {
+  const sent = [];
+  const a = await openApp({ rpc: (fn, b) => { if (fn === "feed_ack") sent.push(b); return []; } });
+  try {
+    a.w.eval(`S.source="mol";S.leaderMode=true;S.welcomed=1;S.onb=true;S.myName="CWO4 TYLER";S.feeds=[{id:"f3",lk:"l".repeat(30),mk:"m".repeat(32),ek:"e",unit:"1ST",posts:[{id:9,t:Date.now(),txt:"Run time?",pq:"Run time?",poll:["0600","0630"],to:{k:"all"},by:"CWO4 TYLER"}],acks:{},mine:{},pins:[]}];fdSel="f3";view="feed";save();render()`);
+    const b = a.$('#main button.pollr[data-fdvote="9"][data-opt="0600"]'); assert.ok(b, "leader's choices are tappable");
+    b.click();
+    for (let i = 0; i < 50 && !sent.length; i++) await sleep(20);
+    assert.equal(sent.length, 1); assert.match(sent[0].p_note, /0600/);
+    await sleep(50);
+    assert.match(a.$("#main").textContent, /100% · 1/);
+    assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });

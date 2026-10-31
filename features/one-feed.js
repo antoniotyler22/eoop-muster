@@ -10,6 +10,7 @@
 const label=f=>String(f.unit||"").trim().toUpperCase()+(f.lk?"|mine":"|joined");
 function groups(){const g={};for(const f of S.feeds||[])(g[label(f)]=g[label(f)]||[]).push(f);return g}
 function primary(list){return list.slice().sort((a,b)=>(b.posts||[]).length-(a.posts||[]).length||(b.main?1:0)-(a.main?1:0))[0]}
+window.oneFeedHidden=()=>{try{return plan().hide}catch(e){return new Set()}};
 function plan(){const hide=new Set(),pri={};for(const [k,list] of Object.entries(groups())){const p=primary(list);pri[k]=p;for(const f of list)if(f!==p)hide.add(f.id)}return {hide,pri}}
 let cleaning=false,tried={};
 async function tidy(){if(cleaning)return;cleaning=true;try{

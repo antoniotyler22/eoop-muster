@@ -69,10 +69,12 @@ document.addEventListener("visibilitychange",()=>{if(document.hidden&&pend.size)
 {const SL=["push_update","push_cal","put_roster"];const _rpc=SB.rpc.bind(SB);SB.rpc=async function(fn,args){const r=await _rpc(fn,args);
   try{if(SL.includes(fn)&&S.link&&!S.board&&Date.now()-touchT<60000){pend.add(fn==="push_cal"?"cal":"sec");clearTimeout(sendT);sendT=setTimeout(flush,30000)}}catch(e){}return r}}
 
-/* Feed posts: skip the phone that posted (it already knows) */
+/* 4.57: every phone gets the "new post" alert, the one that posted it too (you asked for that). Team updates still
+   skip the phone that made the change, by device id. */
 {const _n=SB.notify.bind(SB);SB.notify=function(rid,body){
-  if(body&&(body.team||(body.feed&&body.lk))&&!body.dev)body=Object.assign({},body,{dev:devId()});
-  if(body&&body.feed&&body.lk&&!body.skip&&!body.team){myEnd="";endpoint().then(sk=>_n(rid,sk?Object.assign({},body,{skip:sk}):body));return}return _n(rid,body)}}
+  if(body&&body.team&&!body.dev)body=Object.assign({},body,{dev:devId()});
+  if(body&&body.feed&&body.lk&&!body.team){const b=Object.assign({},body);delete b.skip;delete b.dev;return _n(rid,b)}
+  return _n(rid,body)}}
 
 /* 3) the switch */
 function card(){const f=teamFeed();if(!f||hasAlerts())return "";

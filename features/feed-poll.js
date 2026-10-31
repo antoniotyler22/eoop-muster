@@ -20,15 +20,21 @@ function bars(p,cnt,tot,mine,tap){const max=Math.max(1,...p.poll.map(o=>cnt[o]||
   return `<div class="pollg">${p.poll.map(o=>{const n=cnt[o]||0,pc=tot?Math.round(n/tot*100):0,on=o===mine;
     return `<${tap?`button type="button" data-fdvote="${p.id}" data-opt="${esc(o)}"`:"div"} class="pollr${on?" on":""}" aria-pressed="${on}"><span class="pollf" style="width:${tot?Math.max(4,Math.round(n/max*100)):0}%"></span><span class="pollt">${on?"✓ ":""}${esc(o)}</span><span class="polln">${pc}% · ${n}</span></${tap?"button":"div"}>`}).join("")}</div>`}
 const title=p=>p.pq?`<div style="font-weight:800;font-size:16px;margin:2px 0 4px">${esc(p.pq)}</div>`:"";
-function leaderHTML(f,p){const by=votesOf(f,p);const pool=fdPool(p);const ids=new Set(pool.map(m=>m.id));const tot=Object.keys(by).filter(id=>ids.has(id)).length;
+function leaderHTML(f,p){const by=votesOf(f,p);const pool=fdPool(p);const ids=new Set(pool.map(m=>m.id));let tot=Object.keys(by).filter(id=>ids.has(id)).length;
   const cnt={};for(const [id,v] of Object.entries(by))if(ids.has(id))cnt[v]=(cnt[v]||0)+1;
-  let h=`<div class="fci"><span class="ttl">🗳 Poll · ${tot} of ${pool.length} voted</span>${bars(p,cnt,tot,"",false)}`;
+  /* 4.57: the leader votes too; their own vote counts right away, before it comes back from the server */
+  const mv=myVote(f,p);
+  if(mv){const meId=leaderMid(f);const fresh=Date.now()-mv.t<60000;/* after a minute the server's count has it */
+    if(meId&&by[meId]&&by[meId]!==mv.v){cnt[by[meId]]--;cnt[mv.v]=(cnt[mv.v]||0)+1}else if(fresh&&!(meId&&by[meId]===mv.v)){cnt[mv.v]=(cnt[mv.v]||0)+1;tot++}}
+  let h=`<div class="fci"><span class="ttl">🗳 Poll · ${tot} of ${pool.length} voted${mv?"":" · tap your answer"}</span>${bars(p,cnt,tot,mv?mv.v:"",!!f.mk)}`;
   if(fdOpen===p.id){for(const o of p.poll){const ms=sorted(pool.filter(m=>by[m.id]===o));if(ms.length)h+=`<div class="note" style="margin-top:4px"><b>${esc(o)}:</b> ${ms.map(m=>esc(m.rank+" "+lastOf(m))).join(", ")}</div>`}
     const no=sorted(pool.filter(m=>!by[m.id]));if(no.length)h+=`<div class="note" style="margin-top:4px"><b>Haven't voted (${no.length}):</b> ${no.map(m=>esc(m.rank+" "+lastOf(m))).join(", ")}</div>`}
   else h+=`<div class="note" style="margin:4px 0 0">Tap <b>Who</b> to see who picked what.</div>`;
   return h+`</div>`}
 function memberHTML(f,p){const mv=myVote(f,p);const can=fdForMe(f,p);
-  if(!mv)return `<div class="fci"><span class="ttl">🗳 Poll · tap your answer</span><div class="pollg">${p.poll.map(o=>`<button type="button" class="pollr pick" data-fdvote="${p.id}" data-opt="${esc(o)}"${can?"":" disabled"}><span class="pollt">${esc(o)}</span></button>`).join("")}</div></div>`;
+  /* 4.57: before you vote the choices already show the share so far; tap one to vote */
+  if(!mv){const T0=(f.tally||{})[p.id];const c0=Object.assign({},T0&&T0.cnt||{});const t0=T0?+T0.n||0:0;
+    return `<div class="fci"><span class="ttl">🗳 Poll · tap your answer${t0?" · "+t0+" vote"+(t0===1?"":"s")+" so far":""}</span>${can?bars(p,c0,t0,"",true):bars(p,c0,t0,"",false)}</div>`}
   const T=(f.tally||{})[p.id];const cnt=Object.assign({},T&&T.cnt||{});let tot=T?+T.n||0:0;
   // the leader's tally may not have my latest vote yet: add it (and take back the old one if the tally had it)
   if(!T||mv.t>T.t){cnt[mv.v]=(cnt[mv.v]||0)+1;tot++;if(T&&mv.prev&&mv.pt&&mv.pt<=T.t&&(cnt[mv.prev]||0)>0){cnt[mv.prev]--;tot--}}
@@ -39,12 +45,15 @@ function memberHTML(f,p){const mv=myVote(f,p);const can=fdForMe(f,p);
   // members: the choices replace Got it / Confirm; a vote counts as both
   h=h.replace(/<div class="fcbtns">[\s\S]*?<\/div>/g,"").replace(/<div><span class="fcchip" style="color:var\(--s-onhand\)">✓ Confirmed · [\s\S]*?<\/span><\/span><\/div>/,"").replace(/<div class="fsok">[\s\S]*?<\/div><\/div>/,"");
   return h.replace(/<\/article>$/,memberHTML(f,p)+"</article>")}}
-async function vote(f,pid,opt){if(!f.me){toast("Add your rank and last name first.");return false}
+function leaderMid(f){const w=S.who&&S.who.id;if(w)return w;return ""}
+const voterName=f=>f.me||(f.lk?(S.who&&S.who.n)||S.postAs||S.myName||"":"");
+async function vote(f,pid,opt){const me=voterName(f);if(!me){toast("Add your rank and last name first.");return false}if(!f.mk){toast("Can't vote from this phone.");return false}
   const was=myVote(f,{id:pid});if(was&&was.v===opt)return false;
-  const hs=await Promise.all(SB.words(f.me).slice(0,f.mid?5:6).map(w=>SB.h(f.id,w)));if(f.mid)hs.push(await SB.h(f.id,"ID:"+f.mid));
+  const hs=await Promise.all(SB.words(me).slice(0,f.mid?5:6).map(w=>SB.h(f.id,w)));if(f.mid)hs.push(await SB.h(f.id,"ID:"+f.mid));
   await SB.rpc("feed_ack",{p_feed:f.id,p_member_key:f.mk,p_post:pid,p_words:hs,p_code:1,p_note:(PV+opt).slice(0,60)});
-  f.mine=f.mine||{};f.mine[pid]=Object.assign({c:1,note:PV+opt,t:Date.now()},was?{prev:was.v,pt:was.t}:{});save();return true}
-document.addEventListener("click",e=>{const b=e.target.closest("[data-fdvote]");if(!b)return;e.stopImmediatePropagation();const f=fdCur();if(!f||f.lk)return;const pid=+b.dataset.fdvote,opt=b.dataset.opt;
+  f.mine=f.mine||{};f.mine[pid]=Object.assign({c:1,note:PV+opt,t:Date.now()},was?{prev:was.v,pt:was.t}:{});
+  if(f.lk){f.lseen=f.lseen||{};f.lseen[pid]=f.lseen[pid]||Date.now()}save();return true}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-fdvote]");if(!b)return;e.stopImmediatePropagation();const f=fdCur();if(!f)return;const pid=+b.dataset.fdvote,opt=b.dataset.opt;
   b.disabled=true;vote(f,pid,opt).then(ok=>{const y=window.scrollY;renderFeed();window.scrollTo(0,y);if(ok){toast("🗳 Voted: "+opt);try{buzz()}catch(e2){}}}).catch(err=>{b.disabled=false;toast("Couldn't vote: "+(err&&err.message||err))})},true);
 
 /* leader's phone: post the running tally when it changes, so members' bars fill in */

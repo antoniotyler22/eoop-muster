@@ -1,4 +1,4 @@
-// 4.56.0: the phone that posts never gets the alert for its own post, even with an older alert sign-up.
+// 4.56.0/4.57.0: one alert per phone; since 4.57 every phone gets the new-post alert, the poster too.
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -11,7 +11,7 @@ test("notify skips the poster by device id and keeps one sign-up per phone", () 
   assert.match(src, /feedSend\(f, urg, skip, dev\)/);
 });
 
-test("feed post calls carry this phone's device id, which is not synced", async () => {
+test("feed post alerts go to every phone, the poster too (no skip, no device id); the id is not synced", async () => {
   const calls = [];
   const a = await openApp({ rpc: () => [], fn: (name, body) => { if (/otify/i.test(name)) calls.push(body); return { status: 200, body: "ok" }; } });
   try {
@@ -21,6 +21,6 @@ test("feed post calls carry this phone's device id, which is not synced", async 
     assert.match(d, /^[a-z0-9]{8,40}$/);
     assert.equal(a.w.eval("JSON.stringify(S).includes(afDevId())"), false, "not in synced state");
     const sent = calls.find(c => c && c.feed);
-    if (sent) assert.equal(sent.dev, d);
+    if (sent) { assert.equal(sent.dev, undefined); assert.equal(sent.skip, undefined); }
   } finally { await a.close(); }
 });
