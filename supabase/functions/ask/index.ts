@@ -3,9 +3,11 @@
 // Turn OFF "Enforce JWT verification". Secrets: ANTHROPIC_API_KEY (required),
 // optional AI_MODEL (default claude-sonnet-5-5), AI_DAILY_CAP (default 150), AI_PER_DEVICE (default 20),
 // AI_ADMIN_KEY (lets the OIC's phone turn Ask on/off, choose who can use it and set limits),
-// AI_REQUIRE_PRO (default off; set 1 so only Pro teams, the admin and allow-listed FEEDs can ask), AI_PER_TEAM (default 100/day per Pro team),
+// AI_REQUIRE_PRO (default 1: only Pro teams, the admin and allow-listed FEEDs; set 0 to let anyone ask), AI_PER_TEAM (default 100/day per Pro team),
 // AI_SERVER_CAP (default 5000/day across everyone), AI_PER_TEST_TEAM (default 10/day for TestFlight/Sandbox purchases). Needs SQL part 20 for Pro.
 // Question text is never stored. Only daily counters are kept (ai_usage table).
+// {scan:1, img, statuses}: reads a photo of a paper roster or whiteboard and returns rows (name, rank, status). The photo
+// is sent to the AI for this one answer and not stored. Limits: AI_SCAN_PER_DEVICE (default 15/day), shares the server cap.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const cors = {
@@ -140,6 +142,58 @@ async function support(body: any, req: Request, key: string): Promise<Response> 
   }
 }
 
+// ---- Snap the paper roster: one photo in, rows out ----
+// deno-lint-ignore no-explicit-any
+async function scan(body: any, req: Request, key: string): Promise<Response> {
+  if ((Deno.env.get("AI_SCAN") ?? "1") === "0") return json({ error: "Roster scan is turned off on the server.", off: true }, 403);
+  if (!key) return json({ error: "Roster scan isn't set up yet (no AI key on the server)." }, 503);
+  const img = typeof body.img === "string" ? body.img : "";
+  const m = img.match(/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/);
+  if (!m) return json({ error: "That photo couldn't be read. Try again." }, 400);
+  if (m[2].length > 4_500_000) return json({ error: "That photo is too large. Try again a little farther away." }, 413);
+  const statuses: string[] = Array.isArray(body.statuses) ? body.statuses.filter((x: unknown) => typeof x === "string").map((x: string) => x.slice(0, 30)).slice(0, 20) : [];
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+  const devId = typeof body.dev === "string" && /^[a-z0-9]{16,40}$/.test(body.dev) ? body.dev : "ip:" + ip;
+  const dev = await sha(devId + "|" + (Deno.env.get("SUPABASE_URL") ?? ""));
+  const bump = async (k: string) => { const r = await db.rpc("ai_bump", { p_k: k }); if (r.error) throw new Error("setup"); return r.data as number; };
+  try {
+    if ((await bump("scan:" + dev)) > Number(Deno.env.get("AI_SCAN_PER_DEVICE") ?? 15)) return json({ error: "You've reached today's roster scan limit on this phone." }, 429);
+    if ((await bump("server")) > Number(Deno.env.get("AI_SERVER_CAP") ?? 5000)) return json({ error: "Roster scan is very busy today. Try again tomorrow." }, 429);
+  } catch {
+    return json({ error: "Roster scan isn't set up yet (usage table missing)." }, 503);
+  }
+  const sys = `You read photos of paper muster sheets, accountability rosters and whiteboards for a team accountability app.
+Return ONLY JSON: {"rows":[{"rank":"","name":"","status":"","note":""}]}.
+- One row per person you can read. name: as written (LAST, FIRST or LAST). rank: if written (e.g. SGT, CPL, LCPL), else "".
+- status: map what is written to exactly one of: ${statuses.join(", ") || "On Hand, Leave, TAD, SIQ, Appointment, Other"}. A check mark, "P", "present", "here" or "OH" means On Hand. "L" or leave means Leave. Blank or unreadable: "".
+- note: short extra text next to the name (place, dates), else "".
+- Skip headings, totals and anything that isn't a person. Never invent people. If the photo isn't a roster, return {"rows":[]}.`;
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model: Deno.env.get("AI_SCAN_MODEL") || Deno.env.get("AI_MODEL") || "claude-sonnet-5-5", max_tokens: 3000, system: sys,
+        messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: "image/" + m[1], data: m[2] } }, { type: "text", text: "Read this roster." }] }] }),
+    });
+    const out = await r.json();
+    if (!r.ok) {
+      const msg = String(out?.error?.message ?? "");
+      if (/credit|billing/i.test(msg)) return json({ error: "The AI account is out of credit." }, 503);
+      return json({ error: r.status === 429 || r.status === 529 ? "Roster scan is busy. Try again in a minute." : "Roster scan had a problem. Try again." }, 503);
+    }
+    // deno-lint-ignore no-explicit-any
+    const text = (out.content ?? []).filter((b: any) => b.type === "text").map((b: any) => b.text).join("");
+    const j = text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1);
+    let rows: unknown[] = [];
+    try { const o = JSON.parse(j); rows = Array.isArray(o.rows) ? o.rows : []; } catch { rows = []; }
+    // deno-lint-ignore no-explicit-any
+    const clean = rows.slice(0, 300).map((x: any) => ({ rank: String(x?.rank ?? "").slice(0, 8), name: String(x?.name ?? "").slice(0, 60), status: String(x?.status ?? "").slice(0, 30), note: String(x?.note ?? "").slice(0, 80) })).filter((x) => x.name.trim());
+    return json({ rows: clean });
+  } catch {
+    return json({ error: "Couldn't reach roster scan. Try again." }, 502);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "method" }, 405);
@@ -181,6 +235,8 @@ Deno.serve(async (req) => {
 
   // Customer support for the app itself: free for everyone, separate limits, no web search.
   if (body.support) return support(body, req, key);
+  // Snap the paper roster (separate limits).
+  if (body.scan) return scan(body, req, key);
 
   if (!cfg.on) return json({ error: "Ask is turned off on the server.", off: true }, 403);
 
@@ -198,7 +254,7 @@ Deno.serve(async (req) => {
     const { data } = await db.from("feeds").select("member_key_hash").eq("id", fid).maybeSingle();
     house = !!data && data.member_key_hash === await hex(mk);
   }
-  const requirePro = Deno.env.get("AI_REQUIRE_PRO") === "1"; // off until web and Android can buy Pro and most iPhones run 1.3
+  const requirePro = (Deno.env.get("AI_REQUIRE_PRO") ?? "1") !== "0"; // matches what is deployed (v17): Pro required unless AI_REQUIRE_PRO=0
   if (!isAdmin && !ent && !house) {
     if (requirePro) return json({ error: "Ask is part of Accounted For Pro. The person running your team can turn it on with Pro.", pro: true, off: true }, 402);
     if (cfg.who === "leaders") return json({ error: "Ask is set to leaders only.", off: true }, 403);
