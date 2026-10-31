@@ -2657,7 +2657,7 @@ function animateNums(){document.querySelectorAll("[data-n]").forEach(el=>{const 
   if(from===undefined||from===to||RM())return;const t0=performance.now(),d=420;
   const step=t=>{const p=Math.min(1,(t-t0)/d),e=1-Math.pow(1-p,3);el.textContent=Math.round(from+(to-from)*e);if(p<1)requestAnimationFrame(step)};el.textContent=from;requestAnimationFrame(step)})}
 (()=>{let x0=null,y0=null,ok=false;const order=()=>["board"].concat(SECTIONS.map(s=>s[0].toLowerCase()),["att"]);
-  document.addEventListener("touchstart",e=>{const t=e.target;ok=!t.closest("input,select,textarea,.gridwrap,.sheet,.tabs");const p=e.touches[0];x0=p.clientX;y0=p.clientY},{passive:true});
+  document.addEventListener("touchstart",e=>{const t=e.target;ok=!t.closest("input,select,textarea,.gridwrap,.sheet,.tabs,.sw,#nwCard");const p=e.touches[0];x0=p.clientX;y0=p.clientY},{passive:true});
   document.addEventListener("touchend",e=>{if(!ok||x0===null)return;const p=e.changedTouches[0];const dx=p.clientX-x0,dy=p.clientY-y0;x0=null;
     if(Math.abs(dx)<70||Math.abs(dy)>45)return;const o=order();const i=o.indexOf(view);if(i<0)return;const j=i+(dx<0?1:-1);if(j<0||j>=o.length)return;
     slideDir=dx<0?"vl":"vr";view=o[j];armed=null;query="";render();window.scrollTo(0,0);buzz();
