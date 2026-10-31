@@ -44,6 +44,7 @@ export const SOURCES = [
   "features/team-alerts.js",
   "features/cal-everyone.js",
   "features/cal-pick.js",
+  "features/cal-mix.js",
   "features/send-out.js",
   "features/co-command.js",
   "features/adoption.js",
