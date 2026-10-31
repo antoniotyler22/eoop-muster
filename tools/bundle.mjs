@@ -84,6 +84,7 @@ export const SOURCES = [
   "features/move.js",
   "features/stable-ids.js",
   "features/sec-checkins.js",
+  "features/field-mode.js",
 ];
 
 export function build() {
