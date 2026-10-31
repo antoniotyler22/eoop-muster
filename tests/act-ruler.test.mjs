@@ -32,3 +32,26 @@ test("Activity shows as a ruler: hour marks, NOW, cards by time, new ones marked
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("4.63: a burst of check-ins is one card with faces; tap shows names; × removes the group", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    a.w.eval(`actRuler.mode="ruler";` + LEAD + `const n=Date.now()-74*6e4;const N=["LCPL CHAVEZ","CPL BEAVERS","CPL LEWIS","LCPL PERALES","LCPL REAM KYLE","PFC VEGA"];
+      S.act=N.map((w,i)=>({t:n+i*2000,ic:"📍",txt:w+" checked in: On Hand · put on the roster",go:"checkins"})).reverse();
+      S.act.unshift({t:n+20000,ic:"✓",txt:"1 confirmed “0900-1100 Fall clean-up”",go:"feed"});
+      S.act.unshift({t:Date.now()-6e5,ic:"📍",txt:"CPL PARK checked in: Leave thru 8 Nov",go:"checkins"});S.actSeen=0;save();view="board";render();`);
+    await sleep(20);
+    assert.equal(a.$$(".ar-c").length, 3, "6 check-ins + 1 confirm + 1 later check-in = 3 cards");
+    const g = a.$(".ar-c.grp"); assert.ok(g);
+    assert.match(g.textContent, /6 checked in/); assert.match(g.textContent, /\+2/); assert.match(g.textContent, /On Hand/); assert.match(g.querySelector(".ar-av").textContent, /^CHBELEPE/);
+    assert.equal(g.querySelectorAll(".ar-av span").length, 4, "four faces");
+    g.querySelector("[data-argrp]").click(); await sleep(10);
+    assert.equal(a.$$("#arExp .ar-er").length, 6, "names drop down");
+    assert.match(a.$("#arExp").textContent, /LCPL REAM KYLE/);
+    a.$(".ar-c.grp [data-argrp]").click(); await sleep(10);
+    assert.ok(!a.$("#arExp"), "tap again closes");
+    a.$(".ar-c.grp [data-arhide]").click(); await sleep(10);
+    assert.equal(a.w.eval("S.act.length"), 2, "× removes the whole group");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
