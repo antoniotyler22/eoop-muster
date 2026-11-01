@@ -8890,7 +8890,9 @@ window.fullRank=fullRank;
 const mil=()=>!S.mode||S.mode==="military"||S.mode==="police";
 /* who is holding this phone, in the words they'd want to be called by: "Corporal Tyler", "Ms. Reyes", "Foreman Diaz" */
 function addressName(){let rank="",name="";
-  const D=S.me&&S.me.d;if(D&&D.name){rank=D.rank||"";name=D.name}
+  /* a leader phone greets the leader, not a member page left on the device (a test link, an old preview) */
+  const lead=typeof memberMode==="function"&&!memberMode()&&view!=="mepv"&&!(S.me&&S.me.pk==="preview");
+  const D=!lead&&S.me&&S.me.d;if(D&&D.name){rank=D.rank||"";name=D.name}
   else if(S.lgSelf&&S.lgSelf.l){const l=String(S.lgSelf.l).split(" · ")[0];const m=l.match(/^(\S+)\s+(.+)$/);if(m){rank=m[1];name=m[2]}else name=l}
   else if(S.who&&S.who.n){const m=String(S.who.n).match(/^(\S+)\s+(.+)$/);if(m&&RANKS[m[1].toUpperCase()]){rank=m[1];name=m[2]}else name=S.who.n}
   else if(S.myName||S.postAs){const n=String(S.postAs||S.myName);const m=n.match(/^(\S+)\s+(.+)$/);if(m&&(RANKS[m[1].toUpperCase()]||(MODE().ranks||[]).includes(m[1].toUpperCase()))){rank=m[1];name=m[2]}else name=n}
