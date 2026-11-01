@@ -8,6 +8,7 @@ const setup = async (a) => {
   await a.w.eval(`(async()=>{const k=crypto.getRandomValues(new Uint8Array(32));const ek=b64e(k).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"");
     S.feeds=[{id:"${FEED.id}",mk:"${FEED.mk}",lk:"l".repeat(30),ek,unit:"1ST PLT",me:"CPL TEST",sec:"1ST",mine:{},seen:0,posts:[]}];S.myName="CPL TEST";S.onb=true;S.welcomed=1;S.driftOff=false;fdSel="${FEED.id}";view="feed";render()})()`);
   await sleep(150);
+  a.w.eval(`const t=document.querySelector('[data-fdtab="feed"]');if(t)t.click()`);await sleep(80);
 };
 
 test("the Feed shows an auto-scroll pill that turns the glide off and on, and it is remembered", async () => {

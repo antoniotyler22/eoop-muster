@@ -11288,12 +11288,14 @@ function chrome(show){
   const fade=show&&isOn()?"block":"none";
   mk("div","fdFadeT").className="fdFade";mk("div","fdFadeB").className="fdFade";
   $("#fdFadeT").style.display=fade;$("#fdFadeB").style.display=fade}
-function paint(){chrome(view==="feed"&&!document.body.classList.contains("locked")&&!document.body.classList.contains("onb-open"))}
+const postTab=()=>!!document.querySelector('#fdTabs [data-fdtab="post"][aria-pressed="true"]');
+function paint(){chrome(view==="feed"&&!postTab()&&!document.body.classList.contains("locked")&&!document.body.classList.contains("onb-open"))}
 const bump=()=>{st.idle=Date.now()+IDLE};
 
 /* ---------- when we must not move the page ---------- */
 function blocked(){
   if(view!=="feed")return "view";
+  if(postTab())return "post";            /* writing a post: the page stays put */
   if(!isOn())return "off";
   if(document.hidden)return "hidden";
   if(document.body.classList.contains("locked")||document.body.classList.contains("onb-open"))return "locked";
@@ -11325,13 +11327,13 @@ function loopBack(){const m=$("#main");if(!m||st.fade)return;st.fade=1;
   setTimeout(()=>{window.scrollTo(0,0);st.expect=0;st.acc=0;m.classList.remove("fdOut");setTimeout(()=>{m.classList.remove("fdBack");st.fade=0;st.hold=0},460)},380)}
 function frame(t){st.raf=requestAnimationFrame(frame);
   const dt=Math.min(.05,st.t?(t-st.t)/1e3:0);st.t=t;
-  if(view==="feed"){if(!st.shown){st.shown=true;paint()}}else if(st.shown){st.shown=false;paint()}
+  {const want=view==="feed"&&!postTab();if(want){if(!st.shown){st.shown=true;paint()}}else if(st.shown){st.shown=false;paint()}}
   if(blocked()||st.fade){st.acc=0;st.expect=null;return}
   const el=document.scrollingElement||document.documentElement,max=el.scrollHeight-window.innerHeight;
   if(window.scrollY>=max-2){if(!st.hold)st.hold=Date.now()+HOLD;else if(Date.now()>st.hold)loopBack();return}
   st.hold=0;st.acc+=SPEED*dt;const px=Math.floor(st.acc);if(!px)return;st.acc-=px;
   const to=Math.min(max,window.scrollY+px);st.expect=to;window.scrollTo(0,to)}
-{const _r=render;render=function(){const r=_r.apply(this,arguments);try{st.shown=view==="feed";paint()}catch(e){}return r}}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{st.shown=view==="feed"&&!postTab();paint()}catch(e){}return r}}
 document.addEventListener("visibilitychange",()=>{st.t=0;bump()});
 st.raf=requestAnimationFrame(frame);
 setTimeout(()=>{try{paint()}catch(e){}},1500);
