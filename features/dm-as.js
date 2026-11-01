@@ -17,10 +17,13 @@ if(typeof renderMePv==="function"){const _c=renderMePv;renderMePv=function(){con
 if(typeof renderToday==="function"){const _d=renderToday;renderToday=function(){const r=_d.apply(this,arguments);inject();return r}}
 if(typeof renderLog==="function"){const _e=renderLog;renderLog=function(){const r=_e.apply(this,arguments);inject();return r}}
 {const _r=render;render=function(){const r=_r.apply(this,arguments);inject();return r}}
-/* leaders: the Inbox sits next to Feed and Send, and counts on the Feed tab */
-{const _to=tabOf;tabOf=function(v){if((v==="dms"||v==="dm")&&!(typeof memberMode==="function"&&memberMode()))return "feed";return _to.apply(this,arguments)}}
-{const _tb=tabBadge;tabBadge=function(k){let n=_tb.apply(this,arguments);if(isLeader()){if(k==="feed")n+=unread();else if(k==="tools")n=Math.max(0,n-unread())}return n}}
-{const _rs=renderShell;renderShell=function(){const r=_rs.apply(this,arguments);try{if(isLeader()&&tabOf(view)==="feed"){const sn=$("#subnav");if(sn&&!sn.querySelector("[data-go='dms']")){const n=unread();sn.insertAdjacentHTML("beforeend",`<button data-go="dms"${view==="dms"||view==="dm"?' aria-current="page"':""}>Inbox${n?` (${n})`:""}</button>`)}}}catch(e){}return r}}
+/* leaders: the Inbox is its own bottom tab, right beside Tools, with the unread count on it */
+const lead=()=>!(typeof memberMode==="function"&&memberMode());
+try{IC.inbox='<path d="M3 13l3-8h12l3 8"/><path d="M3 13v6a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-6h-5a4 4 0 0 1-8 0z"/>'}catch(e){}
+{const _to=tabOf;tabOf=function(v){if(v==="dms"||v==="dm")return (lead()||S.me)?"inbox":_to.apply(this,arguments);return _to.apply(this,arguments)}}
+{const _tb=tabBadge;tabBadge=function(k){let n=_tb.apply(this,arguments);if(k==="inbox")return unread();if(isLeader()){if(k==="tools")n=Math.max(0,n-unread())}return n}}
+{const _tl=tabsList;tabsList=function(){const L=_tl.apply(this,arguments).slice();if(L.some(x=>x[0]==="inbox"))return L;if(!lead()){if(S.me)L.push(["inbox","Inbox","inbox"]);return L}const i=L.findIndex(x=>x[0]==="tools");L.splice(i<0?L.length:i+1,0,["inbox","Inbox","inbox"]);return L}}
+document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest("[data-tab='inbox']");if(!t)return;e.stopImmediatePropagation();e.preventDefault();view=lead()?"dms":"dm";armed=null;query="";render();window.scrollTo(0,0)},true);
 
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;
   if(t.closest("#dmAsEd")){const lead=isLeader();sheetCtx={kind:"dmas"};

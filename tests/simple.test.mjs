@@ -53,10 +53,13 @@ test("joining shows sign-in and link; members get My status, Feed, Calendar", as
     a.w.eval(`const m=S.roster[0];const D=mpDigest(m);S.feeds=[{id:"feedabcdef12",mk:"m".repeat(30),ek:"x",unit:"TEAM",me:"A",mid:m.id,sec:m.sec,posts:[],seen:0,mine:{},hub:1}];
       S.me={pk:"p".repeat(24),unit:"TEAM",d:D,t:Date.now()};S.onb=true;S.welcomed=1;S.mode="civilian";view="today";render()`);
     const tabs = a.$$("#tabbar [data-tab]").map((b) => b.dataset.tab);
-    assert.deepEqual(tabs, ["me", "feed", "mecal"]);
+    assert.deepEqual(tabs, ["me", "feed", "mecal", "inbox"]);
     assert.equal(a.w.eval("view"), "me");
     a.$('#tabbar [data-tab="mecal"]').click();
     assert.match(a.$("#main").textContent, /Calendar/);
+    a.$('#tabbar [data-tab="inbox"]').click(); await sleep(150);
+    assert.equal(a.w.eval("view"), "dm", "member Inbox tab opens the message thread");
+    assert.equal(a.$('#tabbar [data-tab="inbox"]').getAttribute("aria-current"), "page");
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
