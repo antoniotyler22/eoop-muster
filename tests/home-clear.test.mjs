@@ -107,6 +107,7 @@ test("home: Needs you lines hide until tomorrow; Today cards show by time of day
     assert.equal(a.w.eval("Object.keys(S.nyHide.h).length"), 1);
     a.w.eval(`view="board";render()`);
     // Today is now a week strip: today's agenda lists everything for the day (the old card clear / time windows are gone)
+    a.$(`[data-twd="${a.w.eval("dkey()")}"]`).click();
     const rows = a.w.eval("document.getElementById('twkRows').textContent");
     assert.match(rows, /Allday/); assert.match(rows, /Dentist/); assert.match(rows, /Duty/);
   } finally { a.close(); }

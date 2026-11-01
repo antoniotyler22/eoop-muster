@@ -11,6 +11,7 @@ test("Home's Today is the week strip, not the one-card ticker", async () => {
     a.w.eval(LEAD + `const k=dkey();S.roster[1].cal=[{id:"c2",d:k,tm:"",ty:"LEAVE",ti:"Parental leave"}];save();view="board";render();`); await sleep(40);
     assert.ok(a.$("#twk #twkDays"), "week strip on Home");
     assert.ok(!a.$(".strip.tk"), "no one-card ticker on Home");
+    a.$(`[data-twd="${a.w.eval("dkey()")}"]`).click(); await sleep(40);
     assert.match(a.$("#twkRows").textContent, /Parental leave|Leave/);
     assert.deepEqual(a.errors.filter((e) => !/scrollTo/.test(e)), []);
   } finally { await a.close(); }

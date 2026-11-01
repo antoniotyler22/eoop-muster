@@ -11438,17 +11438,20 @@ function daysHTML(){const T=today();let h="";
   for(let i=-BACK;i<=FWD;i++){const d=addDays(i),k=dkey(d);const has=agenda(k).n>0;
     h+=`<button type="button" class="twd${k===sel?" on":""}${k===T?" now":""}" data-twd="${k}" aria-pressed="${k===sel}" aria-label="${DOW[d.getDay()]} ${short(d)}${has?", has items":""}"><span class="dw">${k===T?"TODAY":DOW[d.getDay()]}</span><b>${d.getDate()}</b><span class="mo">${d.getDate()===1||i===-BACK?MON[d.getMonth()]:""}</span><i${has?"":' class="nil"'}></i></button>`}
   return h}
-function html(){const T=today();if(!sel||sel<dkey(addDays(-BACK))||sel>dkey(addDays(FWD)))sel=T;
-  const d=parseD(sel)||new Date();
-  return `<div id="twk"><div class="twk-h"><span class="note" style="margin:0;font-weight:700">${sel===T?"Today":DOW[d.getDay()]} · ${esc(short(d))}</span>${sel!==T?`<button type="button" class="chip" data-twd="${T}" style="cursor:pointer">Back to today</button>`:""}</div>
-    <div class="twk-days" id="twkDays" role="group" aria-label="Pick a day">${daysHTML()}</div><div class="twk-rows" id="twkRows">${rowsHTML(sel)}</div></div>`}
+function html(){const T=today();if(sel&&(sel<dkey(addDays(-BACK))||sel>dkey(addDays(FWD))))sel=null;
+  const d=parseD(sel||T)||new Date();
+  const head=sel?`${sel===T?"Today":DOW[d.getDay()]} · ${esc(short(d))}`:`Today · ${esc(short(d))}`;
+  const chips=sel?`<span style="display:flex;gap:6px">${sel!==T?`<button type="button" class="chip" data-twd="${T}" style="cursor:pointer">Back to today</button>`:""}<button type="button" class="chip" data-twx="1" style="cursor:pointer">Hide ▴</button></span>`:`<span class="note" style="margin:0">Tap a day to see what's on</span>`;
+  return `<div id="twk"><div class="twk-h"><span class="note" style="margin:0;font-weight:700">${head}</span>${chips}</div>
+    <div class="twk-days" id="twkDays" role="group" aria-label="Pick a day">${daysHTML()}</div>${sel?`<div class="twk-rows" id="twkRows">${rowsHTML(sel)}</div>`:""}</div>`}
 window.todayWeekHTML=()=>{try{return html()}catch(e){return ""}};
 function centre(smooth){const s=document.getElementById("twkDays"),b=s&&s.querySelector(".twd.on");if(!s||!b)return;
   s.scrollTo({left:Math.max(0,b.offsetLeft-(s.clientWidth-b.offsetWidth)/2),behavior:smooth?"smooth":"auto"})}
 function refresh(){const el=document.getElementById("twk");if(!el)return;const s=document.getElementById("twkDays"),x=s?s.scrollLeft:0;
   el.outerHTML=html();const s2=document.getElementById("twkDays");if(s2)s2.scrollLeft=x;centre(true)}
 document.addEventListener("click",e=>{const g=e.target.closest&&e.target.closest("[data-twg]");if(g){e.preventDefault();e.stopImmediatePropagation();const id=g.dataset.twg;if(openG.has(id))openG.delete(id);else openG.add(id);const r=document.getElementById("twkRows");if(r)r.innerHTML=rowsHTML(sel);return}
-  const b=e.target.closest&&e.target.closest("[data-twd]");if(!b)return;e.preventDefault();e.stopImmediatePropagation();sel=b.dataset.twd;refresh()},true);
+  const x=e.target.closest&&e.target.closest("[data-twx]");if(x){e.preventDefault();e.stopImmediatePropagation();sel=null;refresh();return}
+  const b=e.target.closest&&e.target.closest("[data-twd]");if(!b)return;e.preventDefault();e.stopImmediatePropagation();sel=(b.dataset.twd===sel&&sel!==today())||(b.dataset.twd===sel&&sel===today())?null:b.dataset.twd;refresh()},true);
 /* centre today the first time Home draws, and refresh the dots when Home redraws */
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(document.getElementById("twkDays")&&!document.getElementById("twkDays").dataset.c){document.getElementById("twkDays").dataset.c="1";centre(false)}}catch(e){}return r}}
 {const c=document.createElement("style");c.textContent=`.twk-h{display:flex;justify-content:space-between;align-items:center;margin:2px 2px 8px;min-height:30px}

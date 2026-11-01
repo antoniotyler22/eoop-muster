@@ -13,14 +13,21 @@ test("Home shows a scrollable day strip and the tapped day's agenda", async () =
     await sleep(150);
     const days = a.w.eval(`document.querySelectorAll("#twkDays .twd").length`);
     assert.ok(days >= 40, "a week back and weeks ahead: " + days);
-    assert.match(a.$("#twkRows").textContent, /Dental appointment/, "today's agenda shows");
+    assert.ok(!a.$("#twkRows"), "nothing below the strip until a day is tapped");
+    const todayK = a.w.eval(`dkey()`);
+    a.$(`[data-twd="${todayK}"]`).click(); await sleep(60);
+    assert.match(a.$("#twkRows").textContent, /Dental appointment/, "today's agenda shows once tapped");
+    a.$(`[data-twd="${todayK}"]`).click(); await sleep(60);
+    assert.ok(!a.$("#twkRows"), "tapping the day again collapses it");
     const target = a.w.eval(`dkey(new Date(Date.now()+3*86400000))`);
     a.$(`[data-twd="${target}"]`).click(); await sleep(60);
     assert.match(a.$("#twkRows").textContent, /Range day/, "the tapped day's agenda shows");
     assert.doesNotMatch(a.$("#twkRows").textContent, /Dental appointment/);
-    assert.ok(a.$("#twk .twk-h .chip"), "Back to today appears");
-    a.$("#twk .twk-h .chip").click(); await sleep(60);
+    assert.ok(a.$("#twk .twk-h [data-twx]"), "Hide appears");
+    a.$(`#twk .twk-h [data-twd="${todayK}"]`).click(); await sleep(60);
     assert.match(a.$("#twkRows").textContent, /Dental appointment/, "back on today");
+    a.$("#twk [data-twx]").click(); await sleep(60);
+    assert.ok(!a.$("#twkRows"), "Hide collapses the agenda");
     assert.deepEqual(a.errors.filter((e) => !/Not implemented|scrollTo/.test(e)), []);
   } finally { await a.close(); }
 });
@@ -34,6 +41,7 @@ test("people away are collapsed into one row per type with counts; tap to see wh
       S.roster.slice(5,7).forEach(m=>{m.status="Leave";m.start=d(-3);m.end=d(9);m.detail="Leave(Annual)"});
       save();view="board";render()`);
     await sleep(150);
+    a.$(`[data-twd="${a.w.eval("dkey()")}"]`).click(); await sleep(60);
     assert.match(a.$("#twkRows .tws").textContent, /6\s*away/);
     assert.equal(a.w.eval(`document.querySelectorAll("#twkRows .twg").length`), 2, "one collapsed row per type");
     assert.equal(a.w.eval(`document.querySelectorAll("#twkRows .twp").length`), 0, "people hidden until tapped");
