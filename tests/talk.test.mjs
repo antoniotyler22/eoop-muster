@@ -153,3 +153,21 @@ test("Talk shows who has it on: names of everyone listening", async () => {
     assert.deepEqual(a.errors.filter((e) => !/Not implemented/.test(e)), []);
   } finally { await a.close(); }
 });
+
+test("a clip from someone else puts a red number on the Talk tab until you open Talk", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    await setup(a);
+    a.w.eval(`S.talkSeen={feedabcdef12:5};renderTabs()`); await sleep(50);
+    assert.ok(!a.$("#tabbar [data-tab='talk'] .bd"), "no badge at first");
+    a.w.eval(`(()=>{const s=talkState(S.feeds[0]);s.msgs.set(7,{id:7,by:"SGT OTHER",g:"all",t:Date.now(),d:3,a:"x",seen:true,did:1});s.msgs.set(8,{id:8,by:"CPL TEST",g:"all",t:Date.now(),d:3,a:"x",seen:true,did:1});s.msgs.set(9,{id:9,by:"SGT TWO",g:"all",t:Date.now(),d:3,a:"x",seen:true,did:1});view="home";render()})()`); await sleep(80);
+    const bd = a.$("#tabbar [data-tab='talk'] .bd");
+    assert.ok(bd, "red number appears");
+    assert.equal(bd.textContent, "2", "two clips from other people (mine not counted)");
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(200);
+    assert.ok(!a.$("#tabbar [data-tab='talk'] .bd"), "cleared once Talk is open");
+    a.w.eval(`view="home";render()`); await sleep(60);
+    assert.ok(!a.$("#tabbar [data-tab='talk'] .bd"), "stays cleared");
+    assert.deepEqual(a.errors.filter((e) => !/Not implemented/.test(e)), []);
+  } finally { await a.close(); }
+});

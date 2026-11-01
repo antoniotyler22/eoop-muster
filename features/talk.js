@@ -72,9 +72,10 @@ async function poll(f){const s=st(f);if(s.busy||!f.mk||!f.ek)return;s.busy=true;
         if(!isHid(f,id)&&!logs().some(x=>x.f===f.id&&x.id===id)){logs().unshift({f:f.id,id,by:m.by,g:m.g,t:m.t,d:m.d,tx:m.tx});if(logs().length>LOGMAX)logs().length=LOGMAX}}}
     for(const m of s.msgs.values())if(m.seen===true&&!m.did){m.did=1;incoming(f,m)}
     for(const m of s.msgs.values())if(m.seen===false)m.seen=true;
-    if(!s.init){s.init=true;for(const m of s.msgs.values())m.did=1}
+    if(!s.init){s.init=true;for(const m of s.msgs.values())m.did=1;if(seenMap()[f.id]===undefined){let mx=0;for(const m of s.msgs.values())mx=Math.max(mx,m.id);seenMap()[f.id]=mx}}
     if(fresh)save();
     if(view==="talk"){if(ui.rec||ui.drag)ui.dirty=true;else draw()}
+    if(view==="talk")markTalkSeen();else renderTabs();
     decorate()}catch(e){ui.err=String(e&&e.message||e).slice(0,80)}finally{s.busy=false}}
 /* a clip from another phone just arrived */
 function incoming(f,m){if(m.by===me(f)||!forMe(f,m))return;
@@ -243,8 +244,14 @@ function decorate(){const f=feed();if(!f||view!=="feed")return;
 
 /* ---------- wire into the app: a Talk tab and the "talk" view ---------- */
 {const _to=tabOf;tabOf=function(v){return v==="talk"?"talk":_to.apply(this,arguments)}}
+/* red number on the Talk tab: clips from other people you haven't opened Talk to see */
+const seenMap=()=>{if(!S.talkSeen||typeof S.talkSeen!=="object")S.talkSeen={};return S.talkSeen};
+function unreadTalk(){let n=0;try{for(const f of (S.feeds||[])){const s=st(f),base=seenMap()[f.id]||0;for(const m of s.msgs.values())if(m.id>base&&m.by!==me(f)&&forMe(f,m)&&!isHid(f,m.id))n++}}catch(e){}return n}
+function markTalkSeen(){try{let ch=false;for(const f of (S.feeds||[])){const s=st(f);let mx=seenMap()[f.id]||0;for(const m of s.msgs.values())if(m.id>mx)mx=m.id;if(mx!==(seenMap()[f.id]||0)){seenMap()[f.id]=mx;ch=true}}if(ch){save();renderTabs()}}catch(e){}}
+window.talkUnread=unreadTalk;window.talkState=st;
+{const _tb=tabBadge;tabBadge=function(k){const n=_tb.apply(this,arguments);return k==="talk"?n+(view==="talk"?0:unreadTalk()):n}}
 {const _tl=tabsList;tabsList=function(){const L=_tl.apply(this,arguments).slice();if(L.some(x=>x[0]==="mecal"))return L;const i=L.findIndex(x=>x[0]==="feed");L.splice(i<0?L.length:i+1,0,["talk","Talk","talk"]);return L}}
-{const _r=render;render=function(){if(view==="talk"){renderTabs();const m=$("#main");if(m){m.className=m.className.replace(/\bfchat\b/g,"").trim();draw()}return}return _r.apply(this,arguments)}}
+{const _r=render;render=function(){if(view==="talk"){renderTabs();const m=$("#main");if(m){m.className=m.className.replace(/\bfchat\b/g,"").trim();draw()}markTalkSeen();return}return _r.apply(this,arguments)}}
 document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest("[data-tab='talk']");if(!t)return;e.stopImmediatePropagation();e.preventDefault();view="talk";armed=null;query="";render();window.scrollTo(0,0);start()},true);
 
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest||view!=="talk")return;const f=feed();if(!f)return;
