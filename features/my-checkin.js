@@ -54,6 +54,10 @@ async function send(){grab();const m=me();if(!m)return;const st=c.st,v=c.v;
   try{actAdd("📍",m.rank+" "+lastOf(m)+" checked in: "+(SHORT[st]||st)+(x.to?" thru "+x.to:"")+(x.loc?" · "+x.loc:""),"board")}catch(e){}
   c={open:false,st:"",v:{}};save();try{if(S.board&&typeof rpPublish==="function")rpPublish(true)}catch(e){}
   const y=window.scrollY;render();window.scrollTo(0,y);toast("📍 Checked in: "+(SHORT[st]||st))}
+/* 4.74.11: one-tap "I'm safe" (Lock Screen / Control Center / Action button, or the #safe link). Same as picking On Hand
+   and tapping Check in. Returns "ok", "who" (this phone doesn't know which person you are yet) or "no" (nothing to check in to). */
+window.quickSafe=async function(){if(!real()||isMemberPhone())return "no";if(!me()){view="board";try{render()}catch(e){}toast("Pick which one is you first, then tap I'm safe again.");return "who"}
+  c={open:true,st:"On Hand",v:{},auto:1};await send();return "ok"};
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest||!t.closest("#myCk"))return;
   if(t.closest("#myCkOpen")){const m=me();c={open:true,st:"",v:{}};redraw();return}
   if(t.closest("#myCkX")){c={open:false,st:"",v:{}};redraw();return}

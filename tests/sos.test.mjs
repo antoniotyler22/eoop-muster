@@ -55,7 +55,7 @@ test("SOS: holding the button for 3 seconds sends an encrypted request and a lea
 test("SOS: notify has an urgent leader alert, and alert taps open the right screen", () => {
   const n = readFileSync(new URL("../supabase/functions/notify/index.ts", import.meta.url), "utf8");
   assert.match(n, /body\.alert === "sos"/);
-  assert.match(n, /help: true, open: "sos"/, "urgent so it gets through Quiet hours");
+  assert.match(n, /help: true, crit: true, open: "sos"/, "urgent so it gets through Quiet hours");
   assert.match(n, /member_key_hash/);
   const sw = readFileSync(new URL("../sw.js", import.meta.url), "utf8");
   assert.match(sw, /"dm", "talk", "sos"/, "Inbox, Talk and SOS alerts no longer open the recall screen");
