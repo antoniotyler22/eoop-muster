@@ -11413,19 +11413,29 @@ const BACK=7,FWD=35;let sel=null;
 const today=()=>dkey();
 const addDays=n=>{const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()+n);return d};
 const timeKey=e=>e.tm||"99";
-function agenda(k){const rows=[];const T=today();
+const GROUPS={LEAVE:["Leave","--s-leave"],TAD:["TAD / travel","--s-tad"],APPT:["Appointments","--s-aob"]};
+const openG=new Set();
+function agenda(k){const rows=[],groups={};const T=today();
   try{for(const r of (S.duty&&S.duty.rosters)||[]){const id=(r.assign||{})[k];const m=id&&S.roster.find(x=>x.id===id);rows.push({tm:"",c:"--s-duty",t:"Duty · "+(m?m.rank+" "+lastOf(m):"Open"),s:r.name||"Duty roster",go:'data-go="duty"'})}}catch(e){}
   try{const seen=new Set();calEntries(k,k,"ALL").filter(e=>e.ty!=="DUTY"&&e.ty!=="DUE"&&e.d<=k&&(e.end||e.d)>=k).forEach(e=>{const key=(e.m&&e.m.id)+"|"+e.ty+"|"+e.ti+"|"+(e.tm||"");if(seen.has(key))return;seen.add(key);
-    const ty=ctype(e.ty);rows.push({tm:e.tm||"",c:ty[2],t:e.ti,s:(e.m?e.m.rank+" "+lastOf(e.m)+" · ":"")+ty[1]+(e.end&&e.end>e.d?" · thru "+short(parseD(e.end)):""),go:e.m?`data-pcard="${esc(e.m.id)}"`:'data-go="cal"'})})}catch(e){}
+    const ty=ctype(e.ty),thru=e.end&&e.end>e.d?"thru "+short(parseD(e.end)):"";
+    if(e.auto&&e.m&&GROUPS[e.ty]&&!e.tm){(groups[e.ty]=groups[e.ty]||[]).push({c:ty[2],t:e.m.rank+" "+lastOf(e.m),s:[String(e.ti||"").replace(/^(Leave|TAD|Appt)\s*·\s*/i,""),thru].filter(Boolean).join(" · "),go:`data-pcard="${esc(e.m.id)}"`});return}
+    rows.push({tm:e.tm||"",c:ty[2],t:e.ti,s:(e.m?e.m.rank+" "+lastOf(e.m)+" · ":"")+ty[1]+(thru?" · "+thru:""),go:e.m?`data-pcard="${esc(e.m.id)}"`:'data-go="cal"'})})}catch(e){}
   try{for(const ev of (S.events||[]).filter(ev=>(isoOf(ev.date)||ev.date)===k))rows.push({tm:"",c:"--brass",t:ev.name,s:"Event · "+evReq(ev).filter(m=>!evDone(ev,m)).length+" still owe",go:'data-go="events"'})}catch(e){}
   if(k===T){try{const pod=latestPod();if(pod&&pod.d===k)rows.unshift({tm:"",c:"--brass",t:"Plan of the Day",s:podParse(pod.txt).f||"Posted · tap to view",go:'data-go="feed"'})}catch(e){}
     try{const R=readySum();if(R.items&&R.soon)rows.push({tm:"",c:"--warn",t:R.soon+" due-outs",s:"Next 30 days",go:'data-go="ready"'})}catch(e){}}
-  return rows.sort((a,b)=>timeKey(a).localeCompare(timeKey(b)))}
-function rowsHTML(k){const rows=agenda(k);
-  if(!rows.length)return `<p class="note" style="margin:6px 2px">${k===today()?"Nothing scheduled today.":"Nothing scheduled."} <button class="chip" data-go="cal" style="cursor:pointer">+ Add to calendar</button></p>`;
-  return rows.map(r=>`<button type="button" class="twr" ${r.go} style="--c:var(${r.c})"><span class="twr-t">${esc(r.tm||"All day")}</span><span class="twr-b"><b>${esc(r.t)}</b><small>${esc(r.s)}</small></span></button>`).join("")}
+  rows.sort((a,b)=>timeKey(a).localeCompare(timeKey(b)));
+  return {rows,groups,n:rows.length+Object.keys(groups).length}}
+function rowsHTML(k){const A=agenda(k);const gk=Object.keys(A.groups);
+  if(!A.n)return `<p class="note" style="margin:6px 2px">${k===today()?"Nothing scheduled today.":"Nothing scheduled."} <button class="chip" data-go="cal" style="cursor:pointer">+ Add to calendar</button></p>`;
+  const away=gk.reduce((a,t)=>a+A.groups[t].length,0);
+  let h=away?`<div class="tws" aria-label="${away} away"><b>${away}</b><span>away</span>${gk.map(t=>`<span class="twn" style="--c:var(${GROUPS[t][1]})"><i></i>${esc(GROUPS[t][0].split(" ")[0])} <b>${A.groups[t].length}</b></span>`).join("")}</div>`:"";
+  h+=A.rows.map(r=>`<button type="button" class="twr" ${r.go} style="--c:var(${r.c})"><span class="twr-t">${esc(r.tm||"All day")}</span><span class="twr-b"><b>${esc(r.t)}</b><small>${esc(r.s)}</small></span></button>`).join("");
+  h+=gk.map(t=>{const id=k+"|"+t,o=openG.has(id),L=A.groups[t];
+    return `<div class="twg${o?" open":""}" style="--c:var(${GROUPS[t][1]})"><button type="button" class="twg-h" data-twg="${esc(id)}" aria-expanded="${o}"><span class="twr-b"><b>${esc(GROUPS[t][0])}</b><small>${L.length} ${L.length===1?"person":"people"}${o?"":" · tap to see who"}</small></span><span class="twg-n">${L.length}</span><span class="twg-c" aria-hidden="true">▾</span></button>${o?`<div class="twg-l">${L.map(r=>`<button type="button" class="twp" ${r.go}><b>${esc(r.t)}</b><small>${esc(r.s)}</small></button>`).join("")}</div>`:""}</div>`}).join("");
+  return h}
 function daysHTML(){const T=today();let h="";
-  for(let i=-BACK;i<=FWD;i++){const d=addDays(i),k=dkey(d);const has=agenda(k).length>0;
+  for(let i=-BACK;i<=FWD;i++){const d=addDays(i),k=dkey(d);const has=agenda(k).n>0;
     h+=`<button type="button" class="twd${k===sel?" on":""}${k===T?" now":""}" data-twd="${k}" aria-pressed="${k===sel}" aria-label="${DOW[d.getDay()]} ${short(d)}${has?", has items":""}"><span class="dw">${k===T?"TODAY":DOW[d.getDay()]}</span><b>${d.getDate()}</b><span class="mo">${d.getDate()===1||i===-BACK?MON[d.getMonth()]:""}</span><i${has?"":' class="nil"'}></i></button>`}
   return h}
 function html(){const T=today();if(!sel||sel<dkey(addDays(-BACK))||sel>dkey(addDays(FWD)))sel=T;
@@ -11437,7 +11447,8 @@ function centre(smooth){const s=document.getElementById("twkDays"),b=s&&s.queryS
   s.scrollTo({left:Math.max(0,b.offsetLeft-(s.clientWidth-b.offsetWidth)/2),behavior:smooth?"smooth":"auto"})}
 function refresh(){const el=document.getElementById("twk");if(!el)return;const s=document.getElementById("twkDays"),x=s?s.scrollLeft:0;
   el.outerHTML=html();const s2=document.getElementById("twkDays");if(s2)s2.scrollLeft=x;centre(true)}
-document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("[data-twd]");if(!b)return;e.preventDefault();e.stopImmediatePropagation();sel=b.dataset.twd;refresh()},true);
+document.addEventListener("click",e=>{const g=e.target.closest&&e.target.closest("[data-twg]");if(g){e.preventDefault();e.stopImmediatePropagation();const id=g.dataset.twg;if(openG.has(id))openG.delete(id);else openG.add(id);const r=document.getElementById("twkRows");if(r)r.innerHTML=rowsHTML(sel);return}
+  const b=e.target.closest&&e.target.closest("[data-twd]");if(!b)return;e.preventDefault();e.stopImmediatePropagation();sel=b.dataset.twd;refresh()},true);
 /* centre today the first time Home draws, and refresh the dots when Home redraws */
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(document.getElementById("twkDays")&&!document.getElementById("twkDays").dataset.c){document.getElementById("twkDays").dataset.c="1";centre(false)}}catch(e){}return r}}
 {const c=document.createElement("style");c.textContent=`.twk-h{display:flex;justify-content:space-between;align-items:center;margin:2px 2px 8px;min-height:30px}
@@ -11450,6 +11461,13 @@ document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest
 .twk-rows{display:flex;flex-direction:column;gap:8px;margin-top:2px}
 .twr{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:var(--surface-2,#f5f7fa);border-left:4px solid var(--c,var(--line))}
 .twr-t{flex:none;min-width:48px;font-size:12px;font-weight:800;color:var(--muted)}.twr-b{min-width:0;display:flex;flex-direction:column}.twr-b b{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.twr-b small{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tws{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:4px 4px 2px;font-size:12.5px;font-weight:700;color:var(--muted)}.tws>b{font-size:20px;color:var(--ink)}
+.twn{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:99px;background:var(--surface-2,#f3f5f8);color:var(--ink)}.twn i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.twg{border-radius:16px;background:var(--surface-2,#f5f7fa);border-left:4px solid var(--c,var(--line));overflow:hidden}
+.twg-h{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px}.twg-n{margin-left:auto;min-width:28px;text-align:center;font-size:13px;font-weight:800;padding:4px 8px;border-radius:99px;background:var(--c);color:#fff}
+.twg-c{color:var(--muted);transition:transform .2s}.twg.open .twg-c{transform:rotate(180deg)}.twg-h:focus-visible{outline:2px solid var(--brass,#0857e8);outline-offset:-2px}
+.twg-l{display:flex;flex-direction:column;border-top:1px solid var(--line)}.twp{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;padding:9px 14px 9px 16px;border-bottom:1px solid var(--line)}.twp:last-child{border-bottom:0}
+.twp b{font-size:14px}.twp small{font-size:12px;color:var(--muted)}.twp:focus-visible{outline:2px solid var(--brass,#0857e8);outline-offset:-2px}
 .twr:focus-visible{outline:2px solid var(--brass,#0857e8);outline-offset:2px}`;document.head.appendChild(c)}
 
 /* the strip rolls on its own, like a ticker: it drifts toward the days ahead, you can grab it any time (touch, scroll or tap a day stops it,
