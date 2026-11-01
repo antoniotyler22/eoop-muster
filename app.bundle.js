@@ -10069,7 +10069,7 @@ if(typeof IC==="object")IC.talk='<circle cx="12" cy="12" r="2"/><path d="M16.2 7
 /* ---------- per-feed state (in memory; the server holds the last 3 days) ---------- */
 const ST={};
 const st=f=>ST[f.id]=ST[f.id]||{after:0,msgs:new Map(),groups:new Map(),pres:new Map(),rc:new Map(),init:false,beat:0,watch:false,busy:false};
-const ui={rec:null,note:"",newg:false,gname:"",gpick:new Set(),playing:"",q:[],last:null,dirty:false,err:""};
+const ui={rec:null,note:"",newg:false,gname:"",gpick:new Map(),playing:"",q:[],last:null,dirty:false,err:""};
 let audio=null,unlocked=false;
 
 /* ---------- who is listening ---------- */
@@ -10079,23 +10079,41 @@ const listening=f=>{const s=st(f),now=Date.now(),me0=me(f),out=[];
 const isOn=(f,n)=>{if(n===me(f))return !!tk().on;const p=st(f).pres.get(n);return !!(p&&p.on&&Date.now()-p.t<STALE)};
 window.talkIsOn=n=>{const f=feed();return !!(f&&n&&isOn(f,String(n).toUpperCase().slice(0,30)))};
 const mySec=f=>String(f.sec||"").toUpperCase().slice(0,12);
-const secOf=(f,n)=>n===me(f)?mySec(f):String((st(f).pres.get(n)||{}).s||"");
-const secs=f=>[...new Set(known(f).map(n=>secOf(f,n)).filter(Boolean))].sort();
-const known=f=>{const s=st(f),a=new Set(s.pres.keys());a.add(me(f));return [...a].sort()};
-const groupsOf=f=>[...st(f).groups.values()].filter(g=>!g.x&&(f.lk||g.m.includes(me(f)))).sort((a,b)=>a.n.localeCompare(b.n));
-const targets=(f,g)=>{if(g==="all")return known(f);if(g.startsWith("sec:")){const c=g.slice(4);return known(f).filter(n=>secOf(f,n)===c)}const G=st(f).groups.get(g);return G&&!G.x?G.m.slice():known(f)};
-const forMe=(f,m)=>m.g==="all"||targets(f,m.g).includes(me(f));
-
+const mineH=f=>f.meH||[];
+/* a person is {n:name, w:[hashes of the name's words], s:section}. Name or hashes can match (the same way Feed posts to one person work) */
+const match=(e,by,w)=>e.n===by||(Array.isArray(e.w)&&e.w.length>0&&Array.isArray(w)&&e.w.every(h=>w.includes(h)));
+const entryMe=(f,e)=>match(e,me(f),mineH(f));
+const entryOn=(f,e)=>{if(entryMe(f,e))return !!tk().on;const now=Date.now();for(const [n,p] of st(f).pres)if(p.on&&now-p.t<STALE&&match(e,n,p.w))return true;return false};
+const secOf=(f,e)=>e.s||(entryMe(f,e)?mySec(f):"")||String((st(f).pres.get(e.n)||{}).s||"");
+/* everyone: roster people (leaders and anyone with a roster) plus anyone who has opened Talk */
+const people=f=>{const s=st(f),out=[],seen=new Set();
+  const add=e=>{if(!e||!e.n||seen.has(e.n))return;if(out.some(x=>x.w&&x.w.length&&e.w&&e.w.length&&x.w.length===e.w.length&&x.w.every(h=>e.w.includes(h))))return;seen.add(e.n);out.push(e)};
+  for(const e of rosterOf(f))add(e);
+  for(const [n,p] of s.pres)add({n,w:p.w||[],s:p.s||""});
+  add({n:me(f),w:mineH(f),s:mySec(f)});
+  return out.sort((a,b)=>a.n.localeCompare(b.n))};
+const secs=f=>[...new Set(people(f).map(e=>secOf(f,e)).filter(Boolean))].sort();
+const groupsOf=f=>[...st(f).groups.values()].filter(g=>!g.x&&(f.lk||g.m.some(e=>entryMe(f,e)))).sort((a,b)=>a.n.localeCompare(b.n));
+const targets=(f,g)=>{if(g==="all")return people(f);if(g.startsWith("sec:")){const c=g.slice(4);return people(f).filter(e=>secOf(f,e)===c)}const G=st(f).groups.get(g);return G&&!G.x?G.m.slice():people(f)};
+const forMe=(f,m)=>m.g==="all"||(m.g.startsWith("sec:")?m.g.slice(4)===mySec(f)||targets(f,m.g).some(e=>entryMe(f,e)):targets(f,m.g).some(e=>entryMe(f,e)));
+/* roster -> people with name hashes (hashing is async, so it fills in a moment after the screen opens) */
+function rosterOf(f){const s=st(f);if(S.source==="sample"||!Array.isArray(S.roster)||!S.roster.length||!SB.words||!SB.h)return [];
+  const key=S.roster.length+":"+f.id;if(s.rkey===key)return s.rost||[];
+  if(!s.rbusy){s.rbusy=true;const R=S.roster.slice(0,400);
+    Promise.all(R.map(async m=>{const n=String(m.rank||"")+" "+(typeof lastOf==="function"?lastOf(m):String(m.name||"").split(",")[0].trim().toUpperCase());const nn=n.trim().toUpperCase().slice(0,30);
+      return {n:nn,w:await Promise.all(SB.words(nn).map(w=>SB.h(f.id,w))),s:String(m.sec||"").toUpperCase().slice(0,12)}}))
+      .then(L=>{s.rost=L;s.rkey=key;s.rbusy=false;if(view==="talk"&&!ui.rec&&!(document.activeElement&&document.activeElement.id==="tkGN"))draw()}).catch(()=>{s.rbusy=false})}
+  return s.rost||[]}
 /* ---------- talking to the server ---------- */
 async function put(f,o){const ct=await fdEnc(f.ek,o);const id=await SB.rpc("talk_send",{p_feed:f.id,p_key:f.mk,p_ct:ct});
   try{if(SB.topic&&SB.pingTopic)SB.topic("p_talk",f.id).then(t=>SB.pingTopic(t,"p_talk")).catch(()=>{})}catch(e){}return +id}
-const sendPres=f=>{const s=st(f);s.beat=Date.now();return put(f,{k:"p",by:me(f),on:!!tk().on,t:Date.now(),s:mySec(f)}).catch(()=>{})};
+const sendPres=f=>{const s=st(f);s.beat=Date.now();return put(f,{k:"p",by:me(f),on:!!tk().on,t:Date.now(),s:mySec(f),w:mineH(f)}).catch(()=>{})};
 async function poll(f){const s=st(f);if(s.busy||!f.mk||!f.ek)return;s.busy=true;let fresh=0;
   try{const rows=await SB.rpc("talk_get",{p_feed:f.id,p_key:f.mk,p_after:s.after});
     for(const r of [...(rows||[])].sort((a,b)=>a.id-b.id)){s.after=Math.max(s.after,+r.id);const o=await fdDec(f.ek,r.ct);if(!o||!o.k)continue;const id=+r.id,t=Date.parse(r.created_at)||o.t||Date.now();
-      if(o.k==="p"&&o.by){const cur=s.pres.get(String(o.by));if(!cur||t>=cur.t)s.pres.set(String(o.by).slice(0,30),{on:!!o.on,t:Math.min(Date.now(),Math.max(t,0)),s:String(o.s||"").slice(0,12)})}
-      else if(o.k==="g"&&o.id){const cur=s.groups.get(o.id);if(!cur||id>=cur.rid)s.groups.set(String(o.id).slice(0,20),{id:String(o.id).slice(0,20),n:String(o.n||"Group").slice(0,24),m:(Array.isArray(o.m)?o.m:[]).map(x=>String(x).toUpperCase().slice(0,30)).slice(0,80),x:!!o.x,rid:id})}
-      else if(o.k==="h"&&o.m){let set=s.rc.get(+o.m);if(!set)s.rc.set(+o.m,set=new Set());set.add(String(o.by))}
+      if(o.k==="p"&&o.by){const cur=s.pres.get(String(o.by));if(!cur||t>=cur.t)s.pres.set(String(o.by).slice(0,30),{on:!!o.on,t:Math.min(Date.now(),Math.max(t,0)),s:String(o.s||"").slice(0,12),w:Array.isArray(o.w)?o.w.slice(0,6).map(String):[]})}
+      else if(o.k==="g"&&o.id){const cur=s.groups.get(o.id);if(!cur||id>=cur.rid)s.groups.set(String(o.id).slice(0,20),{id:String(o.id).slice(0,20),n:String(o.n||"Group").slice(0,24),m:(Array.isArray(o.m)?o.m:[]).map(x=>typeof x==="string"?{n:x.toUpperCase().slice(0,30),w:[],s:""}:{n:String(x.n||"").toUpperCase().slice(0,30),w:Array.isArray(x.w)?x.w.slice(0,6).map(String):[],s:String(x.s||"").slice(0,12)}).filter(e=>e.n).slice(0,200),x:!!o.x,rid:id})}
+      else if(o.k==="h"&&o.m){let a=s.rc.get(+o.m);if(!a)s.rc.set(+o.m,a=[]);a.push({by:String(o.by),w:Array.isArray(o.w)?o.w.map(String):[]})}
       else if(o.k==="v"&&o.a&&!s.msgs.has(id)){const m={id,by:String(o.by||"?").slice(0,30),g:String(o.g||"all"),t:o.t||t,d:+o.d||0,tx:String(o.tx||"").slice(0,400),mt:String(o.mt||"audio/mp4"),a:o.a,seen:s.init};s.msgs.set(id,m);fresh++;
         if(!logs().some(x=>x.f===f.id&&x.id===id)){logs().unshift({f:f.id,id,by:m.by,g:m.g,t:m.t,d:m.d,tx:m.tx});if(logs().length>LOGMAX)logs().length=LOGMAX}}}
     for(const m of s.msgs.values())if(m.seen===true&&!m.did){m.did=1;incoming(f,m)}
@@ -10107,7 +10125,7 @@ async function poll(f){const s=st(f);if(s.busy||!f.mk||!f.ek)return;s.busy=true;
 /* a clip from another phone just arrived */
 function incoming(f,m){if(m.by===me(f)||!forMe(f,m))return;
   if(!tk().on)return;                                   /* Talk off: it stays in the log, nothing plays, no receipt */
-  if(Date.now()-m.t<2*60e3){put(f,{k:"h",m:m.id,by:me(f)}).catch(()=>{});queue(f,m)}}
+  if(Date.now()-m.t<2*60e3){put(f,{k:"h",m:m.id,by:me(f),w:mineH(f)}).catch(()=>{});queue(f,m)}}
 
 /* ---------- playing ---------- */
 function blobURL(m){if(m.url)return m.url;try{const bin=atob(m.a),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);m.url=URL.createObjectURL(new Blob([u],{type:m.mt}));return m.url}catch(e){return ""}}
@@ -10156,27 +10174,26 @@ function finish(){if(ui.dirty){ui.dirty=false}draw();next()}
 const gname=(f,g)=>g==="all"?"Everyone":g.startsWith("sec:")?(g.slice(4)===mySec(f)?"My section":g.slice(4)+" section"):((st(f).groups.get(g)||{}).n||"Group");
 const fmtT=t=>{const d=new Date(t);return d.toLocaleDateString([],{weekday:"short",day:"numeric",month:"short"})+" "+String(d.getHours()).padStart(2,"0")+String(d.getMinutes()).padStart(2,"0")};
 function initials(n){const w=String(n||"?").split(/\s+/).filter(Boolean);return (w.length>1?w[0][0]+w[w.length-1][0]:(w[0]||"?").slice(0,2)).toUpperCase()}
-function av(f,n,sz){const on=isOn(f,n);return `<span class="tk-av" style="--sz:${sz||44}px">${esc(initials(n))}${on?`<i class="tk-badge">${RADIO(11)}</i>`:""}</span>`}
+function av(f,n,sz,on0){const on=on0===undefined?isOn(f,n):on0;return `<span class="tk-av" style="--sz:${sz||44}px">${esc(initials(n))}${on?`<i class="tk-badge">${RADIO(11)}</i>`:""}</span>`}
 function bars(id){let h=0;for(const c of String(id))h=(h*31+c.charCodeAt(0))>>>0;return Array.from({length:28},(_,i)=>{h=(h*1103515245+12345)>>>0;return 6+((h>>>8)%20)}).map(x=>`<i style="height:${x}px"></i>`).join("")}
 function status(f){const on=tk().on,g=tk().sel;
   if(ui.rec)return {cls:"live",t:"You are live",s:"Sending to "+gname(f,g)+". Let go to send."};
   if(!on)return {cls:"off",t:"Talk is off",s:"Nothing plays and you can't send. Clips go to the log."};
   if(ui.playing)return {cls:"busy",t:"Channel busy",s:"Someone is talking. Wait for the end."};
   if(ui.note)return {cls:"",t:ui.note,s:""};
-  const L=ui.last;if(L&&Date.now()-L.t<60e3){const T=targets(f,L.g).filter(n=>n!==me(f));const heard=T.filter(n=>(st(f).rc.get(L.id)||new Set()).has(n)).length;const off=T.filter(n=>!isOn(f,n)).length;
+  const L=ui.last;if(L&&Date.now()-L.t<60e3){const T=targets(f,L.g).filter(e=>!entryMe(f,e));const R=st(f).rc.get(L.id)||[];const heard=T.filter(e=>R.some(r=>match(e,r.by,r.w))).length;const off=T.filter(e=>!entryOn(f,e)).length;
     return {cls:"sent",t:"Sent to "+gname(f,L.g),s:"Heard by "+heard+" of "+T.length+(off?", "+off+" have Talk off":"")}}
   return {cls:"",t:"Channel clear",s:"Hold the button to talk to "+gname(f,g)+"."}}
 function chips(f){const g=tk().sel,mine=mySec(f);
-  const L=[["all","Everyone",known(f).length]];
+  const L=[["all","Everyone",people(f).length]];
   if(mine)L.push(["sec:"+mine,"My section ("+mine+")",targets(f,"sec:"+mine).length]);
   if(f.lk)for(const c of secs(f))if(c!==mine)L.push(["sec:"+c,c+" section",targets(f,"sec:"+c).length]);
   groupsOf(f).forEach(x=>L.push([x.id,x.n,x.m.length]));
   return L.map(([id,n,c])=>`<button type="button" class="tk-chip" data-tkg="${esc(id)}" aria-pressed="${g===id}">${esc(n)} <b>${c}</b></button>`).join("")+`<button type="button" class="tk-chip dash" id="tkNewG">+ Pick people</button>`}
-function newGroup(f){if(!ui.newg)return "";const ppl=known(f);
-  return `<div class="tk-card" id="tkG"><b>Pick people for a group</b><p class="tk-note">Everyone you pick hears everyone else in the group.</p>
+function newGroup(f){if(!ui.newg)return "";const ppl=people(f);
+  return `<div class="tk-card" id="tkG"><b>Pick people for a group</b><p class="tk-note">Anyone on your list, even if they haven't turned Talk on. Everyone you pick hears everyone else once their Talk is on.</p>
     <input id="tkGN" maxlength="24" placeholder="Group name" value="${esc(ui.gname)}" aria-label="Group name">
-    <div class="tk-pick">${ppl.map(n=>`<button type="button" data-tkp="${esc(n)}" aria-pressed="${ui.gpick.has(n)}">${av(f,n,32)}<span>${esc(n)}${secOf(f,n)?` <small>${esc(secOf(f,n))}</small>`:""}</span><i></i></button>`).join("")}</div>
-    <p class="tk-note">People show up here once they open Talk on their phone.</p>
+    <div class="tk-pick">${ppl.map(e=>{const on=entryOn(f,e),sc=secOf(f,e);return `<button type="button" data-tkp="${esc(e.n)}" aria-pressed="${ui.gpick.has(e.n)}">${av(f,e.n,32,on)}<span>${esc(e.n)}${sc?` <small>${esc(sc)}</small>`:""}${on?"":` <small class="off">Talk off</small>`}</span><i></i></button>`}).join("")}</div>
     <div class="tk-err" id="tkGE" role="alert"></div>
     <div class="tk-row"><button class="btn" id="tkGMake">Create group</button><button class="btn alt" id="tkGNo">Cancel</button></div></div>`}
 function msgCard(f,m){const mine=m.by===me(f),on=ui.playing===f.id+":"+m.id;
@@ -10186,7 +10203,7 @@ function msgCard(f,m){const mine=m.by===me(f),on=ui.playing===f.id+":"+m.id;
     ${m.tx?`<p class="tk-tx">${esc(m.tx)}</p>`:`<p class="tk-tx dim">Voice message</p>`}</article>`}
 function logCard(f,x){return `<article class="tk-msg old"><div class="tk-mh">${av(f,x.by,40)}<div class="tk-who"><b>${esc(x.by)}</b><small>${esc(fmtT(x.t))} · ${x.d}s · ${esc(gname(f,x.g))} · saved</small></div></div>${x.tx?`<p class="tk-tx">${esc(x.tx)}</p>`:`<p class="tk-tx dim">Voice message (audio expired)</p>`}</article>`}
 function listHTML(f){const s=st(f);const live=[...s.msgs.values()].filter(m=>forMe(f,m)||m.by===me(f)).sort((a,b)=>b.id-a.id).slice(0,30);
-  const have=new Set(live.map(m=>m.id));const old=logs().filter(x=>x.f===f.id&&!have.has(x.id)&&(x.g==="all"||targets(f,x.g).includes(me(f))||x.by===me(f))).slice(0,30);
+  const have=new Set(live.map(m=>m.id));const old=logs().filter(x=>x.f===f.id&&!have.has(x.id)&&(forMe(f,x)||x.by===me(f))).slice(0,30);
   if(!live.length&&!old.length)return `<p class="tk-note" style="text-align:center">No messages yet. Hold the button and say hello.</p>`;
   return live.map(m=>msgCard(f,m)).join("")+old.map(x=>logCard(f,x)).join("")}
 function html(){const f=feed();
@@ -10225,14 +10242,14 @@ document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest||view!=="talk")return;const f=feed();if(!f)return;
   if(t.closest("#tkSw")){unlock();const T=tk();T.on=!T.on;save();sendPres(f);if(!T.on){if(audio)audio.pause();ui.playing="";ui.q=[]}draw();if(T.on)poll(f);return}
   const g=t.closest("[data-tkg]");if(g){tk().sel=g.dataset.tkg;save();draw();return}
-  if(t.closest("#tkNewG")){ui.newg=true;ui.gname="";ui.gpick=new Set();draw();return}
+  if(t.closest("#tkNewG")){ui.newg=true;ui.gname="";ui.gpick=new Map();draw();return}
   if(t.closest("#tkGNo")){ui.newg=false;draw();return}
-  const p=t.closest("[data-tkp]");if(p){const n=p.dataset.tkp;const i=$("#tkGN");if(i)ui.gname=i.value;ui.gpick.has(n)?ui.gpick.delete(n):ui.gpick.add(n);draw();return}
+  const p=t.closest("[data-tkp]");if(p){const n=p.dataset.tkp;const i=$("#tkGN");if(i)ui.gname=i.value;if(ui.gpick.has(n))ui.gpick.delete(n);else{const e=people(f).find(x=>x.n===n);if(e)ui.gpick.set(n,e)}draw();return}
   if(t.closest("#tkGMake")){const i=$("#tkGN"),name=((i&&i.value)||"").trim(),er=$("#tkGE");ui.gname=name;
     if(!name){if(er)er.textContent="Enter a group name first";return}
     if(ui.gpick.size<1){if(er)er.textContent="Pick at least one member";return}
     if(groupsOf(f).some(x=>x.n.toLowerCase()===name.toLowerCase())){if(er)er.textContent="You already have a group with that name";return}
-    const id="g"+Date.now().toString(36)+rndId(3),m=[...new Set([...ui.gpick,me(f)])];
+    const id="g"+Date.now().toString(36)+rndId(3),m=[...ui.gpick.values()].map(e=>({n:e.n,w:(e.w||[]).slice(0,6),s:e.s||""}));if(!m.some(e=>entryMe(f,e)))m.push({n:me(f),w:mineH(f).slice(0,6),s:mySec(f)});
     put(f,{k:"g",id,n:name,m}).then(rid=>{st(f).groups.set(id,{id,n:name,m,x:false,rid});tk().sel=id;save();ui.newg=false;draw();toast("Group "+name+" created")}).catch(()=>toast("Couldn't create the group. Check your connection."));return}
   const pl=t.closest("[data-tkplay]");if(pl){unlock();const m=st(f).msgs.get(+pl.dataset.tkplay);if(!m)return;if(ui.playing===f.id+":"+m.id){audio.pause();ui.playing="";draw();return}ui.q=[];play(f,m);return}});
 
@@ -10268,7 +10285,7 @@ if(typeof HELP==="object"&&HELP.feed&&Array.isArray(HELP.feed[2]))HELP.feed[2].p
 .tk-lbl{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:2px}
 .tk-chips{display:flex;gap:8px;flex-wrap:wrap}.tk-chip{all:unset;cursor:pointer;box-sizing:border-box;min-height:40px;padding:0 16px;border-radius:999px;background:var(--line);color:var(--ink);font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
 .tk-chip b{font-size:12px;opacity:.7}.tk-chip[aria-pressed="true"]{background:var(--brass);color:var(--on-brass,#fff)}.tk-chip.dash{background:transparent;border:1.5px dashed var(--muted);color:var(--muted)}.tk-chip:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
-.tk-pick{display:flex;flex-direction:column;gap:6px;margin:8px 0;max-height:240px;overflow:auto}.tk-pick button{all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:14px;border:1px solid var(--line)}.tk-pick button span{flex:1;font-weight:600;font-size:14px}.tk-pick small{color:var(--muted);font-weight:700;font-size:11px;margin-left:4px}
+.tk-pick{display:flex;flex-direction:column;gap:6px;margin:8px 0;max-height:240px;overflow:auto}.tk-pick button{all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:14px;border:1px solid var(--line)}.tk-pick button span{flex:1;font-weight:600;font-size:14px}.tk-pick small.off{color:var(--warn);font-weight:700}.tk-pick small{color:var(--muted);font-weight:700;font-size:11px;margin-left:4px}
 .tk-pick button i{width:22px;height:22px;border-radius:50%;border:2px solid var(--muted)}.tk-pick button[aria-pressed="true"]{border-color:var(--brass);background:var(--brass-soft,transparent)}.tk-pick button[aria-pressed="true"] i{background:var(--brass);border-color:var(--brass)}
 .tk-err{color:var(--warn);font-size:13px;min-height:18px;font-weight:600}.tk-row{display:flex;gap:8px}.tk-row .btn{flex:1}
 .tk-st{display:flex;flex-direction:column;gap:2px}.tk-st b{font-size:15px}.tk-st small{font-size:12.5px;color:var(--muted)}.tk-st.live{border-color:var(--warn)}.tk-st.live b{color:var(--warn)}.tk-st.sent b{color:var(--brass)}.tk-st.off,.tk-st.busy{opacity:.85}

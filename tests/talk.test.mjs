@@ -73,3 +73,21 @@ test("send-to offers Everyone, My section and Pick people; anyone can build a gr
     assert.ok(a.$("#tkNewG"), "members can pick people too");
   } finally { await a.close(); }
 });
+
+test("the group picker lists roster people who never turned Talk on, and a group includes them", async () => {
+  const sent = [];
+  const a = await openApp({ rpc: (fn, b) => { if (fn === "talk_send") { sent.push(b); return sent.length; } return []; } });
+  try {
+    await setup(a, `S.source="mol";S.roster=[{id:"r1",rank:"CPL",name:"Reyes, Jo",sec:"1ST"},{id:"r2",rank:"SGT",name:"Dunn, Al",sec:"2ND"}]`);
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(400);
+    a.$("#tkNewG").click(); await sleep(400);
+    const txt = a.$("#tkG").textContent;
+    assert.match(txt, /CPL REYES/); assert.match(txt, /SGT DUNN/); assert.match(txt, /Talk off/);
+    a.$("#tkGN").value = "Crew";
+    a.$$("[data-tkp]").find((b) => /DUNN/.test(b.textContent)).click(); await sleep(50);
+    a.$("#tkGMake").click(); await sleep(300);
+    assert.ok(sent.length >= 1);
+    assert.match(a.$("#tkChips").textContent, /Crew\s*2/);
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
