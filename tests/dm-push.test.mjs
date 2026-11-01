@@ -77,3 +77,18 @@ test("Feed auto-scroll stays off while you are on the Post tab", async () => {
     assert.equal(a.w.eval("feedDrift.why()"), "post", "glide is blocked");
   } finally { await a.close(); }
 });
+
+test("Inbox voice notes: record button, encrypted audio field, safe playback", () => {
+  const v = readFileSync(new URL("../v12.js", import.meta.url), "utf8");
+  assert.match(v, /id="v12DmRec"/);
+  assert.match(v, /if\(aud\)\{o\.aud=aud/, "audio goes inside the encrypted message");
+  assert.match(v, /<audio class="tl-aud" controls/);
+  assert.match(v, /Voice note/, "inbox list and alert preview name it");
+  const m = v.match(/const audOK=(.*)\n/);
+  const audOK = new Function("return " + m[1].replace(/;$/, ""))();
+  assert.ok(audOK("data:audio/mp4;base64,AAAA"));
+  assert.ok(audOK("data:audio/webm;base64,AAAA"));
+  assert.ok(!audOK("data:text/html;base64,AAAA"), "only audio types play");
+  assert.ok(!audOK("data:audio/mp4;base64,AA\" onerror=\"x"), "no markup injection");
+  assert.ok(!audOK("data:audio/mp4;base64," + "A".repeat(100000)), "too big is dropped");
+});

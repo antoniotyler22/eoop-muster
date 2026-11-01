@@ -25,6 +25,7 @@ function shrinkPhoto(file){return new Promise((res,rej)=>{const url=URL.createOb
       c.getContext("2d").drawImage(im,0,0,c.width,c.height);out=c.toDataURL("image/jpeg",q);if(out.length<100000)break;if(q>.5)q-=.1;else{max=Math.round(max*.8)}}
     URL.revokeObjectURL(url);out.length<115000?res(out):rej(new Error("That photo is too big. Try a smaller one."))};
   im.onerror=()=>{URL.revokeObjectURL(url);rej(new Error("Couldn't read that photo."))};im.src=url})}
+const audOK=s=>typeof s==="string"&&/^data:audio\/(mp4|webm|ogg|mpeg|aac|x-m4a);base64,[A-Za-z0-9+/=]+$/.test(s)&&s.length<100000;
 const imgOK=s=>typeof s==="string"&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(s)&&s.length<130000;
 
 /* ================= 1. MOVE PEOPLE BETWEEN SECTIONS ================= */
@@ -116,20 +117,20 @@ function dmEnsure(m){if(!m.dm){m.dm={id:rndId(20),k:rndId(32),ek:newEk(),ok:0};s
 async function dmOpenSrv(m){const d=dmEnsure(m);if(d.ok)return d;await SB.rpc("dm_open",{p_id:d.id,p_key:d.k,p_inbox:S.dmInbox});d.ok=1;save();return d}
 {const _md=mpDigest;mpDigest=function(m){const d=_md.apply(this,arguments);if(m&&m.dm&&m.dm.ok)d.dm={id:m.dm.id,k:m.dm.k,ek:m.dm.ek,from:String(S.postAs||S.myName||unitName()).slice(0,30)};return d}}
 {const _mp=mpPublish;mpPublish=async function(){try{for(const m of S.roster.filter(m=>m.pk))await dmOpenSrv(m).catch(()=>{})}catch(e){}return _mp.apply(this,arguments)}}
-async function dmSend(th,txt,img,by,name){const o={t:String(txt||"").slice(0,2000),by,n:String(name||"").slice(0,30)};if(img)o.img=img;const ct=await fdEnc(th.ek,o);const id=await SB.rpc("dm_send",{p_id:th.id,p_key:th.k,p_ct:ct});try{SB.notify(null,{dm:th.id,k:th.k,by:by==="L"?"L":"M",dev:window.dmDev?window.dmDev():undefined,ti:String(name||"").slice(0,40),tx:String(txt||(img?"📷 Photo":"")).slice(0,100)})}catch(e){}return {id:+id,t:Date.now(),...o,me:1}}
+async function dmSend(th,txt,img,by,name,aud,dur){const o={t:String(txt||"").slice(0,2000),by,n:String(name||"").slice(0,30)};if(img)o.img=img;if(aud){o.aud=aud;o.d=Math.min(60,+dur||0)}const ct=await fdEnc(th.ek,o);const id=await SB.rpc("dm_send",{p_id:th.id,p_key:th.k,p_ct:ct});try{SB.notify(null,{dm:th.id,k:th.k,by:by==="L"?"L":"M",dev:window.dmDev?window.dmDev():undefined,ti:String(name||"").slice(0,40),tx:String(txt||(img?"📷 Photo":aud?"🎙 Voice note · "+(+dur||0)+"s":"")).slice(0,100)})}catch(e){}return {id:+id,t:Date.now(),...o,me:1}}
 function dmPush(tid,msg){const L=S.dmMsgs[tid]=S.dmMsgs[tid]||[];if(L.some(x=>x.id===msg.id))return false;L.push(msg);L.sort((a,b)=>a.id-b.id);if(L.length>200)L.splice(0,L.length-200);return true}
 let dmBusy=false;
 async function dmPollLeader(){if(dmBusy||!S.dmInbox||!leader())return;dmBusy=true;let n=0;
   try{const rows=await SB.rpc("dm_inbox",{p_inbox:S.dmInbox,p_after:S.dmAfter||0});const byId={};S.roster.forEach(m=>{if(m.dm)byId[m.dm.id]=m});
     for(const r of rows||[]){S.dmAfter=Math.max(S.dmAfter||0,+r.id);const m=byId[r.thread_id];if(!m)continue;const o=await fdDec(m.dm.ek,r.ct);if(!o)continue;
-      const msg={id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,2000),by:o.by==="L"?"L":"M",n:String(o.n||"").slice(0,30),img:imgOK(o.img)?o.img:""};
+      const msg={id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,2000),by:o.by==="L"?"L":"M",n:String(o.n||"").slice(0,30),img:imgOK(o.img)?o.img:"",aud:audOK(o.aud)?o.aud:"",d:Math.min(60,+o.d||0)};
       if(dmPush(r.thread_id,msg)&&msg.by==="M"){n++;actAdd("💬",title(m.rank)+" "+title(lastOf(m))+": “"+msg.txt.slice(0,60)+"”","dms")}}
     if(rows&&rows.length)save();if(n){toast("💬 "+n+" new message"+(n>1?"s":""));try{navigator.vibrate&&navigator.vibrate([60,40,60])}catch(e){}renderTabs();if(view==="dms"||view==="dm")redraw(render)}}
   catch(e){}finally{dmBusy=false}}
 const myDm=()=>S.me&&S.me.d&&S.me.d.dm&&S.me.d.dm.id?S.me.d.dm:null;
 async function dmPollMember(){const th=myDm();if(dmBusy||!th)return;dmBusy=true;let n=0;
   try{const rows=await SB.rpc("dm_get",{p_id:th.id,p_key:th.k,p_after:S.dmMineAfter||0});
-    for(const r of rows||[]){S.dmMineAfter=Math.max(S.dmMineAfter||0,+r.id);const o=await fdDec(th.ek,r.ct);if(!o)continue;const msg={id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,2000),by:o.by==="L"?"L":"M",n:String(o.n||"").slice(0,30),img:imgOK(o.img)?o.img:""};
+    for(const r of rows||[]){S.dmMineAfter=Math.max(S.dmMineAfter||0,+r.id);const o=await fdDec(th.ek,r.ct);if(!o)continue;const msg={id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,2000),by:o.by==="L"?"L":"M",n:String(o.n||"").slice(0,30),img:imgOK(o.img)?o.img:"",aud:audOK(o.aud)?o.aud:"",d:Math.min(60,+o.d||0)};
       if(dmPush("mine:"+th.id,msg)&&msg.by==="L")n++}
     if(rows&&rows.length)save();if(n){toast("💬 New message from "+(th.from||"your leader"));renderTabs();if(view==="dm")redraw(render)}}catch(e){}finally{dmBusy=false}}
 every(20000,()=>{if(document.hidden)return;if(leader()&&S.dmInbox)dmPollLeader();if(myDm())dmPollMember()},"v12-dm");
@@ -140,15 +141,15 @@ let dmWith=null;
 const tlHM=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,"0")+String(d.getMinutes()).padStart(2,"0")};
 const tlDay=t=>{const d=new Date(t),td=new Date(),y=new Date(Date.now()-864e5);const D=["SUN","MON","TUE","WED","THU","FRI","SAT"],M=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
   const tag=d.toDateString()===td.toDateString()?"TODAY":d.toDateString()===y.toDateString()?"YESTERDAY":"";return (tag?tag+" · ":"")+D[d.getDay()]+" "+d.getDate()+" "+M[d.getMonth()]};
-function bubble(x,mine){return `<div class="tl-e ${mine?"me":""}"><span class="tl-t">${tlHM(x.t)}</span><div class="tl-c">${x.img?`<img src="${x.img}" alt="Photo" class="v12img">`:""}${x.txt?`<div>${esc(x.txt).replace(/\n/g,"<br>")}</div>`:""}<small class="tl-w">${mine?"You":esc(x.n||"")}</small></div></div>`}
+function bubble(x,mine){return `<div class="tl-e ${mine?"me":""}"><span class="tl-t">${tlHM(x.t)}</span><div class="tl-c">${x.img?`<img src="${x.img}" alt="Photo" class="v12img">`:""}${x.aud?`<audio class="tl-aud" controls preload="none" src="${x.aud}"></audio>`:""}${x.txt?`<div>${esc(x.txt).replace(/\n/g,"<br>")}</div>`:""}<small class="tl-w">${mine?"You":esc(x.n||"")}</small></div></div>`}
 function tlList(list,mineBy){let day="",h="";for(const x of list){const k=new Date(x.t).toDateString();if(k!==day){day=k;h+=`<div class="tl-d">${tlDay(x.t)}</div>`}h+=bubble(x,x.by===mineBy)}return h}
 {const c=document.createElement("style");c.textContent=`.tl-chat{gap:0!important;position:relative;padding:10px 0 10px 0!important}.tl-d{font-size:11.5px;font-weight:800;letter-spacing:.06em;color:var(--muted);text-align:center;margin:10px 0 12px}
 .tl-e{position:relative;margin:0 0 14px 62px}.tl-e:before{content:"";position:absolute;left:-17px;top:-8px;bottom:-14px;width:2px;background:var(--line)}.tl-e:after{content:"";position:absolute;left:-21px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--line);border:2px solid var(--bg,#fff)}.tl-e.me:after{background:var(--brass)}
 .tl-t{position:absolute;left:-62px;width:38px;text-align:right;font-size:11px;font-weight:700;color:var(--muted);top:4px;font-variant-numeric:tabular-nums}
-.tl-c{background:var(--surface-solid);border:1px solid var(--line);border-radius:16px;padding:10px 13px;font-size:15px;line-height:1.35;word-wrap:break-word;box-shadow:var(--shadow)}.tl-e.me .tl-c{background:color-mix(in srgb,var(--brass) 12%,var(--surface-solid))}.tl-w{display:block;margin-top:3px;font-size:11px;font-weight:700;color:var(--muted)}.tl-e.me .tl-w{color:var(--brass)}#v12DmSend{background:var(--brass)!important;color:var(--on-brass,#fff)!important}#v12DmTxt{border-radius:18px}`;document.head.appendChild(c)}
+.tl-aud{display:block;width:100%;min-width:200px;height:38px;margin:0 0 6px}.tl-c{background:var(--surface-solid);border:1px solid var(--line);border-radius:16px;padding:10px 13px;font-size:15px;line-height:1.35;word-wrap:break-word;box-shadow:var(--shadow)}.tl-e.me .tl-c{background:color-mix(in srgb,var(--brass) 12%,var(--surface-solid))}.tl-w{display:block;margin-top:3px;font-size:11px;font-weight:700;color:var(--muted)}.tl-e.me .tl-w{color:var(--brass)}#v12DmSend{background:var(--brass)!important;color:var(--on-brass,#fff)!important}#v12DmTxt{border-radius:18px}`;document.head.appendChild(c)}
 function chatHTML(list,mineBy,who,sub){return `<div class="sechead" style="margin-top:12px"><h2>${esc(who)}</h2><span class="note" style="margin:0">${esc(sub||"")}</span></div>
   <div class="v12chat tl-chat" id="v12Chat">${list.length?tlList(list,mineBy):`<p class="note" style="text-align:center">No messages yet. Say hello.</p>`}</div>
-  <div class="v12comp"><textarea id="v12DmTxt" maxlength="2000" placeholder="Message" rows="2"></textarea><div class="row2"><label class="btn alt" style="cursor:pointer">📷 Photo<input type="file" id="v12DmImg" accept="image/*" hidden></label><button class="btn" id="v12DmSend">Send</button></div><div class="note" id="v12DmOut"></div></div>
+  <div class="v12comp"><textarea id="v12DmTxt" maxlength="2000" placeholder="Message" rows="2"></textarea><div class="row2"><label class="btn alt" style="cursor:pointer">📷 Photo<input type="file" id="v12DmImg" accept="image/*" hidden></label><button class="btn alt" id="v12DmRec" type="button">🎙 Voice</button><button class="btn" id="v12DmSend">Send</button></div><div class="note" id="v12DmOut"></div></div>
   <p class="note">Private: encrypted on this phone; only you two can read it. Don't send anything your organization says not to.</p>`}
 let ibF="all",ibQ="",ibNew=false;
 const ibCol=["#7c3aed","#0ea5e9","#f59e0b","#10b981","#ef4444","#14b8a6","#a855f7","#64748b"];
@@ -158,7 +159,7 @@ function ibRows(){const q=ibQ.trim().toLowerCase();let T=ibThreads();
   if(q)T=T.filter(x=>(x.m.rank+" "+x.m.name+" "+x.last.txt).toLowerCase().includes(q));
   return T.length?T.map(x=>{const m=x.m,last=x.last,nm=title(m.rank)+" "+title(lastOf(m));const on=m.status==="On Hand";const c=ibCol[(String(m.id).split("").reduce((a,ch)=>a+ch.charCodeAt(0),0))%ibCol.length];
     const ini=((m.rank?String(m.rank)[0]:"")+(lastOf(m)?String(lastOf(m))[0]:"")).toUpperCase()||"?";
-    return `<button class="ib-row" data-v12dm="${m.id}"><span class="ib-av" style="background:${c}">${esc(ini)}<i class="ib-dot${on?"":" off"}"></i></span><span class="ib-mid"><span class="ib-nm">${esc(nm)}</span><span class="ib-pv${x.un?" hot":""}"><b class="ib-arr">${x.mine?"↗ You:":"↙"}</b> ${esc(last.img&&!last.txt?"📷 Photo":last.txt)}</span></span><span class="ib-tm">${esc(dmTime(last.t))}${x.un?`<span class="ib-un">${x.un}</span>`:x.mine?`<span class="ib-ok">✓ Sent</span>`:""}</span></button>`}).join(""):`<p class="note" style="text-align:center;margin:24px 0">${ibThreads().length?"Nothing matches.":"No conversations yet. Tap New message."}</p>`}
+    return `<button class="ib-row" data-v12dm="${m.id}"><span class="ib-av" style="background:${c}">${esc(ini)}<i class="ib-dot${on?"":" off"}"></i></span><span class="ib-mid"><span class="ib-nm">${esc(nm)}</span><span class="ib-pv${x.un?" hot":""}"><b class="ib-arr">${x.mine?"↗ You:":"↙"}</b> ${esc(last.txt||(last.img?"📷 Photo":last.aud?"🎙 Voice note":""))}</span></span><span class="ib-tm">${esc(dmTime(last.t))}${x.un?`<span class="ib-un">${x.un}</span>`:x.mine?`<span class="ib-ok">✓ Sent</span>`:""}</span></button>`}).join(""):`<p class="note" style="text-align:center;margin:24px 0">${ibThreads().length?"Nothing matches.":"No conversations yet. Tap New message."}</p>`}
 function renderDmList(){const T=ibThreads();const nu=T.filter(x=>x.un).length;
   let h=banner()+`<div class="sechead" style="margin-top:12px"><h2>Inbox</h2></div>
   <div class="ib-srch"><span aria-hidden="true">🔍</span><input id="ibQ" type="search" placeholder="Search people or messages" value="${esc(ibQ)}" autocomplete="off"></div>
@@ -186,7 +187,25 @@ function renderDm(){if(memberMode()||!leader()){const th=myDm();if(!th){$("#main
   const d=dmEnsure(m);const L=S.dmMsgs[d.id]||[];$("#main").innerHTML=`<button class="chip" data-go="dms" style="cursor:pointer;margin-top:12px">◂ All messages</button>`+chatHTML(L,"L",title(m.rank)+" "+title(lastOf(m)),m.sec);
   const top=L.length?L[L.length-1].id:0;if(top>(S.dmSeen[d.id]||0)){S.dmSeen[d.id]=top;save();setTimeout(renderTabs,0)}scrollChat();if(!d.ok)dmOpenSrv(m).then(()=>mpPublish(true)).catch(()=>{})}
 function scrollChat(){const c=$("#v12Chat");if(c)c.scrollTop=c.scrollHeight}
-let dmImg="";
+let dmImg="",dmAud="",dmAudD=0,dmR=null;
+function dmRecStop(){if(dmR&&dmR.mr&&dmR.mr.state!=="inactive"){try{dmR.mr.stop()}catch(e){}}}
+async function dmRecToggle(){
+  if(dmR){dmRecStop();return}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||typeof MediaRecorder==="undefined"){toast("This phone can't record voice here.");return}
+  try{const st=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+    const mt=["audio/mp4","audio/webm;codecs=opus","audio/webm","audio/ogg;codecs=opus"].find(m=>{try{return MediaRecorder.isTypeSupported(m)}catch(e){return false}})||"";
+    const r={chunks:[],t0:Date.now()};dmR=r;
+    r.mr=new MediaRecorder(st,Object.assign({audioBitsPerSecond:16000},mt?{mimeType:mt}:{}));const type=(r.mr.mimeType||mt||"audio/mp4").split(";")[0];
+    r.mr.ondataavailable=e=>{if(e.data&&e.data.size)r.chunks.push(e.data)};
+    r.mr.onstop=async()=>{clearInterval(r.tick);clearTimeout(r.cap);st.getTracks().forEach(t=>t.stop());dmR=null;const ms=Date.now()-r.t0;const bb=$("#v12DmRec");if(bb)bb.textContent="🎙 Voice";
+      if(ms<700){toast("Too short. Tap Voice, talk, tap Stop.");return}
+      const d=await new Promise(ok=>{const fr=new FileReader();fr.onload=()=>ok(String(fr.result));fr.onerror=()=>ok("");fr.readAsDataURL(new Blob(r.chunks,{type}))});
+      const url="data:"+type+";base64,"+(d.split(",")[1]||"");
+      if(!audOK(url)){toast("Voice note too long. Keep it under 25 seconds.");return}
+      dmAud=url;dmAudD=Math.round(ms/1e3);const o=$("#v12DmOut");if(o)o.textContent="🎙 Voice note ready ("+dmAudD+"s). Tap Send."};
+    r.mr.start();const b=$("#v12DmRec");if(b)b.textContent="⏹ Stop 0:00";
+    r.tick=setInterval(()=>{const s=Math.floor((Date.now()-r.t0)/1000),bb=$("#v12DmRec");if(bb)bb.textContent="⏹ Stop 0:"+String(s).padStart(2,"0")},250);r.cap=setTimeout(dmRecStop,25000);
+  }catch(e){dmR=null;toast(/denied|NotAllowed/i.test(String(e&&e.name||e))?"Allow the microphone to record.":"Couldn't open the microphone.")}}
 
 /* ================= 6. PAGES (social) ================= */
 S.pages=S.pages||[];
@@ -281,10 +300,11 @@ document.addEventListener("click",e=>{const t=e.target;let b;
   if(t.id==="v12CustSave"){const c={};document.querySelectorAll("[data-v12c]").forEach(i=>{const v=i.value.replace(/[<>|#]/g,"").trim().slice(0,30);if(v)c[i.dataset.v12c]=v});S.customV=c;save();toast("Saved. Reloading…");setTimeout(()=>location.reload(),400);return}
   /* messages */
   if((b=t.closest("[data-v12dm]"))){dmWith=b.dataset.v12dm;view="dm";render();window.scrollTo(0,0);return}
-  if(t.id==="v12DmSend"){const txt=($("#v12DmTxt").value||"").trim();if(!txt&&!dmImg){toast("Write a message.");return}const o=$("#v12DmOut");t.disabled=true;if(o)o.textContent="Sending…";
-    (async()=>{if(memberMode()||!leader()){const th=myDm();if(!th)return;const msg=await dmSend(th,txt,dmImg,"M",myName());dmPush("mine:"+th.id,{id:msg.id,t:Date.now(),txt,by:"M",n:myName(),img:dmImg});}
-      else{const m=S.roster.find(x=>x.id===dmWith);const d=await dmOpenSrv(m);const msg=await dmSend(d,txt,dmImg,"L",S.postAs||S.myName||unitName());dmPush(d.id,{id:msg.id,t:Date.now(),txt,by:"L",n:"",img:dmImg});S.dmSeen[d.id]=Math.max(S.dmSeen[d.id]||0,msg.id)}
-      dmImg="";save();redraw(render);scrollChat()})().catch(err=>{t.disabled=false;const s=String(err&&err.message||err);if(o)o.textContent=/find the function|schema/i.test(s)?"Messages aren't set up on the server yet (System check → 1.2).":"Couldn't send. Check signal and try again."});return}
+  if(t.id==="v12DmRec"){dmRecToggle();return}
+  if(t.id==="v12DmSend"){const txt=($("#v12DmTxt").value||"").trim();if(!txt&&!dmImg&&!dmAud){toast("Write a message.");return}const o=$("#v12DmOut");t.disabled=true;if(o)o.textContent="Sending…";
+    (async()=>{if(memberMode()||!leader()){const th=myDm();if(!th)return;const msg=await dmSend(th,txt,dmImg,"M",myName(),dmAud,dmAudD);dmPush("mine:"+th.id,{id:msg.id,t:Date.now(),txt,by:"M",n:myName(),img:dmImg,aud:dmAud,d:dmAudD});}
+      else{const m=S.roster.find(x=>x.id===dmWith);const d=await dmOpenSrv(m);const msg=await dmSend(d,txt,dmImg,"L",S.postAs||S.myName||unitName(),dmAud,dmAudD);dmPush(d.id,{id:msg.id,t:Date.now(),txt,by:"L",n:"",img:dmImg,aud:dmAud,d:dmAudD});S.dmSeen[d.id]=Math.max(S.dmSeen[d.id]||0,msg.id)}
+      dmImg="";dmAud="";dmAudD=0;save();redraw(render);scrollChat()})().catch(err=>{t.disabled=false;const s=String(err&&err.message||err);if(o)o.textContent=/find the function|schema/i.test(s)?"Messages aren't set up on the server yet (System check → 1.2).":"Couldn't send. Check signal and try again."});return}
   /* pages */
   if(t.id==="v12PgNew"||t.id==="v12PgNewG"){t.disabled=true;pgCreate(t.id==="v12PgNewG").then(p=>{pgCur=p.id;view="pg";render();window.scrollTo(0,0);toast("Page made. Invite people from Invite and settings.")}).catch(err=>{t.disabled=false;toast(/find the function|schema/i.test(String(err.message))?"Pages aren't set up on the server yet (System check → 1.2).":"Couldn't make the page: "+(err.message||err))});return}
   if((b=t.closest("[data-v12pg]"))){pgCur=b.dataset.v12pg;pgOpenC=null;pgMenu=null;view="pg";render();window.scrollTo(0,0);return}
