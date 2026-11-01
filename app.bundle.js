@@ -3810,7 +3810,7 @@ function dmEnsure(m){if(!m.dm){m.dm={id:rndId(20),k:rndId(32),ek:newEk(),ok:0};s
 async function dmOpenSrv(m){const d=dmEnsure(m);if(d.ok)return d;await SB.rpc("dm_open",{p_id:d.id,p_key:d.k,p_inbox:S.dmInbox});d.ok=1;save();return d}
 {const _md=mpDigest;mpDigest=function(m){const d=_md.apply(this,arguments);if(m&&m.dm&&m.dm.ok)d.dm={id:m.dm.id,k:m.dm.k,ek:m.dm.ek,from:String(S.postAs||S.myName||unitName()).slice(0,30)};return d}}
 {const _mp=mpPublish;mpPublish=async function(){try{for(const m of S.roster.filter(m=>m.pk))await dmOpenSrv(m).catch(()=>{})}catch(e){}return _mp.apply(this,arguments)}}
-async function dmSend(th,txt,img,by,name){const o={t:String(txt||"").slice(0,2000),by,n:String(name||"").slice(0,30)};if(img)o.img=img;const ct=await fdEnc(th.ek,o);const id=await SB.rpc("dm_send",{p_id:th.id,p_key:th.k,p_ct:ct});try{SB.notify(null,{dm:th.id,k:th.k,by:by==="L"?"L":"M",dev:window.dmDev?window.dmDev():undefined})}catch(e){}return {id:+id,t:Date.now(),...o,me:1}}
+async function dmSend(th,txt,img,by,name){const o={t:String(txt||"").slice(0,2000),by,n:String(name||"").slice(0,30)};if(img)o.img=img;const ct=await fdEnc(th.ek,o);const id=await SB.rpc("dm_send",{p_id:th.id,p_key:th.k,p_ct:ct});try{SB.notify(null,{dm:th.id,k:th.k,by:by==="L"?"L":"M",dev:window.dmDev?window.dmDev():undefined,ti:String(name||"").slice(0,40),tx:String(txt||(img?"📷 Photo":"")).slice(0,100)})}catch(e){}return {id:+id,t:Date.now(),...o,me:1}}
 function dmPush(tid,msg){const L=S.dmMsgs[tid]=S.dmMsgs[tid]||[];if(L.some(x=>x.id===msg.id))return false;L.push(msg);L.sort((a,b)=>a.id-b.id);if(L.length>200)L.splice(0,L.length-200);return true}
 let dmBusy=false;
 async function dmPollLeader(){if(dmBusy||!S.dmInbox||!leader())return;dmBusy=true;let n=0;
@@ -10238,7 +10238,7 @@ async function done(r){const ms=Date.now()-r.t0;ui.rec=null;paintRec(false);beat
   const f=r.f,s=st(f);try{const blob=new Blob(r.chunks,{type:r.mt});const a=await toB64(blob);
     const o={k:"v",by:me(f),g:r.g,d:Math.max(1,Math.round(ms/1e3)),tx:r.tx.trim().slice(0,400),mt:r.mt,a,t:Date.now()};
     ui.note="Sending…";draw();
-    const id=await put(f,o);const m={id,by:o.by,g:o.g,t:o.t,d:o.d,tx:o.tx,mt:o.mt,a,seen:true,did:1};s.msgs.set(id,m);
+    const id=await put(f,o);try{SB.notify(null,{talk:f.id,k:f.mk,dev:window.dmDev?window.dmDev():undefined,ti:o.by,tx:(o.tx?o.tx.slice(0,90):"🎙 Voice message · "+o.d+"s")})}catch(e){}const m={id,by:o.by,g:o.g,t:o.t,d:o.d,tx:o.tx,mt:o.mt,a,seen:true,did:1};s.msgs.set(id,m);
     s.after=Math.max(s.after,id);logs().unshift({f:f.id,id,by:m.by,g:m.g,t:m.t,d:m.d,tx:m.tx});if(logs().length>LOGMAX)logs().length=LOGMAX;save();
     ui.last={id,g:o.g,t:Date.now()};ui.note="";
     if(typeof actAdd==="function")actAdd("📻","Talk: sent to "+gname(f,o.g),"talk")}
@@ -10600,7 +10600,8 @@ document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;
 /* Accounted For 4.70.7 — phone alerts for Inbox messages. Every phone that can read a private thread signs up for it
    (leader = "L", the person on their My page = "M"). When a message is sent, v12.js dmSend asks the notify function to
    buzz the other side. Needs supabase/setup/40_dm_push.sql and the new notify function; without them this quietly
-   does nothing and the in-app check (every 20 s while the app is open) still works. No names or text in the alert. */
+   does nothing and the in-app check (every 20 s while the app is open) still works. The alert shows the sender's name and
+   a short preview (design A); the sending phone passes them to notify, which sends them on and never stores them. */
 (()=>{
 const dev=()=>{let d="";try{d=localStorage.getItem("af-dev")||""}catch(e){}if(!/^[a-z0-9]{8,40}$/.test(d)){d=rndId(20);try{localStorage.setItem("af-dev",d)}catch(e){}}return d};
 window.dmDev=dev;

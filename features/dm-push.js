@@ -1,7 +1,8 @@
 /* Accounted For 4.70.7 — phone alerts for Inbox messages. Every phone that can read a private thread signs up for it
    (leader = "L", the person on their My page = "M"). When a message is sent, v12.js dmSend asks the notify function to
    buzz the other side. Needs supabase/setup/40_dm_push.sql and the new notify function; without them this quietly
-   does nothing and the in-app check (every 20 s while the app is open) still works. No names or text in the alert. */
+   does nothing and the in-app check (every 20 s while the app is open) still works. The alert shows the sender's name and
+   a short preview (design A); the sending phone passes them to notify, which sends them on and never stores them. */
 (()=>{
 const dev=()=>{let d="";try{d=localStorage.getItem("af-dev")||""}catch(e){}if(!/^[a-z0-9]{8,40}$/.test(d)){d=rndId(20);try{localStorage.setItem("af-dev",d)}catch(e){}}return d};
 window.dmDev=dev;
