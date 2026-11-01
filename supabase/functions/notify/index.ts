@@ -17,6 +17,7 @@
 //    of that thread ("L" leader / "M" person) gets "New message". No names or text in the alert.
 //  {talk, k, ti, tx, dev}: (4.70.8) a Talk message was sent; only the phones of the people it was sent to (to = their names, matched to the name each phone signed up with) get "📻 name" + preview.
 //  4.70.8: Inbox and Talk alerts show the sender's name and a short preview (ti, tx), sent by the sending phone, passed through and never stored.
+//  4.72.1: Quiet hours. A sign-up with qh/tz skips non-urgent alerts (payload.help false) while that phone's local time is inside the window.
 //  4.33.0: skips the posting phone by device id ("dev") and keeps one sign-up per phone.
 // Payloads carry no names. Turn OFF "Enforce JWT verification" (the function validates input itself).
 // Secrets: VAPID_PUBLIC, VAPID_PRIVATE (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are built in).
@@ -31,7 +32,7 @@ const cors = {
 };
 webpush.setVapidDetails("mailto:antoniotyler22@gmail.com", Deno.env.get("VAPID_PUBLIC")!, Deno.env.get("VAPID_PRIVATE")!);
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-const VER = "4.70.9";
+const VER = "4.72.1";
 const out = (t: string, status = 200) => new Response(t, { status, headers: cors });
 // A database error (for example the service role lost its table rights) must never read as "no sub": that hid a
 // week of dead alerts. Log it and answer 500 so the failure shows in the logs and the owner's Health tab.
@@ -65,8 +66,19 @@ async function apnsSend(token: string, p: Record<string, unknown>, urgent: boole
     return r.status === 410 || r.status === 400 ? "gone" : "fail";
   } catch { return "fail"; }
 }
+// Quiet hours: the phone's sign-up carries qh [fromMin, toMin] (local minutes) and tz (minutes east of UTC).
+// deno-lint-ignore no-explicit-any
+function quietNow(sub: any): boolean {
+  const q = sub?.qh;
+  if (!Array.isArray(q) || q.length !== 2) return false;
+  const a = Number(q[0]), b = Number(q[1]), tz = Number(sub?.tz) || 0;
+  if (!(a >= 0 && a < 1440 && b >= 0 && b < 1440) || a === b) return false;
+  const m = (((Math.floor(Date.now() / 60000) + tz) % 1440) + 1440) % 1440;
+  return a < b ? m >= a && m < b : m >= a || m < b;
+}
 // deno-lint-ignore no-explicit-any
 async function pushAny(sub: any, payload: Record<string, unknown>, urgent: boolean, ttl: number): Promise<string> {
+  if (quietNow(sub) && !payload.help) return "ok"; // Quiet hours (4.72.1): held back unless urgent
   if (sub && typeof sub.apns === "string") return apnsSend(sub.apns, payload, urgent);
   try { await webpush.sendNotification(sub, JSON.stringify(payload), { TTL: ttl, urgency: urgent ? "high" : "normal" }); return "ok"; }
   catch (e) { const c = (e as { statusCode?: number }).statusCode; return c === 404 || c === 410 ? "gone" : "fail"; }
@@ -467,7 +479,7 @@ Deno.serve(async (req) => {
     const sub = body.sub as any;
     const ok = sub && typeof sub === "object" && ((typeof sub.apns === "string" && /^[0-9a-fA-F]{32,200}$/.test(sub.apns)) || (typeof sub.endpoint === "string" && /^https:\/\//.test(sub.endpoint) && sub.keys && typeof sub.keys.p256dh === "string" && typeof sub.keys.auth === "string"));
     if (!ok) return out("bad sub", 400);
-    const r = await pushAny(sub, { title: "🔔 Test alert", body: "Alerts work on this phone.", help: false, open: "board" }, true, 300);
+    const r = await pushAny(sub, { title: "🔔 Test alert", body: "Alerts work on this phone.", help: true, open: "board" }, true, 300);
     return out(r === "ok" ? "sent" : r === "gone" ? "phone token expired" : "push failed");
   }
   if (body.health === 1) {

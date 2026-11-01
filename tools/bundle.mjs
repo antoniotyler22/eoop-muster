@@ -84,6 +84,7 @@ export const SOURCES = [
   "features/dm-as.js",
   "features/dm-push.js",
   "features/search.js",
+  "features/quiet-hours.js",
   "features/member-feed.js",
   "features/swipe-tiles.js",
   "features/today-ticker.js",
