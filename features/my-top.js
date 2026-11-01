@@ -17,6 +17,8 @@ function mine(){return `<div class="sech" style="margin-top:14px"><h2>My page</h
     if(!ok)m.innerHTML=mine();
     if(typeof animateView==="function")animateView()}return}
   const r=_r.apply(this,arguments);return r}}
+/* a small version line so you can tell which version this phone is running */
+{const _r2=render;render=function(){const r=_r2.apply(this,arguments);try{if(view==="mypg"||view==="data"||view==="me"){const m=$("#main");if(m&&!m.querySelector("#afVer"))m.insertAdjacentHTML("beforeend",`<p class="note" id="afVer" style="text-align:center;margin:18px 0 6px">Version ${esc(window.AV||"")}</p>`)}}catch(e){}return r}}
 /* member page: add photo + quiet hours under the SOS / place card */
 {const _rm=renderMe;renderMe=function(){_rm.apply(this,arguments);try{
   if(view!=="me"||!S.me||String(S.me.pk)==="preview")return;const m=$("#main");if(!m)return;
