@@ -84,7 +84,7 @@ document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest("[da
 /* ---------- share card ---------- */
 let ICON=null;{const im=new Image();im.onload=()=>ICON=im;im.src="icon-192.png"}
 async function cardBlob(n,total,team){const W=1080,H=1080;const c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d");
-  const all=total&&n>=total;const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,all?"#0f6b52":"#1f3a8a");g.addColorStop(1,all?"#17a37a":"#2f6fde");x.fillStyle=g;x.fillRect(0,0,W,H);
+  const all=total&&n>=total;const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,all?"#0a3fb0":"#1f3a8a");g.addColorStop(1,all?"#0857e8":"#2f6fde");x.fillStyle=g;x.fillRect(0,0,W,H);
   x.globalAlpha=.08;x.fillStyle="#fff";x.beginPath();x.arc(W*.85,H*.12,260,0,7);x.fill();x.beginPath();x.arc(W*.1,H*.95,220,0,7);x.fill();x.globalAlpha=1;
   const cx=W/2,cy=390,r=190;x.lineWidth=34;x.strokeStyle="rgba(255,255,255,.25)";x.beginPath();x.arc(cx,cy,r,0,7);x.stroke();
   x.strokeStyle="#fff";x.lineCap="round";x.beginPath();x.arc(cx,cy,r,-Math.PI/2,-Math.PI/2+2*Math.PI*(total?n/total:0));x.stroke();

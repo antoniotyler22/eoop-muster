@@ -14,7 +14,7 @@ const IC={who:`<svg ${SV}><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-
   bell:`<svg ${SV}><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0"/></svg>`,
   chat:`<svg ${SV}><path d="M4 5h16v11H8l-4 4z"/></svg>`,pin:`<svg ${SV}><path d="M12 17v5M5 9l7-6 7 6-2 6H7z"/></svg>`,
   del:`<svg ${SV}><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>`};
-const col=pc=>pc>=85?"var(--rr-g)":pc>=50?"var(--rr-a)":"var(--rr-r)";
+const col=pc=>"color-mix(in srgb,var(--pr-hi) "+Math.max(0,Math.min(100,pc))+"%,var(--pr-lo))";   /* light blue (nobody in) to deep blue (everyone in) */
 function ring(got,pool){const pc=pool?Math.round(100*got/pool):0,C=138.2;
   return `<div class="rr-ring" role="img" aria-label="${got} of ${pool} confirmed"><svg width="52" height="52"><circle cx="26" cy="26" r="22" stroke="var(--rr-track)" stroke-width="6" fill="none"/><circle cx="26" cy="26" r="22" stroke="${col(pc)}" stroke-width="6" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${(C*(1-pc/100)).toFixed(1)}"/></svg><span>${pc}%</span></div>`}
 function segs(f,p,st){const pool=fdPool(p);const ord=(typeof SECTIONS!=="undefined"?SECTIONS.map(x=>x[0]):[]).concat("ATT");const keys=[...new Set(ord.concat(pool.map(m=>m.sec).filter(Boolean)))];
@@ -56,7 +56,7 @@ function fix(){const f=fdCur();if(!f||!f.lk||view!=="feed")return;const posts=fd
   })}
 {const _rf=renderFeed;renderFeed=function(){const r=_rf.apply(this,arguments);try{fix()}catch(e){}return r}}
 const st=document.createElement("style");st.textContent=`
-:root{--rr-g:#1f9d63;--rr-a:#e8a019;--rr-r:#e5484d;--rr-track:rgba(120,130,150,.18)}
+:root{--rr-g:#0857e8;--rr-a:#e8a019;--rr-r:#e5484d;--rr-track:rgba(120,130,150,.18)}
 #main article.fc.rr{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:22px;max-width:none;margin:12px 0 0;padding:14px 14px 10px;box-shadow:0 10px 26px -20px rgba(17,24,39,.35)}
 #main article.fc.rr .tm,#main article.fc.rr .note{color:var(--muted)}
 #main article.fc.rr .fch{align-items:flex-start}

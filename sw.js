@@ -1,6 +1,6 @@
 // Offline cache. The app opens from the phone instantly; a newer version is fetched in the background.
 // Everything the app uses is served from this site: no outside fonts, scripts or trackers.
-const CACHE = "eop-numbers-v123";
+const CACHE = "eop-numbers-v124";
 const CORE = ["./", "./index.html", "./app.bundle.js", "./terms.html", "./app.css", "./native.js", "./privacy.html", "./support.html", "./help.html", "./manifest.webmanifest",
   "./icon-180.png", "./icon-192.png", "./icon-512.png",
   "./fonts/pjs-400.woff2", "./fonts/pjs-500.woff2", "./fonts/pjs-600.woff2", "./fonts/pjs-700.woff2", "./fonts/pjs-800.woff2"];
@@ -37,8 +37,9 @@ self.addEventListener("fetch", e => {
         }
         return res;
       }).catch(() => null);
-      // Network first (fresh links always open on the newest app), cached copy if no signal within 3 s.
-      if (cached) { const quick = await Promise.race([net, new Promise(r => setTimeout(() => r(null), 3000))]); if (quick && quick.ok) return quick; servedCache = true; e.waitUntil(net); return cached; }
+      // Open instantly from the phone's copy and refresh it in the background (it used to wait up to 3 s for the network, which made
+      // every open feel slow on weak signal). A newer version is picked up by the app's own version check (version.json), right after it opens.
+      if (cached) { servedCache = true; e.waitUntil(net); return cached; }
       return (await net) || caches.match(key);
     }));
     return;

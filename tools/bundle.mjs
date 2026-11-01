@@ -88,6 +88,7 @@ export const SOURCES = [
   "features/sec-checkins.js",
   "features/field-mode.js",
   "features/feed-drift.js",
+  "features/blue-ramp.js",
 ];
 
 export function build() {
