@@ -89,6 +89,7 @@ export const SOURCES = [
   "features/field-mode.js",
   "features/feed-drift.js",
   "features/blue-ramp.js",
+  "features/profile-photo.js",
 ];
 
 export function build() {

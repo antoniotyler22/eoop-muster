@@ -127,7 +127,7 @@ function finish(){if(ui.dirty){ui.dirty=false}draw();next()}
 const gname=(f,g)=>g==="all"?"Everyone":g.startsWith("sec:")?(g.slice(4)===mySec(f)?"My section":g.slice(4)+" section"):((st(f).groups.get(g)||{}).n||"Group");
 const fmtT=t=>{const d=new Date(t);return d.toLocaleDateString([],{weekday:"short",day:"numeric",month:"short"})+" "+String(d.getHours()).padStart(2,"0")+String(d.getMinutes()).padStart(2,"0")};
 function initials(n){const w=String(n||"?").split(/\s+/).filter(Boolean);return (w.length>1?w[0][0]+w[w.length-1][0]:(w[0]||"?").slice(0,2)).toUpperCase()}
-function av(f,n,sz,on0){const on=on0===undefined?isOn(f,n):on0;return `<span class="tk-av" style="--sz:${sz||44}px">${esc(initials(n))}${on?`<i class="tk-badge">${RADIO(11)}</i>`:""}</span>`}
+function av(f,n,sz,on0){const on=on0===undefined?isOn(f,n):on0,ph=window.afPhoto?window.afPhoto(n):"";return `<span class="tk-av" style="--sz:${sz||44}px${ph?`;background:center/cover no-repeat url(${ph})`:""}">${ph?"":esc(initials(n))}${on?`<i class="tk-badge">${RADIO(11)}</i>`:""}</span>`}
 function bars(id){let h=0;for(const c of String(id))h=(h*31+c.charCodeAt(0))>>>0;return Array.from({length:28},(_,i)=>{h=(h*1103515245+12345)>>>0;return 6+((h>>>8)%20)}).map(x=>`<i style="height:${x}px"></i>`).join("")}
 function status(f){const on=tk().on,g=tk().sel;
   if(ui.rec)return {cls:"live",t:"You are live",s:"Sending to "+gname(f,g)+". Let go to send."};
