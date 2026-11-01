@@ -16,7 +16,7 @@ const reduce=()=>{try{return matchMedia("(prefers-reduced-motion: reduce)").matc
 .wring{display:flex;align-items:center;gap:16px;margin:6px 0 10px}
 .wring svg{width:132px;height:132px;flex:none;transform:rotate(-90deg)}
 .wring .bg{stroke:var(--line,#e3e6ea);fill:none}
-.wring .fg{stroke:var(--s-onhand,#17795f);fill:none;stroke-linecap:round;transition:stroke-dashoffset .7s cubic-bezier(.2,.8,.2,1)}
+.wring .fg{stroke:var(--s-onhand,#0857e8);fill:none;stroke-linecap:round;transition:stroke-dashoffset .7s cubic-bezier(.2,.8,.2,1)}
 .wring .rin{position:relative;width:132px;height:132px;flex:none}
 .wring .rtx{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
 .wring .rtx b{font-size:40px;font-weight:800;letter-spacing:-.02em}
@@ -70,7 +70,7 @@ function recallRing(){if(view!=="recall"||document.querySelector("#main .wring")
 /* ---------- celebration ---------- */
 function confetti(){if(reduce())return;let c=$("#wConf");if(c)c.remove();c=document.createElement("canvas");c.id="wConf";document.body.appendChild(c);
   const dpr=Math.min(2,devicePixelRatio||1);c.width=innerWidth*dpr;c.height=innerHeight*dpr;let x=null;try{x=c.getContext("2d")}catch(e){}if(!x){c.remove();return}x.scale(dpr,dpr);
-  const cols=["#17795f","#2f6fde","#f2b705","#c23a5b","#7a4bd1","#0f8b9c"];const P=[];
+  const cols=["#0857e8","#2f6fde","#f2b705","#c23a5b","#7a4bd1","#0f8b9c"];const P=[];
   for(let i=0;i<140;i++)P.push({x:innerWidth/2+(Math.random()-.5)*80,y:innerHeight*0.38,vx:(Math.random()-.5)*11,vy:-Math.random()*13-4,r:Math.random()*6+3,c:cols[i%cols.length],a:Math.random()*6,s:(Math.random()-.5)*.3});
   const t0=performance.now();const f=t=>{const k=(t-t0)/1000;x.clearRect(0,0,innerWidth,innerHeight);
     for(const p of P){p.vy+=.38;p.vx*=.99;p.x+=p.vx;p.y+=p.vy;p.a+=p.s;x.save();x.translate(p.x,p.y);x.rotate(p.a);x.globalAlpha=Math.max(0,1-k/2.4);x.fillStyle=p.c;x.fillRect(-p.r/2,-p.r/4,p.r,p.r/2);x.restore()}
