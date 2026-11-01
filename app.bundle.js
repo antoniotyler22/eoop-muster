@@ -10078,19 +10078,22 @@ const listening=f=>{const s=st(f),now=Date.now(),me0=me(f),out=[];
   if(tk().on)out.push(me0);return out};
 const isOn=(f,n)=>{if(n===me(f))return !!tk().on;const p=st(f).pres.get(n);return !!(p&&p.on&&Date.now()-p.t<STALE)};
 window.talkIsOn=n=>{const f=feed();return !!(f&&n&&isOn(f,String(n).toUpperCase().slice(0,30)))};
+const mySec=f=>String(f.sec||"").toUpperCase().slice(0,12);
+const secOf=(f,n)=>n===me(f)?mySec(f):String((st(f).pres.get(n)||{}).s||"");
+const secs=f=>[...new Set(known(f).map(n=>secOf(f,n)).filter(Boolean))].sort();
 const known=f=>{const s=st(f),a=new Set(s.pres.keys());a.add(me(f));return [...a].sort()};
-const groupsOf=f=>[...st(f).groups.values()].filter(g=>!g.x).sort((a,b)=>a.n.localeCompare(b.n));
-const targets=(f,g)=>{if(g==="all")return known(f);const G=st(f).groups.get(g);return G&&!G.x?G.m.slice():known(f)};
+const groupsOf=f=>[...st(f).groups.values()].filter(g=>!g.x&&(f.lk||g.m.includes(me(f)))).sort((a,b)=>a.n.localeCompare(b.n));
+const targets=(f,g)=>{if(g==="all")return known(f);if(g.startsWith("sec:")){const c=g.slice(4);return known(f).filter(n=>secOf(f,n)===c)}const G=st(f).groups.get(g);return G&&!G.x?G.m.slice():known(f)};
 const forMe=(f,m)=>m.g==="all"||targets(f,m.g).includes(me(f));
 
 /* ---------- talking to the server ---------- */
 async function put(f,o){const ct=await fdEnc(f.ek,o);const id=await SB.rpc("talk_send",{p_feed:f.id,p_key:f.mk,p_ct:ct});
   try{if(SB.topic&&SB.pingTopic)SB.topic("p_talk",f.id).then(t=>SB.pingTopic(t,"p_talk")).catch(()=>{})}catch(e){}return +id}
-const sendPres=f=>{const s=st(f);s.beat=Date.now();return put(f,{k:"p",by:me(f),on:!!tk().on,t:Date.now()}).catch(()=>{})};
+const sendPres=f=>{const s=st(f);s.beat=Date.now();return put(f,{k:"p",by:me(f),on:!!tk().on,t:Date.now(),s:mySec(f)}).catch(()=>{})};
 async function poll(f){const s=st(f);if(s.busy||!f.mk||!f.ek)return;s.busy=true;let fresh=0;
   try{const rows=await SB.rpc("talk_get",{p_feed:f.id,p_key:f.mk,p_after:s.after});
     for(const r of [...(rows||[])].sort((a,b)=>a.id-b.id)){s.after=Math.max(s.after,+r.id);const o=await fdDec(f.ek,r.ct);if(!o||!o.k)continue;const id=+r.id,t=Date.parse(r.created_at)||o.t||Date.now();
-      if(o.k==="p"&&o.by){const cur=s.pres.get(String(o.by));if(!cur||t>=cur.t)s.pres.set(String(o.by).slice(0,30),{on:!!o.on,t:Math.min(Date.now(),Math.max(t,0))})}
+      if(o.k==="p"&&o.by){const cur=s.pres.get(String(o.by));if(!cur||t>=cur.t)s.pres.set(String(o.by).slice(0,30),{on:!!o.on,t:Math.min(Date.now(),Math.max(t,0)),s:String(o.s||"").slice(0,12)})}
       else if(o.k==="g"&&o.id){const cur=s.groups.get(o.id);if(!cur||id>=cur.rid)s.groups.set(String(o.id).slice(0,20),{id:String(o.id).slice(0,20),n:String(o.n||"Group").slice(0,24),m:(Array.isArray(o.m)?o.m:[]).map(x=>String(x).toUpperCase().slice(0,30)).slice(0,80),x:!!o.x,rid:id})}
       else if(o.k==="h"&&o.m){let set=s.rc.get(+o.m);if(!set)s.rc.set(+o.m,set=new Set());set.add(String(o.by))}
       else if(o.k==="v"&&o.a&&!s.msgs.has(id)){const m={id,by:String(o.by||"?").slice(0,30),g:String(o.g||"all"),t:o.t||t,d:+o.d||0,tx:String(o.tx||"").slice(0,400),mt:String(o.mt||"audio/mp4"),a:o.a,seen:s.init};s.msgs.set(id,m);fresh++;
@@ -10150,7 +10153,7 @@ async function done(r){const ms=Date.now()-r.t0;ui.rec=null;paintRec(false);
 function finish(){if(ui.dirty){ui.dirty=false}draw();next()}
 
 /* ---------- screen ---------- */
-const gname=(f,g)=>g==="all"?"Whole team":((st(f).groups.get(g)||{}).n||"Group");
+const gname=(f,g)=>g==="all"?"Everyone":g.startsWith("sec:")?(g.slice(4)===mySec(f)?"My section":g.slice(4)+" section"):((st(f).groups.get(g)||{}).n||"Group");
 const fmtT=t=>{const d=new Date(t);return d.toLocaleDateString([],{weekday:"short",day:"numeric",month:"short"})+" "+String(d.getHours()).padStart(2,"0")+String(d.getMinutes()).padStart(2,"0")};
 function initials(n){const w=String(n||"?").split(/\s+/).filter(Boolean);return (w.length>1?w[0][0]+w[w.length-1][0]:(w[0]||"?").slice(0,2)).toUpperCase()}
 function av(f,n,sz){const on=isOn(f,n);return `<span class="tk-av" style="--sz:${sz||44}px">${esc(initials(n))}${on?`<i class="tk-badge">${RADIO(11)}</i>`:""}</span>`}
@@ -10163,12 +10166,16 @@ function status(f){const on=tk().on,g=tk().sel;
   const L=ui.last;if(L&&Date.now()-L.t<60e3){const T=targets(f,L.g).filter(n=>n!==me(f));const heard=T.filter(n=>(st(f).rc.get(L.id)||new Set()).has(n)).length;const off=T.filter(n=>!isOn(f,n)).length;
     return {cls:"sent",t:"Sent to "+gname(f,L.g),s:"Heard by "+heard+" of "+T.length+(off?", "+off+" have Talk off":"")}}
   return {cls:"",t:"Channel clear",s:"Hold the button to talk to "+gname(f,g)+"."}}
-function chips(f){const g=tk().sel;let h=[["all","Whole team",known(f).length]].concat(groupsOf(f).map(x=>[x.id,x.n,x.m.length])).map(([id,n,c])=>`<button type="button" class="tk-chip" data-tkg="${esc(id)}" aria-pressed="${g===id}">${esc(n)} <b>${c}</b></button>`).join("");
-  if(f.lk)h+=`<button type="button" class="tk-chip dash" id="tkNewG">+ New group</button>`;return h}
+function chips(f){const g=tk().sel,mine=mySec(f);
+  const L=[["all","Everyone",known(f).length]];
+  if(mine)L.push(["sec:"+mine,"My section ("+mine+")",targets(f,"sec:"+mine).length]);
+  if(f.lk)for(const c of secs(f))if(c!==mine)L.push(["sec:"+c,c+" section",targets(f,"sec:"+c).length]);
+  groupsOf(f).forEach(x=>L.push([x.id,x.n,x.m.length]));
+  return L.map(([id,n,c])=>`<button type="button" class="tk-chip" data-tkg="${esc(id)}" aria-pressed="${g===id}">${esc(n)} <b>${c}</b></button>`).join("")+`<button type="button" class="tk-chip dash" id="tkNewG">+ Pick people</button>`}
 function newGroup(f){if(!ui.newg)return "";const ppl=known(f);
-  return `<div class="tk-card" id="tkG"><b>New group</b><p class="tk-note">Everyone you pick hears everyone else in the group.</p>
+  return `<div class="tk-card" id="tkG"><b>Pick people for a group</b><p class="tk-note">Everyone you pick hears everyone else in the group.</p>
     <input id="tkGN" maxlength="24" placeholder="Group name" value="${esc(ui.gname)}" aria-label="Group name">
-    <div class="tk-pick">${ppl.map(n=>`<button type="button" data-tkp="${esc(n)}" aria-pressed="${ui.gpick.has(n)}">${av(f,n,32)}<span>${esc(n)}</span><i></i></button>`).join("")}</div>
+    <div class="tk-pick">${ppl.map(n=>`<button type="button" data-tkp="${esc(n)}" aria-pressed="${ui.gpick.has(n)}">${av(f,n,32)}<span>${esc(n)}${secOf(f,n)?` <small>${esc(secOf(f,n))}</small>`:""}</span><i></i></button>`).join("")}</div>
     <p class="tk-note">People show up here once they open Talk on their phone.</p>
     <div class="tk-err" id="tkGE" role="alert"></div>
     <div class="tk-row"><button class="btn" id="tkGMake">Create group</button><button class="btn alt" id="tkGNo">Cancel</button></div></div>`}
@@ -10184,6 +10191,7 @@ function listHTML(f){const s=st(f);const live=[...s.msgs.values()].filter(m=>for
   return live.map(m=>msgCard(f,m)).join("")+old.map(x=>logCard(f,x)).join("")}
 function html(){const f=feed();
   if(!f)return `<h2>Talk</h2><div class="tk-card"><p class="tk-note" style="margin:0">Talk runs on your Feed. Start a Feed (or open the link your leader sent), then come back.</p><button class="btn" data-go="feed" style="margin-top:10px">Go to Feed</button></div>`;
+  if(tk().sel!=="all"&&!chips(f).includes(`data-tkg="${esc(tk().sel)}"`))tk().sel="all";
   const on=tk().on,S0=status(f),n=listening(f).length,nm=me(f);
   return `<div class="tk">
    <div class="tk-top"><h2>Talk</h2><span class="tk-listen">${n?`<i></i> ${n} listening`:"Nobody listening"}</span></div>
@@ -10222,7 +10230,7 @@ document.addEventListener("click",e=>{const t=e.target;if(!t.closest||view!=="ta
   const p=t.closest("[data-tkp]");if(p){const n=p.dataset.tkp;const i=$("#tkGN");if(i)ui.gname=i.value;ui.gpick.has(n)?ui.gpick.delete(n):ui.gpick.add(n);draw();return}
   if(t.closest("#tkGMake")){const i=$("#tkGN"),name=((i&&i.value)||"").trim(),er=$("#tkGE");ui.gname=name;
     if(!name){if(er)er.textContent="Enter a group name first";return}
-    if(!ui.gpick.size){if(er)er.textContent="Pick at least one member";return}
+    if(ui.gpick.size<1){if(er)er.textContent="Pick at least one member";return}
     if(groupsOf(f).some(x=>x.n.toLowerCase()===name.toLowerCase())){if(er)er.textContent="You already have a group with that name";return}
     const id="g"+Date.now().toString(36)+rndId(3),m=[...new Set([...ui.gpick,me(f)])];
     put(f,{k:"g",id,n:name,m}).then(rid=>{st(f).groups.set(id,{id,n:name,m,x:false,rid});tk().sel=id;save();ui.newg=false;draw();toast("Group "+name+" created")}).catch(()=>toast("Couldn't create the group. Check your connection."));return}
@@ -10260,7 +10268,7 @@ if(typeof HELP==="object"&&HELP.feed&&Array.isArray(HELP.feed[2]))HELP.feed[2].p
 .tk-lbl{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:2px}
 .tk-chips{display:flex;gap:8px;flex-wrap:wrap}.tk-chip{all:unset;cursor:pointer;box-sizing:border-box;min-height:40px;padding:0 16px;border-radius:999px;background:var(--line);color:var(--ink);font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
 .tk-chip b{font-size:12px;opacity:.7}.tk-chip[aria-pressed="true"]{background:var(--brass);color:var(--on-brass,#fff)}.tk-chip.dash{background:transparent;border:1.5px dashed var(--muted);color:var(--muted)}.tk-chip:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
-.tk-pick{display:flex;flex-direction:column;gap:6px;margin:8px 0;max-height:240px;overflow:auto}.tk-pick button{all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:14px;border:1px solid var(--line)}.tk-pick button span{flex:1;font-weight:600;font-size:14px}
+.tk-pick{display:flex;flex-direction:column;gap:6px;margin:8px 0;max-height:240px;overflow:auto}.tk-pick button{all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:14px;border:1px solid var(--line)}.tk-pick button span{flex:1;font-weight:600;font-size:14px}.tk-pick small{color:var(--muted);font-weight:700;font-size:11px;margin-left:4px}
 .tk-pick button i{width:22px;height:22px;border-radius:50%;border:2px solid var(--muted)}.tk-pick button[aria-pressed="true"]{border-color:var(--brass);background:var(--brass-soft,transparent)}.tk-pick button[aria-pressed="true"] i{background:var(--brass);border-color:var(--brass)}
 .tk-err{color:var(--warn);font-size:13px;min-height:18px;font-weight:600}.tk-row{display:flex;gap:8px}.tk-row .btn{flex:1}
 .tk-st{display:flex;flex-direction:column;gap:2px}.tk-st b{font-size:15px}.tk-st small{font-size:12.5px;color:var(--muted)}.tk-st.live{border-color:var(--warn)}.tk-st.live b{color:var(--warn)}.tk-st.sent b{color:var(--brass)}.tk-st.off,.tk-st.busy{opacity:.85}

@@ -60,3 +60,16 @@ test("a leader builds a group and everyone picked is in it", async () => {
     assert.match(a.$("#tkChips").textContent, /Bldg 4/);
   } finally { await a.close(); }
 });
+
+test("send-to offers Everyone, My section and Pick people; anyone can build a group", async () => {
+  const a = await openApp({ rpc: (fn) => (fn === "talk_send" ? 1 : []) });
+  try {
+    await setup(a, `S.feeds[0].lk=""`);
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(150);
+    const t = a.$("#tkChips").textContent;
+    assert.match(t, /Everyone/); assert.match(t, /My section \(1ST\)/); assert.match(t, /Pick people/);
+    a.$("[data-tkg='sec:1ST']").click(); await sleep(50);
+    assert.equal(a.$("[data-tkg='sec:1ST']").getAttribute("aria-pressed"), "true");
+    assert.ok(a.$("#tkNewG"), "members can pick people too");
+  } finally { await a.close(); }
+});
