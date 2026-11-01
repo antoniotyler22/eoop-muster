@@ -26,7 +26,13 @@ function drawPend(){const b=$("#fpBox");if(b)b.outerHTML=pendHTML();else{const p
 /* compose box: the photo row sits right above Post */
 if(typeof renderFeed==="function"){const _rf=renderFeed;renderFeed=function(){const r=_rf.apply(this,arguments);try{const b=$("#fdPost");if(b&&!$("#fpBox"))b.insertAdjacentHTML("beforebegin",pendHTML());fill()}catch(e){}return r}}
 document.addEventListener("change",e=>{if(e.target.id!=="fpIn"&&e.target.id!=="fpCamIn")return;const f=e.target.files;if(f&&f.length)addFiles(f).then(()=>{try{e.target.value=""}catch(x){}})});
-document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;if(t.closest("#fpPick")){const i=$("#fpIn");if(i)i.click();return}if(t.closest("#fpCam")){const i=$("#fpCamIn");if(i)i.click();return}});
+/* The pickers live outside the page: the Feed redraws itself every few seconds, and a picker inside it was thrown away
+   while the phone's photo sheet was open, so the chosen photo never arrived. These stay put. */
+const pickers={};
+function pickPhoto(cam){let i=pickers[cam?"c":"p"];if(!i){i=pickers[cam?"c":"p"]=document.createElement("input");i.type="file";i.accept="image/*";if(cam)i.setAttribute("capture","environment");else i.multiple=true;i.style.display="none";document.body.appendChild(i);
+    i.addEventListener("change",()=>{const f=i.files&&[...i.files];if(f&&f.length)addFiles(f).then(()=>{try{i.value=""}catch(x){}})})}
+  i.click()}
+document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;if(t.closest("#fpPick")){pickPhoto(false);return}if(t.closest("#fpCam")){pickPhoto(true);return}});
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;const x=t.closest("[data-fpx]");if(x){pend=pend.filter(p=>p.id!==x.dataset.fpx);drawPend();return}
   const im=t.closest("[data-fpview]");if(im){const src=im.querySelector("img")&&im.querySelector("img").src;if(!src||!/^data:|^blob:/.test(src))return;const o=document.createElement("div");o.className="rm-view";o.innerHTML=`<img src="${src}" alt=""><button type="button" class="btn alt">Close</button>`;o.addEventListener("click",()=>o.remove());document.body.appendChild(o)}},true);
 
