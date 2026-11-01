@@ -29,6 +29,7 @@ const listening=f=>{const s=st(f),now=Date.now(),me0=me(f),out=[];
   for(const [n,p] of s.pres)if(n!==me0&&p.on&&now-p.t<STALE)out.push(n);
   if(tk().on)out.push(me0);return out};
 const isOn=(f,n)=>{if(n===me(f))return !!tk().on;const p=st(f).pres.get(n);return !!(p&&p.on&&Date.now()-p.t<STALE)};
+window.talkPeople=f=>people(f);
 window.talkIsOn=n=>{const f=feed();return !!(f&&n&&isOn(f,String(n).toUpperCase().slice(0,30)))};
 const mySec=f=>String(f.sec||"").toUpperCase().slice(0,12);
 const mineH=f=>f.meH||[];
@@ -106,11 +107,11 @@ async function startRec(){const f=feed();if(!f||ui.rec||!tk().on)return;unlock()
     r.mr.onstop=()=>done(r);r.mr.start();r.t0=Date.now();
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(SR){try{const sr=new SR();sr.continuous=true;sr.interimResults=false;sr.lang=navigator.language||"en-US";sr.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)r.tx+=e.results[i][0].transcript+" "};sr.onerror=()=>{};sr.start();r.sr=sr}catch(e){}}
-    r.cap=setTimeout(()=>stopRec(),MAXS*1e3);r.tick=setInterval(()=>tickUI(),200);paintRec(true);try{navigator.vibrate&&navigator.vibrate(15)}catch(e){}
+    beat(f,"rec");r.cap=setTimeout(()=>stopRec(),MAXS*1e3);r.tick=setInterval(()=>tickUI(),200);paintRec(true);try{navigator.vibrate&&navigator.vibrate(15)}catch(e){}
   }catch(e){ui.rec=null;paintRec(false);toast(/denied|NotAllowed/i.test(String(e&&e.name||e))?"Allow the microphone to use Talk.":"Couldn't open the microphone.")}}
 function stopRec(){const r=ui.rec;if(!r)return;r.stop=true;if(!r.mr||r.mr.state==="inactive")return;clearTimeout(r.cap);clearInterval(r.tick);try{r.sr&&r.sr.stop()}catch(e){}try{r.mr.stop()}catch(e){}r.stream&&r.stream.getTracks().forEach(t=>t.stop())}
 function toB64(blob){return new Promise((ok,no)=>{const fr=new FileReader();fr.onload=()=>ok(String(fr.result).split(",")[1]||"");fr.onerror=()=>no(fr.error);fr.readAsDataURL(blob)})}
-async function done(r){const ms=Date.now()-r.t0;ui.rec=null;paintRec(false);
+async function done(r){const ms=Date.now()-r.t0;ui.rec=null;paintRec(false);beat(r.f,"on");
   if(ms<MINMS){toast("Hold the button while you talk.");finish();return}
   const f=r.f,s=st(f);try{const blob=new Blob(r.chunks,{type:r.mt});const a=await toB64(blob);
     const o={k:"v",by:me(f),g:r.g,d:Math.max(1,Math.round(ms/1e3)),tx:r.tx.trim().slice(0,400),mt:r.mt,a,t:Date.now()};
@@ -121,7 +122,42 @@ async function done(r){const ms=Date.now()-r.t0;ui.rec=null;paintRec(false);
     if(typeof actAdd==="function")actAdd("📻","Talk: sent to "+gname(f,o.g),"talk")}
   catch(e){ui.note="";toast(/not allowed|PGRST|404|talk_send/i.test(String(e&&e.message||e))?"Talk isn't set up on the server yet (run part 38).":"Couldn't send. Check your connection.")}
   finish()}
-function finish(){if(ui.dirty){ui.dirty=false}draw();next()}
+function finish(){if(ui.dirty){ui.dirty=false}beat(feed(),"on");draw();next()}
+
+/* ---------- online, recording, live location (rides on AFS signals) ---------- */
+const ONLINE=150e3,REC_FRESH=20e3;
+const liveOf=(f,n)=>{for(const r of AFS.all(f,"live")){const o=r.o;if(o&&o.by===n)return {st:o.st,t:Math.max(r.t,0)}}return null};
+const online=(f,e)=>{if(entryMe(f,e))return !!tk().on;const now=Date.now();for(const r of AFS.all(f,"live")){const o=r.o;if(o&&o.st!=="off"&&now-r.t<ONLINE&&match(e,o.by,o.w))return true}return false};
+const lastSeen=(f,e)=>{let t=0;for(const r of AFS.all(f,"live")){const o=r.o;if(o&&match(e,o.by,o.w))t=Math.max(t,r.t)}return t};
+const recorders=f=>{const now=Date.now(),out=[];for(const r of AFS.all(f,"live")){const o=r.o;if(o&&o.st==="rec"&&o.by!==me(f)&&now-r.t<REC_FRESH)out.push(o.by)}return out};
+const beat=(f,stt)=>{if(!f||!tk().on)return;AFS.put(f,"live",me(f),{by:me(f),st:stt||"on",t:Date.now(),w:mineH(f)})};
+const hhmm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,"0")+String(d.getMinutes()).padStart(2,"0")};
+let geo={id:null,last:0,pos:null};
+const sharing=()=>tk().locUntil&&tk().locUntil>Date.now();
+function locStart(f,mins){tk().locUntil=Date.now()+mins*60e3;save();watchPos(f);draw()}
+function watchPos(f){if(geo.id!==null||!navigator.geolocation||!sharing())return;
+  geo.id=navigator.geolocation.watchPosition(p=>{geo.pos=p.coords;const now=Date.now();
+    if(!sharing()){locStop(f,true);return}
+    if(now-geo.last<20e3)return;geo.last=now;
+    AFS.put(f,"loc",me(f),{by:me(f),lat:+p.coords.latitude.toFixed(5),lon:+p.coords.longitude.toFixed(5),acc:Math.round(p.coords.accuracy||0),t:now,until:tk().locUntil,w:mineH(f)}).then(()=>{if(view==="talk"&&!ui.rec)draw()})},
+    e=>{if(e&&e.code===1){toast("Location is turned off for this app. Allow it in Settings.");locStop(f)}},{enableHighAccuracy:true,maximumAge:10e3,timeout:30e3})}
+function locStop(f,quiet){if(geo.id!==null){try{navigator.geolocation.clearWatch(geo.id)}catch(e){}geo.id=null}
+  const was=tk().locUntil;tk().locUntil=0;save();if(was&&f)AFS.put(f,"loc",me(f),{by:me(f),off:1,t:Date.now()});if(!quiet)draw()}
+const dist=(a,b)=>{const R=6371e3,rad=x=>x*Math.PI/180,dl=rad(b.lat-a.lat),dn=rad(b.lon-a.lon),q=Math.sin(dl/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(q))};
+const fmtD=m=>m<1000?Math.round(m/10)*10+" m":(m/1609.34).toFixed(1)+" mi";
+function locCard(f){const now=Date.now(),mine=sharing();
+  const others=AFS.all(f,"loc").map(r=>r.o).filter(o=>o&&!o.off&&o.by!==me(f)&&o.until>now&&now-o.t<30*60e3).sort((a,b)=>a.by.localeCompare(b.by));
+  const me0=geo.pos?{lat:geo.pos.latitude,lon:geo.pos.longitude}:null;
+  return `<div class="tk-card" id="tkLoc"><b>Live location</b>
+    ${mine?`<p class="tk-note" style="margin:4px 0 8px">You're sharing · ${Math.max(1,Math.ceil((tk().locUntil-now)/60e3))} min left. Everyone in this Feed can see where you are.</p><button class="btn alt" id="tkLocStop" style="width:100%">Stop sharing</button>`
+    :`<p class="tk-note" style="margin:4px 0 8px">Share where you are with this Feed. Updates while the app is open. You can stop any time.</p><div class="tk-row"><button class="btn alt" data-tkloc="15">15 min</button><button class="btn alt" data-tkloc="60">1 hour</button><button class="btn alt" data-tkloc="480">8 hours</button></div>`}
+    ${others.map(o=>{const d=me0?fmtD(dist(me0,o))+" away · ":"";return `<div class="tk-lr">${av(f,o.by,36)}<div class="tk-who"><b>${esc(o.by)}</b><small>${d}updated ${esc(hhmm(o.t))} · ${Math.max(1,Math.ceil((o.until-now)/60e3))} min left</small></div><a class="tk-map" href="https://maps.apple.com/?ll=${o.lat},${o.lon}&q=${encodeURIComponent(o.by)}" target="_blank" rel="noopener">Map</a></div>`}).join("")}</div>`}
+document.addEventListener("click",e=>{const t=e.target;if(!t.closest||view!=="talk")return;const f=feed();if(!f)return;
+  const l=t.closest("[data-tkloc]");if(l){if(!navigator.geolocation){toast("Location isn't available on this device.");return}locStart(f,+l.dataset.tkloc);return}
+  if(t.closest("#tkLocStop")){locStop(f);return}});
+setInterval(()=>{const f=feed();if(!f)return;if(tk().locUntil&&!sharing())locStop(f);if(!document.hidden)beat(f,ui.rec?"rec":"on")},60e3);
+AFS.onChange(()=>{if(view==="talk"&&!ui.rec)draw()});
+setTimeout(()=>{const f=feed();if(f&&sharing())watchPos(f);if(f)beat(f)},3500);
 
 /* ---------- screen ---------- */
 const gname=(f,g)=>g==="all"?"Everyone":g.startsWith("sec:")?(g.slice(4)===mySec(f)?"My section":g.slice(4)+" section"):((st(f).groups.get(g)||{}).n||"Group");
@@ -132,6 +168,7 @@ function bars(id){let h=0;for(const c of String(id))h=(h*31+c.charCodeAt(0))>>>0
 function status(f){const on=tk().on,g=tk().sel;
   if(ui.rec)return {cls:"live",t:"You are live",s:"Sending to "+gname(f,g)+". Let go to send."};
   if(!on)return {cls:"off",t:"Talk is off",s:"Nothing plays and you can't send. Clips go to the log."};
+  {const R=recorders(f);if(R.length)return {cls:"busy",t:R.slice(0,2).join(" and ")+" "+(R.length>1?"are":"is")+" recording…",s:"Wait for them to finish."}}
   if(ui.playing)return {cls:"busy",t:"Channel busy",s:"Someone is talking. Wait for the end."};
   if(ui.note)return {cls:"",t:ui.note,s:""};
   const L=ui.last;if(L&&Date.now()-L.t<60e3){const T=targets(f,L.g).filter(e=>!entryMe(f,e));const R=st(f).rc.get(L.id)||[];const heard=T.filter(e=>R.some(r=>match(e,r.by,r.w))).length;const off=T.filter(e=>!entryOn(f,e)).length;
@@ -146,7 +183,7 @@ function chips(f){const g=tk().sel,mine=mySec(f);
 function newGroup(f){if(!ui.newg)return "";const ppl=people(f);
   return `<div class="tk-card" id="tkG"><b>Pick people for a group</b><p class="tk-note">Anyone on your list, even if they haven't turned Talk on. Everyone you pick hears everyone else once their Talk is on.</p>
     <input id="tkGN" maxlength="24" placeholder="Group name" value="${esc(ui.gname)}" aria-label="Group name">
-    <div class="tk-pick">${ppl.map(e=>{const on=entryOn(f,e),sc=secOf(f,e);return `<button type="button" data-tkp="${esc(e.n)}" aria-pressed="${ui.gpick.has(e.n)}">${av(f,e.n,32,on)}<span>${esc(e.n)}${sc?` <small>${esc(sc)}</small>`:""}${on?"":` <small class="off">Talk off</small>`}</span><i></i></button>`}).join("")}</div>
+    <div class="tk-pick">${ppl.map(e=>{const on=entryOn(f,e),sc=secOf(f,e);return `<button type="button" data-tkp="${esc(e.n)}" aria-pressed="${ui.gpick.has(e.n)}">${av(f,e.n,32,on)}<span>${esc(e.n)}${sc?` <small>${esc(sc)}</small>`:""}${on?"":` <small class="off">Talk off</small>`}${online(f,e)?` <small class="ol">Online</small>`:(lastSeen(f,e)?` <small>last seen ${esc(hhmm(lastSeen(f,e)))}</small>`:"")}</span><i></i></button>`}).join("")}</div>
     <div class="tk-err" id="tkGE" role="alert"></div>
     <div class="tk-row"><button class="btn" id="tkGMake">Create group</button><button class="btn alt" id="tkGNo">Cancel</button></div></div>`}
 const TRASH=`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/></svg>`;
@@ -189,6 +226,7 @@ function html(){const f=feed();
    <div class="tk-ptt${on?"":" off"}${ui.rec?" live":""}"><div class="tk-ring"><button type="button" id="tkBtn" ${on?"":"disabled"} aria-label="Hold to talk to ${esc(gname(f,tk().sel))}">${ui.rec?"<span id=\"tkT\">0:00</span>":"Hold<br>to talk"}</button></div></div>
    <p class="tk-note" style="text-align:center">Release to send. Voice is saved, turned into text where this phone can, and kept in the log. Works while the app is open.</p>
    ${ui.err?`<p class="tk-note" style="color:var(--warn);text-align:center">${esc(ui.err)}</p>`:""}
+   ${locCard(f)}
    <div class="tk-lbl">Messages</div><p class="tk-note" style="margin:0">Swipe a message left to delete it. Your own messages (or any, if you're a leader) are deleted for everyone; others are removed from this phone only.</p><div id="tkList">${listHTML(f)}</div></div>`}
 function draw(){if(view!=="talk")return;const main=$("#main");if(!main)return;const a=document.activeElement;if(a&&a.id==="tkGN"){ui.gname=a.value;const keep=a.selectionStart;main.innerHTML=html();const i=$("#tkGN");if(i){i.focus();try{i.setSelectionRange(keep,keep)}catch(e){}}return}
   const y=window.scrollY;main.innerHTML=html();window.scrollTo(0,y)}
@@ -209,7 +247,7 @@ function decorate(){const f=feed();if(!f||view!=="feed")return;
 document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest("[data-tab='talk']");if(!t)return;e.stopImmediatePropagation();e.preventDefault();view="talk";armed=null;query="";render();window.scrollTo(0,0);start()},true);
 
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest||view!=="talk")return;const f=feed();if(!f)return;
-  if(t.closest("#tkSw")){unlock();const T=tk();T.on=!T.on;save();sendPres(f);if(!T.on){if(audio)audio.pause();ui.playing="";ui.q=[]}draw();if(T.on)poll(f);return}
+  if(t.closest("#tkSw")){unlock();const T=tk();T.on=!T.on;save();sendPres(f);if(T.on)beat(f);if(!T.on){if(audio)audio.pause();ui.playing="";ui.q=[]}draw();if(T.on)poll(f);return}
   const dl=t.closest("[data-tkdel]");if(dl){const r=dl.closest(".tk-sl");if(r)fling(f,r);return}
   const g=t.closest("[data-tkg]");if(g){tk().sel=g.dataset.tkg;save();draw();return}
   if(t.closest("#tkNewG")){ui.newg=true;ui.gname="";ui.gpick=new Map();draw();return}
@@ -295,6 +333,7 @@ if(typeof HELP==="object"&&HELP.feed&&Array.isArray(HELP.feed[2]))HELP.feed[2].p
 .tk-mh{display:flex;align-items:center;gap:10px}.tk-mp{display:flex;align-items:center;gap:10px}
 .tk-play{all:unset;cursor:pointer;width:44px;height:44px;flex:none;border-radius:50%;background:var(--brass);color:var(--on-brass,#fff);display:inline-flex;align-items:center;justify-content:center;font-size:15px}.tk-play:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .tk-wave{flex:1;height:34px;display:flex;align-items:center;gap:3px}.tk-wave i{flex:1;max-width:5px;border-radius:3px;background:var(--line)}.tk-wave i.on{background:var(--brass)}
+.tk-lr{display:flex;align-items:center;gap:10px;margin-top:10px}.tk-map{font-weight:700;font-size:13px;color:var(--brass);text-decoration:none;padding:8px 12px;border-radius:999px;background:var(--line)}.tk-pick small.ol{color:var(--brass);font-weight:700}
 .tk-tx{font-size:14px;line-height:1.4;margin:0}.tk-tx.dim{color:var(--muted)}
 .tk-sl{position:relative;border-radius:20px;overflow:hidden;margin-bottom:10px}.tk-sl .tk-msg{position:relative;transition:transform .22s ease;touch-action:pan-y;will-change:transform}.tk-sl.drag .tk-msg{user-select:none;-webkit-user-select:none}.tk-sl.open .tk-msg{transform:translateX(-96px)}
 .tk-del{all:unset;cursor:pointer;position:absolute;top:0;right:0;bottom:0;width:96px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--warn);color:#fff;font-size:12px;font-weight:800;opacity:0;transition:opacity .15s}.tk-sl.open .tk-del,.tk-sl.drag .tk-del{opacity:1}.tk-del:focus-visible{outline:3px solid var(--ink);outline-offset:-3px;opacity:1}
