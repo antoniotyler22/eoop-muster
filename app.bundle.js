@@ -3835,13 +3835,35 @@ function chatHTML(list,mineBy,who,sub){return `<div class="sechead" style="margi
   <div class="v12chat" id="v12Chat">${list.length?list.map(x=>bubble(x,x.by===mineBy)).join(""):`<p class="note" style="text-align:center">No messages yet. Say hello.</p>`}</div>
   <div class="v12comp"><textarea id="v12DmTxt" maxlength="2000" placeholder="Message" rows="2"></textarea><div class="row2"><label class="btn alt" style="cursor:pointer">📷 Photo<input type="file" id="v12DmImg" accept="image/*" hidden></label><button class="btn" id="v12DmSend">Send</button></div><div class="note" id="v12DmOut"></div></div>
   <p class="note">Private: encrypted on this phone; only you two can read it. Don't send anything your organization says not to.</p>`}
-function renderDmList(){let h=banner()+`<div class="sechead" style="margin-top:12px"><h2>Messages</h2></div>`;
-  const ms=S.roster.filter(m=>m.dm&&(S.dmMsgs[m.dm.id]||[]).length).sort((a,b)=>{const la=(S.dmMsgs[a.dm.id]||[]).slice(-1)[0],lb=(S.dmMsgs[b.dm.id]||[]).slice(-1)[0];return (lb?lb.t:0)-(la?la.t:0)});
-  h+=ms.length?`<div class="alist">${ms.map(m=>{const L=S.dmMsgs[m.dm.id];const last=L[L.length-1];const un=L.filter(x=>x.by==="M"&&x.id>(S.dmSeen[m.dm.id]||0)).length;
-      return `<button class="lrow card" data-v12dm="${m.id}" style="width:100%;text-align:left;cursor:pointer;color:inherit;margin:4px 0">${fdAv(m.rank+" "+lastOf(m))}<span style="flex:1;min-width:0"><span class="t" style="display:block">${esc(title(m.rank)+" "+title(lastOf(m)))}${un?` <b style="color:var(--brass)">· ${un} new</b>`:""}</span><span class="s" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${last.by==="L"?"You: ":""}${esc(last.img&&!last.txt?"📷 Photo":last.txt)} · ${esc(dmTime(last.t))}</span></span></button>`}).join("")}</div>`:`<div class="panel"><p class="note" style="margin:0">No conversations yet.</p></div>`;
-  h+=`<label for="v12DmPick">Start a message</label><select id="v12DmPick" class="wsel"><option value="">Pick a person…</option>${sorted(S.roster).map(m=>`<option value="${m.id}">${esc(m.rank+" "+m.name)}${m.pk?"":" (needs My page)"}</option>`).join("")}</select>
-    <p class="note">People read and answer on their My page. Turn on My page for someone from their card first.</p>`;
+let ibF="all",ibQ="",ibNew=false;
+const ibCol=["#7c3aed","#0ea5e9","#f59e0b","#10b981","#ef4444","#14b8a6","#a855f7","#64748b"];
+function ibThreads(){return S.roster.filter(m=>m.dm&&(S.dmMsgs[m.dm.id]||[]).length).map(m=>{const L=S.dmMsgs[m.dm.id];const last=L[L.length-1];const un=L.filter(x=>x.by==="M"&&x.id>(S.dmSeen[m.dm.id]||0)).length;return {m,L,last,un,mine:last.by==="L"}}).sort((x,y)=>y.last.t-x.last.t)}
+function ibRows(){const q=ibQ.trim().toLowerCase();let T=ibThreads();
+  if(ibF==="unread")T=T.filter(x=>x.un);else if(ibF==="reply")T=T.filter(x=>!x.mine);else if(ibF==="sent")T=T.filter(x=>x.mine);
+  if(q)T=T.filter(x=>(x.m.rank+" "+x.m.name+" "+x.last.txt).toLowerCase().includes(q));
+  return T.length?T.map(x=>{const m=x.m,last=x.last,nm=title(m.rank)+" "+title(lastOf(m));const on=m.status==="On Hand";const c=ibCol[(String(m.id).split("").reduce((a,ch)=>a+ch.charCodeAt(0),0))%ibCol.length];
+    const ini=((m.rank?String(m.rank)[0]:"")+(lastOf(m)?String(lastOf(m))[0]:"")).toUpperCase()||"?";
+    return `<button class="ib-row" data-v12dm="${m.id}"><span class="ib-av" style="background:${c}">${esc(ini)}<i class="ib-dot${on?"":" off"}"></i></span><span class="ib-mid"><span class="ib-nm">${esc(nm)}</span><span class="ib-pv${x.un?" hot":""}"><b class="ib-arr">${x.mine?"↗ You:":"↙"}</b> ${esc(last.img&&!last.txt?"📷 Photo":last.txt)}</span></span><span class="ib-tm">${esc(dmTime(last.t))}${x.un?`<span class="ib-un">${x.un}</span>`:x.mine?`<span class="ib-ok">✓ Sent</span>`:""}</span></button>`}).join(""):`<p class="note" style="text-align:center;margin:24px 0">${ibThreads().length?"Nothing matches.":"No conversations yet. Tap New message."}</p>`}
+function renderDmList(){const T=ibThreads();const nu=T.filter(x=>x.un).length;
+  let h=banner()+`<div class="sechead" style="margin-top:12px"><h2>Inbox</h2></div>
+  <div class="ib-srch"><span aria-hidden="true">🔍</span><input id="ibQ" type="search" placeholder="Search people or messages" value="${esc(ibQ)}" autocomplete="off"></div>
+  <div class="ib-chips">${[["all","All"],["unread","Unread"+(nu?" "+nu:"")],["reply","Needs reply"],["sent","Sent"]].map(([k,l])=>`<button type="button" class="ib-chip${ibF===k?" on":""}" data-ibf="${k}">${l}</button>`).join("")}</div>
+  <div id="ibList">${ibRows()}</div>
+  <div class="ib-new" id="ibNewBox"${ibNew?"":" hidden"}><label for="v12DmPick">Start a message</label><select id="v12DmPick" class="wsel"><option value="">Pick a person…</option>${sorted(S.roster).map(m=>`<option value="${m.id}">${esc(m.rank+" "+m.name)}${m.pk?"":" (needs My page)"}</option>`).join("")}</select>
+    <p class="note">People read and answer on their My page. Turn on My page for someone from their card first.</p></div>
+  <button type="button" class="ib-fab" id="ibFab">✎ New message</button>`;
   $("#main").innerHTML=h}
+document.addEventListener("click",e=>{if(view!=="dms")return;const t=e.target.closest&&e.target.closest("[data-ibf],#ibFab");if(!t)return;
+  if(t.id==="ibFab"){ibNew=!ibNew;const b=$("#ibNewBox");if(b){b.hidden=!ibNew;if(ibNew){b.scrollIntoView({block:"center",behavior:"smooth"});const s=$("#v12DmPick");if(s)s.focus()}}return}
+  ibF=t.dataset.ibf;const y=window.scrollY;renderDmList();window.scrollTo(0,y)});
+document.addEventListener("input",e=>{if(e.target&&e.target.id==="ibQ"){ibQ=e.target.value;const l=$("#ibList");if(l)l.innerHTML=ibRows()}});
+{const c=document.createElement("style");c.textContent=`.ib-srch{display:flex;align-items:center;gap:8px;height:42px;padding:0 14px;border-radius:14px;background:var(--line);margin:10px 0 8px;color:var(--muted)}.ib-srch input{all:unset;flex:1;color:var(--ink);font-size:15px;min-width:0}
+.ib-chips{display:flex;gap:7px;margin-bottom:4px;overflow-x:auto}.ib-chip{all:unset;cursor:pointer;padding:8px 14px;border-radius:99px;background:var(--line);font-weight:700;font-size:13px;white-space:nowrap}.ib-chip.on{background:var(--brass);color:var(--on-brass,#fff)}
+.ib-row{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer}.ib-av{position:relative;flex:none;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:17px}
+.ib-dot{position:absolute;right:-1px;bottom:-1px;width:13px;height:13px;border-radius:50%;background:#22c55e;border:2.5px solid var(--bg,#fff)}.ib-dot.off{background:#cbd5e1}
+.ib-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.ib-nm{font-weight:700;font-size:15px;color:var(--ink)}.ib-pv{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ib-pv.hot{color:var(--ink);font-weight:600}.ib-arr{color:var(--brass);font-size:11.5px}
+.ib-tm{flex:none;text-align:right;font-size:11.5px;color:var(--muted);display:flex;flex-direction:column;align-items:flex-end;gap:4px}.ib-un{background:var(--warn,#e5322d);color:#fff;border-radius:99px;font-size:11px;font-weight:800;padding:2px 7px}.ib-ok{color:#22c55e;font-weight:700}
+.ib-new{margin:14px 0 90px}.ib-fab{all:unset;cursor:pointer;position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));height:52px;padding:0 20px;border-radius:99px;background:var(--brass);color:var(--on-brass,#fff);font-weight:800;display:flex;align-items:center;box-shadow:0 10px 24px rgba(8,87,232,.4);z-index:20}`;document.head.appendChild(c)}
 function renderDm(){if(memberMode()||!leader()){const th=myDm();if(!th){$("#main").innerHTML=`<div class="panel" style="margin-top:14px"><p class="note" style="margin:0">Messages open once your leader turns on your My page.</p></div>`;return}
     const L=S.dmMsgs["mine:"+th.id]||[];$("#main").innerHTML=meTabs("dm")+chatHTML(L,"M",th.from||"Your leader","Private chat");const top=L.length?L[L.length-1].id:0;if(top>(S.dmSeen["mine:"+th.id]||0)){S.dmSeen["mine:"+th.id]=top;save();setTimeout(renderTabs,0)}scrollChat();return}
   const m=S.roster.find(x=>x.id===dmWith);if(!m){view="dms";return render()}

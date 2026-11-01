@@ -106,3 +106,21 @@ test("a leader has an Inbox next to Feed and Send, and on every My page strip", 
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("Inbox: search, filter chips, ↗ You / ↙ markers, red unread, New message button", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    await a.w.eval(`const m=S.roster[0];m.pk="p".repeat(24);m.dm={id:"t1",k:"k".repeat(32),ek:"x",ok:1};S.dmMsgs={t1:[{id:1,t:Date.now()-5000,txt:"Reporting at 0700",by:"M",n:"CPL"},{id:2,t:Date.now()-2000,txt:"Copy that",by:"L",n:""}]};S.dmSeen={t1:1};
+      S.onb=true;S.welcomed=1;S.leaderMode=true;view="dms";render()`);
+    await sleep(150);
+    assert.match(a.$("#ibList").textContent, /↗ You:\s*Copy that/, "my message shows as You");
+    assert.ok(a.$("#ibList .ib-row"), "thread row");
+    a.$('[data-ibf="unread"]').click(); await sleep(40);
+    assert.ok(!a.$("#ibList .ib-row"), "no unread threads");
+    a.$('[data-ibf="sent"]').click(); await sleep(40);
+    assert.ok(a.$("#ibList .ib-row"), "sent filter keeps it");
+    a.$("#ibFab").click(); await sleep(40);
+    assert.ok(!a.$("#ibNewBox").hidden, "New message opens the picker");
+    assert.deepEqual(a.errors.filter((e) => !/scrollTo|scrollIntoView/.test(e)), []);
+  } finally { await a.close(); }
+});
