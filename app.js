@@ -1390,7 +1390,7 @@ function renderBoard(){const {c,T,A}=counts();const P=pct(T["On Hand"],T.total);
   {const R=readySum();if(R.items&&R.soon)cards.push(`<button data-go="ready"><div class="k">DUE SOON</div><div class="v">${R.soon} due-outs</div><div class="w">next 30 days</div></button>`)}
   const pod=latestPod();if(pod&&pod.d===k)cards.unshift(`<button data-go="feed"><div class="k">PLAN OF THE DAY</div><div class="v">${esc((podParse(pod.txt).f||"Posted"))}</div><div class="w">${esc(podParse(pod.txt).u||"Tap to view")}</div></button>`);
   h+=`<div class="sech"><h2>Today</h2><button class="chip" data-go="cal" style="cursor:pointer">Calendar ▸</button></div>`;
-  h+=cards.length?`<div class="strip">${cards.join("")}</div>`:`<p class="note">Nothing scheduled today. <button class="chip" data-go="cal" style="cursor:pointer">+ Add to calendar</button></p>`;
+  h+=(window.todayWeekHTML&&window.todayWeekHTML())||(cards.length?`<div class="strip">${cards.join("")}</div>`:`<p class="note">Nothing scheduled today. <button class="chip" data-go="cal" style="cursor:pointer">+ Add to calendar</button></p>`);
   if(S.board)h+=liveStrip();
   h+=`<details class="card" style="gap:8px"><summary style="font-weight:800;cursor:pointer">Numbers by status and section</summary><div class="gridwrap"><table><thead><tr><th>Status</th>${SECTIONS.map(([k])=>`<th><button data-go="${k.toLowerCase()}">${k}</button></th>`).join("")}<th class="tot">Total</th></tr></thead><tbody>`;
   for(const st of STATUSES){h+=`<tr><td><span class="dot" style="background:var(${SVAR[st]})"></span>${SHORT[st]}</td>${SECTIONS.map(([k])=>`<td class="${c[k][st]?"":"z"}">${c[k][st]}</td>`).join("")}<td class="tot">${T[st]}</td></tr>`}

@@ -106,19 +106,9 @@ test("home: Needs you lines hide until tomorrow; Today cards show by time of day
     assert.equal(a.w.eval("document.querySelectorAll('[data-nyhide]').length"), n - 1);
     assert.equal(a.w.eval("Object.keys(S.nyHide.h).length"), 1);
     a.w.eval(`view="board";render()`);
-    // Today: the all-day item shows; the 23:59 appointment is hidden unless it's late; duty depends on the hour
-    const now = a.w.eval("new Date().getHours()*60+new Date().getMinutes()");
-    const vis = a.w.eval("[...document.querySelectorAll('#main .strip [data-tdk]')].filter(c=>!c.hidden).map(c=>c.dataset.tdk)");
-    assert.ok(vis.some(k => /Allday/.test(k)), vis.join("|"));
-    assert.equal(vis.some(k => /Dentist/.test(k)), now >= 23*60+59-120, vis.join("|"));
-    assert.equal(vis.some(k => /^DUTY/.test(k)), now >= 420 && now <= 540);
-    assert.ok(a.$("#tdShow") || a.$("#tdClear"));
-    a.w.eval(`S.dutyAt=String(new Date().getHours()).padStart(2,"0")+":00";save();render()`);
-    assert.ok(a.w.eval("[...document.querySelectorAll('#main .strip [data-tdk]')].some(c=>!c.hidden&&/^DUTY/.test(c.dataset.tdk))"), "duty shows around the chosen hour");
-    a.$("#tdClear").click(); a.$("#tdClear").click();
-    assert.equal(a.w.eval("[...document.querySelectorAll('#main .strip [data-tdk]')].filter(c=>!c.hidden).length"), 0);
-    assert.ok(a.$("#tdNone"));
-    assert.equal(a.w.eval("S.todayHide.d"), a.w.eval("new Date().toISOString().slice(0,10)"));
+    // Today is now a week strip: today's agenda lists everything for the day (the old card clear / time windows are gone)
+    const rows = a.w.eval("document.getElementById('twkRows').textContent");
+    assert.match(rows, /Allday/); assert.match(rows, /Dentist/); assert.match(rows, /Duty/);
   } finally { a.close(); }
 });
 
