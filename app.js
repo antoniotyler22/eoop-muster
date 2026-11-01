@@ -1573,6 +1573,7 @@ const SC=[
  {k:"sc",n:"Section calendars",f:["03_section_calendar"],t:[["push_cal",{p_board:"zz",p_write_key:"x",p_sec:"HQ",p_ct:"QQ=="}],["get_cal",{p_board:"zz",p_read_key:"x"}]]},
  {k:"fd",n:"Feed",f:["04a_feed_tables","04b_feed_post","04c_feed_read","04d_feed_manage"],t:[["create_feed",{p_id:"zz",p_member_key:"x",p_leader_key:"x"}],["feed_post",{p_feed:"zz",p_leader_key:"x",p_ct:"QQ=="}],["feed_get",{p_feed:"zz",p_member_key:"x",p_after:0}],["feed_ack",{p_feed:"zz",p_member_key:"x",p_post:0,p_words:["0"],p_code:1,p_note:""}],["feed_acks_get",{p_feed:"zz",p_leader_key:"x",p_after:0}],["feed_delete_post",{p_feed:"zz",p_leader_key:"x",p_post:0}],["delete_feed",{p_feed:"zz",p_leader_key:"x"}]]},
  {k:"fa",n:"Feed alerts",f:["05_feed_alerts"],t:[["feed_sub",{p_feed:"zz",p_member_key:"x",p_sub:{}}],["feed_unsub",{p_feed:"zz",p_member_key:"x",p_endpoint:"x"}]]},
+ {k:"dp",n:"Inbox phone alerts",f:["40_dm_push"],t:[["dm_sub",{p_id:"zz",p_key:"x",p_role:"L",p_sub:{}}]]},
  {k:"rq",n:"Requests",f:["08_requests"],t:[["feed_req",{p_feed:"zz",p_member_key:"x",p_ct:"QQ=="}],["feed_reqs_get",{p_feed:"zz",p_leader_key:"x",p_after:0}]]},
  {k:"bk",n:"Backup and sync",f:["06a_backup_put","06b_backup_read"],t:[["backup_put",{p_id:"zz",p_key:"x",p_ct:"QQ==",p_base:null}],["backup_get",{p_id:"zz",p_key:"x"}],["backup_ver",{p_id:"zz",p_key:"x"}],["backup_delete",{p_id:"zz",p_key:"x"}]]},
  {k:"mp",n:"My page",f:["07_my_page"],t:[["put_page",{p_id:"zz",p_wk:"x",p_ct:"QQ=="}],["get_page",{p_id:"zz"}],["delete_page",{p_id:"zz",p_wk:"x"}]]},

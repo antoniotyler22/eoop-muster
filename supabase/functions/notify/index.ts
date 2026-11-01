@@ -13,6 +13,8 @@
 //  {health:1}: reads one row with the service role; answers "ok" or "db denied" (System check). Database errors now answer 500, never "no sub".
 //  {drain:1} also handles {kind:"req"} (part 36): one rolled-up leader alert for every check-in or request since the last alert.
 //  {stalled:1} and the minute job: if check-ins sit unalerted for 6 min or the database refuses us, the owner phone gets "Alerts not going out" (once an hour).
+//  {dm, k, by, dev}: (4.70.7, setup part 40) an Inbox message was sent. The thread key is checked, then every phone signed up on the other side
+//    of that thread ("L" leader / "M" person) gets "New message". No names or text in the alert.
 //  4.33.0: skips the posting phone by device id ("dev") and keeps one sign-up per phone.
 // Payloads carry no names. Turn OFF "Enforce JWT verification" (the function validates input itself).
 // Secrets: VAPID_PUBLIC, VAPID_PRIVATE (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are built in).
@@ -27,7 +29,7 @@ const cors = {
 };
 webpush.setVapidDetails("mailto:antoniotyler22@gmail.com", Deno.env.get("VAPID_PUBLIC")!, Deno.env.get("VAPID_PRIVATE")!);
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-const VER = "4.33.0";
+const VER = "4.70.7";
 const out = (t: string, status = 200) => new Response(t, { status, headers: cors });
 // A database error (for example the service role lost its table rights) must never read as "no sub": that hid a
 // week of dead alerts. Log it and answer 500 so the failure shows in the logs and the owner's Health tab.
@@ -407,10 +409,30 @@ async function remember(req: Request) {
   try { await db.rpc("notify_fn_set", { p_name: name }); } catch { /* part 31 not run yet */ }
 }
 
+
+// Inbox message: buzz the phones on the other side of the thread. Checks the thread key first.
+async function dmAlert(id: string, key: string, by: string, dev: string) {
+  const hash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key)))).map((x) => x.toString(16).padStart(2, "0")).join("");
+  const { data: th, error: te } = await db.from("dm_threads").select("id").eq("id", id).eq("key_hash", hash).maybeSingle();
+  if (te) return dbErr(te);
+  if (!th) return out("not allowed", 403);
+  const want = by === "L" ? "M" : "L";
+  const { data: subs, error } = await db.from("dm_subs").select("id,sub").eq("thread_id", id).eq("role", want).limit(20);
+  if (error) return dbErr(error);
+  // deno-lint-ignore no-explicit-any
+  const list = (subs ?? []).filter((s: any) => !(dev && s.sub?.dev === dev));
+  const payload = { title: "💬 New message", body: "Open Accounted For to read it.", help: false, open: "dm" };
+  const dead: number[] = [];
+  // deno-lint-ignore no-explicit-any
+  await Promise.allSettled(list.map(async (s: any) => { if ((await pushAny(s.sub, payload, true, 3600)) === "gone") dead.push(s.id); }));
+  if (dead.length) await db.from("dm_subs").delete().in("id", dead);
+  return out("sent " + (list.length - dead.length));
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return out("ok");
   if (req.method !== "POST") return out("method", 405);
-  let body: { ver?: unknown; test?: unknown; sub?: unknown; recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown; drain?: unknown; team?: unknown; k?: unknown; what?: unknown; skip?: unknown; dev?: unknown; whoami?: unknown; health?: unknown; stalled?: unknown } = {};
+  let body: { dm?: unknown; by?: unknown; ver?: unknown; test?: unknown; sub?: unknown; recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown; drain?: unknown; team?: unknown; k?: unknown; what?: unknown; skip?: unknown; dev?: unknown; whoami?: unknown; health?: unknown; stalled?: unknown } = {};
   try { body = await req.json(); } catch { return out("bad", 400); }
   if (body.whoami === 1) { namedAt = 0; await remember(req); return out("ok"); }
   // {ver:1}: which version is deployed (System check).  {test:1, sub}: one "Test alert" to the asking phone only.
@@ -430,6 +452,8 @@ Deno.serve(async (req) => {
   if (body.stalled === 1) { const w = await stalledNow(); return out(w || "ok", w ? 503 : 200); }
   if (body.escalate === 1) { remember(req); return escalate(); }
   if (body.drain === 1) { remember(req); return drain(); }
+  if (typeof body.dm === "string" && /^[a-zA-Z0-9]{10,40}$/.test(body.dm) && typeof body.k === "string" && /^[a-zA-Z0-9]{20,64}$/.test(body.k) && (body.by === "L" || body.by === "M"))
+    return dmAlert(body.dm, body.k, body.by, typeof body.dev === "string" && /^[a-z0-9]{8,40}$/.test(body.dev) ? body.dev : "");
   const skip = typeof body.skip === "string" ? body.skip.slice(0, 600) : "";
   const dev = typeof body.dev === "string" && /^[a-z0-9]{8,40}$/.test(body.dev) ? body.dev : "";
   if (typeof body.team === "string" && /^[a-z0-9]{10,20}$/.test(body.team) && typeof body.k === "string" && /^[a-z0-9]{24,40}$/.test(body.k))

@@ -110,13 +110,13 @@ function renderMePv(){const m=S.roster.find(x=>x.id===pvId);if(!m){view="people"
 
 /* ================= 5. MESSAGES (leader <-> member) ================= */
 S.dmMsgs=S.dmMsgs||{};S.dmSeen=S.dmSeen||{};
-if(typeof SYNC_SKIP==="object"&&Array.isArray(SYNC_SKIP))SYNC_SKIP.push("dmMsgs","dmSeen","dmAfter","pages","w62","w6t","w6To","aiOn","customV","evTypesX");
+if(typeof SYNC_SKIP==="object"&&Array.isArray(SYNC_SKIP))SYNC_SKIP.push("dmSubs","dmMsgs","dmSeen","dmAfter","pages","w62","w6t","w6To","aiOn","customV","evTypesX");
 if(typeof WS_GLOBAL==="object"&&Array.isArray(WS_GLOBAL))WS_GLOBAL.push("aiOn","w6t","w6To","pages","dmMineAfter","dmMine");
 function dmEnsure(m){if(!m.dm){m.dm={id:rndId(20),k:rndId(32),ek:newEk(),ok:0};save()}if(!S.dmInbox){S.dmInbox=rndId(32);save()}return m.dm}
 async function dmOpenSrv(m){const d=dmEnsure(m);if(d.ok)return d;await SB.rpc("dm_open",{p_id:d.id,p_key:d.k,p_inbox:S.dmInbox});d.ok=1;save();return d}
 {const _md=mpDigest;mpDigest=function(m){const d=_md.apply(this,arguments);if(m&&m.dm&&m.dm.ok)d.dm={id:m.dm.id,k:m.dm.k,ek:m.dm.ek,from:String(S.postAs||S.myName||unitName()).slice(0,30)};return d}}
 {const _mp=mpPublish;mpPublish=async function(){try{for(const m of S.roster.filter(m=>m.pk))await dmOpenSrv(m).catch(()=>{})}catch(e){}return _mp.apply(this,arguments)}}
-async function dmSend(th,txt,img,by,name){const o={t:String(txt||"").slice(0,2000),by,n:String(name||"").slice(0,30)};if(img)o.img=img;const ct=await fdEnc(th.ek,o);const id=await SB.rpc("dm_send",{p_id:th.id,p_key:th.k,p_ct:ct});return {id:+id,t:Date.now(),...o,me:1}}
+async function dmSend(th,txt,img,by,name){const o={t:String(txt||"").slice(0,2000),by,n:String(name||"").slice(0,30)};if(img)o.img=img;const ct=await fdEnc(th.ek,o);const id=await SB.rpc("dm_send",{p_id:th.id,p_key:th.k,p_ct:ct});try{SB.notify(null,{dm:th.id,k:th.k,by:by==="L"?"L":"M",dev:window.dmDev?window.dmDev():undefined})}catch(e){}return {id:+id,t:Date.now(),...o,me:1}}
 function dmPush(tid,msg){const L=S.dmMsgs[tid]=S.dmMsgs[tid]||[];if(L.some(x=>x.id===msg.id))return false;L.push(msg);L.sort((a,b)=>a.id-b.id);if(L.length>200)L.splice(0,L.length-200);return true}
 let dmBusy=false;
 async function dmPollLeader(){if(dmBusy||!S.dmInbox||!leader())return;dmBusy=true;let n=0;
