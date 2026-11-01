@@ -10061,6 +10061,10 @@ fdUnread=function(){const H=hidden();let n=0,ch=false;
 const MAXS=60,MINMS=450,STALE=15*60e3,BEAT=5*60e3,LOGMAX=100;
 const tk=()=>{if(!S.talk||typeof S.talk!=="object")S.talk={on:false,sel:"all"};return S.talk};
 const logs=()=>{S.talkLog=Array.isArray(S.talkLog)?S.talkLog:[];return S.talkLog};
+/* messages you delete are remembered here (on this phone only) so a later poll doesn't bring them back */
+const hid=()=>{S.talkHid=Array.isArray(S.talkHid)?S.talkHid:[];return S.talkHid};
+const hk=(f,id)=>f.id+":"+id;
+const isHid=(f,id)=>hid().includes(hk(f,id));
 const feed=()=>{const l=(S.feeds||[]);return (typeof fdCur==="function"&&fdCur())||l[0]||null};
 const me=f=>String(typeof fdBy==="function"?fdBy(f):(S.myName||"ME")).toUpperCase().slice(0,30);
 const RADIO=sz=>`<svg class="tk-ic" width="${sz||14}" height="${sz||14}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19.1 4.9a10 10 0 0 1 0 14.2M4.9 19.1a10 10 0 0 1 0-14.2"/></svg>`;
@@ -10069,7 +10073,7 @@ if(typeof IC==="object")IC.talk='<circle cx="12" cy="12" r="2"/><path d="M16.2 7
 /* ---------- per-feed state (in memory; the server holds the last 3 days) ---------- */
 const ST={};
 const st=f=>ST[f.id]=ST[f.id]||{after:0,msgs:new Map(),groups:new Map(),pres:new Map(),rc:new Map(),init:false,beat:0,watch:false,busy:false};
-const ui={rec:null,note:"",newg:false,gname:"",gpick:new Map(),playing:"",q:[],last:null,dirty:false,err:""};
+const ui={rec:null,note:"",newg:false,gname:"",gpick:new Map(),playing:"",q:[],last:null,dirty:false,err:"",open:"",drag:false,swiped:false};
 let audio=null,unlocked=false;
 
 /* ---------- who is listening ---------- */
@@ -10115,12 +10119,12 @@ async function poll(f){const s=st(f);if(s.busy||!f.mk||!f.ek)return;s.busy=true;
       else if(o.k==="g"&&o.id){const cur=s.groups.get(o.id);if(!cur||id>=cur.rid)s.groups.set(String(o.id).slice(0,20),{id:String(o.id).slice(0,20),n:String(o.n||"Group").slice(0,24),m:(Array.isArray(o.m)?o.m:[]).map(x=>typeof x==="string"?{n:x.toUpperCase().slice(0,30),w:[],s:""}:{n:String(x.n||"").toUpperCase().slice(0,30),w:Array.isArray(x.w)?x.w.slice(0,6).map(String):[],s:String(x.s||"").slice(0,12)}).filter(e=>e.n).slice(0,200),x:!!o.x,rid:id})}
       else if(o.k==="h"&&o.m){let a=s.rc.get(+o.m);if(!a)s.rc.set(+o.m,a=[]);a.push({by:String(o.by),w:Array.isArray(o.w)?o.w.map(String):[]})}
       else if(o.k==="v"&&o.a&&!s.msgs.has(id)){const m={id,by:String(o.by||"?").slice(0,30),g:String(o.g||"all"),t:o.t||t,d:+o.d||0,tx:String(o.tx||"").slice(0,400),mt:String(o.mt||"audio/mp4"),a:o.a,seen:s.init};s.msgs.set(id,m);fresh++;
-        if(!logs().some(x=>x.f===f.id&&x.id===id)){logs().unshift({f:f.id,id,by:m.by,g:m.g,t:m.t,d:m.d,tx:m.tx});if(logs().length>LOGMAX)logs().length=LOGMAX}}}
+        if(!isHid(f,id)&&!logs().some(x=>x.f===f.id&&x.id===id)){logs().unshift({f:f.id,id,by:m.by,g:m.g,t:m.t,d:m.d,tx:m.tx});if(logs().length>LOGMAX)logs().length=LOGMAX}}}
     for(const m of s.msgs.values())if(m.seen===true&&!m.did){m.did=1;incoming(f,m)}
     for(const m of s.msgs.values())if(m.seen===false)m.seen=true;
     if(!s.init){s.init=true;for(const m of s.msgs.values())m.did=1}
     if(fresh)save();
-    if(view==="talk"){if(ui.rec)ui.dirty=true;else draw()}
+    if(view==="talk"){if(ui.rec||ui.drag)ui.dirty=true;else draw()}
     decorate()}catch(e){ui.err=String(e&&e.message||e).slice(0,80)}finally{s.busy=false}}
 /* a clip from another phone just arrived */
 function incoming(f,m){if(m.by===me(f)||!forMe(f,m))return;
@@ -10196,14 +10200,24 @@ function newGroup(f){if(!ui.newg)return "";const ppl=people(f);
     <div class="tk-pick">${ppl.map(e=>{const on=entryOn(f,e),sc=secOf(f,e);return `<button type="button" data-tkp="${esc(e.n)}" aria-pressed="${ui.gpick.has(e.n)}">${av(f,e.n,32,on)}<span>${esc(e.n)}${sc?` <small>${esc(sc)}</small>`:""}${on?"":` <small class="off">Talk off</small>`}</span><i></i></button>`}).join("")}</div>
     <div class="tk-err" id="tkGE" role="alert"></div>
     <div class="tk-row"><button class="btn" id="tkGMake">Create group</button><button class="btn alt" id="tkGNo">Cancel</button></div></div>`}
+const TRASH=`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/></svg>`;
+/* a message row you can swipe left to reveal Delete (or swipe all the way to delete) */
+const slide=(f,id,inner)=>{const o=ui.open===hk(f,id);return `<div class="tk-sl${o?" open":""}" data-tksl="${id}"><button type="button" class="tk-del" data-tkdel="${id}" aria-label="Delete message"${o?"":' tabindex="-1"'}>${TRASH}<span>Delete</span></button>${inner}</div>`};
+function delMsg(f,id){const s=st(f),m=s.msgs.get(+id);
+  if(m&&m.url){try{URL.revokeObjectURL(m.url)}catch(e){}}
+  if(ui.playing===f.id+":"+id&&audio){audio.pause();ui.playing=""}
+  ui.q=ui.q.filter(x=>!(x.f===f&&x.m.id===+id));
+  s.msgs.delete(+id);S.talkLog=logs().filter(x=>!(x.f===f.id&&x.id===+id));
+  const H=hid(),k=hk(f,id);if(!H.includes(k)){H.push(k);if(H.length>400)H.splice(0,H.length-400)}
+  if(ui.open===k)ui.open="";save();draw()}
 function msgCard(f,m){const mine=m.by===me(f),on=ui.playing===f.id+":"+m.id;
-  return `<article class="tk-msg" data-tkm="${m.id}">
+  return slide(f,m.id,`<article class="tk-msg" data-tkm="${m.id}" tabindex="0">
     <div class="tk-mh">${av(f,m.by,40)}<div class="tk-who"><b>${esc(m.by)}${isOn(f,m.by)?` <span class="tk-ri" title="Talk is on">${RADIO(13)}</span>`:""}</b><small>${esc(fmtT(m.t))} · ${m.d}s · ${esc(gname(f,m.g))}${mine?" · you":""}</small></div></div>
     <div class="tk-mp"><button type="button" class="tk-play" data-tkplay="${m.id}" aria-label="${on?"Playing":"Play message"}">${on?"❚❚":"▶"}</button><div class="tk-wave">${bars(m.id)}</div></div>
-    ${m.tx?`<p class="tk-tx">${esc(m.tx)}</p>`:`<p class="tk-tx dim">Voice message</p>`}</article>`}
-function logCard(f,x){return `<article class="tk-msg old"><div class="tk-mh">${av(f,x.by,40)}<div class="tk-who"><b>${esc(x.by)}</b><small>${esc(fmtT(x.t))} · ${x.d}s · ${esc(gname(f,x.g))} · saved</small></div></div>${x.tx?`<p class="tk-tx">${esc(x.tx)}</p>`:`<p class="tk-tx dim">Voice message (audio expired)</p>`}</article>`}
-function listHTML(f){const s=st(f);const live=[...s.msgs.values()].filter(m=>forMe(f,m)||m.by===me(f)).sort((a,b)=>b.id-a.id).slice(0,30);
-  const have=new Set(live.map(m=>m.id));const old=logs().filter(x=>x.f===f.id&&!have.has(x.id)&&(forMe(f,x)||x.by===me(f))).slice(0,30);
+    ${m.tx?`<p class="tk-tx">${esc(m.tx)}</p>`:`<p class="tk-tx dim">Voice message</p>`}</article>`)}
+function logCard(f,x){return slide(f,x.id,`<article class="tk-msg old" data-tkm="${x.id}" tabindex="0"><div class="tk-mh">${av(f,x.by,40)}<div class="tk-who"><b>${esc(x.by)}</b><small>${esc(fmtT(x.t))} · ${x.d}s · ${esc(gname(f,x.g))} · saved</small></div></div>${x.tx?`<p class="tk-tx">${esc(x.tx)}</p>`:`<p class="tk-tx dim">Voice message (audio expired)</p>`}</article>`)}
+function listHTML(f){const s=st(f);const live=[...s.msgs.values()].filter(m=>!isHid(f,m.id)&&(forMe(f,m)||m.by===me(f))).sort((a,b)=>b.id-a.id).slice(0,30);
+  const have=new Set(live.map(m=>m.id));const old=logs().filter(x=>x.f===f.id&&!have.has(x.id)&&!isHid(f,x.id)&&(forMe(f,x)||x.by===me(f))).slice(0,30);
   if(!live.length&&!old.length)return `<p class="tk-note" style="text-align:center">No messages yet. Hold the button and say hello.</p>`;
   return live.map(m=>msgCard(f,m)).join("")+old.map(x=>logCard(f,x)).join("")}
 function html(){const f=feed();
@@ -10220,7 +10234,7 @@ function html(){const f=feed();
    <div class="tk-ptt${on?"":" off"}${ui.rec?" live":""}"><div class="tk-ring"><button type="button" id="tkBtn" ${on?"":"disabled"} aria-label="Hold to talk to ${esc(gname(f,tk().sel))}">${ui.rec?"<span id=\"tkT\">0:00</span>":"Hold<br>to talk"}</button></div></div>
    <p class="tk-note" style="text-align:center">Release to send. Voice is saved, turned into text where this phone can, and kept in the log. Works while the app is open.</p>
    ${ui.err?`<p class="tk-note" style="color:var(--warn);text-align:center">${esc(ui.err)}</p>`:""}
-   <div class="tk-lbl">Messages</div><div id="tkList">${listHTML(f)}</div></div>`}
+   <div class="tk-lbl">Messages</div><p class="tk-note" style="margin:0">Swipe a message left to delete it. This only removes it from this phone.</p><div id="tkList">${listHTML(f)}</div></div>`}
 function draw(){if(view!=="talk")return;const main=$("#main");if(!main)return;const a=document.activeElement;if(a&&a.id==="tkGN"){ui.gname=a.value;const keep=a.selectionStart;main.innerHTML=html();const i=$("#tkGN");if(i){i.focus();try{i.setSelectionRange(keep,keep)}catch(e){}}return}
   const y=window.scrollY;main.innerHTML=html();window.scrollTo(0,y)}
 function tickUI(){const r=ui.rec;if(!r)return;const s=Math.floor((Date.now()-r.t0)/1e3);const el=$("#tkT");if(el)el.textContent=Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
@@ -10241,6 +10255,7 @@ document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest
 
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest||view!=="talk")return;const f=feed();if(!f)return;
   if(t.closest("#tkSw")){unlock();const T=tk();T.on=!T.on;save();sendPres(f);if(!T.on){if(audio)audio.pause();ui.playing="";ui.q=[]}draw();if(T.on)poll(f);return}
+  const dl=t.closest("[data-tkdel]");if(dl){const r=dl.closest(".tk-sl");if(r)fling(f,r);return}
   const g=t.closest("[data-tkg]");if(g){tk().sel=g.dataset.tkg;save();draw();return}
   if(t.closest("#tkNewG")){ui.newg=true;ui.gname="";ui.gpick=new Map();draw();return}
   if(t.closest("#tkGNo")){ui.newg=false;draw();return}
@@ -10252,6 +10267,33 @@ document.addEventListener("click",e=>{const t=e.target;if(!t.closest||view!=="ta
     const id="g"+Date.now().toString(36)+rndId(3),m=[...ui.gpick.values()].map(e=>({n:e.n,w:(e.w||[]).slice(0,6),s:e.s||""}));if(!m.some(e=>entryMe(f,e)))m.push({n:me(f),w:mineH(f).slice(0,6),s:mySec(f)});
     put(f,{k:"g",id,n:name,m}).then(rid=>{st(f).groups.set(id,{id,n:name,m,x:false,rid});tk().sel=id;save();ui.newg=false;draw();toast("Group "+name+" created")}).catch(()=>toast("Couldn't create the group. Check your connection."));return}
   const pl=t.closest("[data-tkplay]");if(pl){unlock();const m=st(f).msgs.get(+pl.dataset.tkplay);if(!m)return;if(ui.playing===f.id+":"+m.id){audio.pause();ui.playing="";draw();return}ui.q=[];play(f,m);return}});
+
+/* swipe a message left: it slides to show Delete; swipe most of the way across (or tap Delete) and it's gone.
+   Delete only removes it from this phone. Keyboard: focus a message and press Delete. */
+const OPENW=96;let sw=null;
+function fling(f,row){const id=row.dataset.tksl,a=row.querySelector(".tk-msg");
+  row.style.height=row.offsetHeight+"px";row.style.transition="height .2s,opacity .2s,margin .2s";if(a){a.style.transition="transform .2s";a.style.transform="translateX(-110%)"}
+  void row.offsetHeight;row.style.height="0";row.style.opacity="0";row.style.marginBottom="0";setTimeout(()=>delMsg(f,id),210)}
+const shut=keep=>document.querySelectorAll(".tk-sl.open").forEach(r=>{if(r!==keep){r.classList.remove("open");const b=r.querySelector(".tk-del");if(b)b.tabIndex=-1}});
+document.addEventListener("pointerdown",e=>{if(view!=="talk"||(e.pointerType==="mouse"&&e.button!==0))return;const a=e.target.closest&&e.target.closest(".tk-sl .tk-msg");if(!a)return;
+  const row=a.parentElement;sw={a,row,x:e.clientX,y:e.clientY,base:row.classList.contains("open")?-OPENW:0,id:e.pointerId,lock:0,dx:0,w:row.offsetWidth||320}},true);
+document.addEventListener("pointermove",e=>{if(!sw||e.pointerId!==sw.id)return;const dx=e.clientX-sw.x,dy=e.clientY-sw.y;
+  if(!sw.lock){if(Math.abs(dy)>10&&Math.abs(dy)>Math.abs(dx)){sw=null;return}
+    if(Math.abs(dx)>8&&Math.abs(dx)>Math.abs(dy)){sw.lock=1;ui.drag=true;sw.row.classList.add("drag");sw.a.style.transition="none";try{sw.a.setPointerCapture(e.pointerId)}catch(x){}}else return}
+  sw.dx=Math.max(-sw.w,Math.min(0,sw.base+dx));sw.a.style.transform="translateX("+sw.dx+"px)";e.preventDefault()},true);
+function swEnd(e){if(!sw||e.pointerId!==sw.id)return;const s=sw;sw=null;if(!s.lock)return;
+  ui.drag=false;ui.swiped=true;setTimeout(()=>{ui.swiped=false},350);
+  s.a.style.transition="";s.a.style.transform="";s.row.classList.remove("drag");
+  const f=feed();if(!f)return;const k=hk(f,s.row.dataset.tksl),b=s.row.querySelector(".tk-del");
+  if(s.dx<-s.w*0.6){fling(f,s.row)}
+  else if(s.dx<-OPENW/2){shut(s.row);ui.open=k;s.row.classList.add("open");if(b)b.tabIndex=0}
+  else{if(ui.open===k)ui.open="";s.row.classList.remove("open");if(b)b.tabIndex=-1}}
+for(const ev of ["pointerup","pointercancel"])document.addEventListener(ev,swEnd,true);
+/* a swipe shouldn't also press Play; a tap elsewhere closes an open row */
+document.addEventListener("click",e=>{if(view!=="talk")return;const t=e.target;if(!t.closest)return;
+  if(ui.swiped&&t.closest(".tk-sl")){e.stopImmediatePropagation();e.preventDefault();return}
+  if(ui.open&&!t.closest(".tk-sl.open")){ui.open="";shut(null)}},true);
+document.addEventListener("keydown",e=>{if(view!=="talk"||(e.key!=="Delete"&&e.key!=="Backspace"))return;const a=document.activeElement;if(!a||!a.classList||!a.classList.contains("tk-msg"))return;const f=feed(),r=a.parentElement;if(f&&r&&r.dataset.tksl){e.preventDefault();fling(f,r)}});
 
 /* hold to talk: press and hold (pointer events cover finger and mouse) */
 document.addEventListener("pointerdown",e=>{const b=e.target.closest&&e.target.closest("#tkBtn");if(!b||b.disabled)return;e.preventDefault();try{b.setPointerCapture(e.pointerId)}catch(x){}startRec()},true);
@@ -10268,7 +10310,7 @@ setInterval(()=>{if(document.hidden)return;const f=feed();if(!f)return;const fas
 setTimeout(()=>{try{start()}catch(e){}},2500);
 
 if(typeof SC==="object"&&Array.isArray(SC))SC.push({k:"tk",n:"4.67: Talk (push-to-talk voice)",f:["38_talk"],t:[["talk_ok",{}]]});
-if(typeof HELP==="object"&&HELP.feed&&Array.isArray(HELP.feed[2]))HELP.feed[2].push("Talk: hold the big button to send a voice clip to your team or a group. Turn Talk off with the switch and nothing plays. A radio icon sits by anyone who has Talk on.");
+if(typeof HELP==="object"&&HELP.feed&&Array.isArray(HELP.feed[2]))HELP.feed[2].push("Talk: hold the big button to send a voice clip to your team or a group. Turn Talk off with the switch and nothing plays. A radio icon sits by anyone who has Talk on. Swipe a message left to delete it from this phone.");
 
 /* ---------- looks (the app's Glass design) ---------- */
 {const c=document.createElement("style");c.textContent=`.tk{display:flex;flex-direction:column;gap:12px;padding-bottom:20px}
@@ -10298,7 +10340,10 @@ if(typeof HELP==="object"&&HELP.feed&&Array.isArray(HELP.feed[2]))HELP.feed[2].p
 .tk-mh{display:flex;align-items:center;gap:10px}.tk-mp{display:flex;align-items:center;gap:10px}
 .tk-play{all:unset;cursor:pointer;width:44px;height:44px;flex:none;border-radius:50%;background:var(--brass);color:var(--on-brass,#fff);display:inline-flex;align-items:center;justify-content:center;font-size:15px}.tk-play:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .tk-wave{flex:1;height:34px;display:flex;align-items:center;gap:3px}.tk-wave i{flex:1;max-width:5px;border-radius:3px;background:var(--line)}.tk-wave i.on{background:var(--brass)}
-.tk-tx{font-size:14px;line-height:1.4;margin:0}.tk-tx.dim{color:var(--muted)}`;document.head.appendChild(c)}
+.tk-tx{font-size:14px;line-height:1.4;margin:0}.tk-tx.dim{color:var(--muted)}
+.tk-sl{position:relative;border-radius:20px;overflow:hidden;margin-bottom:10px}.tk-sl .tk-msg{position:relative;transition:transform .22s ease;touch-action:pan-y;will-change:transform}.tk-sl.drag .tk-msg{user-select:none;-webkit-user-select:none}.tk-sl.open .tk-msg{transform:translateX(-96px)}
+.tk-del{all:unset;cursor:pointer;position:absolute;top:0;right:0;bottom:0;width:96px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--warn);color:#fff;font-size:12px;font-weight:800;opacity:0;transition:opacity .15s}.tk-sl.open .tk-del,.tk-sl.drag .tk-del{opacity:1}.tk-del:focus-visible{outline:3px solid var(--ink);outline-offset:-3px;opacity:1}
+@media (prefers-reduced-motion:reduce){.tk-sl .tk-msg{transition:none}}`;document.head.appendChild(c)}
 })();
 
 /* ===== features/swipe-tiles.js ===== */

@@ -91,3 +91,19 @@ test("the group picker lists roster people who never turned Talk on, and a group
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("a Talk message can be deleted with its Delete button and stays deleted", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    await setup(a, `S.talkLog=[{f:"${FEED.id}",id:7,by:"CPL TEST",g:"all",t:Date.now(),d:3,tx:"hello there"},{f:"${FEED.id}",id:8,by:"CPL TEST",g:"all",t:Date.now(),d:2,tx:"second one"}]`);
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(150);
+    assert.equal(a.$$ ? a.$$(".tk-sl").length : a.w.eval("document.querySelectorAll('.tk-sl').length"), 2, "both messages are swipe rows");
+    assert.ok(a.$("[data-tksl='7'] .tk-del"), "Delete sits behind the message");
+    a.$("[data-tksl='7'] .tk-del").click(); await sleep(400);
+    assert.ok(!a.$("[data-tksl='7']"), "message 7 is gone");
+    assert.ok(a.$("[data-tksl='8']"), "message 8 stays");
+    assert.equal(a.w.eval("S.talkLog.some(x=>x.id===7)"), false, "removed from the saved log");
+    assert.equal(a.w.eval("S.talkHid.includes('" + FEED.id + ":7')"), true, "remembered as deleted so it can't come back");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
