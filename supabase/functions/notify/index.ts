@@ -17,6 +17,7 @@
 //    of that thread ("L" leader / "M" person) gets "New message". No names or text in the alert.
 //  {talk, k, ti, tx, dev}: (4.70.8) a Talk message was sent; only the phones of the people it was sent to (to = their names, matched to the name each phone signed up with) get "📻 name" + preview.
 //  4.70.8: Inbox and Talk alerts show the sender's name and a short preview (ti, tx), sent by the sending phone, passed through and never stored.
+//  {alert:"sos", feed, mk, ti, tx}: (4.72.2) SOS: urgent alert to the OIC and every leader phone, with the sender's name and what is wrong.
 //  4.72.1: Quiet hours. A sign-up with qh/tz skips non-urgent alerts (payload.help false) while that phone's local time is inside the window.
 //  4.33.0: skips the posting phone by device id ("dev") and keeps one sign-up per phone.
 // Payloads carry no names. Turn OFF "Enforce JWT verification" (the function validates input itself).
@@ -32,7 +33,7 @@ const cors = {
 };
 webpush.setVapidDetails("mailto:antoniotyler22@gmail.com", Deno.env.get("VAPID_PUBLIC")!, Deno.env.get("VAPID_PRIVATE")!);
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-const VER = "4.72.1";
+const VER = "4.72.2";
 const out = (t: string, status = 200) => new Response(t, { status, headers: cors });
 // A database error (for example the service role lost its table rights) must never read as "no sub": that hid a
 // week of dead alerts. Log it and answer 500 so the failure shows in the logs and the owner's Health tab.
@@ -464,6 +465,22 @@ async function talkAlert(id: string, key: string, dev: string, ti: string, tx: s
   return out("sent " + n);
 }
 
+// SOS (4.72.2): a team member held the SOS button. Checks the member key, then buzzes the OIC's phone and every leader phone, urgent, through Quiet hours.
+const sosAt = new Map<string, number>();
+async function sosAlert(id: string, mk: string, ti: string, tx: string) {
+  const { data: f, error: e0 } = await db.from("feeds").select("*").eq("id", id).maybeSingle();
+  if (e0) return dbErr(e0);
+  if (!f) return out("no feed");
+  if ((await hexOf(mk)) !== f.member_key_hash) return out("not allowed", 403);
+  const k = id + ":" + ti;
+  if (Date.now() - (sosAt.get(k) ?? 0) < 5000) return out("throttled");
+  sosAt.set(k, Date.now());
+  const { data: ls, error } = await db.from("feed_subs").select("id,sub").eq("feed_id", id).limit(500);
+  if (error) return dbErr(error);
+  const payload = { title: "🆘 SOS: " + (ti || "Someone"), body: (tx || "Needs help") + ". Open now.", help: true, open: "sos" };
+  return out("sent " + await toLeaders(f, ls ?? [], payload, true));
+}
+
 const cut = (v: unknown, n: number) => (typeof v === "string" ? v.replace(/[\u0000-\u001f]/g, " ").trim().slice(0, n) : "");
 
 Deno.serve(async (req) => {
@@ -491,6 +508,8 @@ Deno.serve(async (req) => {
   if (body.drain === 1) { remember(req); return drain(); }
   if (typeof body.dm === "string" && /^[a-zA-Z0-9]{10,40}$/.test(body.dm) && typeof body.k === "string" && /^[a-zA-Z0-9]{20,64}$/.test(body.k) && (body.by === "L" || body.by === "M"))
     return dmAlert(body.dm, body.k, body.by, typeof body.dev === "string" && /^[a-z0-9]{8,40}$/.test(body.dev) ? body.dev : "", cut(body.ti, 40), cut(body.tx, 100));
+  if (body.alert === "sos" && typeof body.feed === "string" && /^[a-z0-9]{10,20}$/.test(body.feed) && typeof body.mk === "string" && /^[a-z0-9]{24,40}$/.test(body.mk))
+    return sosAlert(body.feed, body.mk, cut(body.ti, 40), cut(body.tx, 60));
   if (typeof body.talk === "string" && /^[a-z0-9]{10,20}$/.test(body.talk) && typeof body.k === "string" && /^[a-z0-9]{24,40}$/.test(body.k))
     return talkAlert(body.talk, body.k, typeof body.dev === "string" && /^[a-z0-9]{8,40}$/.test(body.dev) ? body.dev : "", cut(body.ti, 40), cut(body.tx, 100),
       Array.isArray(body.to) ? body.to.filter((x): x is string => typeof x === "string").slice(0, 100).map((x) => x.slice(0, 30)) : null);
