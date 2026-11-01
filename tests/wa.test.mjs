@@ -86,3 +86,22 @@ test("members see the latest Feed posts on their Today page", async () => {
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("a leader has an Inbox next to Feed and Send, and on every My page strip", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    await a.w.eval(`const m=S.roster[0];m.pk="p".repeat(24);m.dm={id:"t1",k:"k".repeat(32),ek:"x",ok:1};S.dmMsgs={t1:[{id:1,t:Date.now()-5000,txt:"Reporting at 0700",by:"M",n:"CPL"},{id:2,t:Date.now()-2000,txt:"Copy",by:"L",n:""}]};S.dmSeen={};
+      S.onb=true;S.welcomed=1;S.leaderMode=true;view="feed";render()`);
+    await sleep(200);
+    const sub = a.$("#subnav");
+    assert.ok(sub.querySelector("[data-go='dms']"), "Inbox in the Feed sub-nav");
+    assert.match(sub.querySelector("[data-go='dms']").textContent, /Inbox \(1\)/, "unread shown");
+    sub.querySelector("[data-go='dms']").click(); await sleep(200);
+    assert.equal(a.w.eval("view"), "dms");
+    assert.match(a.$("#main").textContent, /Reporting at 0700|Copy/);
+    assert.equal(a.$("#tabbar [data-tab='feed']").getAttribute("aria-current"), "page");
+    a.w.eval(`view="today";render()`); await sleep(100);
+    assert.ok(a.$("#dmAsInbox"), "Inbox button on the strip");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
