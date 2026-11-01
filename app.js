@@ -1812,7 +1812,7 @@ async function exportXL(kind){try{const X=await loadXLSX();const wb=X.utils.book
 const xlBtn=k=>`<button class="chip" data-xl="${k}" style="cursor:pointer;font-size:13px">⬇ Excel</button>`;
 
 /* ---------- backup + sync: encrypted with a recovery code; server stores an unreadable blob ---------- */
-const SYNC_SKIP=["quiet","myPhoto","sync","pushOn","link","ts","onb","role","me","who","ask","askSt","dev","hubMode","ws","wsCur","pendLink"];const CODE_AB="23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+const SYNC_SKIP=["gfOn","gfDay","quiet","myPhoto","sync","pushOn","link","ts","onb","role","me","who","ask","askSt","dev","hubMode","ws","wsCur","pendLink"];const CODE_AB="23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 let syncT=null,syncBusy=false,syncShow=false;
 const fnv=str=>{let h=0x811c9dc5;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)}return (h>>>0).toString(36)+str.length.toString(36)};
 const sig=v=>fnv(JSON.stringify(v===undefined?null:v));

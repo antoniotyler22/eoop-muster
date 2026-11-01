@@ -217,7 +217,7 @@ async function rpPublish(force){const B=S.board;if(!B||!B.sk||rpBusy||S.role==="
   catch(e){const t=String(e.message||e);B.rerr=/could not find|schema cache|404/i.test(t)?"Server needs setup part 11a.":t.slice(0,80);rawSave()}
   finally{rpBusy=false}}
 const sigF=v=>fnv(JSON.stringify(v||[]));
-const SYNC_SKIP=["quiet","myPhoto","sync","pushOn","link","ts","onb","role","me","who","ask","askSt","dev","hubMode","ws","wsCur","pendLink"];
+const SYNC_SKIP=["gfOn","gfDay","quiet","myPhoto","sync","pushOn","link","ts","onb","role","me","who","ask","askSt","dev","hubMode","ws","wsCur","pendLink"];
 const fnv=str=>{let h=0x811c9dc5;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)}return (h>>>0).toString(36)+str.length.toString(36)};
 const sig=v=>fnv(JSON.stringify(v===undefined?null:v));
 const normCode=c=>String(c||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
