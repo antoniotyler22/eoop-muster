@@ -11001,8 +11001,12 @@ window.gfCheck=check;
    Leaders: a My page with SOS, Profile photo, Quiet hours, Muster place and the account. */
 (function(){
 const H=n=>{try{return typeof window[n]==="function"?window[n]():""}catch(e){return""}};
-function self(){try{const n=String(S.myName||"").toUpperCase().trim().split(/\s+/).pop();if(!n||n.length<2)return null;
-  return (S.roster||[]).find(m=>String(m.name||"").toUpperCase().split(/[\s,]+/).includes(n))||null}catch(e){return null}}
+function self(){try{const R=S.roster||[];
+  if(S.who&&S.who.id){const w=R.find(m=>m.id===S.who.id||m.uid===S.who.id);if(w)return w}
+  const parts=String(S.myName||"").toUpperCase().trim().split(/\s+/),n=parts.pop();if(!n||n.length<2)return null;const rk=parts[0]||"";
+  /* match the LAST name only (the part before the comma), never a first name, so "TYLER" can't land on "BRIMHALL, TYLER" */
+  const L=R.filter(m=>String(m.name||"").split(",")[0].trim().toUpperCase()===n);
+  return L.find(m=>rk&&String(m.rank||"").toUpperCase()===rk)||L[0]||null}catch(e){return null}}
 function mine(){return `<div class="sech" style="margin-top:14px"><h2>My page</h2></div>${H("sosCardHtml")}${H("ppPanelHtml")}${H("qhPanelHtml")}${(S.role!=="view")?H("gfLeadHtml"):""}${H("acctHtml")}`}
 {const _r=render;render=function(){
   if(view==="mypg"){renderTabs();const m=$("#main");if(m){const own=self();
