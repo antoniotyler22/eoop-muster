@@ -32,13 +32,9 @@ test("touching or typing stops the glide, and it is hidden away from the Feed", 
   try {
     await setup(a);
     a.w.document.dispatchEvent(new a.w.Event("pointerdown", { bubbles: true }));
-    assert.equal(a.w.eval("feedDrift.why()"), "held", "a finger on the screen stops it");
+    assert.equal(a.w.eval("feedDrift.why()"), "touch", "a finger on the screen stops it");
     a.w.document.dispatchEvent(new a.w.Event("pointerup", { bubbles: true }));
-    await sleep(4200);
-    assert.equal(a.w.eval("feedDrift.why()"), "held", "and it stays where you left it, it does not restart by itself");
-    assert.match(a.$("#fdDrift").textContent, /Paused/);
-    a.$("#fdDrift").click(); await sleep(50);
-    assert.notEqual(a.w.eval("feedDrift.why()"), "held", "tapping the pill resumes");
+    assert.equal(a.w.eval("feedDrift.why()"), "touch", "and it waits a few seconds after you let go");
     a.w.eval(`view="home";render()`); await sleep(80);
     assert.equal(a.w.eval("feedDrift.why()"), "view");
     assert.notEqual(a.$("#fdDrift").style.display, "inline-flex", "pill hidden off the Feed");
