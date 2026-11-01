@@ -146,10 +146,10 @@ function tlList(list,mineBy){let day="",h="";for(const x of list){const k=new Da
 {const c=document.createElement("style");c.textContent=`.tl-chat{gap:0!important;position:relative;padding:10px 0 10px 0!important}.tl-d{font-size:11.5px;font-weight:800;letter-spacing:.06em;color:var(--muted);text-align:center;margin:10px 0 12px}
 .tl-e{position:relative;margin:0 0 14px 62px}.tl-e:before{content:"";position:absolute;left:-17px;top:-8px;bottom:-14px;width:2px;background:var(--line)}.tl-e:after{content:"";position:absolute;left:-21px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--line);border:2px solid var(--bg,#fff)}.tl-e.me:after{background:var(--brass)}
 .tl-t{position:absolute;left:-62px;width:38px;text-align:right;font-size:11px;font-weight:700;color:var(--muted);top:4px;font-variant-numeric:tabular-nums}
-.tl-aud{display:block;width:100%;min-width:200px;height:38px;margin:0 0 6px}.tl-c{background:var(--surface-solid);border:1px solid var(--line);border-radius:16px;padding:10px 13px;font-size:15px;line-height:1.35;word-wrap:break-word;box-shadow:var(--shadow)}.tl-e.me .tl-c{background:color-mix(in srgb,var(--brass) 12%,var(--surface-solid))}.tl-w{display:block;margin-top:3px;font-size:11px;font-weight:700;color:var(--muted)}.tl-e.me .tl-w{color:var(--brass)}#v12DmSend{background:var(--brass)!important;color:var(--on-brass,#fff)!important}#v12DmTxt{border-radius:18px}`;document.head.appendChild(c)}
+.v12draft{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px}.v12draft .tl-aud{flex:1;margin:0}.tl-aud{display:block;width:100%;min-width:200px;height:38px;margin:0 0 6px}.tl-c{background:var(--surface-solid);border:1px solid var(--line);border-radius:16px;padding:10px 13px;font-size:15px;line-height:1.35;word-wrap:break-word;box-shadow:var(--shadow)}.tl-e.me .tl-c{background:color-mix(in srgb,var(--brass) 12%,var(--surface-solid))}.tl-w{display:block;margin-top:3px;font-size:11px;font-weight:700;color:var(--muted)}.tl-e.me .tl-w{color:var(--brass)}#v12DmSend{background:var(--brass)!important;color:var(--on-brass,#fff)!important}#v12DmTxt{border-radius:18px}`;document.head.appendChild(c)}
 function chatHTML(list,mineBy,who,sub){return `<div class="sechead" style="margin-top:12px"><h2>${esc(who)}</h2><span class="note" style="margin:0">${esc(sub||"")}</span></div>
   <div class="v12chat tl-chat" id="v12Chat">${list.length?tlList(list,mineBy):`<p class="note" style="text-align:center">No messages yet. Say hello.</p>`}</div>
-  <div class="v12comp"><textarea id="v12DmTxt" maxlength="2000" placeholder="Message" rows="2"></textarea><div class="row2"><label class="btn alt" style="cursor:pointer">📷 Photo<input type="file" id="v12DmImg" accept="image/*" hidden></label><button class="btn alt" id="v12DmRec" type="button">🎙 Voice</button><button class="btn" id="v12DmSend">Send</button></div><div class="note" id="v12DmOut"></div></div>
+  <div class="v12comp"><div id="v12DmDraft">${dmDraftHtml()}</div><textarea id="v12DmTxt" maxlength="2000" placeholder="Message" rows="2"></textarea><div class="row2"><label class="btn alt" style="cursor:pointer">📷 Photo<input type="file" id="v12DmImg" accept="image/*" hidden></label><button class="btn alt" id="v12DmRec" type="button">🎙 Voice</button><button class="btn" id="v12DmSend">Send</button></div><div class="note" id="v12DmOut"></div></div>
   <p class="note">Private: encrypted on this phone; only you two can read it. Don't send anything your organization says not to.</p>`}
 let ibF="all",ibQ="",ibNew=false;
 const ibCol=["#7c3aed","#0ea5e9","#f59e0b","#10b981","#ef4444","#14b8a6","#a855f7","#64748b"];
@@ -188,6 +188,11 @@ function renderDm(){if(memberMode()||!leader()){const th=myDm();if(!th){$("#main
   const top=L.length?L[L.length-1].id:0;if(top>(S.dmSeen[d.id]||0)){S.dmSeen[d.id]=top;save();setTimeout(renderTabs,0)}scrollChat();if(!d.ok)dmOpenSrv(m).then(()=>mpPublish(true)).catch(()=>{})}
 function scrollChat(){const c=$("#v12Chat");if(c)c.scrollTop=c.scrollHeight}
 let dmImg="",dmAud="",dmAudD=0,dmR=null;
+function dmDraftHtml(){
+  if(dmR)return `<div class="v12draft"><span>🔴 Recording…</span><button class="btn alt" id="v12DmDel" type="button">🗑 Cancel</button></div>`;
+  if(dmAud||dmImg)return `<div class="v12draft">${dmImg?`<img src="${dmImg}" alt="Photo draft" class="v12img" style="max-height:80px;width:auto">`:""}${dmAud?`<audio class="tl-aud" controls preload="metadata" src="${dmAud}"></audio>`:""}<button class="btn alt" id="v12DmDel" type="button">🗑 Delete</button></div>`;
+  return ""}
+function dmDraftPaint(){const e=$("#v12DmDraft");if(e)e.innerHTML=dmDraftHtml()}
 function dmRecStop(){if(dmR&&dmR.mr&&dmR.mr.state!=="inactive"){try{dmR.mr.stop()}catch(e){}}}
 async function dmRecToggle(){
   if(dmR){dmRecStop();return}
@@ -198,14 +203,15 @@ async function dmRecToggle(){
     r.mr=new MediaRecorder(st,Object.assign({audioBitsPerSecond:16000},mt?{mimeType:mt}:{}));const type=(r.mr.mimeType||mt||"audio/mp4").split(";")[0];
     r.mr.ondataavailable=e=>{if(e.data&&e.data.size)r.chunks.push(e.data)};
     r.mr.onstop=async()=>{clearInterval(r.tick);clearTimeout(r.cap);st.getTracks().forEach(t=>t.stop());dmR=null;const ms=Date.now()-r.t0;const bb=$("#v12DmRec");if(bb)bb.textContent="🎙 Voice";
-      if(ms<700){toast("Too short. Tap Voice, talk, tap Stop.");return}
+      if(r.cancel){dmDraftPaint();return}
+      if(ms<700){dmDraftPaint();toast("Too short. Tap Voice, talk, tap Stop.");return}
       const d=await new Promise(ok=>{const fr=new FileReader();fr.onload=()=>ok(String(fr.result));fr.onerror=()=>ok("");fr.readAsDataURL(new Blob(r.chunks,{type}))});
       const url="data:"+type+";base64,"+(d.split(",")[1]||"");
-      if(!audOK(url)){toast("Voice note too long. Keep it under 25 seconds.");return}
-      dmAud=url;dmAudD=Math.round(ms/1e3);const o=$("#v12DmOut");if(o)o.textContent="🎙 Voice note ready ("+dmAudD+"s). Tap Send."};
-    r.mr.start();const b=$("#v12DmRec");if(b)b.textContent="⏹ Stop 0:00";
+      if(!audOK(url)){dmDraftPaint();toast("Voice note too long. Keep it under 25 seconds.");return}
+      dmAud=url;dmAudD=Math.round(ms/1e3);const o=$("#v12DmOut");if(o)o.textContent="🎙 Voice note ready ("+dmAudD+"s). Listen, then Send or Delete.";dmDraftPaint()};
+    r.mr.start();dmDraftPaint();const b=$("#v12DmRec");if(b)b.textContent="⏹ Stop 0:00";
     r.tick=setInterval(()=>{const s=Math.floor((Date.now()-r.t0)/1000),bb=$("#v12DmRec");if(bb)bb.textContent="⏹ Stop 0:"+String(s).padStart(2,"0")},250);r.cap=setTimeout(dmRecStop,25000);
-  }catch(e){dmR=null;toast(/denied|NotAllowed/i.test(String(e&&e.name||e))?"Allow the microphone to record.":"Couldn't open the microphone.")}}
+  }catch(e){dmR=null;dmDraftPaint();toast(/denied|NotAllowed/i.test(String(e&&e.name||e))?"Allow the microphone to record.":"Couldn't open the microphone.")}}
 
 /* ================= 6. PAGES (social) ================= */
 S.pages=S.pages||[];
@@ -300,6 +306,7 @@ document.addEventListener("click",e=>{const t=e.target;let b;
   if(t.id==="v12CustSave"){const c={};document.querySelectorAll("[data-v12c]").forEach(i=>{const v=i.value.replace(/[<>|#]/g,"").trim().slice(0,30);if(v)c[i.dataset.v12c]=v});S.customV=c;save();toast("Saved. Reloading…");setTimeout(()=>location.reload(),400);return}
   /* messages */
   if((b=t.closest("[data-v12dm]"))){dmWith=b.dataset.v12dm;view="dm";render();window.scrollTo(0,0);return}
+  if(t.id==="v12DmDel"){if(dmR){dmR.cancel=1;dmRecStop()}dmAud="";dmAudD=0;dmImg="";const x=$("#v12DmTxt");if(x)x.value="";const o=$("#v12DmOut");if(o)o.textContent="";dmDraftPaint();return}
   if(t.id==="v12DmRec"){dmRecToggle();return}
   if(t.id==="v12DmSend"){const txt=($("#v12DmTxt").value||"").trim();if(!txt&&!dmImg&&!dmAud){toast("Write a message.");return}const o=$("#v12DmOut");t.disabled=true;if(o)o.textContent="Sending…";
     (async()=>{if(memberMode()||!leader()){const th=myDm();if(!th)return;const msg=await dmSend(th,txt,dmImg,"M",myName(),dmAud,dmAudD);dmPush("mine:"+th.id,{id:msg.id,t:Date.now(),txt,by:"M",n:myName(),img:dmImg,aud:dmAud,d:dmAudD});}
@@ -338,7 +345,7 @@ document.addEventListener("change",e=>{const t=e.target;
   if(t.id==="v12PgOpen"){const p=pgFind(pgCur);SB.rpc("page_set",{p_id:p.id,p_owner:p.ok,p_open:t.checked,p_member:null}).then(()=>{p.open=t.checked;save();toast(t.checked?"Invited people can post":"Only you can post")}).catch(()=>{t.checked=!t.checked;toast("Couldn't change it. Try again.")});return}
   if(t.id==="v12PgName"){const p=pgFind(pgCur);p.name=t.value.replace(/[<>|#]/g,"").trim().slice(0,40)||p.name;save();return}
   if(t.id==="v12DmPick"){if(!t.value)return;dmWith=t.value;view="dm";render();window.scrollTo(0,0);return}
-  if(t.id==="v12DmImg"||t.id==="v12PgImg"){const f=t.files&&t.files[0];if(!f)return;shrinkPhoto(f).then(d=>{if(t.id==="v12DmImg"){dmImg=d;const o=$("#v12DmOut");if(o)o.textContent="📷 Photo ready. Tap Send."}else{pgImg=d;const keep=($("#v12PgTxt")||{}).value||"";redraw(renderPg);const a=$("#v12PgTxt");if(a)a.value=keep}}).catch(err=>toast(err.message));t.value="";return}});
+  if(t.id==="v12DmImg"||t.id==="v12PgImg"){const f=t.files&&t.files[0];if(!f)return;shrinkPhoto(f).then(d=>{if(t.id==="v12DmImg"){dmImg=d;dmDraftPaint();const o=$("#v12DmOut");if(o)o.textContent="📷 Photo ready. Send or Delete."}else{pgImg=d;const keep=($("#v12PgTxt")||{}).value||"";redraw(renderPg);const a=$("#v12PgTxt");if(a)a.value=keep}}).catch(err=>toast(err.message));t.value="";return}});
 document.addEventListener("input",e=>{const t=e.target;
   if(t.matches&&t.matches("[data-v12wf]")){W2.f[t.dataset.v12wf]=t.value;w6Refresh();return}
   if(t.id==="v12WTo"){S.w6To=t.value;save();w6Refresh();return}

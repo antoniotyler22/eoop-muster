@@ -81,6 +81,8 @@ test("Feed auto-scroll stays off while you are on the Post tab", async () => {
 test("Inbox voice notes: record button, encrypted audio field, safe playback", () => {
   const v = readFileSync(new URL("../v12.js", import.meta.url), "utf8");
   assert.match(v, /id="v12DmRec"/);
+  assert.match(v, /id="v12DmDel"/, "a draft can be deleted or cancelled");
+  assert.match(v, /r\.cancel/, "cancelling a recording saves nothing");
   assert.match(v, /if\(aud\)\{o\.aud=aud/, "audio goes inside the encrypted message");
   assert.match(v, /<audio class="tl-aud" controls/);
   assert.match(v, /Voice note/, "inbox list and alert preview name it");
