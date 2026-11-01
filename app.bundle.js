@@ -10072,7 +10072,7 @@ if(typeof IC==="object")IC.talk='<circle cx="12" cy="12" r="2"/><path d="M16.2 7
 
 /* ---------- per-feed state (in memory; the server holds the last 3 days) ---------- */
 const ST={};
-const st=f=>ST[f.id]=ST[f.id]||{after:0,msgs:new Map(),groups:new Map(),pres:new Map(),rc:new Map(),init:false,beat:0,watch:false,busy:false};
+const st=f=>ST[f.id]=ST[f.id]||{after:0,msgs:new Map(),groups:new Map(),pres:new Map(),rc:new Map(),del:new Map(),init:false,beat:0,watch:false,busy:false};
 const ui={rec:null,note:"",newg:false,gname:"",gpick:new Map(),playing:"",q:[],last:null,dirty:false,err:"",open:"",drag:false,swiped:false};
 let audio=null,unlocked=false;
 
@@ -10118,7 +10118,8 @@ async function poll(f){const s=st(f);if(s.busy||!f.mk||!f.ek)return;s.busy=true;
       if(o.k==="p"&&o.by){const cur=s.pres.get(String(o.by));if(!cur||t>=cur.t)s.pres.set(String(o.by).slice(0,30),{on:!!o.on,t:Math.min(Date.now(),Math.max(t,0)),s:String(o.s||"").slice(0,12),w:Array.isArray(o.w)?o.w.slice(0,6).map(String):[]})}
       else if(o.k==="g"&&o.id){const cur=s.groups.get(o.id);if(!cur||id>=cur.rid)s.groups.set(String(o.id).slice(0,20),{id:String(o.id).slice(0,20),n:String(o.n||"Group").slice(0,24),m:(Array.isArray(o.m)?o.m:[]).map(x=>typeof x==="string"?{n:x.toUpperCase().slice(0,30),w:[],s:""}:{n:String(x.n||"").toUpperCase().slice(0,30),w:Array.isArray(x.w)?x.w.slice(0,6).map(String):[],s:String(x.s||"").slice(0,12)}).filter(e=>e.n).slice(0,200),x:!!o.x,rid:id})}
       else if(o.k==="h"&&o.m){let a=s.rc.get(+o.m);if(!a)s.rc.set(+o.m,a=[]);a.push({by:String(o.by),w:Array.isArray(o.w)?o.w.map(String):[]})}
-      else if(o.k==="v"&&o.a&&!s.msgs.has(id)){const m={id,by:String(o.by||"?").slice(0,30),g:String(o.g||"all"),t:o.t||t,d:+o.d||0,tx:String(o.tx||"").slice(0,400),mt:String(o.mt||"audio/mp4"),a:o.a,seen:s.init};s.msgs.set(id,m);fresh++;
+      else if(o.k==="x"&&o.m){const mid=+o.m,by=String(o.by||"").slice(0,30),l=!!o.l;s.del.set(mid,{by,l});const cur=s.msgs.get(mid)||logs().find(x=>x.f===f.id&&x.id===mid);if(cur&&(l||cur.by===by)){dropMsg(f,mid);fresh++}}
+      else if(o.k==="v"&&o.a&&!s.msgs.has(id)&&!isHid(f,id)&&!((d=>d&&(d.l||d.by===String(o.by||"?").slice(0,30)))(s.del.get(id)))){const m={id,by:String(o.by||"?").slice(0,30),g:String(o.g||"all"),t:o.t||t,d:+o.d||0,tx:String(o.tx||"").slice(0,400),mt:String(o.mt||"audio/mp4"),a:o.a,seen:s.init};s.msgs.set(id,m);fresh++;
         if(!isHid(f,id)&&!logs().some(x=>x.f===f.id&&x.id===id)){logs().unshift({f:f.id,id,by:m.by,g:m.g,t:m.t,d:m.d,tx:m.tx});if(logs().length>LOGMAX)logs().length=LOGMAX}}}
     for(const m of s.msgs.values())if(m.seen===true&&!m.did){m.did=1;incoming(f,m)}
     for(const m of s.msgs.values())if(m.seen===false)m.seen=true;
@@ -10203,13 +10204,19 @@ function newGroup(f){if(!ui.newg)return "";const ppl=people(f);
 const TRASH=`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/></svg>`;
 /* a message row you can swipe left to reveal Delete (or swipe all the way to delete) */
 const slide=(f,id,inner)=>{const o=ui.open===hk(f,id);return `<div class="tk-sl${o?" open":""}" data-tksl="${id}"><button type="button" class="tk-del" data-tkdel="${id}" aria-label="Delete message"${o?"":' tabindex="-1"'}>${TRASH}<span>Delete</span></button>${inner}</div>`};
-function delMsg(f,id){const s=st(f),m=s.msgs.get(+id);
+function dropMsg(f,id){const s=st(f),m=s.msgs.get(+id);
   if(m&&m.url){try{URL.revokeObjectURL(m.url)}catch(e){}}
   if(ui.playing===f.id+":"+id&&audio){audio.pause();ui.playing=""}
   ui.q=ui.q.filter(x=>!(x.f===f&&x.m.id===+id));
   s.msgs.delete(+id);S.talkLog=logs().filter(x=>!(x.f===f.id&&x.id===+id));
   const H=hid(),k=hk(f,id);if(!H.includes(k)){H.push(k);if(H.length>400)H.splice(0,H.length-400)}
-  if(ui.open===k)ui.open="";save();draw()}
+  if(ui.open===k)ui.open=""}
+/* your own messages (or any message, if you hold the leader link) are deleted for everyone: a small encrypted "deleted" note goes out and every phone drops the clip. Anything else is removed from this phone only. */
+function delMsg(f,id){const s=st(f),m=s.msgs.get(+id)||logs().find(x=>x.f===f.id&&x.id===+id);
+  const all=!!m&&(m.by===me(f)||!!f.lk);
+  dropMsg(f,id);save();draw();
+  if(all)put(f,{k:"x",m:+id,by:me(f),l:!!f.lk}).then(()=>toast("Deleted for everyone")).catch(()=>toast("Deleted here, but couldn't reach the others. Check your connection."));
+  else toast("Removed from this phone only")}
 function msgCard(f,m){const mine=m.by===me(f),on=ui.playing===f.id+":"+m.id;
   return slide(f,m.id,`<article class="tk-msg" data-tkm="${m.id}" tabindex="0">
     <div class="tk-mh">${av(f,m.by,40)}<div class="tk-who"><b>${esc(m.by)}${isOn(f,m.by)?` <span class="tk-ri" title="Talk is on">${RADIO(13)}</span>`:""}</b><small>${esc(fmtT(m.t))} · ${m.d}s · ${esc(gname(f,m.g))}${mine?" · you":""}</small></div></div>
@@ -10234,7 +10241,7 @@ function html(){const f=feed();
    <div class="tk-ptt${on?"":" off"}${ui.rec?" live":""}"><div class="tk-ring"><button type="button" id="tkBtn" ${on?"":"disabled"} aria-label="Hold to talk to ${esc(gname(f,tk().sel))}">${ui.rec?"<span id=\"tkT\">0:00</span>":"Hold<br>to talk"}</button></div></div>
    <p class="tk-note" style="text-align:center">Release to send. Voice is saved, turned into text where this phone can, and kept in the log. Works while the app is open.</p>
    ${ui.err?`<p class="tk-note" style="color:var(--warn);text-align:center">${esc(ui.err)}</p>`:""}
-   <div class="tk-lbl">Messages</div><p class="tk-note" style="margin:0">Swipe a message left to delete it. This only removes it from this phone.</p><div id="tkList">${listHTML(f)}</div></div>`}
+   <div class="tk-lbl">Messages</div><p class="tk-note" style="margin:0">Swipe a message left to delete it. Your own messages (or any, if you're a leader) are deleted for everyone; others are removed from this phone only.</p><div id="tkList">${listHTML(f)}</div></div>`}
 function draw(){if(view!=="talk")return;const main=$("#main");if(!main)return;const a=document.activeElement;if(a&&a.id==="tkGN"){ui.gname=a.value;const keep=a.selectionStart;main.innerHTML=html();const i=$("#tkGN");if(i){i.focus();try{i.setSelectionRange(keep,keep)}catch(e){}}return}
   const y=window.scrollY;main.innerHTML=html();window.scrollTo(0,y)}
 function tickUI(){const r=ui.rec;if(!r)return;const s=Math.floor((Date.now()-r.t0)/1e3);const el=$("#tkT");if(el)el.textContent=Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
@@ -10269,7 +10276,7 @@ document.addEventListener("click",e=>{const t=e.target;if(!t.closest||view!=="ta
   const pl=t.closest("[data-tkplay]");if(pl){unlock();const m=st(f).msgs.get(+pl.dataset.tkplay);if(!m)return;if(ui.playing===f.id+":"+m.id){audio.pause();ui.playing="";draw();return}ui.q=[];play(f,m);return}});
 
 /* swipe a message left: it slides to show Delete; swipe most of the way across (or tap Delete) and it's gone.
-   Delete only removes it from this phone. Keyboard: focus a message and press Delete. */
+   Delete goes to everyone for your own messages (and any message for a leader), otherwise just this phone. Keyboard: focus a message and press Delete. */
 const OPENW=96;let sw=null;
 function fling(f,row){const id=row.dataset.tksl,a=row.querySelector(".tk-msg");
   row.style.height=row.offsetHeight+"px";row.style.transition="height .2s,opacity .2s,margin .2s";if(a){a.style.transition="transform .2s";a.style.transform="translateX(-110%)"}
@@ -10310,7 +10317,7 @@ setInterval(()=>{if(document.hidden)return;const f=feed();if(!f)return;const fas
 setTimeout(()=>{try{start()}catch(e){}},2500);
 
 if(typeof SC==="object"&&Array.isArray(SC))SC.push({k:"tk",n:"4.67: Talk (push-to-talk voice)",f:["38_talk"],t:[["talk_ok",{}]]});
-if(typeof HELP==="object"&&HELP.feed&&Array.isArray(HELP.feed[2]))HELP.feed[2].push("Talk: hold the big button to send a voice clip to your team or a group. Turn Talk off with the switch and nothing plays. A radio icon sits by anyone who has Talk on. Swipe a message left to delete it from this phone.");
+if(typeof HELP==="object"&&HELP.feed&&Array.isArray(HELP.feed[2]))HELP.feed[2].push("Talk: hold the big button to send a voice clip to your team or a group. Turn Talk off with the switch and nothing plays. A radio icon sits by anyone who has Talk on. Swipe a message left to delete it. Your own messages are deleted for everyone.");
 
 /* ---------- looks (the app's Glass design) ---------- */
 {const c=document.createElement("style");c.textContent=`.tk{display:flex;flex-direction:column;gap:12px;padding-bottom:20px}

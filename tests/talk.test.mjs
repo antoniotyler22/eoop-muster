@@ -107,3 +107,35 @@ test("a Talk message can be deleted with its Delete button and stays deleted", a
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("deleting my own message tells everyone; a leader or the sender's delete note removes it from other phones", async () => {
+  const sent = []; let rows = [];
+  const a = await openApp({ rpc: (fn, b) => { if (fn === "talk_send") { sent.push(b); return 50 + sent.length; } if (fn === "talk_get") return rows.filter(r => r.id > b.p_after); return []; } });
+  try {
+    await setup(a, `S.talkLog=[{f:"${FEED.id}",id:7,by:"CPL TEST",g:"all",t:Date.now(),d:3,tx:"mine"},{f:"${FEED.id}",id:8,by:"SGT OTHER",g:"all",t:Date.now(),d:2,tx:"theirs"}]`);
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(150);
+    // 1) deleting my own message sends an encrypted delete note
+    sent.length = 0;
+    a.$("[data-tksl='7'] .tk-del").click(); await sleep(500);
+    assert.ok(!a.$("[data-tksl='7']"), "gone here");
+    const note = sent.find(x => x.p_feed === FEED.id);
+    assert.ok(note, "delete note sent to the server");
+    assert.ok(!/"k":"x"/.test(note.p_ct), "delete note is encrypted");
+    // 2) deleting someone else's message (not a leader) stays on this phone
+    sent.length = 0;
+    a.w.eval(`S.feeds[0].lk=""`);
+    a.$("[data-tksl='8'] .tk-del").click(); await sleep(500);
+    assert.ok(!a.$("[data-tksl='8']"), "gone here");
+    assert.equal(sent.length, 0, "no delete note for someone else's message");
+    // 3) a delete note from the sender removes the message here
+    a.w.eval(`S.talkLog=[{f:"${FEED.id}",id:20,by:"SGT OTHER",g:"all",t:Date.now(),d:2,tx:"going away"},{f:"${FEED.id}",id:21,by:"SGT OTHER",g:"all",t:Date.now(),d:2,tx:"stays"}];render()`);
+    await sleep(100);
+    assert.ok(a.$("[data-tksl='20']"), "shown before the note");
+    const ct = await a.w.eval(`fdEnc(S.feeds[0].ek,{k:"x",m:20,by:"SGT OTHER",l:false,t:Date.now()})`);
+    rows = [{ id: 99, ct, created_at: new Date().toISOString() }];
+    await sleep(4600);
+    assert.ok(!a.$("[data-tksl='20']"), "removed by the sender's delete note");
+    assert.ok(a.$("[data-tksl='21']"), "other message untouched");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
