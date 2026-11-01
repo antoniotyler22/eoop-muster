@@ -4283,7 +4283,7 @@ window.lgAfterSignIn=function(n){if(!signedIn())return;n=n||0;const sh=$("#sheet
 {const _ss=secHTML;secHTML=function(){return (signedIn()?acctHTML():"")+_ss.apply(this,arguments)}}
 /* a Log out chip in the header for signed-in people */
 function hdrPaint(){const hic=document.querySelector(".hic");if(!hic)return;let b=$("#v13Hdr");if(!signedIn()){if(b)b.remove();return}
-  if(!b){hic.insertAdjacentHTML("afterbegin",`<button id="v13Hdr" aria-label="Account and log out" title="Account and log out"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></button>`)}}
+  if(!b){hic.insertAdjacentHTML("afterbegin",`<button id="v13Hdr" style="color:#2563eb" aria-label="Account and log out" title="Account and log out"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></button>`)}}
 {const _rtb=renderTabs;renderTabs=function(){_rtb.apply(this,arguments);hdrPaint()}}
 
 /* ---------- events ---------- */
