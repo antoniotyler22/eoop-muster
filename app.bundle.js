@@ -6960,9 +6960,9 @@ async function attachOnce(force){if(!S.pushOn)return 0;let n=0;lastErr="";
     const j=Object.assign({},s.toJSON(),{dev:devId()});myEnd=j.endpoint||myEnd;const M=subMap();
     /* v2: leader phones are marked "lead" so member check-ins, requests and problem reports reach them (co-leaders
        too), and the OIC's phone is also the feed's leader alert phone. Phones attached before re-attach once. */
-    if(M.__v!==3){force=true;M.__v=3}
-    for(const f of S.feeds||[]){if(!f.mk)continue;if(!force&&M[f.id]===j.endpoint){f.push=true;continue}
-      try{await SB.rpc("feed_sub",{p_feed:f.id,p_member_key:f.mk,p_sub:f.lk?Object.assign({},j,{lead:1}):j});M[f.id]=j.endpoint;f.push=true;n++;
+    if(M.__v!==4){force=true;M.__v=4}M.__nm=M.__nm||{};
+    for(const f of S.feeds||[]){if(!f.mk)continue;const nm=String(typeof fdBy==="function"?fdBy(f):(S.myName||"")).toUpperCase().slice(0,30);if(!force&&M[f.id]===j.endpoint&&M.__nm[f.id]===nm){f.push=true;continue}
+      try{const jf=Object.assign({},j,nm?{nm}:{});await SB.rpc("feed_sub",{p_feed:f.id,p_member_key:f.mk,p_sub:f.lk?Object.assign({},jf,{lead:1}):jf});M[f.id]=j.endpoint;M.__nm[f.id]=nm;f.push=true;n++;
         if(f.lk&&(!S.role||S.role==="oic"||S.role==="newoic"))try{await SB.rpc("set_feed_leader_sub",{p_feed:f.id,p_leader_key:f.lk,p_sub:j})}catch(e2){}}
       catch(e){const msg=String(e&&e.message||e);lastErr=/full/.test(msg)?"the team's alert list is full (500 phones).":/find the function|schema|does not exist/i.test(msg)?"alerts aren't set up on the server yet (DATA → System check).":/fetch|network|Failed/i.test(msg)?"no signal reaching the server. Try again.":msg.slice(0,80)}}
     putMap(M);if(n)rawSave()}catch(e){lastErr=String(e&&e.message||e).slice(0,80)}return n}
@@ -10238,7 +10238,7 @@ async function done(r){const ms=Date.now()-r.t0;ui.rec=null;paintRec(false);beat
   const f=r.f,s=st(f);try{const blob=new Blob(r.chunks,{type:r.mt});const a=await toB64(blob);
     const o={k:"v",by:me(f),g:r.g,d:Math.max(1,Math.round(ms/1e3)),tx:r.tx.trim().slice(0,400),mt:r.mt,a,t:Date.now()};
     ui.note="Sending…";draw();
-    const id=await put(f,o);try{SB.notify(null,{talk:f.id,k:f.mk,dev:window.dmDev?window.dmDev():undefined,ti:o.by,tx:(o.tx?o.tx.slice(0,90):"🎙 Voice message · "+o.d+"s")})}catch(e){}const m={id,by:o.by,g:o.g,t:o.t,d:o.d,tx:o.tx,mt:o.mt,a,seen:true,did:1};s.msgs.set(id,m);
+    const id=await put(f,o);try{SB.notify(null,{talk:f.id,k:f.mk,to:targets(f,o.g).filter(e=>!entryMe(f,e)).map(e=>e.n).slice(0,100),dev:window.dmDev?window.dmDev():undefined,ti:o.by,tx:(o.tx?o.tx.slice(0,90):"🎙 Voice message · "+o.d+"s")})}catch(e){}const m={id,by:o.by,g:o.g,t:o.t,d:o.d,tx:o.tx,mt:o.mt,a,seen:true,did:1};s.msgs.set(id,m);
     s.after=Math.max(s.after,id);logs().unshift({f:f.id,id,by:m.by,g:m.g,t:m.t,d:m.d,tx:m.tx});if(logs().length>LOGMAX)logs().length=LOGMAX;save();
     ui.last={id,g:o.g,t:Date.now()};ui.note="";
     if(typeof actAdd==="function")actAdd("📻","Talk: sent to "+gname(f,o.g),"talk")}

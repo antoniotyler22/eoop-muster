@@ -15,7 +15,7 @@
 //  {stalled:1} and the minute job: if check-ins sit unalerted for 6 min or the database refuses us, the owner phone gets "Alerts not going out" (once an hour).
 //  {dm, k, by, dev}: (4.70.7, setup part 40) an Inbox message was sent. The thread key is checked, then every phone signed up on the other side
 //    of that thread ("L" leader / "M" person) gets "New message". No names or text in the alert.
-//  {talk, k, ti, tx, dev}: (4.70.8) a Talk message was sent; every phone on the team alert list except the sender's gets "📻 name" + preview.
+//  {talk, k, ti, tx, dev}: (4.70.8) a Talk message was sent; only the phones of the people it was sent to (to = their names, matched to the name each phone signed up with) get "📻 name" + preview.
 //  4.70.8: Inbox and Talk alerts show the sender's name and a short preview (ti, tx), sent by the sending phone, passed through and never stored.
 //  4.33.0: skips the posting phone by device id ("dev") and keeps one sign-up per phone.
 // Payloads carry no names. Turn OFF "Enforce JWT verification" (the function validates input itself).
@@ -31,7 +31,7 @@ const cors = {
 };
 webpush.setVapidDetails("mailto:antoniotyler22@gmail.com", Deno.env.get("VAPID_PUBLIC")!, Deno.env.get("VAPID_PRIVATE")!);
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-const VER = "4.70.8";
+const VER = "4.70.9";
 const out = (t: string, status = 200) => new Response(t, { status, headers: cors });
 // A database error (for example the service role lost its table rights) must never read as "no sub": that hid a
 // week of dead alerts. Log it and answer 500 so the failure shows in the logs and the owner's Health tab.
@@ -434,7 +434,7 @@ async function dmAlert(id: string, key: string, by: string, dev: string, ti = ""
 
 // Talk (push to talk) message: buzz every phone on the team's alert list except the sender's. Checks the member key.
 const talkAt = new Map<string, number>();
-async function talkAlert(id: string, key: string, dev: string, ti: string, tx: string) {
+async function talkAlert(id: string, key: string, dev: string, ti: string, tx: string, to: string[] | null) {
   const { data: f, error: e1 } = await db.from("feeds").select("id,member_key_hash").eq("id", id).maybeSingle();
   if (e1) return dbErr(e1);
   if (!f) return out("no feed");
@@ -446,7 +446,8 @@ async function talkAlert(id: string, key: string, dev: string, ti: string, tx: s
   const { data: subs, error } = await db.from("feed_subs").select("id,sub").eq("feed_id", id).limit(500);
   if (error) return dbErr(error);
   // deno-lint-ignore no-explicit-any
-  const list = (subs ?? []).filter((s: any) => !(dev && s.sub?.dev === dev));
+  const want = to ? new Set(to) : null;
+  const list = (subs ?? []).filter((s: any) => !(dev && s.sub?.dev === dev) && (!want || want.has(String(s.sub?.nm ?? ""))));
   const n = await sendSubs(list, { title: ti ? "📻 " + ti : "📻 Talk", body: tx || "New Talk message.", help: false, open: "talk" }, true, 600);
   return out("sent " + n);
 }
@@ -456,7 +457,7 @@ const cut = (v: unknown, n: number) => (typeof v === "string" ? v.replace(/[\u00
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return out("ok");
   if (req.method !== "POST") return out("method", 405);
-  let body: { talk?: unknown; ti?: unknown; tx?: unknown; dm?: unknown; by?: unknown; ver?: unknown; test?: unknown; sub?: unknown; recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown; drain?: unknown; team?: unknown; k?: unknown; what?: unknown; skip?: unknown; dev?: unknown; whoami?: unknown; health?: unknown; stalled?: unknown } = {};
+  let body: { to?: unknown; talk?: unknown; ti?: unknown; tx?: unknown; dm?: unknown; by?: unknown; ver?: unknown; test?: unknown; sub?: unknown; recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown; drain?: unknown; team?: unknown; k?: unknown; what?: unknown; skip?: unknown; dev?: unknown; whoami?: unknown; health?: unknown; stalled?: unknown } = {};
   try { body = await req.json(); } catch { return out("bad", 400); }
   if (body.whoami === 1) { namedAt = 0; await remember(req); return out("ok"); }
   // {ver:1}: which version is deployed (System check).  {test:1, sub}: one "Test alert" to the asking phone only.
@@ -479,7 +480,8 @@ Deno.serve(async (req) => {
   if (typeof body.dm === "string" && /^[a-zA-Z0-9]{10,40}$/.test(body.dm) && typeof body.k === "string" && /^[a-zA-Z0-9]{20,64}$/.test(body.k) && (body.by === "L" || body.by === "M"))
     return dmAlert(body.dm, body.k, body.by, typeof body.dev === "string" && /^[a-z0-9]{8,40}$/.test(body.dev) ? body.dev : "", cut(body.ti, 40), cut(body.tx, 100));
   if (typeof body.talk === "string" && /^[a-z0-9]{10,20}$/.test(body.talk) && typeof body.k === "string" && /^[a-z0-9]{24,40}$/.test(body.k))
-    return talkAlert(body.talk, body.k, typeof body.dev === "string" && /^[a-z0-9]{8,40}$/.test(body.dev) ? body.dev : "", cut(body.ti, 40), cut(body.tx, 100));
+    return talkAlert(body.talk, body.k, typeof body.dev === "string" && /^[a-z0-9]{8,40}$/.test(body.dev) ? body.dev : "", cut(body.ti, 40), cut(body.tx, 100),
+      Array.isArray(body.to) ? body.to.filter((x): x is string => typeof x === "string").slice(0, 100).map((x) => x.slice(0, 30)) : null);
   const skip = typeof body.skip === "string" ? body.skip.slice(0, 600) : "";
   const dev = typeof body.dev === "string" && /^[a-z0-9]{8,40}$/.test(body.dev) ? body.dev : "";
   if (typeof body.team === "string" && /^[a-z0-9]{10,20}$/.test(body.team) && typeof body.k === "string" && /^[a-z0-9]{24,40}$/.test(body.k))

@@ -34,3 +34,20 @@ test("alerts show the sender and a preview (style A), for Inbox and Talk", () =>
   const v = readFileSync(new URL("../v12.js", import.meta.url), "utf8");
   assert.match(v, /SB\.notify\(null,\{dm:th\.id,k:th\.k/);
 });
+
+test("Talk alerts go only to the people a message was sent to", async () => {
+  const n = readFileSync(new URL("../supabase/functions/notify/index.ts", import.meta.url), "utf8");
+  assert.match(n, /want\.has\(String\(s\.sub\?\.nm/);
+  const t = readFileSync(new URL("../features/talk.js", import.meta.url), "utf8");
+  assert.match(t, /to:targets\(f,o\.g\)\.filter\(e=>!entryMe\(f,e\)\)/);
+  const calls = [];
+  const a = await openApp({ rpc: (name, args) => { calls.push([name, args]); return []; } });
+  try {
+    await a.w.eval(`S.onb=true;S.welcomed=1;S.leaderMode=true;S.pushOn=true;S.myName="gysgt tyler";
+      S.feeds=[{id:"feedabcdef12",mk:"m".repeat(30),ek:"x",unit:"TEAM",me:"A",posts:[],seen:0,mine:{},hub:1}];
+      window.pushSub=async()=>({toJSON:()=>({endpoint:"https://push.example/zzz"}),endpoint:"https://push.example/zzz"});`);
+    await a.w.eval(`taAttach(true)`); await sleep(150);
+    const c = calls.find((x) => x[0] === "feed_sub");
+    assert.ok(c && c[1].p_sub.nm, "phone signs up with its name so Talk can find it");
+  } finally { await a.close(); }
+});

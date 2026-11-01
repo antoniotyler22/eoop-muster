@@ -117,7 +117,7 @@ async function done(r){const ms=Date.now()-r.t0;ui.rec=null;paintRec(false);beat
   const f=r.f,s=st(f);try{const blob=new Blob(r.chunks,{type:r.mt});const a=await toB64(blob);
     const o={k:"v",by:me(f),g:r.g,d:Math.max(1,Math.round(ms/1e3)),tx:r.tx.trim().slice(0,400),mt:r.mt,a,t:Date.now()};
     ui.note="Sending…";draw();
-    const id=await put(f,o);try{SB.notify(null,{talk:f.id,k:f.mk,dev:window.dmDev?window.dmDev():undefined,ti:o.by,tx:(o.tx?o.tx.slice(0,90):"🎙 Voice message · "+o.d+"s")})}catch(e){}const m={id,by:o.by,g:o.g,t:o.t,d:o.d,tx:o.tx,mt:o.mt,a,seen:true,did:1};s.msgs.set(id,m);
+    const id=await put(f,o);try{SB.notify(null,{talk:f.id,k:f.mk,to:targets(f,o.g).filter(e=>!entryMe(f,e)).map(e=>e.n).slice(0,100),dev:window.dmDev?window.dmDev():undefined,ti:o.by,tx:(o.tx?o.tx.slice(0,90):"🎙 Voice message · "+o.d+"s")})}catch(e){}const m={id,by:o.by,g:o.g,t:o.t,d:o.d,tx:o.tx,mt:o.mt,a,seen:true,did:1};s.msgs.set(id,m);
     s.after=Math.max(s.after,id);logs().unshift({f:f.id,id,by:m.by,g:m.g,t:m.t,d:m.d,tx:m.tx});if(logs().length>LOGMAX)logs().length=LOGMAX;save();
     ui.last={id,g:o.g,t:Date.now()};ui.note="";
     if(typeof actAdd==="function")actAdd("📻","Talk: sent to "+gname(f,o.g),"talk")}
