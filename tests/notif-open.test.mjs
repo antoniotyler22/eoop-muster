@@ -6,7 +6,7 @@ import { openApp } from "./harness.mjs";
 
 test("the service worker tells the open app where to go and keeps every alert target", () => {
   const sw = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-  assert.match(sw, /postMessage\(\{ type: "open", open \}\)/);
+  assert.match(sw, /postMessage\(\{ type: "open", open, sos: sx \}\)/);
   for (const k of ["checkins", "co", "owner", "feed", "live"]) assert.ok(sw.includes(`"${k}"`), k);
 });
 
