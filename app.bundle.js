@@ -11004,11 +11004,13 @@ function self(){try{const n=String(S.myName||"").toUpperCase().trim().split(/\s+
 function mine(){return `<div class="sech" style="margin-top:14px"><h2>My page</h2></div>${H("sosCardHtml")}${H("ppPanelHtml")}${H("qhPanelHtml")}${(S.role!=="view")?H("gfLeadHtml"):""}${H("acctHtml")}`}
 {const _r=render;render=function(){
   if(view==="mypg"){renderTabs();const m=$("#main");if(m){const own=self();
-    if(own){const saved=S.me;try{S.me={pk:"preview",d:Object.assign(window.__v12.mpDigest(own),{at:Date.now()}),t:Date.now()};renderMe()}finally{S.me=saved}
+    let ok=false;
+    if(own){const saved=S.me;try{S.me={pk:"preview",d:Object.assign(window.__v12.mpDigest(own),{at:Date.now()}),t:Date.now()};renderMe()}catch(e){m.innerHTML=""}finally{S.me=saved}
+      if(m.innerHTML){
       ["#meOff","#tdLeader","#meRe"].forEach(q=>{const x=m.querySelector(q);if(x){const p=x.closest("p")||x;p.remove()}});
       const top=m.querySelector(".hero")||m.firstElementChild;const blk=H("sosCardHtml")+H("ppPanelHtml")+H("qhPanelHtml")+((S.role!=="view")?H("gfLeadHtml"):"")+H("acctHtml");
-      top?top.insertAdjacentHTML("afterend",blk):m.insertAdjacentHTML("afterbegin",blk)}
-    else m.innerHTML=mine();
+      top?top.insertAdjacentHTML("afterend",blk):m.insertAdjacentHTML("afterbegin",blk);ok=true}}
+    if(!ok)m.innerHTML=mine();
     if(typeof animateView==="function")animateView()}return}
   const r=_r.apply(this,arguments);return r}}
 /* member page: add photo + quiet hours under the SOS / place card */
