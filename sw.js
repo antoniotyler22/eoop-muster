@@ -1,6 +1,6 @@
 // Offline cache. The app opens from the phone instantly; a newer version is fetched in the background.
 // Everything the app uses is served from this site: no outside fonts, scripts or trackers.
-const CACHE = "eop-numbers-v155";
+const CACHE = "eop-numbers-v156";
 const CORE = ["./", "./index.html", "./app.bundle.js", "./terms.html", "./app.css", "./native.js", "./privacy.html", "./support.html", "./help.html", "./manifest.webmanifest",
   "./icon-180.png", "./icon-192.png", "./icon-512.png",
   "./fonts/pjs-400.woff2", "./fonts/pjs-500.woff2", "./fonts/pjs-600.woff2", "./fonts/pjs-700.woff2", "./fonts/pjs-800.woff2"];
@@ -64,20 +64,23 @@ self.addEventListener("fetch", e => {
 self.addEventListener("push", e => {
   let d = {}; try { d = e.data ? e.data.json() : {}; } catch (x) {}
   const title = d.title || "New check-in";
+  const sos = d.open === "sos" && d.sos && typeof d.sos === "object" ? { id: String(d.sos.id || "").slice(0, 20), w: String(d.sos.w || "").slice(0, 30), k: String(d.sos.k || "").slice(0, 10), la: d.sos.la, ln: d.sos.ln, ac: d.sos.ac, t: Date.now() } : null;
+  if (sos) e.waitUntil(clients.matchAll({ type: "window", includeUncontrolled: true }).then(ws => ws.forEach(w => { try { w.postMessage({ type: "sos", sos }); } catch (x) {} })));
   e.waitUntil(self.registration.showNotification(title, {
     body: d.body || "Open the recall to see who.", tag: d.open === "sos" ? "sos" : d.open === "dm" ? "dm" : d.open === "talk" ? "talk" : d.open === "feed" ? "feed" : d.open === "board" ? "team" : d.help ? "recall-help" : (d.open === "live" ? "board" : "recall"), renotify: true,
-    icon: "./icon-192.png", badge: "./icon-192.png", requireInteraction: !!d.help, data: { open: ["live", "feed", "board", "checkins", "co", "owner", "recall", "dm", "talk", "sos"].includes(d.open) ? d.open : "recall" }, vibrate: d.help ? [300, 100, 300, 100, 300] : [120]
+    icon: "./icon-192.png", badge: "./icon-192.png", requireInteraction: !!d.help, data: { open: ["live", "feed", "board", "checkins", "co", "owner", "recall", "dm", "talk", "sos"].includes(d.open) ? d.open : "recall", sos }, vibrate: d.help ? [300, 100, 300, 100, 300] : [120]
   }));
 });
 self.addEventListener("notificationclick", e => {
   e.notification.close();
   const open = (e.notification.data && e.notification.data.open) || "recall";
-  const dest = "./#" + open;
+  const sx = e.notification.data && e.notification.data.sos;
+  const dest = sx ? "./#sos:" + encodeURIComponent(JSON.stringify(sx)) : "./#" + open;
   e.waitUntil(clients.matchAll({ type: "window", includeUncontrolled: true }).then(ws => {
     for (const w of ws) {
       if (w.url.includes(self.registration.scope)) {
         /* tell the open app where to go (works even when the address already ends in the same #word), then bring it forward */
-        try { w.postMessage({ type: "open", open }); } catch (x) {}
+        try { w.postMessage({ type: "open", open, sos: sx }); } catch (x) {}
         return w.focus();
       }
     }

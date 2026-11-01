@@ -5,7 +5,8 @@
    Leaders see a red full-screen alert with the name, a map link, Call / Text, and "I'm responding". */
 (()=>{
 const KINDS=["Help","Medical","Unsafe","Lost"],HOLD=3000;
-const feedOf=()=>(S.feeds||[]).find(f=>f.mk&&f.ek)||null;
+const feedOf=()=>(S.feeds||[]).find(f=>f.mk&&f.ek)||(S.me&&S.me.d&&S.me.d.feed&&S.me.d.feed.mk&&S.me.d.feed.ek&&String(S.me.pk)!=="preview"?S.me.d.feed:null);
+const myNm=f=>{const D=S.me&&S.me.d;return String(f.me||S.myName||(D&&D.name?title(D.rank)+" "+title(String(D.name).split(",")[0].trim()):"")||(typeof fdBy==="function"?fdBy(f):"")||"Someone").slice(0,30)};
 const list=()=>S.sos=Array.isArray(S.sos)?S.sos:[];
 let kind="Help",hold=null,note="",busy=false,pos=null;
 const hhmm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
@@ -19,12 +20,12 @@ function paintNote(){const e=document.getElementById("sosNote");if(e)e.textConte
 async function send(){if(busy)return;const f=feedOf();
   if(!f){note="Join your team first: SOS needs your team's link.";paintNote();return}
   busy=true;note="Getting your location…";paintNote();
-  const p=await where();const me=String(f.me||(typeof fdBy==="function"?fdBy(f):"")||S.myName||"Someone").slice(0,30);
+  const p=await where();const me=myNm(f);
   const o={k:"sos",sid:"s"+Date.now().toString(36)+rndId(4),me,kind,t:Date.now()};
   if(p){o.lat=+p.lat.toFixed(5);o.lng=+p.lng.toFixed(5);o.acc=Math.round(p.acc||0)}
   note="Sending…";paintNote();
   try{const ct=await fdEnc(f.ek,o);await SB.rpc("feed_req",{p_feed:f.id,p_member_key:f.mk,p_ct:ct});
-    try{SB.notify(null,{alert:"sos",feed:f.id,mk:f.mk,ti:me,tx:kind+(p?" · location shared":"")})}catch(e){}
+    try{SB.notify(null,{alert:"sos",feed:f.id,mk:f.mk,ti:me,tx:kind+(p?" · location shared":""),sid:o.sid,kd:kind,la:o.lat,ln:o.lng,ac:o.acc,dev:window.dmDev?window.dmDev():undefined})}catch(e){}
     note="🆘 SOS sent at "+hhmm(Date.now())+(p?" with your location":" (no location: allow it in Settings)")+". Stay where you are if you can.";
     try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}
   }catch(e){note="Couldn't send. Check signal and hold the button again. If it's an emergency call 911."}
@@ -32,7 +33,7 @@ async function send(){if(busy)return;const f=feedOf();
 function ringStyle(p){return `background:conic-gradient(#fff ${Math.round(p*360)}deg,transparent 0)`}
 function screen(){
   return `<div class="sos-wrap"><button class="chip" data-go="board" style="cursor:pointer">◂ Back</button><h2 style="margin:10px 0 4px">🆘 SOS</h2>
-  <p class="note" style="margin:0 0 12px">Press and hold for 3 seconds. Your leaders get an urgent alert with your name and location.</p>
+  <p class="note" style="margin:0 0 12px">Press and hold for 3 seconds. Everyone on your team gets an urgent alert with your name and location.</p>
   <div class="sos-kinds" role="radiogroup" aria-label="What's wrong">${KINDS.map(k=>`<button type="button" data-soskind="${k}" role="radio" aria-checked="${kind===k}" class="sos-k${kind===k?" on":""}">${k}</button>`).join("")}</div>
   <div class="sos-stage"><button id="sosBtn" type="button" class="sos-btn" aria-label="SOS: press and hold for 3 seconds"><span class="sos-ring" id="sosRing"></span><span class="sos-in"><b>SOS</b><small>Hold 3 sec</small></span></button></div>
   <div class="note sos-note" id="sosNote" role="status">${esc(note)}</div>
@@ -46,9 +47,11 @@ document.addEventListener("pointerdown",e=>{if(e.target.closest&&e.target.closes
 document.addEventListener("contextmenu",e=>{if(e.target.closest&&e.target.closest("#sosBtn"))e.preventDefault()});
 document.addEventListener("click",e=>{const k=e.target.closest&&e.target.closest("[data-soskind]");if(k){kind=k.dataset.soskind;const w=document.querySelector(".sos-kinds");if(w)w.querySelectorAll(".sos-k").forEach(b=>{const on=b.dataset.soskind===kind;b.classList.toggle("on",on);b.setAttribute("aria-checked",on)})}});
 {const _r=render;render=function(){if(view==="sos"){renderTabs();const m=$("#main");if(m){m.innerHTML=screen();warm()}return}return _r.apply(this,arguments)}}
-function card(){return `<button class="card sos-card" id="sosHome" data-go="sos" type="button"><span class="sos-dot">🆘</span><span><b>SOS</b><small>Hold to alert your leaders</small></span></button>`}
+function card(){return `<button class="btn warn" id="sosHome" data-go="sos" type="button" style="width:100%;margin-top:12px;font-size:17px">🆘 SOS</button>`}
 {const _rt=renderTools;renderTools=function(){const r=_rt.apply(this,arguments);try{const g=document.querySelector("#main .tgrid");if(g&&!document.getElementById("sosTile"))g.insertAdjacentHTML("afterbegin",`<button data-go="sos" id="sosTile" class="hot"><span class="ic">${svg("alert")}</span><span><b>SOS</b><small>Hold to alert your leaders</small></span></button>`)}catch(e){}return r}}
 {const _td=renderToday;renderToday=function(){const r=_td.apply(this,arguments);try{const m=$("#main");if(m&&feedOf()&&!document.getElementById("sosHome"))m.insertAdjacentHTML("beforeend",card())}catch(e){}return r}}
+
+{const _rm=renderMe;renderMe=function(){_rm.apply(this,arguments);try{if(view!=="me"||!feedOf()||document.getElementById("sosHome"))return;const m=$("#main"),t=m&&m.querySelector(".v12tabs");const h=card();if(t)t.insertAdjacentHTML("afterend",h);else if(m)m.insertAdjacentHTML("afterbegin",h)}catch(e){}}}
 
 /* ---------- leader ---------- */
 const clean=(v,n)=>String(v||"").replace(/[<>]/g,"").slice(0,n);
@@ -62,6 +65,11 @@ function sosIn(f,o,r){const id=clean(o.sid,20);if(!id||list().some(x=>x.id===id)
   try{if(typeof localAlert==="function")localAlert("🆘 SOS: "+x.who,kd+". Open Accounted For now.","sos")}catch(e){}
   show(true)}
 window.sosIn=sosIn;
+/* 4.73.1: everyone on the team gets the SOS as a push that carries the details, so it also shows on member phones */
+function sosRecv(o){if(!o||typeof o!=="object")return;sosIn({id:0},{sid:o.id,me:o.w,kind:o.k,lat:o.la,lng:o.ln,acc:o.ac,t:o.t},null)}
+window.sosRecv=sosRecv;
+if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",ev=>{const d=ev.data;if(d&&d.type==="sos")sosRecv(d.sos)});
+{const h=String(location.hash||"");if(h.startsWith("#sos:")){try{const o=JSON.parse(decodeURIComponent(h.slice(5)));setTimeout(()=>sosRecv(o),1200)}catch(e){}}}
 function open(){return list().filter(x=>x.st==="open"&&Date.now()-x.t<12*3600e3)}
 function show(force){const L=open();const old=document.getElementById("sosOv");if(old)old.remove();if(!L.length)return;
   const d=document.createElement("div");d.id="sosOv";d.setAttribute("role","alertdialog");d.setAttribute("aria-label","SOS alert");

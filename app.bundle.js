@@ -3813,7 +3813,7 @@ async function dmOpenSrv(m){const d=dmEnsure(m);if(d.ok)return d;await SB.rpc("d
 {const _md=mpDigest;mpDigest=function(m){const d=_md.apply(this,arguments);if(m&&m.dm&&m.dm.ok)d.dm={id:m.dm.id,k:m.dm.k,ek:m.dm.ek,from:String(S.postAs||S.myName||unitName()).slice(0,30)};return d}}
 {const _m2=mpDigest;mpDigest=function(m){const d=_m2.apply(this,arguments);const g=(S.grps||[]).filter(g=>g.ok&&(g.ids||[]).includes(m&&m.id));if(g.length)d.grps=g.map(g=>({id:g.id,k:g.k,ek:g.ek,name:g.name,n:(g.ids||[]).length+1}));return d}}
 {const _mp=mpPublish;mpPublish=async function(){try{for(const m of S.roster.filter(m=>m.pk))await dmOpenSrv(m).catch(()=>{})}catch(e){}return _mp.apply(this,arguments)}}
-async function dmSend(th,txt,img,by,name,aud,dur,ti){const o={t:String(txt||"").slice(0,2000),by,n:String(name||"").slice(0,30),dv:window.dmDev?window.dmDev():""};if(img)o.img=img;if(aud){o.aud=aud;o.d=Math.min(60,+dur||0)}const ct=await fdEnc(th.ek,o);const id=await SB.rpc("dm_send",{p_id:th.id,p_key:th.k,p_ct:ct});try{SB.notify(null,{dm:th.id,k:th.k,by:by==="L"?"L":"M",dev:window.dmDev?window.dmDev():undefined,ti:String(ti||name||"").slice(0,40),tx:String(txt||(img?"📷 Photo":aud?"🎙 Voice note · "+(+dur||0)+"s":"")).slice(0,100)})}catch(e){}return {id:+id,t:Date.now(),...o,me:1}}
+async function dmSend(th,txt,img,by,name,aud,dur,ti,grp){const o={t:String(txt||"").slice(0,2000),by,n:String(name||"").slice(0,30),dv:window.dmDev?window.dmDev():""};if(img)o.img=img;if(aud){o.aud=aud;o.d=Math.min(60,+dur||0)}const ct=await fdEnc(th.ek,o);const id=await SB.rpc("dm_send",{p_id:th.id,p_key:th.k,p_ct:ct});try{SB.notify(null,{dm:th.id,k:th.k,by:by==="L"?"L":"M",grp:grp?1:undefined,dev:window.dmDev?window.dmDev():undefined,ti:String(ti||name||"").slice(0,40),tx:String(txt||(img?"📷 Photo":aud?"🎙 Voice note · "+(+dur||0)+"s":"")).slice(0,100)})}catch(e){}return {id:+id,t:Date.now(),...o,me:1}}
 function dmPush(tid,msg){const L=S.dmMsgs[tid]=S.dmMsgs[tid]||[];if(L.some(x=>x.id===msg.id))return false;L.push(msg);L.sort((a,b)=>a.id-b.id);if(L.length>200)L.splice(0,L.length-200);return true}
 function dmRxSet(o,by){const id=+o.r;by=String(by||"").slice(0,24);if(!id||!by)return false;const e=RX.includes(o.e)?o.e:"";const M=S.dmRx[id]=S.dmRx[id]||{};if(e)M[by]=e;else delete M[by];if(!Object.keys(M).length)delete S.dmRx[id];return true}
 async function dmReact(th,id,e,by){const o={t:"",by,n:"",r:+id,e:RX.includes(e)?e:""};const ct=await fdEnc(th.ek,o);await SB.rpc("dm_send",{p_id:th.id,p_key:th.k,p_ct:ct});dmRxSet(o,by)}
@@ -4040,7 +4040,7 @@ document.addEventListener("click",e=>{const t=e.target;let b;
   if((b=t.closest(".tl-c"))&&b.closest(".tl-e[data-mid]")&&!t.closest("audio,a,img")){const e=b.closest(".tl-e");const pk=e.nextElementSibling;if(pk&&pk.classList.contains("tl-pick")){const was=pk.hidden;document.querySelectorAll(".tl-pick").forEach(x=>x.hidden=true);pk.hidden=!was}return}
   if(t.id==="v12DmRec"){dmRecToggle();return}
   if(t.id==="v12DmSend"){const txt=($("#v12DmTxt").value||"").trim();if(!txt&&!dmImg&&!dmAud){toast("Write a message.");return}const o=$("#v12DmOut");t.disabled=true;if(o)o.textContent="Sending…";
-    (async()=>{if(view==="grp"){const g=myGroups().find(x=>x.id===grpCur);if(!g)return;const mem=gMem();const nm=mem?myName():(S.postAs||S.myName||unitName());const msg=await dmSend(g,txt,dmImg,mem?"M":"L",nm,dmAud,dmAudD,nm+" · "+g.name);dmPush(gKey(g),{id:msg.id,t:Date.now(),txt,by:mem?"M":"L",n:nm,img:dmImg,aud:dmAud,d:dmAudD,dv:gDev()});S.dmSeen[gKey(g)]=Math.max(S.dmSeen[gKey(g)]||0,msg.id)}
+    (async()=>{if(view==="grp"){const g=myGroups().find(x=>x.id===grpCur);if(!g)return;const mem=gMem();const nm=mem?myName():(S.postAs||S.myName||unitName());const msg=await dmSend(g,txt,dmImg,mem?"M":"L",nm,dmAud,dmAudD,nm+" · "+g.name,1);dmPush(gKey(g),{id:msg.id,t:Date.now(),txt,by:mem?"M":"L",n:nm,img:dmImg,aud:dmAud,d:dmAudD,dv:gDev()});S.dmSeen[gKey(g)]=Math.max(S.dmSeen[gKey(g)]||0,msg.id)}
       else if(memberMode()||!leader()){const th=myDm();if(!th)return;const msg=await dmSend(th,txt,dmImg,"M",myName(),dmAud,dmAudD);dmPush("mine:"+th.id,{id:msg.id,t:Date.now(),txt,by:"M",n:myName(),img:dmImg,aud:dmAud,d:dmAudD});}
       else{const m=S.roster.find(x=>x.id===dmWith);const d=await dmOpenSrv(m);const msg=await dmSend(d,txt,dmImg,"L",S.postAs||S.myName||unitName(),dmAud,dmAudD);dmPush(d.id,{id:msg.id,t:Date.now(),txt,by:"L",n:"",img:dmImg,aud:dmAud,d:dmAudD});S.dmSeen[d.id]=Math.max(S.dmSeen[d.id]||0,msg.id)}
       dmImg="";dmAud="";dmAudD=0;save();redraw(render);scrollChat()})().catch(err=>{t.disabled=false;const s=String(err&&err.message||err);if(o)o.textContent=/find the function|schema/i.test(s)?"Messages aren't set up on the server yet (System check → 1.2).":"Couldn't send. Check signal and try again."});return}
@@ -9983,16 +9983,16 @@ function stack(f){const need=order(needs(f));const n=need.length;
    - The address #checkins / #owner / #invite also work while the app is already open. */
 (()=>{
 const OK=["recall","live","feed","board","checkins","co","owner","today","me","muster","alerts","send","cal","ask"];
-function go(o){o=String(o||"").toLowerCase();
+function go(o,x){o=String(o||"").toLowerCase();
   /* 4.72.2: Inbox, Talk and SOS alerts used to fall back to the recall screen */
   if(o==="dm"||o==="talk"){const b=document.querySelector(`[data-tab="${o==="dm"?"inbox":"talk"}"]`);if(b){b.click();window.scrollTo(0,0)}return}
-  if(o==="sos"){if(typeof fdPollAll==="function")fdPollAll(true);setTimeout(()=>{if(typeof window.sosShow==="function")window.sosShow(true)},1800);return}
+  if(o==="sos"){if(x&&typeof window.sosRecv==="function")window.sosRecv(x);if(typeof fdPollAll==="function")fdPollAll(true);setTimeout(()=>{if(typeof window.sosShow==="function")window.sosShow(true)},1800);return}
   if(!OK.includes(o))return;
   if(o==="owner"&&!(typeof ownerOn==="function"&&ownerOn()))o="board";
   armed=null;view=o;render();window.scrollTo(0,0);if(o==="feed"&&typeof fdPollAll==="function")fdPollAll(true)}
 window.openFromAlert=go;
-{const h=(location.hash||"").slice(1).toLowerCase();if(h==="dm"||h==="talk"||h==="sos")setTimeout(()=>go(h),1800)}
-if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",ev=>{const d=ev.data;if(d&&d.type==="open")go(d.open)});
+{const h=(location.hash||"").slice(1).toLowerCase();if(h==="dm"||h==="talk"||h==="sos"||h.startsWith("sos:"))setTimeout(()=>go(h.startsWith("sos")?"sos":h),1800)}
+if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",ev=>{const d=ev.data;if(d&&d.type==="open")go(d.open,d.sos)});
 window.addEventListener("hashchange",()=>{const h=(location.hash||"").slice(1).toLowerCase();if((h==="checkins"||h==="owner")&&h!==view)go(h)});
 })();
 
@@ -10811,7 +10811,8 @@ setTimeout(attach,6000);
    Leaders see a red full-screen alert with the name, a map link, Call / Text, and "I'm responding". */
 (()=>{
 const KINDS=["Help","Medical","Unsafe","Lost"],HOLD=3000;
-const feedOf=()=>(S.feeds||[]).find(f=>f.mk&&f.ek)||null;
+const feedOf=()=>(S.feeds||[]).find(f=>f.mk&&f.ek)||(S.me&&S.me.d&&S.me.d.feed&&S.me.d.feed.mk&&S.me.d.feed.ek&&String(S.me.pk)!=="preview"?S.me.d.feed:null);
+const myNm=f=>{const D=S.me&&S.me.d;return String(f.me||S.myName||(D&&D.name?title(D.rank)+" "+title(String(D.name).split(",")[0].trim()):"")||(typeof fdBy==="function"?fdBy(f):"")||"Someone").slice(0,30)};
 const list=()=>S.sos=Array.isArray(S.sos)?S.sos:[];
 let kind="Help",hold=null,note="",busy=false,pos=null;
 const hhmm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
@@ -10825,12 +10826,12 @@ function paintNote(){const e=document.getElementById("sosNote");if(e)e.textConte
 async function send(){if(busy)return;const f=feedOf();
   if(!f){note="Join your team first: SOS needs your team's link.";paintNote();return}
   busy=true;note="Getting your location…";paintNote();
-  const p=await where();const me=String(f.me||(typeof fdBy==="function"?fdBy(f):"")||S.myName||"Someone").slice(0,30);
+  const p=await where();const me=myNm(f);
   const o={k:"sos",sid:"s"+Date.now().toString(36)+rndId(4),me,kind,t:Date.now()};
   if(p){o.lat=+p.lat.toFixed(5);o.lng=+p.lng.toFixed(5);o.acc=Math.round(p.acc||0)}
   note="Sending…";paintNote();
   try{const ct=await fdEnc(f.ek,o);await SB.rpc("feed_req",{p_feed:f.id,p_member_key:f.mk,p_ct:ct});
-    try{SB.notify(null,{alert:"sos",feed:f.id,mk:f.mk,ti:me,tx:kind+(p?" · location shared":"")})}catch(e){}
+    try{SB.notify(null,{alert:"sos",feed:f.id,mk:f.mk,ti:me,tx:kind+(p?" · location shared":""),sid:o.sid,kd:kind,la:o.lat,ln:o.lng,ac:o.acc,dev:window.dmDev?window.dmDev():undefined})}catch(e){}
     note="🆘 SOS sent at "+hhmm(Date.now())+(p?" with your location":" (no location: allow it in Settings)")+". Stay where you are if you can.";
     try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}
   }catch(e){note="Couldn't send. Check signal and hold the button again. If it's an emergency call 911."}
@@ -10838,7 +10839,7 @@ async function send(){if(busy)return;const f=feedOf();
 function ringStyle(p){return `background:conic-gradient(#fff ${Math.round(p*360)}deg,transparent 0)`}
 function screen(){
   return `<div class="sos-wrap"><button class="chip" data-go="board" style="cursor:pointer">◂ Back</button><h2 style="margin:10px 0 4px">🆘 SOS</h2>
-  <p class="note" style="margin:0 0 12px">Press and hold for 3 seconds. Your leaders get an urgent alert with your name and location.</p>
+  <p class="note" style="margin:0 0 12px">Press and hold for 3 seconds. Everyone on your team gets an urgent alert with your name and location.</p>
   <div class="sos-kinds" role="radiogroup" aria-label="What's wrong">${KINDS.map(k=>`<button type="button" data-soskind="${k}" role="radio" aria-checked="${kind===k}" class="sos-k${kind===k?" on":""}">${k}</button>`).join("")}</div>
   <div class="sos-stage"><button id="sosBtn" type="button" class="sos-btn" aria-label="SOS: press and hold for 3 seconds"><span class="sos-ring" id="sosRing"></span><span class="sos-in"><b>SOS</b><small>Hold 3 sec</small></span></button></div>
   <div class="note sos-note" id="sosNote" role="status">${esc(note)}</div>
@@ -10852,9 +10853,11 @@ document.addEventListener("pointerdown",e=>{if(e.target.closest&&e.target.closes
 document.addEventListener("contextmenu",e=>{if(e.target.closest&&e.target.closest("#sosBtn"))e.preventDefault()});
 document.addEventListener("click",e=>{const k=e.target.closest&&e.target.closest("[data-soskind]");if(k){kind=k.dataset.soskind;const w=document.querySelector(".sos-kinds");if(w)w.querySelectorAll(".sos-k").forEach(b=>{const on=b.dataset.soskind===kind;b.classList.toggle("on",on);b.setAttribute("aria-checked",on)})}});
 {const _r=render;render=function(){if(view==="sos"){renderTabs();const m=$("#main");if(m){m.innerHTML=screen();warm()}return}return _r.apply(this,arguments)}}
-function card(){return `<button class="card sos-card" id="sosHome" data-go="sos" type="button"><span class="sos-dot">🆘</span><span><b>SOS</b><small>Hold to alert your leaders</small></span></button>`}
+function card(){return `<button class="btn warn" id="sosHome" data-go="sos" type="button" style="width:100%;margin-top:12px;font-size:17px">🆘 SOS</button>`}
 {const _rt=renderTools;renderTools=function(){const r=_rt.apply(this,arguments);try{const g=document.querySelector("#main .tgrid");if(g&&!document.getElementById("sosTile"))g.insertAdjacentHTML("afterbegin",`<button data-go="sos" id="sosTile" class="hot"><span class="ic">${svg("alert")}</span><span><b>SOS</b><small>Hold to alert your leaders</small></span></button>`)}catch(e){}return r}}
 {const _td=renderToday;renderToday=function(){const r=_td.apply(this,arguments);try{const m=$("#main");if(m&&feedOf()&&!document.getElementById("sosHome"))m.insertAdjacentHTML("beforeend",card())}catch(e){}return r}}
+
+{const _rm=renderMe;renderMe=function(){_rm.apply(this,arguments);try{if(view!=="me"||!feedOf()||document.getElementById("sosHome"))return;const m=$("#main"),t=m&&m.querySelector(".v12tabs");const h=card();if(t)t.insertAdjacentHTML("afterend",h);else if(m)m.insertAdjacentHTML("afterbegin",h)}catch(e){}}}
 
 /* ---------- leader ---------- */
 const clean=(v,n)=>String(v||"").replace(/[<>]/g,"").slice(0,n);
@@ -10868,6 +10871,11 @@ function sosIn(f,o,r){const id=clean(o.sid,20);if(!id||list().some(x=>x.id===id)
   try{if(typeof localAlert==="function")localAlert("🆘 SOS: "+x.who,kd+". Open Accounted For now.","sos")}catch(e){}
   show(true)}
 window.sosIn=sosIn;
+/* 4.73.1: everyone on the team gets the SOS as a push that carries the details, so it also shows on member phones */
+function sosRecv(o){if(!o||typeof o!=="object")return;sosIn({id:0},{sid:o.id,me:o.w,kind:o.k,lat:o.la,lng:o.ln,acc:o.ac,t:o.t},null)}
+window.sosRecv=sosRecv;
+if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",ev=>{const d=ev.data;if(d&&d.type==="sos")sosRecv(d.sos)});
+{const h=String(location.hash||"");if(h.startsWith("#sos:")){try{const o=JSON.parse(decodeURIComponent(h.slice(5)));setTimeout(()=>sosRecv(o),1200)}catch(e){}}}
 function open(){return list().filter(x=>x.st==="open"&&Date.now()-x.t<12*3600e3)}
 function show(force){const L=open();const old=document.getElementById("sosOv");if(old)old.remove();if(!L.length)return;
   const d=document.createElement("div");d.id="sosOv";d.setAttribute("role","alertdialog");d.setAttribute("aria-label","SOS alert");

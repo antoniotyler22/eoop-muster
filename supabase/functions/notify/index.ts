@@ -17,7 +17,8 @@
 //    of that thread ("L" leader / "M" person) gets "New message". No names or text in the alert.
 //  {talk, k, ti, tx, dev}: (4.70.8) a Talk message was sent; only the phones of the people it was sent to (to = their names, matched to the name each phone signed up with) get "📻 name" + preview.
 //  4.70.8: Inbox and Talk alerts show the sender's name and a short preview (ti, tx), sent by the sending phone, passed through and never stored.
-//  {alert:"sos", feed, mk, ti, tx}: (4.72.2) SOS: urgent alert to the OIC and every leader phone, with the sender's name and what is wrong.
+//  {alert:"sos", feed, mk, ti, tx, sid, kd, la, ln, ac, dev}: (4.72.2) SOS: urgent alert to the OIC and (4.73.1) every phone on the team, with the sender's name, what is wrong and where. The details travel inside the alert and are never stored.
+//  {dm, ..., grp:1}: (4.73.1) a group chat message alerts every phone on that thread except the sender's.
 //  4.72.1: Quiet hours. A sign-up with qh/tz skips non-urgent alerts (payload.help false) while that phone's local time is inside the window.
 //  4.33.0: skips the posting phone by device id ("dev") and keeps one sign-up per phone.
 // Payloads carry no names. Turn OFF "Enforce JWT verification" (the function validates input itself).
@@ -33,7 +34,7 @@ const cors = {
 };
 webpush.setVapidDetails("mailto:antoniotyler22@gmail.com", Deno.env.get("VAPID_PUBLIC")!, Deno.env.get("VAPID_PRIVATE")!);
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-const VER = "4.72.2";
+const VER = "4.73.1";
 const out = (t: string, status = 200) => new Response(t, { status, headers: cors });
 // A database error (for example the service role lost its table rights) must never read as "no sub": that hid a
 // week of dead alerts. Log it and answer 500 so the failure shows in the logs and the owner's Health tab.
@@ -61,7 +62,7 @@ async function apnsSend(token: string, p: Record<string, unknown>, urgent: boole
     const r = await fetch(`https://${host}/3/device/${token}`, {
       method: "POST",
       headers: { authorization: "bearer " + await apnsToken(), "apns-topic": Deno.env.get("APNS_TOPIC") || "com.antoniotyler.accountedfor", "apns-push-type": "alert", "apns-priority": urgent ? "10" : "5", "content-type": "application/json" },
-      body: JSON.stringify({ aps: { alert: { title: p.title, body: p.body }, sound: "default", "interruption-level": urgent ? "time-sensitive" : "active" }, open: p.open }),
+      body: JSON.stringify({ aps: { alert: { title: p.title, body: p.body }, sound: "default", "interruption-level": urgent ? "time-sensitive" : "active" }, open: p.open, sos: p.sos }),
     });
     if (r.ok) return "ok";
     return r.status === 410 || r.status === 400 ? "gone" : "fail";
@@ -426,13 +427,14 @@ async function remember(req: Request) {
 
 
 // Inbox message: buzz the phones on the other side of the thread. Checks the thread key first.
-async function dmAlert(id: string, key: string, by: string, dev: string, ti = "", tx = "") {
+async function dmAlert(id: string, key: string, by: string, dev: string, ti = "", tx = "", grp = false) {
   const hash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key)))).map((x) => x.toString(16).padStart(2, "0")).join("");
   const { data: th, error: te } = await db.from("dm_threads").select("id").eq("id", id).eq("key_hash", hash).maybeSingle();
   if (te) return dbErr(te);
   if (!th) return out("not allowed", 403);
   const want = by === "L" ? "M" : "L";
-  const { data: subs, error } = await db.from("dm_subs").select("id,sub").eq("thread_id", id).eq("role", want).limit(20);
+  let q = db.from("dm_subs").select("id,sub").eq("thread_id", id); if (!grp) q = q.eq("role", want); // a group chat (4.73.1) alerts every phone on the thread except the sender's
+  const { data: subs, error } = await q.limit(grp ? 200 : 20);
   if (error) return dbErr(error);
   // deno-lint-ignore no-explicit-any
   const list = (subs ?? []).filter((s: any) => !(dev && s.sub?.dev === dev));
@@ -465,9 +467,10 @@ async function talkAlert(id: string, key: string, dev: string, ti: string, tx: s
   return out("sent " + n);
 }
 
-// SOS (4.72.2): a team member held the SOS button. Checks the member key, then buzzes the OIC's phone and every leader phone, urgent, through Quiet hours.
+// SOS (4.72.2, everyone from 4.73.1): a team member held the SOS button. Checks the member key, then buzzes the OIC, every leader phone
+// and every other phone on the team's alert list, urgent, through Quiet hours. The alert carries the details (name, what, where) so it opens on member phones too.
 const sosAt = new Map<string, number>();
-async function sosAlert(id: string, mk: string, ti: string, tx: string) {
+async function sosAlert(id: string, mk: string, ti: string, tx: string, sos: Record<string, unknown>, dev: string) {
   const { data: f, error: e0 } = await db.from("feeds").select("*").eq("id", id).maybeSingle();
   if (e0) return dbErr(e0);
   if (!f) return out("no feed");
@@ -477,8 +480,19 @@ async function sosAlert(id: string, mk: string, ti: string, tx: string) {
   sosAt.set(k, Date.now());
   const { data: ls, error } = await db.from("feed_subs").select("id,sub").eq("feed_id", id).limit(500);
   if (error) return dbErr(error);
-  const payload = { title: "🆘 SOS: " + (ti || "Someone"), body: (tx || "Needs help") + ". Open now.", help: true, open: "sos" };
-  return out("sent " + await toLeaders(f, ls ?? [], payload, true));
+  const payload = { title: "\u{1F198} SOS: " + (ti || "Someone"), body: (tx || "Needs help") + ". Open now.", help: true, open: "sos", sos };
+  const keyOf = (s: any) => s?.apns ? "apns:" + s.apns : s?.endpoint ?? "";
+  let n = 0;
+  if (f.leader_sub) {
+    const r = await pushAny(f.leader_sub, payload, true, 86400);
+    if (r === "gone") await db.from("feeds").update({ leader_sub: null }).eq("id", id);
+    if (r === "fail") await queueRetry("leader", id, payload, true, 86400);
+    if (r === "ok") n++;
+  }
+  const lk = f.leader_sub ? keyOf(f.leader_sub) : "";
+  const { list, stale } = pickSubs((ls ?? []).filter((s: any) => s.sub && keyOf(s.sub) !== lk), "", dev);
+  if (stale.length) await db.from("feed_subs").delete().in("id", stale);
+  return out("sent " + (n + await sendSubs(list, payload, true, 86400)));
 }
 
 const cut = (v: unknown, n: number) => (typeof v === "string" ? v.replace(/[\u0000-\u001f]/g, " ").trim().slice(0, n) : "");
@@ -486,7 +500,7 @@ const cut = (v: unknown, n: number) => (typeof v === "string" ? v.replace(/[\u00
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return out("ok");
   if (req.method !== "POST") return out("method", 405);
-  let body: { to?: unknown; talk?: unknown; ti?: unknown; tx?: unknown; dm?: unknown; by?: unknown; ver?: unknown; test?: unknown; sub?: unknown; recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown; drain?: unknown; team?: unknown; k?: unknown; what?: unknown; skip?: unknown; dev?: unknown; whoami?: unknown; health?: unknown; stalled?: unknown } = {};
+  let body: { to?: unknown; talk?: unknown; ti?: unknown; tx?: unknown; dm?: unknown; by?: unknown; ver?: unknown; test?: unknown; sub?: unknown; recall?: unknown; board?: unknown; feed?: unknown; lk?: unknown; urg?: unknown; alert?: unknown; mk?: unknown; escalate?: unknown; drain?: unknown; team?: unknown; k?: unknown; what?: unknown; skip?: unknown; dev?: unknown; whoami?: unknown; health?: unknown; stalled?: unknown; grp?: unknown; sid?: unknown; kd?: unknown; la?: unknown; ln?: unknown; ac?: unknown } = {};
   try { body = await req.json(); } catch { return out("bad", 400); }
   if (body.whoami === 1) { namedAt = 0; await remember(req); return out("ok"); }
   // {ver:1}: which version is deployed (System check).  {test:1, sub}: one "Test alert" to the asking phone only.
@@ -507,9 +521,13 @@ Deno.serve(async (req) => {
   if (body.escalate === 1) { remember(req); return escalate(); }
   if (body.drain === 1) { remember(req); return drain(); }
   if (typeof body.dm === "string" && /^[a-zA-Z0-9]{10,40}$/.test(body.dm) && typeof body.k === "string" && /^[a-zA-Z0-9]{20,64}$/.test(body.k) && (body.by === "L" || body.by === "M"))
-    return dmAlert(body.dm, body.k, body.by, typeof body.dev === "string" && /^[a-z0-9]{8,40}$/.test(body.dev) ? body.dev : "", cut(body.ti, 40), cut(body.tx, 100));
+    return dmAlert(body.dm, body.k, body.by, typeof body.dev === "string" && /^[a-z0-9]{8,40}$/.test(body.dev) ? body.dev : "", cut(body.ti, 40), cut(body.tx, 100), body.grp === 1);
   if (body.alert === "sos" && typeof body.feed === "string" && /^[a-z0-9]{10,20}$/.test(body.feed) && typeof body.mk === "string" && /^[a-z0-9]{24,40}$/.test(body.mk))
-    return sosAlert(body.feed, body.mk, cut(body.ti, 40), cut(body.tx, 60));
+    {
+    const num = (v: unknown, lim: number) => (typeof v === "number" && isFinite(v) && Math.abs(v) <= lim ? v : undefined);
+    const sos = { id: cut(body.sid, 20), w: cut(body.ti, 30), k: cut(body.kd, 10), la: num(body.la, 90), ln: num(body.ln, 180), ac: num(body.ac, 99999) };
+    return sosAlert(body.feed, body.mk, cut(body.ti, 40), cut(body.tx, 60), sos, typeof body.dev === "string" && /^[a-z0-9]{8,40}$/.test(body.dev) ? body.dev : "");
+  }
   if (typeof body.talk === "string" && /^[a-z0-9]{10,20}$/.test(body.talk) && typeof body.k === "string" && /^[a-z0-9]{24,40}$/.test(body.k))
     return talkAlert(body.talk, body.k, typeof body.dev === "string" && /^[a-z0-9]{8,40}$/.test(body.dev) ? body.dev : "", cut(body.ti, 40), cut(body.tx, 100),
       Array.isArray(body.to) ? body.to.filter((x): x is string => typeof x === "string").slice(0, 100).map((x) => x.slice(0, 30)) : null);
