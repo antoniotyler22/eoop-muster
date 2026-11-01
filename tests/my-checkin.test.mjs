@@ -13,7 +13,7 @@ test("the leader's Home has My check-in: pick yourself, check in, your row chang
     const id = a.w.eval("S.roster[0].id");
     a.w.eval(`{const s=$("#myWho");s.value=${JSON.stringify(id)};s.dispatchEvent(new Event("change",{bubbles:true}))}`);
     await sleep(5); assert.ok(!a.$("#myCkOpen"), "no extra Check in button: choices show right away");
-    a.$('[data-myst="SIQ"]').click(); await sleep(5);
+    a.$("#myStBtn").click(); await sleep(5); a.$('[data-myst="SIQ"]').click(); await sleep(5);
     a.w.eval(`$("#myL").value="Barracks";$("#myT").value=dkey(new Date(Date.now()+864e5))`);
     a.$("#myCkSend").click(); await sleep(10);
     const m = a.w.eval(`S.roster.find(x=>x.id===${JSON.stringify(id)})`);

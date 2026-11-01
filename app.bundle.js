@@ -9306,11 +9306,12 @@ function cardHTML(){const m=me();
   if(!c.open){const st=STATUSES.includes(m.status)?m.status:"On Hand";const io=x=>x?(typeof isoOf==="function"&&isoOf(x))||String(x):"";
     c={open:true,st,v:st==="On Hand"?{}:{from:io(m.start),to:io(m.end),loc:m.loc||"",note:m.detail||""},auto:1}}
   const v=c.v;
-  h+=`<div class="evts" role="radiogroup" aria-label="Your status">${STATUSES.map(s=>`<button type="button" data-myst="${esc(s)}" aria-pressed="${c.st===s}" role="radio" aria-checked="${c.st===s}">${s==="Other"?"✎ Other":`<span class="dot" style="background:var(${SVAR[s]})"></span>${esc(SHORT[s]||s)}`}</button>`).join("")}</div>`;
+  h+=`<button type="button" id="myStBtn" class="mst" aria-haspopup="true" aria-expanded="${!!c.pick}" aria-label="Your status: ${esc(SHORT[c.st]||c.st)}. Tap to change"><span class="dot" style="background:var(${SVAR[c.st]||"--line"})"></span><b>${esc(SHORT[c.st]||c.st)}</b><span class="mst-c" aria-hidden="true">▾</span></button>`;
+  if(c.pick)h+=`<div class="evts mst-list" role="radiogroup" aria-label="Your status">${STATUSES.map(s=>`<button type="button" data-myst="${esc(s)}" aria-pressed="${c.st===s}" role="radio" aria-checked="${c.st===s}">${s==="Other"?"✎ Other":`<span class="dot" style="background:var(${SVAR[s]})"></span>${esc(SHORT[s]||s)}`}</button>`).join("")}</div>`;
   if(c.st==="Other")h+=`<label for="myO">What's going on?</label><input type="text" id="myO" maxlength="80" value="${esc(v.oth||"")}" placeholder="Write it in">`;
   if(c.st&&c.st!=="On Hand")h+=`<div class="row2"><div><label for="myF">From</label><input type="date" id="myF" value="${esc(v.from||dkey())}" style="${inp}"></div><div><label for="myT">To</label><input type="date" id="myT" value="${esc(v.to||"")}" style="${inp}"></div></div>
     <label for="myL">Location</label><input type="text" id="myL" maxlength="60" value="${esc(v.loc||"")}" placeholder="Where you are: base, city, clinic">`;
-  if(c.st)h+=`<label for="myN">Note (optional)</label><input type="text" id="myN" maxlength="80" value="${esc(v.note||"")}" placeholder="Anything the team should know">`;
+  if(c.st)h+=`<label for="myN">Note (optional)</label><input type="text" id="myN" maxlength="80" value="${esc(v.note||"")}" placeholder="Add a note…">`;
   return h+`<div class="row2"><button class="btn" id="myCkSend"${c.st?"":" disabled"}>Check in</button>${c.auto?"":`<button class="btn alt" id="myCkX">Cancel</button>`}</div>${viewOnly()?`<p class="note" style="margin:0">Goes to your leader to confirm.</p>`:""}<button class="chip" id="myCkWho" style="cursor:pointer;align-self:flex-start">Not you? Change</button></div>`}
 function grab(){for(const [k,id] of [["from","myF"],["to","myT"],["loc","myL"],["oth","myO"],["note","myN"]]){const el=document.getElementById(id);if(el)c.v[k]=el.value}}
 function redraw(){const el=document.getElementById("myCk");if(el)el.outerHTML=cardHTML()}
@@ -9337,7 +9338,8 @@ document.addEventListener("click",e=>{const t=e.target;if(!t.closest||!t.closest
   if(t.closest("#myCkOpen")){const m=me();c={open:true,st:"",v:{}};redraw();return}
   if(t.closest("#myCkX")){c={open:false,st:"",v:{}};redraw();return}
   if(t.closest("#myCkWho")){S.who=null;rawSave();redraw();return}
-  const s=t.closest("[data-myst]");if(s){grab();c.st=s.dataset.myst;redraw();try{buzz()}catch(e2){}return}
+  if(t.closest("#myStBtn")){grab();c.pick=!c.pick;redraw();return}
+  const s=t.closest("[data-myst]");if(s){grab();c.st=s.dataset.myst;c.pick=false;redraw();try{buzz()}catch(e2){}return}
   if(t.closest("#myCkSend")){send();return}},true);
 document.addEventListener("change",e=>{if(e.target.id!=="myWho"||!e.target.value)return;const m=S.roster.find(x=>x.id===e.target.value);if(!m)return;
   S.who=Object.assign({},S.who||{},{id:m.id,n:m.rank+" "+lastOf(m),t:Date.now()});S.myName=S.myName||m.rank+" "+lastOf(m);rawSave();redraw()});
@@ -9347,6 +9349,13 @@ window.myCkShow=show;
 /* Needs attention: a quiet section isn't a problem to fix. Its tile already says when it last updated, so the
    "hasn't sent an update in 24 hr" line no longer sits on Home. */
 {const _hi=healthIssues;healthIssues=function(){return _hi.apply(this,arguments).filter(x=>!/hasn't sent an update in/.test(String(x&&x.t||"")))}}
+
+/* compact My check-in: status button and slider share one line */
+{const k=document.createElement("style");k.textContent=`#myCk{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px}#myCk>*{grid-column:1/-1}
+#myCk>.mst{grid-column:1;grid-row:3;align-self:center}#myCk>.slck{grid-column:2;grid-row:3;margin:0;min-width:0}
+.mst{display:inline-flex;align-items:center;gap:8px;height:52px;padding:0 14px;border:1.5px solid var(--line);border-radius:999px;background:var(--surface-2,#f3f5f8);color:var(--ink);font:inherit;font-size:15px;cursor:pointer;white-space:nowrap}
+.mst b{font-weight:800}.mst-c{color:var(--muted);font-size:12px}.mst:focus-visible{outline:2px solid var(--brass);outline-offset:2px}.mst[aria-expanded="true"]{border-color:var(--brass)}
+.mst-list{flex-wrap:wrap!important;overflow:visible!important}#myCk .slck-txt{font-size:14px}#myCk label[for="myN"]{display:none}`;document.head.appendChild(k)}
 
 /* ===== features/harp.js ===== */
 /* Accounted For 4.26: HARP — Holiday Accident Reduction Program form, filled out on the phone.
@@ -9895,7 +9904,7 @@ const CHECK=`<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke=
 function buzzy(ms){try{if(navigator.vibrate)navigator.vibrate(ms)}catch(e){}try{if(window.Capacitor&&typeof NP==="function"){const H=NP("Haptics");if(H)H.impact({style:ms>15?"MEDIUM":"LIGHT"})}}catch(e){}}
 function enhance(btn){if(!btn||btn.dataset.slid)return;btn.dataset.slid="1";
   const off=btn.disabled,busy=/Sending/.test(btn.textContent);
-  const label=busy?"Sending…":off?"Pick a status above first":"slide to check in";
+  const cmp=btn.id==="myCkSend";const label=busy?"Sending…":off?(cmp?"Pick a status":"Pick a status above first"):(cmp?"slide":"slide to check in");
   const wrap=document.createElement("div");wrap.className="slck"+(off?" off":"")+(busy?" busy":"");
   wrap.innerHTML=`<div class="slck-fill"></div><div class="slck-txt">${label}</div><div class="slck-knob" role="slider" tabindex="${off?-1:0}" aria-label="Slide to check in" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"${off?' aria-disabled="true"':""}>${busy?CHECK:ARROW}</div>`;
   const row=btn.closest(".row2");(row||btn).insertAdjacentElement("beforebegin",wrap);

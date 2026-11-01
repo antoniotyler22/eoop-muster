@@ -12,7 +12,7 @@ const CHECK=`<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke=
 function buzzy(ms){try{if(navigator.vibrate)navigator.vibrate(ms)}catch(e){}try{if(window.Capacitor&&typeof NP==="function"){const H=NP("Haptics");if(H)H.impact({style:ms>15?"MEDIUM":"LIGHT"})}}catch(e){}}
 function enhance(btn){if(!btn||btn.dataset.slid)return;btn.dataset.slid="1";
   const off=btn.disabled,busy=/Sending/.test(btn.textContent);
-  const label=busy?"Sending…":off?"Pick a status above first":"slide to check in";
+  const cmp=btn.id==="myCkSend";const label=busy?"Sending…":off?(cmp?"Pick a status":"Pick a status above first"):(cmp?"slide":"slide to check in");
   const wrap=document.createElement("div");wrap.className="slck"+(off?" off":"")+(busy?" busy":"");
   wrap.innerHTML=`<div class="slck-fill"></div><div class="slck-txt">${label}</div><div class="slck-knob" role="slider" tabindex="${off?-1:0}" aria-label="Slide to check in" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"${off?' aria-disabled="true"':""}>${busy?CHECK:ARROW}</div>`;
   const row=btn.closest(".row2");(row||btn).insertAdjacentElement("beforebegin",wrap);
