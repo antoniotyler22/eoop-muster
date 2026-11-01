@@ -83,6 +83,7 @@ export const SOURCES = [
   "features/feed-react.js",
   "features/dm-as.js",
   "features/dm-push.js",
+  "features/search.js",
   "features/member-feed.js",
   "features/swipe-tiles.js",
   "features/today-ticker.js",
