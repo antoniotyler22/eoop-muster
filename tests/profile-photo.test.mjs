@@ -46,3 +46,18 @@ test("my photo rides inside encrypted posts and another phone's photo is learned
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("my photo only travels on things posted by me, never on a payload about someone else", async () => {
+  const { openApp } = await import("./harness.mjs");
+  const a = await openApp({ rpc: () => [] });
+  try {
+    const r = await a.w.eval(`(async()=>{S.myPhoto="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==";S.myName="GYSGT TYLER";S.postAs="";
+      const k=b64e(crypto.getRandomValues(new Uint8Array(32))).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"");
+      const mine=await fdDec(k,await fdEnc(k,{t:"hi",by:"GYSGT TYLER",to:{},u:0}));
+      const other=await fdDec(k,await fdEnc(k,{t:"status",by:"CPL JONES",to:{},u:0}));
+      return JSON.stringify({mine:!!(mine&&mine.av),other:!!(other&&other.av)})})()`);
+    const o = JSON.parse(r);
+    assert.equal(o.mine, true, "my own post carries my photo");
+    assert.equal(o.other, false, "someone else's name never gets my photo");
+  } finally { await a.close(); }
+});

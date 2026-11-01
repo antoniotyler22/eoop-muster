@@ -24,8 +24,9 @@ function learn(by,av){const k=key(by);if(!k||typeof av!=="string"||av.length>MAX
 /* the picture itself replaces the initials circle */
 {const _a=fdAv;fdAv=function(name){const p=photoOf(name);if(!p)return _a.apply(this,arguments);return `<div class="av avp" role="img" aria-label="${esc(String(name||""))}" style="background-image:url(${p})"></div>`}}
 
-/* the team gets it: small copy inside encrypted posts and Talk presence */
-{const _e=fdEnc;fdEnc=function(k,o){try{if(S.myPhoto&&S.myPhoto.length<=MAXB&&o&&typeof o==="object"&&!o.av&&o.by&&(typeof o.t==="string"||o.k==="p"))o=Object.assign({},o,{av:S.myPhoto})}catch(e){}return _e.call(this,k,o)}}
+/* the team gets it: small copy inside encrypted posts and Talk presence. Only when the post is BY me: my photo never rides on
+   anything written about or for someone else, so it can never become another person's picture. */
+{const _e=fdEnc;fdEnc=function(k,o){try{if(S.myPhoto&&S.myPhoto.length<=MAXB&&o&&typeof o==="object"&&!o.av&&o.by&&myKeys().has(key(o.by))&&(typeof o.t==="string"||o.k==="p"))o=Object.assign({},o,{av:S.myPhoto})}catch(e){}return _e.call(this,k,o)}}
 {const _d=fdDec;fdDec=async function(){const o=await _d.apply(this,arguments);try{if(o&&o.av&&o.by)learn(o.by,o.av)}catch(e){}return o}}
 
 /* ---------- taking / choosing a photo ---------- */
