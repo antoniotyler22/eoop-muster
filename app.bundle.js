@@ -10307,6 +10307,7 @@ function html(){const f=feed();
   const on=tk().on,S0=status(f),n=listening(f).length,nm=me(f);
   return `<div class="tk">
    <div class="tk-top"><h2>Talk</h2><span class="tk-listen">${n?`<i></i> ${n} listening`:"Nobody listening"}</span></div>
+   ${n?`<div class="tk-lw" aria-label="Talk is on for">${listening(f).sort((a,b)=>a===nm?-1:b===nm?1:a.localeCompare(b)).map(w=>`<span class="tk-lc">${av(f,w,28,true)}<b>${w===nm?"You":esc(w)}</b></span>`).join("")}</div>`:""}
    <div class="tk-card tk-you">${av(f,nm,48)}<div class="tk-who"><b>${esc(nm)}${on?` <span class="tk-ri" title="Your Talk is on">${RADIO(14)}</span>`:""}</b><small>${on?"Talk is on · others can hear you":"Talk is off"}</small></div>
      <button type="button" id="tkSw" class="tk-sw" role="switch" aria-checked="${!!on}" aria-label="Talk on or off"><i></i></button></div>
    <div class="tk-lbl">Send to</div><div class="tk-chips" id="tkChips">${chips(f)}</div>
@@ -10400,6 +10401,7 @@ if(typeof HELP==="object"&&HELP.feed&&Array.isArray(HELP.feed[2]))HELP.feed[2].p
 .tk-listen{font-size:13px;font-weight:700;color:var(--brass);display:inline-flex;align-items:center;gap:6px}.tk-listen i{width:8px;height:8px;border-radius:50%;background:currentColor}
 .tk-card{border:1px solid var(--glass-line);border-radius:20px;background:var(--card,var(--surface));box-shadow:var(--shadow);padding:14px 16px}
 .tk-card input{width:100%;box-sizing:border-box;margin:8px 0}.tk-note{font-size:12.5px;color:var(--muted);margin:4px 0}
+.tk-lw{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;margin:0 -2px;scrollbar-width:none}.tk-lw::-webkit-scrollbar{display:none}.tk-lc{display:inline-flex;align-items:center;gap:6px;flex:none;padding:3px 10px 3px 3px;border-radius:999px;background:var(--brass-soft,#dde8ff)}.tk-lc b{font-size:12.5px;font-weight:700;white-space:nowrap}
 .tk-you{display:flex;align-items:center;gap:12px}.tk-who{flex:1;min-width:0;display:flex;flex-direction:column}.tk-who b{font-size:15px;display:flex;align-items:center;gap:6px}.tk-who small{font-size:12.5px;color:var(--muted)}
 .tk-av{position:relative;flex:none;width:var(--sz);height:var(--sz);border-radius:50%;background:var(--brass);color:var(--on-brass,#fff);display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:calc(var(--sz)*.34)}
 .tk-badge{position:absolute;right:-3px;bottom:-3px;width:18px;height:18px;border-radius:50%;background:var(--surface-solid,#fff);color:var(--brass);border:1.5px solid var(--brass);display:inline-flex;align-items:center;justify-content:center;font-style:normal}
@@ -11144,11 +11146,11 @@ body:has(#toast:not([hidden])) .fm-pill{opacity:0;pointer-events:none}
 /* ===== features/feed-drift.js ===== */
 /* Accounted For: Feed Drift. The Feed glides upward on its own, like a live ticker, with soft fades at the top and bottom.
    You are always in control: touching, scrolling, typing, or opening anything stops the glide at once (every button and link
-   still works while it moves), and it picks up again a few seconds after you let go. At the end it fades and starts over.
+   still works while it moves), and it stays exactly where you left it (no snapping back or restarting) until you tap the pill to resume. At the end it just stops.
    The pill at the bottom right pauses/resumes it (remembered on this phone). Off by default if the phone asks for reduced motion. */
 (()=>{
 const SPEED=48,IDLE=3500,HOLD=1400;            /* points per second; wait after your last touch; pause at the end */
-const st={acc:0,t:0,idle:0,down:false,downAt:0,hold:0,fade:0,expect:null,raf:0};
+const st={held:false,acc:0,t:0,idle:0,down:false,downAt:0,hold:0,fade:0,expect:null,raf:0};
 const reduced=()=>{try{return window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches}catch(e){return false}};
 const isOn=()=>S.driftOff===undefined?!reduced():!S.driftOff;
 const mk=(tag,id,css)=>{let e=document.getElementById(id);if(!e){e=document.createElement(tag);e.id=id;e.style.cssText=css||"";document.body.appendChild(e)}return e};
@@ -11162,25 +11164,25 @@ const mk=(tag,id,css)=>{let e=document.getElementById(id);if(!e){e=document.crea
 @media (prefers-reduced-motion:reduce){#main.fdBack,#main.fdOut.fdBack{transition:none}}`;document.head.appendChild(c)}
 function chrome(show){
   const b=mk("button","fdDrift");b.type="button";
-  if(!b.dataset.w){b.dataset.w=1;b.addEventListener("click",()=>{S.driftOff=isOn();save();paint();bump()})}
-  b.style.display=show?"inline-flex":"none";b.className=isOn()?"on":"";
-  b.setAttribute("aria-pressed",String(isOn()));b.setAttribute("aria-label",isOn()?"Pause auto-scroll":"Resume auto-scroll");
-  b.innerHTML=`<i></i>${isOn()?"Auto-scroll on":"Auto-scroll off"}`;
-  const fade=show&&isOn()?"block":"none";
+  if(!b.dataset.w){b.dataset.w=1;b.addEventListener("click",()=>{if(st.held||!isOn()){st.held=false;S.driftOff=false}else S.driftOff=true;save();paint();st.idle=0})}
+  b.style.display=show?"inline-flex":"none";const run=isOn()&&!st.held;b.className=run?"on":"";
+  b.setAttribute("aria-pressed",String(run));b.setAttribute("aria-label",run?"Pause auto-scroll":"Resume auto-scroll");
+  b.innerHTML=`<i></i>${run?"Auto-scroll on":st.held&&isOn()?"Paused · tap to resume":"Auto-scroll off"}`;
+  const fade=show&&run?"block":"none";
   mk("div","fdFadeT").className="fdFade";mk("div","fdFadeB").className="fdFade";
   $("#fdFadeT").style.display=fade;$("#fdFadeB").style.display=fade}
 function paint(){chrome(view==="feed"&&!document.body.classList.contains("locked")&&!document.body.classList.contains("onb-open"))}
-const bump=()=>{st.idle=Date.now()+IDLE};
+const bump=()=>{if(!st.held&&view==="feed"&&isOn()){st.held=true;try{paint()}catch(e){}}};
 
 /* ---------- when we must not move the page ---------- */
 function blocked(){
   if(view!=="feed")return "view";
   if(!isOn())return "off";
+  if(st.held)return "held";
   if(document.hidden)return "hidden";
   if(document.body.classList.contains("locked")||document.body.classList.contains("onb-open"))return "locked";
   if(st.down&&Date.now()-st.downAt>15000)st.down=false;           /* a missed finger-up can't freeze it for good */
   if(st.down)return "touch";
-  if(Date.now()<st.idle)return "touch";
   const a=document.activeElement;
   if(a&&a.matches&&a.matches("input,textarea,select,[contenteditable='true']"))return "typing";
   for(const e of document.querySelectorAll(".sheet.open .sheet-panel,[role='dialog'],#tour"))if(e.getClientRects().length&&!e.closest("[hidden]"))return "open";
@@ -11190,14 +11192,14 @@ function blocked(){
 window.feedDrift={why:()=>blocked()||"running",on:isOn};
 
 /* ---------- your hands always win ---------- */
-const hand=()=>{st.down=true;st.downAt=Date.now();bump()};
-const letgo=()=>{st.down=false;bump()};
+const hand=e=>{if(e&&e.target&&e.target.closest&&e.target.closest("#fdDrift"))return;st.down=true;st.downAt=Date.now();bump()};
+const letgo=()=>{st.down=false};
 document.addEventListener("pointerdown",hand,{capture:true,passive:true});
 document.addEventListener("touchstart",hand,{capture:true,passive:true});
 for(const ev of ["pointerup","pointercancel","touchend","touchcancel"])document.addEventListener(ev,letgo,{capture:true,passive:true});
 document.addEventListener("wheel",bump,{capture:true,passive:true});
 document.addEventListener("keydown",bump,{capture:true});
-document.addEventListener("focusin",bump,{capture:true});
+document.addEventListener("focusin",e=>{if(e.target&&e.target.closest&&e.target.closest("#fdDrift"))return;if(e.target&&e.target.matches&&e.target.matches("input,textarea,select,[contenteditable='true']"))bump()},{capture:true});
 window.addEventListener("scroll",()=>{if(st.expect!==null&&Math.abs(window.scrollY-st.expect)<=2)return;bump()},{passive:true});   /* a scroll we didn't make = you */
 
 /* ---------- the glide ---------- */
@@ -11206,14 +11208,14 @@ function loopBack(){const m=$("#main");if(!m||st.fade)return;st.fade=1;
   setTimeout(()=>{window.scrollTo(0,0);st.expect=0;st.acc=0;m.classList.remove("fdOut");setTimeout(()=>{m.classList.remove("fdBack");st.fade=0;st.hold=0},460)},380)}
 function frame(t){st.raf=requestAnimationFrame(frame);
   const dt=Math.min(.05,st.t?(t-st.t)/1e3:0);st.t=t;
-  if(view==="feed"){if(!st.shown){st.shown=true;paint()}}else if(st.shown){st.shown=false;paint()}
+  if(view==="feed"){if(!st.shown){st.shown=true;st.held=false;paint()}}else if(st.shown){st.shown=false;paint()}
   if(blocked()||st.fade){st.acc=0;st.expect=null;return}
   const el=document.scrollingElement||document.documentElement,max=el.scrollHeight-window.innerHeight;
-  if(window.scrollY>=max-2){if(!st.hold)st.hold=Date.now()+HOLD;else if(Date.now()>st.hold)loopBack();return}
+  if(window.scrollY>=max-2){return}
   st.hold=0;st.acc+=SPEED*dt;const px=Math.floor(st.acc);if(!px)return;st.acc-=px;
   const to=Math.min(max,window.scrollY+px);st.expect=to;window.scrollTo(0,to)}
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{st.shown=view==="feed";paint()}catch(e){}return r}}
-document.addEventListener("visibilitychange",()=>{st.t=0;bump()});
+document.addEventListener("visibilitychange",()=>{st.t=0});
 st.raf=requestAnimationFrame(frame);
 setTimeout(()=>{try{paint()}catch(e){}},1500);
 })();

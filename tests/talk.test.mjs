@@ -139,3 +139,17 @@ test("deleting my own message tells everyone; a leader or the sender's delete no
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("Talk shows who has it on: names of everyone listening", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    await setup(a);
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(150);
+    assert.ok(!a.$("#main .tk-lw"), "no strip when nobody is listening");
+    a.$("#tkSw").click(); await sleep(250);
+    const strip = a.$("#main .tk-lw");
+    assert.ok(strip, "strip appears when my Talk is on");
+    assert.match(strip.textContent, /You/);
+    assert.deepEqual(a.errors.filter((e) => !/Not implemented/.test(e)), []);
+  } finally { await a.close(); }
+});

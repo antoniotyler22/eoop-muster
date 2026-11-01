@@ -218,6 +218,7 @@ function html(){const f=feed();
   const on=tk().on,S0=status(f),n=listening(f).length,nm=me(f);
   return `<div class="tk">
    <div class="tk-top"><h2>Talk</h2><span class="tk-listen">${n?`<i></i> ${n} listening`:"Nobody listening"}</span></div>
+   ${n?`<div class="tk-lw" aria-label="Talk is on for">${listening(f).sort((a,b)=>a===nm?-1:b===nm?1:a.localeCompare(b)).map(w=>`<span class="tk-lc">${av(f,w,28,true)}<b>${w===nm?"You":esc(w)}</b></span>`).join("")}</div>`:""}
    <div class="tk-card tk-you">${av(f,nm,48)}<div class="tk-who"><b>${esc(nm)}${on?` <span class="tk-ri" title="Your Talk is on">${RADIO(14)}</span>`:""}</b><small>${on?"Talk is on · others can hear you":"Talk is off"}</small></div>
      <button type="button" id="tkSw" class="tk-sw" role="switch" aria-checked="${!!on}" aria-label="Talk on or off"><i></i></button></div>
    <div class="tk-lbl">Send to</div><div class="tk-chips" id="tkChips">${chips(f)}</div>
@@ -311,6 +312,7 @@ if(typeof HELP==="object"&&HELP.feed&&Array.isArray(HELP.feed[2]))HELP.feed[2].p
 .tk-listen{font-size:13px;font-weight:700;color:var(--brass);display:inline-flex;align-items:center;gap:6px}.tk-listen i{width:8px;height:8px;border-radius:50%;background:currentColor}
 .tk-card{border:1px solid var(--glass-line);border-radius:20px;background:var(--card,var(--surface));box-shadow:var(--shadow);padding:14px 16px}
 .tk-card input{width:100%;box-sizing:border-box;margin:8px 0}.tk-note{font-size:12.5px;color:var(--muted);margin:4px 0}
+.tk-lw{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;margin:0 -2px;scrollbar-width:none}.tk-lw::-webkit-scrollbar{display:none}.tk-lc{display:inline-flex;align-items:center;gap:6px;flex:none;padding:3px 10px 3px 3px;border-radius:999px;background:var(--brass-soft,#dde8ff)}.tk-lc b{font-size:12.5px;font-weight:700;white-space:nowrap}
 .tk-you{display:flex;align-items:center;gap:12px}.tk-who{flex:1;min-width:0;display:flex;flex-direction:column}.tk-who b{font-size:15px;display:flex;align-items:center;gap:6px}.tk-who small{font-size:12.5px;color:var(--muted)}
 .tk-av{position:relative;flex:none;width:var(--sz);height:var(--sz);border-radius:50%;background:var(--brass);color:var(--on-brass,#fff);display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:calc(var(--sz)*.34)}
 .tk-badge{position:absolute;right:-3px;bottom:-3px;width:18px;height:18px;border-radius:50%;background:var(--surface-solid,#fff);color:var(--brass);border:1.5px solid var(--brass);display:inline-flex;align-items:center;justify-content:center;font-style:normal}
