@@ -17,7 +17,7 @@ test("Settings offers a profile photo; a saved photo replaces my initials", asyn
     assert.ok(a.$("#ppTake"), "Take photo button in Settings");
     assert.ok(a.$("#ppPick"), "Upload photo button in Settings");
     assert.match(a.w.eval(`fdAv("CPL TEST")`), />CT</, "initials before a photo");
-    a.w.eval(`S.myPhoto=${JSON.stringify(PHOTO)};render()`); await sleep(60);
+    a.w.eval(`afPhotoOwn(${JSON.stringify(PHOTO)});render()`); await sleep(60);
     assert.match(a.w.eval(`fdAv("CPL TEST")`), /class="av avp"/, "photo instead of initials");
     assert.ok(a.$("#ppDel"), "Use my initials button once there is a photo");
     assert.match(a.w.eval(`fdAv("SGT OTHER")`), />SO</, "other people keep initials");
@@ -31,7 +31,7 @@ test("my photo rides inside encrypted posts and another phone's photo is learned
   const a = await openApp({ rpc: () => [] });
   try {
     await setup(a);
-    a.w.eval(`S.myPhoto=${JSON.stringify(PHOTO)}`);
+    a.w.eval(`afPhotoOwn(${JSON.stringify(PHOTO)})`);
     const ct = await a.w.eval(`fdEnc(S.feeds[0].ek,{t:"hello",u:false,to:{},by:"CPL TEST"})`);
     assert.ok(!ct.includes("CPL TEST") && !ct.includes("AAAA"), "payload is encrypted");
     const back = await a.w.eval(`fdDec(S.feeds[0].ek,${JSON.stringify(ct)})`);
@@ -51,7 +51,7 @@ test("my photo only travels on things posted by me, never on a payload about som
   const { openApp } = await import("./harness.mjs");
   const a = await openApp({ rpc: () => [] });
   try {
-    const r = await a.w.eval(`(async()=>{S.myPhoto="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==";S.myName="GYSGT TYLER";S.postAs="";
+    const r = await a.w.eval(`(async()=>{afPhotoOwn("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==");S.myName="GYSGT TYLER";S.postAs="";
       const k=b64e(crypto.getRandomValues(new Uint8Array(32))).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"");
       const mine=await fdDec(k,await fdEnc(k,{t:"hi",by:"GYSGT TYLER",to:{},u:0}));
       const other=await fdDec(k,await fdEnc(k,{t:"status",by:"CPL JONES",to:{},u:0}));
@@ -59,5 +59,18 @@ test("my photo only travels on things posted by me, never on a payload about som
     const o = JSON.parse(r);
     assert.equal(o.mine, true, "my own post carries my photo");
     assert.equal(o.other, false, "someone else's name never gets my photo");
+  } finally { await a.close(); }
+});
+
+test("a photo that synced in from another phone is not mine: ignored, dropped and never sent under my name", async () => {
+  const { openApp } = await import("./harness.mjs");
+  const a = await openApp({ rpc: () => [] });
+  try {
+    const r = await a.w.eval(`(async()=>{S.myName="CPL ROMERO";S.myPhoto="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==";
+      const k=b64e(crypto.getRandomValues(new Uint8Array(32))).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"");
+      const o=await fdDec(k,await fdEnc(k,{t:"hi",by:"CPL ROMERO",to:{},u:0}));
+      return JSON.stringify({sent:!!(o&&o.av),shown:!!afPhoto("CPL ROMERO"),skip:SYNC_SKIP.includes("myPhoto")})})()`);
+    const o = JSON.parse(r);
+    assert.equal(o.sent, false); assert.equal(o.shown, false); assert.equal(o.skip, true);
   } finally { await a.close(); }
 });

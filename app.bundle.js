@@ -1815,7 +1815,7 @@ async function exportXL(kind){try{const X=await loadXLSX();const wb=X.utils.book
 const xlBtn=k=>`<button class="chip" data-xl="${k}" style="cursor:pointer;font-size:13px">⬇ Excel</button>`;
 
 /* ---------- backup + sync: encrypted with a recovery code; server stores an unreadable blob ---------- */
-const SYNC_SKIP=["sync","pushOn","link","ts","onb","role","me","who","ask","askSt","dev","hubMode","ws","wsCur","pendLink"];const CODE_AB="23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+const SYNC_SKIP=["myPhoto","sync","pushOn","link","ts","onb","role","me","who","ask","askSt","dev","hubMode","ws","wsCur","pendLink"];const CODE_AB="23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 let syncT=null,syncBusy=false,syncShow=false;
 const fnv=str=>{let h=0x811c9dc5;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193)}return (h>>>0).toString(36)+str.length.toString(36)};
 const sig=v=>fnv(JSON.stringify(v===undefined?null:v));
@@ -10465,7 +10465,7 @@ if(typeof HELP==="object"&&HELP.feed&&Array.isArray(HELP.feed[2]))HELP.feed[2].p
 .tk-chips{display:flex;gap:8px;flex-wrap:wrap}.tk-chip{all:unset;cursor:pointer;box-sizing:border-box;min-height:40px;padding:0 16px;border-radius:999px;background:var(--line);color:var(--ink);font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
 .tk-chip b{font-size:12px;opacity:.7}.tk-chip[aria-pressed="true"]{background:var(--brass);color:var(--on-brass,#fff)}.tk-chip.dash{background:transparent;border:1.5px dashed var(--muted);color:var(--muted)}.tk-chip:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 .tk-pick{display:flex;flex-direction:column;gap:6px;margin:8px 0;max-height:240px;overflow:auto}.tk-pick button{all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:14px;border:1px solid var(--line)}.tk-pick button span{flex:1;font-weight:600;font-size:14px}.tk-pick small.off{color:var(--warn);font-weight:700}.tk-pick small{color:var(--muted);font-weight:700;font-size:11px;margin-left:4px}
-.tk-pick button i{width:22px;height:22px;border-radius:50%;border:2px solid var(--muted)}.tk-pick button[aria-pressed="true"]{border-color:var(--brass);background:var(--brass-soft,transparent)}.tk-pick button[aria-pressed="true"] i{background:var(--brass);border-color:var(--brass)}
+.tk-pick button .tk-av{flex:none;width:var(--sz);height:var(--sz);font-size:calc(var(--sz)*.34)}.tk-pick button i{width:22px;height:22px;border-radius:50%;border:2px solid var(--muted)}.tk-pick button[aria-pressed="true"]{border-color:var(--brass);background:var(--brass-soft,transparent)}.tk-pick button[aria-pressed="true"] i{background:var(--brass);border-color:var(--brass)}
 .tk-err{color:var(--warn);font-size:13px;min-height:18px;font-weight:600}.tk-row{display:flex;gap:8px}.tk-row .btn{flex:1}
 .tk-st{display:flex;flex-direction:column;gap:2px}.tk-st b{font-size:15px}.tk-st small{font-size:12.5px;color:var(--muted)}.tk-st.live{border-color:var(--warn)}.tk-st.live b{color:var(--warn)}.tk-st.sent b{color:var(--brass)}.tk-st.off,.tk-st.busy{opacity:.85}
 .tk-ptt{display:flex;justify-content:center;padding:6px 0}.tk-ring{width:176px;height:176px;border-radius:50%;border:2px solid color-mix(in srgb,var(--brass) 45%,transparent);display:flex;align-items:center;justify-content:center;transition:border-color .2s}
@@ -11371,6 +11371,12 @@ later();
 (()=>{
 const SZ=128,MAXB=16000,KEEP=80,OK=/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/;
 const key=n=>String(n||"").toUpperCase().replace(/\s+/g," ").trim().slice(0,30);
+/* The photo is mine only if THIS phone took or chose it. (State that syncs between a team's phones carried one person's
+   photo onto the others, who then sent it out under their own names.) A phone-local mark says which photo is mine. */
+const hsh=d=>{d=String(d||"");return d.length+":"+d.slice(30,70)+d.slice(-30)};
+const LSK="af-pp";
+const mine=()=>{try{return S.myPhoto&&localStorage.getItem(LSK)===hsh(S.myPhoto)?S.myPhoto:""}catch(e){return ""}};
+window.afPhotoOwn=p=>{S.myPhoto=p;try{localStorage.setItem(LSK,hsh(p))}catch(e){}};
 const mem=new Map();                                     /* NAME -> data URL, other people's photos */
 const DB={name:"af-avatars",store:"av"};
 const idb=()=>new Promise((ok,no)=>{try{const r=indexedDB.open(DB.name,1);r.onupgradeneeded=()=>r.result.createObjectStore(DB.store);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}catch(e){no(e)}});
@@ -11380,7 +11386,7 @@ async function loadAll(){try{const d=await idb();const rows=await new Promise((o
 /* who am I, by every name this phone uses for me */
 function myKeys(){const s=new Set();const add=n=>{n=key(n);if(n)s.add(n)};add(S.myName);add(S.postAs);if(S.who)add(S.who.n);
   for(const f of (S.feeds||[])){add(f.me);try{add(fdBy(f))}catch(e){}}return s}
-const photoOf=name=>{const k=key(name);if(!k)return "";if(S.myPhoto&&myKeys().has(k))return S.myPhoto;return mem.get(k)||""};
+const photoOf=name=>{const k=key(name);if(!k)return "";if(mine()&&myKeys().has(k))return mine();return mem.get(k)||""};
 window.afPhoto=photoOf;
 function learn(by,av){const k=key(by);if(!k||typeof av!=="string"||av.length>MAXB||!OK.test(av)||myKeys().has(k)||mem.get(k)===av)return;
   mem.set(k,av);if(mem.size>KEEP){const old=mem.keys().next().value;mem.delete(old);store(old,null)}store(k,av);
@@ -11391,7 +11397,7 @@ function learn(by,av){const k=key(by);if(!k||typeof av!=="string"||av.length>MAX
 
 /* the team gets it: small copy inside encrypted posts and Talk presence. Only when the post is BY me: my photo never rides on
    anything written about or for someone else, so it can never become another person's picture. */
-{const _e=fdEnc;fdEnc=function(k,o){try{if(S.myPhoto&&S.myPhoto.length<=MAXB&&o&&typeof o==="object"&&!o.av&&o.by&&myKeys().has(key(o.by))&&(typeof o.t==="string"||o.k==="p"))o=Object.assign({},o,{av:S.myPhoto})}catch(e){}return _e.call(this,k,o)}}
+{const _e=fdEnc;fdEnc=function(k,o){try{if(mine()&&mine().length<=MAXB&&o&&typeof o==="object"&&!o.av&&o.by&&myKeys().has(key(o.by))&&(typeof o.t==="string"||o.k==="p"))o=Object.assign({},o,{av:mine()})}catch(e){}return _e.call(this,k,o)}}
 {const _d=fdDec;fdDec=async function(){const o=await _d.apply(this,arguments);try{if(o&&o.av&&o.by)learn(o.by,o.av)}catch(e){}return o}}
 
 /* ---------- taking / choosing a photo ---------- */
@@ -11404,21 +11410,23 @@ function shrink(file){return new Promise((ok,no)=>{const img=new Image(),u=URL.c
 const inps={};                                           /* "up" = choose or upload from the phone, "cam" = open the camera */
 function pick(mode){let inp=inps[mode];if(!inp){inp=inps[mode]=document.createElement("input");inp.type="file";inp.accept="image/*";if(mode==="cam")inp.setAttribute("capture","user");inp.style.display="none";document.body.appendChild(inp);
   inp.addEventListener("change",async()=>{const f=inp.files&&inp.files[0];inp.value="";if(!f)return;
-    try{S.myPhoto=await shrink(f);save();toast("Photo saved");try{render()}catch(e){}}catch(e){toast("Couldn't use that photo. Try another.")}})}
+    try{S.myPhoto=await shrink(f);try{localStorage.setItem(LSK,hsh(S.myPhoto))}catch(e){}save();toast("Photo saved");try{render()}catch(e){}}catch(e){toast("Couldn't use that photo. Try another.")}})}
   inp.click()}
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;
   if(t.closest("#ppTake")){pick("cam");return}
   if(t.closest("#ppPick")||t.closest("#main .tk-you .tk-av")){pick("up");return}
-  if(t.closest("#ppDel")){delete S.myPhoto;save();toast("Using your initials");try{render()}catch(x){}}});
+  if(t.closest("#ppDel")){delete S.myPhoto;try{localStorage.removeItem(LSK)}catch(x){}save();toast("Using your initials");try{render()}catch(x){}}});
 
 /* ---------- Settings panel ---------- */
 function panel(){const nm=S.myName||(typeof fdCur==="function"&&fdCur()?fdBy(fdCur()):"")||"ME";
-  return `<div class="panel" id="ppPanel"><b>Profile photo</b><div class="lrow" style="margin:8px 0"><div class="fch">${fdAv(nm)}</div><span style="flex:1;min-width:0"><span class="t" style="display:block">${esc(nm)}</span><span class="s" style="display:block">${S.myPhoto?"Your team sees this photo":"Showing your initials"}</span></span></div>
-  <div style="display:flex;gap:8px"><button class="btn" id="ppTake" style="flex:1">Take photo</button><button class="btn" id="ppPick" style="flex:1">Upload photo</button></div>${S.myPhoto?`<button class="btn alt" id="ppDel" style="width:100%;margin-top:8px">Use my initials</button>`:""}
+  return `<div class="panel" id="ppPanel"><b>Profile photo</b><div class="lrow" style="margin:8px 0"><div class="fch">${fdAv(nm)}</div><span style="flex:1;min-width:0"><span class="t" style="display:block">${esc(nm)}</span><span class="s" style="display:block">${mine()?"Your team sees this photo":"Showing your initials"}</span></span></div>
+  <div style="display:flex;gap:8px"><button class="btn" id="ppTake" style="flex:1">Take photo</button><button class="btn" id="ppPick" style="flex:1">Upload photo</button></div>${mine()?`<button class="btn alt" id="ppDel" style="width:100%;margin-top:8px">Use my initials</button>`:""}
   <p class="note">It shows instead of your initials. Your team sees a small copy that travels inside your encrypted posts, never as a separate file.</p></div>`}
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(view==="data"){const m=document.querySelector("#main");if(m&&!m.querySelector("#ppPanel"))m.insertAdjacentHTML("afterbegin",panel())}}catch(e){}return r}}
 
 {const c=document.createElement("style");c.textContent=`.av.avp{background-size:cover;background-position:center;background-repeat:no-repeat;font-size:0}#main .tk-you .tk-av{cursor:pointer}`;document.head.appendChild(c)}
+/* one-time clean-up: a photo this phone didn't take is dropped, and pictures learned from others are re-learned fresh */
+try{if(S.myPhoto&&!mine()){delete S.myPhoto;save()}if(!localStorage.getItem("af-av-v2")){localStorage.setItem("af-av-v2","1");idb().then(d=>{const t=d.transaction(DB.store,"readwrite");t.objectStore(DB.store).clear();t.oncomplete=()=>d.close()}).catch(()=>{})}}catch(e){}
 loadAll().then(n=>{if(n&&typeof view!=="undefined"&&(view==="feed"||view==="talk"||view==="people"))try{render()}catch(e){}});
 })();
 
