@@ -53,3 +53,21 @@ test("Talk shows a live location card with the three share times", async () => {
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("every My page shows who you message as, and Change saves it", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    await a.w.eval(`const m=S.roster[0];S.feeds=[];S.me={pk:"p".repeat(24),unit:"TEAM",d:mpDigest(m),t:Date.now()};S.myName="CPL TEST";S.onb=true;S.welcomed=1;S.mode="civilian";view="me";render()`);
+    await sleep(150);
+    for (const v of ["me", "mecal", "today", "log"]) {
+      a.w.eval(`view="${v}";render()`); await sleep(100);
+      assert.match(a.$("#dmAs") ? a.$("#dmAs").textContent : "", /Messaging as\s*CPL TEST/, v + " shows the name");
+    }
+    a.w.eval(`view="me";render()`); await sleep(80);
+    a.$("#dmAsEd").click(); await sleep(60);
+    a.$("#dmAsIn").value = "sgt reyes"; a.$("#dmAsSave").click(); await sleep(120);
+    assert.equal(a.w.eval("S.myName"), "SGT REYES");
+    assert.match(a.$("#dmAs").textContent, /SGT REYES/);
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
