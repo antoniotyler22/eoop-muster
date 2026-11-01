@@ -80,3 +80,15 @@ test("SOS 4.73.1: a member page has the red SOS button, and a pushed SOS opens t
     assert.equal(a.w.eval("S.sos.length"), 1, "same SOS from the leader path and the push shows once");
   } finally { await a.close(); }
 });
+
+test("SOS 4.74.2: the leader's SOS button sits right under Emergency check-in", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    a.w.eval(`S.onb=true;S.welcomed=1;S.leaderMode=true;S.role="oic";S.source="mol";S.feeds=[{id:"feedabcdef12",mk:"${"m".repeat(30)}",lk:"${"l".repeat(30)}",ek:"${"e".repeat(43)}",unit:"1ST",main:1,posts:[],seen:0}];view="board";render()`);
+    await sleep(120);
+    const em = a.$("#v11Em"), sos = a.$("#sosHome");
+    assert.ok(em && sos, "both buttons");
+    assert.equal(em.nextElementSibling, sos, "SOS directly after Emergency muster");
+    assert.match(sos.className, /warn/);
+  } finally { await a.close(); }
+});
