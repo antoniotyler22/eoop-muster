@@ -84,10 +84,24 @@ async function smsAll(){const pool=recallPool().filter(m=>m.phone&&!(S.rc.ci||{}
     const r=await post("sms",{pro:tok,to:ppl.map(p=>p.to),ppl,recall:ciRid(),key:L.key,link:ciLink()});S.rc.smsAt=Date.now();S.rc.smsReply=!!r.reply;S.rc.sent=S.rc.sent||{};pool.forEach(m=>S.rc.sent[m.id]=1);save();
     const total=pool.length+vis.length;toast(`Texted ${r.sent} of ${total}`+(r.failed?` · ${r.failed} failed`:"")+(r.reply?" · replies check people in":""));render()}
   catch(e){toast(String(e.message||e).slice(0,90))}}
+/* 4.74.11: "Press 1" robot calls for people who ignored the push and the text. Same people, same scrambled names as texting;
+   they press 1 = OK, 2 = delayed, 3 = need help and it counts them here. Pro, and the "voice" function needs Twilio. */
+async function callAll(){const pool=recallPool().filter(m=>m.phone&&!(S.rc.ci||{})[m.id]);
+  if(!pool.length){toast("No one left to call.");return}
+  const tok=typeof proTok==="function"?proTok():"";if(!tok){toast("Phone calls are part of Pro.");return}
+  const L=S.rc.live||{};if(!L.ok||!L.key){toast("Turn on live check-ins first.");return}
+  const unit=String(typeof unitName==="function"?unitName():"Your unit").replace(/[^A-Za-z0-9 .,'&-]/g,"").trim().slice(0,30)||"Your unit";
+  if(!confirm(`Call ${pool.length} ${pool.length===1?"person":"people"} who haven't checked in? A recorded voice asks them to press 1, 2 or 3.`))return;
+  try{const ppl=[];for(const m of pool)ppl.push({to:m.phone,w:await replyWords(m)});
+    const r=await post("voice",{pro:tok,ppl,recall:ciRid(),key:L.key,unit});S.rc.callAt=Date.now();save();
+    toast(`Calling ${r.placed} of ${pool.length}`+(r.failed?` · ${r.failed} failed`:""));render()}
+  catch(e){toast(String(e.message||e).slice(0,90))}}
 const _rr=renderRecall;
 renderRecall=function(){_rr.apply(this,arguments);if(!S.rc.open||!S.rc.live||!S.smsSrv)return;const at=$("#main .rp-panel")||$("#main .mbar");
-  if(at)at.insertAdjacentHTML("afterend",`<div class="panel"><button class="btn" data-sms-all>📨 Text the check-in link to everyone not checked in</button><p class="note">Sent from the server (Pro). Numbers are passed to the text service for delivery and not kept.${S.rc.smsAt?" Last sent "+esc(ago(S.rc.smsAt))+".":""}${S.rc.smsReply?" <b>No app or data needed:</b> anyone texted can just reply 1 = OK, 2 = delayed, 3 = need help, and it counts them here.":""}</p></div>`)};
+  if(at)at.insertAdjacentHTML("afterend",`<div class="panel"><button class="btn" data-sms-all>📨 Text the check-in link to everyone not checked in</button><p class="note">Sent from the server (Pro). Numbers are passed to the text service for delivery and not kept.${S.rc.smsAt?" Last sent "+esc(ago(S.rc.smsAt))+".":""}${S.rc.smsReply?" <b>No app or data needed:</b> anyone texted can just reply 1 = OK, 2 = delayed, 3 = need help, and it counts them here.":""}</p>${S.voiceSrv?`<button class="btn alt" data-call-all>📞 Call everyone still not checked in (press 1, 2 or 3)</button><p class="note">A recorded call asks them to press 1 = OK, 2 = delayed, 3 = need help.${S.rc.callAt?" Last called "+esc(ago(S.rc.callAt))+".":""}</p>`:""}</div>`)};
+document.addEventListener("click",e=>{if(e.target.closest("[data-call-all]")){e.preventDefault();const b=e.target.closest("[data-call-all]");b.disabled=true;callAll().finally(()=>{b.disabled=false})}});
 document.addEventListener("click",e=>{if(e.target.closest("[data-sms-all]")){e.preventDefault();const b=e.target.closest("[data-sms-all]");b.disabled=true;smsAll().finally(()=>{b.disabled=false})}});
 /* Show the server-texting button only once the sms function answers (it needs Twilio set up). */
 setTimeout(()=>{if(!(typeof proTok==="function"&&proTok()))return;fetch(fn("sms"),{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:'{"ping":1}'}).then(r=>r.ok?r.json():null).then(j=>{const on=!!(j&&j.ready);if(on!==!!S.smsSrv){S.smsSrv=on;save()}}).catch(()=>{})},4000);
+setTimeout(()=>{if(!(typeof proTok==="function"&&proTok()))return;fetch(fn("voice"),{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:'{"ping":1}'}).then(r=>r.ok?r.json():null).then(j=>{const on=!!(j&&j.ready);if(on!==!!S.voiceSrv){S.voiceSrv=on;save()}}).catch(()=>{})},4500);
 })();

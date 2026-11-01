@@ -34,7 +34,7 @@ const cors = {
 };
 webpush.setVapidDetails("mailto:antoniotyler22@gmail.com", Deno.env.get("VAPID_PUBLIC")!, Deno.env.get("VAPID_PRIVATE")!);
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-const VER = "4.73.1";
+const VER = "4.74.11";
 const out = (t: string, status = 200) => new Response(t, { status, headers: cors });
 // A database error (for example the service role lost its table rights) must never read as "no sub": that hid a
 // week of dead alerts. Log it and answer 500 so the failure shows in the logs and the owner's Health tab.
@@ -55,6 +55,16 @@ async function apnsToken(): Promise<string> {
   const sig = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, key, new TextEncoder().encode(head + "." + body));
   apnsJwt = head + "." + body + "." + b64url(sig); apnsAt = Date.now(); return apnsJwt;
 }
+// <aps> (4.74.11) The "aps" part of an iPhone alert. Only alerts marked crit (an SOS, or "NEED HELP" in a live check-in) can be
+// critical, and only when the APNS_CRITICAL secret is "1": that stays off until Apple approves the Critical Alerts entitlement
+// for the app and the app build carries it. Critical alerts sound through the silent switch, Do Not Disturb and Focus.
+// Tests load this block on its own (types stripped), so keep it free of other helpers.
+function apsFor(p: any, urgent: boolean, criticalOn: boolean): any {
+  const aps: any = { alert: { title: p.title, body: p.body }, sound: "default", "interruption-level": urgent ? "time-sensitive" : "active" };
+  if (criticalOn && p.crit === true) { aps.sound = { critical: 1, name: "default", volume: 1.0 }; aps["interruption-level"] = "critical"; }
+  return aps;
+}
+// </aps>
 // Returns "ok", "gone" (token no longer valid: remove it) or "fail".
 async function apnsSend(token: string, p: Record<string, unknown>, urgent: boolean): Promise<string> {
   try {
@@ -62,7 +72,7 @@ async function apnsSend(token: string, p: Record<string, unknown>, urgent: boole
     const r = await fetch(`https://${host}/3/device/${token}`, {
       method: "POST",
       headers: { authorization: "bearer " + await apnsToken(), "apns-topic": Deno.env.get("APNS_TOPIC") || "com.antoniotyler.accountedfor", "apns-push-type": "alert", "apns-priority": urgent ? "10" : "5", "content-type": "application/json" },
-      body: JSON.stringify({ aps: { alert: { title: p.title, body: p.body }, sound: "default", "interruption-level": urgent ? "time-sensitive" : "active" }, open: p.open, sos: p.sos }),
+      body: JSON.stringify({ aps: apsFor(p, urgent, Deno.env.get("APNS_CRITICAL") === "1"), open: p.open, sos: p.sos }),
     });
     if (r.ok) return "ok";
     return r.status === 410 || r.status === 400 ? "gone" : "fail";
@@ -131,7 +141,7 @@ async function recall(id: string) {
   if (!claimed || !claimed.length) return out("already sent");
   const help = rows.filter((x) => x.code === 3).length, n = rows.length;
   const payload = help
-    ? { title: "⚠ NEED HELP", body: help === 1 ? "Someone needs help. Open the recall." : help + " people need help. Open the recall.", help: true, open: "recall" }
+    ? { title: "⚠ NEED HELP", body: help === 1 ? "Someone needs help. Open the recall." : help + " people need help. Open the recall.", help: true, crit: true, open: "recall" }
     : { title: n === 1 ? "New check-in" : n + " new check-ins", body: "Open the recall to see who.", help: false, open: "recall" };
   return send("recalls", id, r.push_sub, payload, help > 0);
 }
@@ -480,7 +490,7 @@ async function sosAlert(id: string, mk: string, ti: string, tx: string, sos: Rec
   sosAt.set(k, Date.now());
   const { data: ls, error } = await db.from("feed_subs").select("id,sub").eq("feed_id", id).limit(500);
   if (error) return dbErr(error);
-  const payload = { title: "\u{1F198} SOS: " + (ti || "Someone"), body: (tx || "Needs help") + ". Open now.", help: true, open: "sos", sos };
+  const payload = { title: "\u{1F198} SOS: " + (ti || "Someone"), body: (tx || "Needs help") + ". Open now.", help: true, crit: true, open: "sos", sos };
   const keyOf = (s: any) => s?.apns ? "apns:" + s.apns : s?.endpoint ?? "";
   let n = 0;
   if (f.leader_sub) {

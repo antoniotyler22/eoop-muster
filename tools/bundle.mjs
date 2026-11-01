@@ -68,6 +68,7 @@ export const SOURCES = [
   "features/status-done.js",
   "features/feed-poll.js",
   "features/my-checkin.js",
+  "features/quick-safe.js",
   "features/harp.js",
   "features/ck-missing.js",
   "features/ask-roster.js",
