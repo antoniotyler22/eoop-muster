@@ -14,7 +14,8 @@ test("Settings offers a profile photo; a saved photo replaces my initials", asyn
   const a = await openApp({ rpc: () => [] });
   try {
     await setup(a);
-    assert.ok(a.$("#ppPick"), "Take or choose photo button in Settings");
+    assert.ok(a.$("#ppTake"), "Take photo button in Settings");
+    assert.ok(a.$("#ppPick"), "Upload photo button in Settings");
     assert.match(a.w.eval(`fdAv("CPL TEST")`), />CT</, "initials before a photo");
     a.w.eval(`S.myPhoto=${JSON.stringify(PHOTO)};render()`); await sleep(60);
     assert.match(a.w.eval(`fdAv("CPL TEST")`), /class="av avp"/, "photo instead of initials");
