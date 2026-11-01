@@ -49,6 +49,7 @@ document.addEventListener("click",e=>{const k=e.target.closest&&e.target.closest
 /* 4.74.2: SOS sits right under the Emergency muster button, same look */
 function placeSos(){if(document.getElementById("sosHome")||!feedOf())return;const m=$("#main");if(!m)return;const em=m.querySelector("#v11Em")||m.querySelector('button.btn.warn[data-go="recall"]');if(em)em.insertAdjacentHTML("afterend",card())}
 {const _r=render;render=function(){if(view==="sos"){renderTabs();const m=$("#main");if(m){m.innerHTML=screen();warm()}return}const r=_r.apply(this,arguments);try{placeSos()}catch(e){}return r}}
+window.sosCardHtml=()=>card();
 function card(){return `<button class="btn warn" id="sosHome" data-go="sos" type="button" style="width:100%;margin-top:12px;font-size:17px">🆘 SOS</button>`}
 {const _rt=renderTools;renderTools=function(){const r=_rt.apply(this,arguments);try{const g=document.querySelector("#main .tgrid");if(g&&!document.getElementById("sosTile"))g.insertAdjacentHTML("afterbegin",`<button data-go="sos" id="sosTile" class="hot"><span class="ic">${svg("alert")}</span><span><b>SOS</b><small>Hold to alert your leaders</small></span></button>`)}catch(e){}return r}}
 {const _td=renderToday;renderToday=function(){const r=_td.apply(this,arguments);try{const m=$("#main");if(m&&feedOf()&&!document.getElementById("sosHome"))m.insertAdjacentHTML("beforeend",card())}catch(e){}return r}}

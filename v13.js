@@ -86,6 +86,7 @@ async function unlock(){const u=($("#v13U").value||""),p=($("#v13P").value||""),
   finally{b.disabled=false}}
 function logOut(){try{SB.rpc&&0}catch(e){}const V=window.VAULT;toast("Logging out…");setTimeout(()=>{if(V&&V.eraseAll)V.eraseAll();else{try{localStorage.clear()}catch(e){}location.replace(location.pathname)}},300)}
 /* account panel: Tools, My page, Today */
+window.acctHtml=()=>acctHTML();
 function acctHTML(){if(!signedIn())return"";const L=S.lgSelf;return `<div class="panel" id="v13Acct"><b>👤 Signed in as ${esc(L.user||"")}</b><div class="note">${esc(L.l||"")}</div>
   <details${chg?" open":""}><summary class="note">Change my password</summary>
     <label for="v13Old">Current password</label><input type="password" id="v13Old" autocomplete="current-password" autocapitalize="none">

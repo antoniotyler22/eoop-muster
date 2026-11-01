@@ -25,5 +25,5 @@
     save();resign();const n=document.getElementById("qhNote");if(n)n.textContent=z.on?"On: "+z.from+" to "+z.to+" on this phone.":"Off."});
   /* travelled to another time zone: tell the server the new offset */
   setTimeout(()=>{try{const z=q();if(z.on&&z.tz!==tzNow())resign()}catch(e){}},9000);
-  window.qhExtra=extra;
+  window.qhExtra=extra;window.qhPanelHtml=()=>panel();
 })();

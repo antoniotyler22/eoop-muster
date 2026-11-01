@@ -81,7 +81,7 @@ function memberLib(){return [
   {s:"[data-v12g]",opt:1,t:"Group chats",b:"Groups your leader adds you to show up here in Messages. Tap one to chat, tap a message to react, and tap a name chip to @mention someone."},
   {s:tab("feed"),tap:1,opt:1,t:"Feed",b:"Tap <b>Feed</b>. Word from your leader shows up here. Tap <b>Got it</b> on each post so they know you saw it."},
   {s:tab("log"),tap:1,opt:1,t:"My log",b:"Tap <b>My log</b>. Write down what you did today. It stays on your phone."},
-  {s:"#v13Hdr",opt:1,t:"Your account button",b:"This person button opens your account any time."},
+  {s:"#v13Hdr",opt:1,t:"Your account button",b:"This person button opens <b>My page</b>: SOS, your photo, quiet hours, muster place and your account."},
   {s:"#helpBtn",opt:1,t:"Stuck? Tap ?",b:"Tap <b>?</b> on any screen to have it walk you through that screen, or replay this tour."},
   {t:"You're all set",b:"Replay this tour any time from <b>Tools → Take the tour</b>.",end:1}]}
 function sectionLib(){return [

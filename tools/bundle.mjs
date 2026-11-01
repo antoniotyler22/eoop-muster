@@ -86,7 +86,7 @@ export const SOURCES = [
   "features/search.js",
   "features/quiet-hours.js",
   "features/sos.js",
-  "features/geofence.js",
+  "features/geofence.js","features/my-top.js",
   "features/member-feed.js",
   "features/swipe-tiles.js",
   "features/today-ticker.js",

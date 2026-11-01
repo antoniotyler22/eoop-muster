@@ -27,6 +27,7 @@ function lpanel(){const z=zone();
 {const _r=render;render=function(){const r=_r.apply(this,arguments);
   try{if(view==="data"&&!(typeof memberMode==="function"&&memberMode())&&S.role!=="view"){const m=document.querySelector("#main");if(m&&!m.querySelector("#gfLead")){const q=m.querySelector("#qhPanel")||m.querySelector("#ppPanel");if(q)q.insertAdjacentHTML("afterend",lpanel());else m.insertAdjacentHTML("afterbegin",lpanel())}}}catch(e){}return r}}
 {const _m=mpDigest;mpDigest=function(m){const d=_m.apply(this,arguments);try{const z=zone();if(z)d.gz={name:clean(z.name,30),lat:z.lat,lng:z.lng,r:z.r}}catch(e){}return d}}
+window.gfLeadHtml=()=>lpanel();
 function repaintLead(){const o=document.getElementById("gfLead");if(o)o.outerHTML=lpanel()}
 document.addEventListener("click",async e=>{const t=e.target;if(!t||!t.closest)return;
   const rb=t.closest("[data-gfr]");if(rb&&S.gz){S.gz.r=+rb.dataset.gfr;save();repaintLead();try{mpSchedule()}catch(x){}return}

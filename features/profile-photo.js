@@ -53,6 +53,7 @@ document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;
   if(t.closest("#ppDel")){delete S.myPhoto;try{localStorage.removeItem(LSK)}catch(x){}save();toast("Using your initials");try{render()}catch(x){}}});
 
 /* ---------- Settings panel ---------- */
+window.ppPanelHtml=()=>panel();
 function panel(){const nm=S.myName||(typeof fdCur==="function"&&fdCur()?fdBy(fdCur()):"")||"ME";
   return `<div class="panel" id="ppPanel"><b>Profile photo</b><div class="lrow" style="margin:8px 0"><div class="fch">${fdAv(nm)}</div><span style="flex:1;min-width:0"><span class="t" style="display:block">${esc(nm)}</span><span class="s" style="display:block">${mine()?"Your team sees this photo":"Showing your initials"}</span></span></div>
   <div style="display:flex;gap:8px"><button class="btn" id="ppTake" style="flex:1">Take photo</button><button class="btn" id="ppPick" style="flex:1">Upload photo</button></div>${mine()?`<button class="btn alt" id="ppDel" style="width:100%;margin-top:8px">Use my initials</button>`:""}
