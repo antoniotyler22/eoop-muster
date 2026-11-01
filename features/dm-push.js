@@ -13,6 +13,8 @@ async function attach(){if(busy||bad>=3||!S.pushOn||typeof pushSub!=="function")
     const ths=[];
     if(!(typeof memberMode==="function"&&memberMode())&&S.role!=="view")for(const m of S.roster||[])if(m.dm&&m.dm.ok)ths.push([m.dm,"L"]);
     const mine=typeof myDm==="function"?myDm():null;if(mine)ths.push([mine,"M"]);
+    if(!(typeof memberMode==="function"&&memberMode())&&S.role!=="view")for(const g of S.grps||[])if(g.ok)ths.push([g,"L"]);
+    for(const g of (S.me&&S.me.d&&S.me.d.grps)||[])if(g&&g.id&&g.k)ths.push([g,"M"]);
     let n=0;for(const [t,role] of ths){if(M[t.id]===j.endpoint)continue;
       try{await SB.rpc("dm_sub",{p_id:t.id,p_key:t.k,p_role:role,p_sub:j});M[t.id]=j.endpoint;n++}catch(e){if(/function|schema|404/i.test(String(e&&e.message||e))){bad=3;break}}
       if(n>=25)break}

@@ -110,44 +110,57 @@ function renderMePv(){const m=S.roster.find(x=>x.id===pvId);if(!m){view="people"
   main.insertAdjacentHTML("afterbegin",`<div class="banner" style="margin-top:12px"><span>👁 <b>Leader view.</b> This is what ${esc(title(m.rank)+" "+title(lastOf(m)))} sees on their My page${m.pk?"":" (not turned on for them yet)"}.</span><button data-pcard="${m.id}">Back</button></div>`)}
 
 /* ================= 5. MESSAGES (leader <-> member) ================= */
-S.dmMsgs=S.dmMsgs||{};S.dmSeen=S.dmSeen||{};S.dmRx=S.dmRx||{};
+S.dmMsgs=S.dmMsgs||{};S.dmSeen=S.dmSeen||{};S.dmRx=S.dmRx||{};S.grps=S.grps||[];S.gAfter=S.gAfter||{};
 const RX=["👍","❤️","😂","‼️","✅"];
 if(typeof SYNC_SKIP==="object"&&Array.isArray(SYNC_SKIP))SYNC_SKIP.push("dmSubs","dmMsgs","dmSeen","dmAfter","pages","w62","w6t","w6To","aiOn","customV","evTypesX");
 if(typeof WS_GLOBAL==="object"&&Array.isArray(WS_GLOBAL))WS_GLOBAL.push("aiOn","w6t","w6To","pages","dmMineAfter","dmMine");
 function dmEnsure(m){if(!m.dm){m.dm={id:rndId(20),k:rndId(32),ek:newEk(),ok:0};save()}if(!S.dmInbox){S.dmInbox=rndId(32);save()}return m.dm}
 async function dmOpenSrv(m){const d=dmEnsure(m);if(d.ok)return d;await SB.rpc("dm_open",{p_id:d.id,p_key:d.k,p_inbox:S.dmInbox});d.ok=1;save();return d}
 {const _md=mpDigest;mpDigest=function(m){const d=_md.apply(this,arguments);if(m&&m.dm&&m.dm.ok)d.dm={id:m.dm.id,k:m.dm.k,ek:m.dm.ek,from:String(S.postAs||S.myName||unitName()).slice(0,30)};return d}}
+{const _m2=mpDigest;mpDigest=function(m){const d=_m2.apply(this,arguments);const g=(S.grps||[]).filter(g=>g.ok&&(g.ids||[]).includes(m&&m.id));if(g.length)d.grps=g.map(g=>({id:g.id,k:g.k,ek:g.ek,name:g.name,n:(g.ids||[]).length+1}));return d}}
 {const _mp=mpPublish;mpPublish=async function(){try{for(const m of S.roster.filter(m=>m.pk))await dmOpenSrv(m).catch(()=>{})}catch(e){}return _mp.apply(this,arguments)}}
-async function dmSend(th,txt,img,by,name,aud,dur){const o={t:String(txt||"").slice(0,2000),by,n:String(name||"").slice(0,30)};if(img)o.img=img;if(aud){o.aud=aud;o.d=Math.min(60,+dur||0)}const ct=await fdEnc(th.ek,o);const id=await SB.rpc("dm_send",{p_id:th.id,p_key:th.k,p_ct:ct});try{SB.notify(null,{dm:th.id,k:th.k,by:by==="L"?"L":"M",dev:window.dmDev?window.dmDev():undefined,ti:String(name||"").slice(0,40),tx:String(txt||(img?"📷 Photo":aud?"🎙 Voice note · "+(+dur||0)+"s":"")).slice(0,100)})}catch(e){}return {id:+id,t:Date.now(),...o,me:1}}
+async function dmSend(th,txt,img,by,name,aud,dur,ti){const o={t:String(txt||"").slice(0,2000),by,n:String(name||"").slice(0,30),dv:window.dmDev?window.dmDev():""};if(img)o.img=img;if(aud){o.aud=aud;o.d=Math.min(60,+dur||0)}const ct=await fdEnc(th.ek,o);const id=await SB.rpc("dm_send",{p_id:th.id,p_key:th.k,p_ct:ct});try{SB.notify(null,{dm:th.id,k:th.k,by:by==="L"?"L":"M",dev:window.dmDev?window.dmDev():undefined,ti:String(ti||name||"").slice(0,40),tx:String(txt||(img?"📷 Photo":aud?"🎙 Voice note · "+(+dur||0)+"s":"")).slice(0,100)})}catch(e){}return {id:+id,t:Date.now(),...o,me:1}}
 function dmPush(tid,msg){const L=S.dmMsgs[tid]=S.dmMsgs[tid]||[];if(L.some(x=>x.id===msg.id))return false;L.push(msg);L.sort((a,b)=>a.id-b.id);if(L.length>200)L.splice(0,L.length-200);return true}
-function dmRxSet(o,by){const id=+o.r;if(!id||!by)return false;const e=RX.includes(o.e)?o.e:"";const M=S.dmRx[id]=S.dmRx[id]||{};if(e)M[by]=e;else delete M[by];if(!Object.keys(M).length)delete S.dmRx[id];return true}
+function dmRxSet(o,by){const id=+o.r;by=String(by||"").slice(0,24);if(!id||!by)return false;const e=RX.includes(o.e)?o.e:"";const M=S.dmRx[id]=S.dmRx[id]||{};if(e)M[by]=e;else delete M[by];if(!Object.keys(M).length)delete S.dmRx[id];return true}
 async function dmReact(th,id,e,by){const o={t:"",by,n:"",r:+id,e:RX.includes(e)?e:""};const ct=await fdEnc(th.ek,o);await SB.rpc("dm_send",{p_id:th.id,p_key:th.k,p_ct:ct});dmRxSet(o,by)}
-window.dmRx={set:dmRxSet,open:id=>{dmWith=id;view="dm";render()}};
+window.dmRx={set:dmRxSet,open:id=>{dmWith=id;view="dm";render()},grp:id=>{grpCur=id;view="grp";render()}};
+let grpCur=null,grpBusy=false;
+const gDev=()=>window.dmDev?window.dmDev():"";
+const gKey=g=>"g:"+g.id;
+const gMem=()=>memberMode()||!leader();
+function myGroups(){return gMem()?((S.me&&S.me.d&&S.me.d.grps)||[]).filter(g=>g&&g.id&&g.k&&g.ek):(S.grps||[]).filter(g=>g.ok)}
+function gUn(){try{return myGroups().reduce((a,g)=>a+(S.dmMsgs[gKey(g)]||[]).filter(x=>x.dv!==gDev()&&x.id>(S.dmSeen[gKey(g)]||0)).length,0)}catch(e){return 0}}
+function gMsg(r,o){return {id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,2000),by:o.by==="L"?"L":"M",n:String(o.n||"").slice(0,30),img:imgOK(o.img)?o.img:"",aud:audOK(o.aud)?o.aud:"",d:Math.min(60,+o.d||0),dv:String(o.dv||"").slice(0,40)}}
+async function dmPollGroupsM(){const gs=myGroups();if(grpBusy||!gs.length||!gMem())return;grpBusy=true;let n=0;
+  try{for(const g of gs.slice(0,8)){const rows=await SB.rpc("dm_get",{p_id:g.id,p_key:g.k,p_after:S.gAfter[g.id]||0});
+    for(const r of rows||[]){S.gAfter[g.id]=Math.max(S.gAfter[g.id]||0,+r.id);const o=await fdDec(g.ek,r.ct);if(!o)continue;if(o.r){dmRxSet(o,o.by);continue}const msg=gMsg(r,o);if(dmPush(gKey(g),msg)&&msg.dv!==gDev())n++}}
+    save();if(n){toast("👥 New group message"+(n>1?"s":""));renderTabs();if(view==="grp"||view==="dm")redraw(render)}}catch(e){}finally{grpBusy=false}}
 let dmBusy=false;
 async function dmPollLeader(){if(dmBusy||!S.dmInbox||!leader())return;dmBusy=true;let n=0;
-  try{const rows=await SB.rpc("dm_inbox",{p_inbox:S.dmInbox,p_after:S.dmAfter||0});const byId={};S.roster.forEach(m=>{if(m.dm)byId[m.dm.id]=m});
-    for(const r of rows||[]){S.dmAfter=Math.max(S.dmAfter||0,+r.id);const m=byId[r.thread_id];if(!m)continue;const o=await fdDec(m.dm.ek,r.ct);if(!o)continue;if(o.r){dmRxSet(o,o.by==="L"?"L":"M");continue}
-      const msg={id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,2000),by:o.by==="L"?"L":"M",n:String(o.n||"").slice(0,30),img:imgOK(o.img)?o.img:"",aud:audOK(o.aud)?o.aud:"",d:Math.min(60,+o.d||0)};
+  try{const rows=await SB.rpc("dm_inbox",{p_inbox:S.dmInbox,p_after:S.dmAfter||0});const byId={};S.roster.forEach(m=>{if(m.dm)byId[m.dm.id]=m});const gById={};(S.grps||[]).forEach(g=>gById[g.id]=g);
+    for(const r of rows||[]){S.dmAfter=Math.max(S.dmAfter||0,+r.id);const gg=gById[r.thread_id];if(gg){const go=await fdDec(gg.ek,r.ct);if(go){if(go.r)dmRxSet(go,go.by);else{const gm=gMsg(r,go);if(dmPush(gKey(gg),gm)&&gm.dv!==gDev()){n++;actAdd("👥",gg.name+": "+gm.n+" “"+gm.txt.slice(0,50)+"”","dms")}}}continue}const m=byId[r.thread_id];if(!m)continue;const o=await fdDec(m.dm.ek,r.ct);if(!o)continue;if(o.r){dmRxSet(o,o.by==="L"?"L":"M");continue}
+      const msg={id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,2000),by:o.by==="L"?"L":"M",n:String(o.n||"").slice(0,30),img:imgOK(o.img)?o.img:"",aud:audOK(o.aud)?o.aud:"",d:Math.min(60,+o.d||0),dv:String(o.dv||"").slice(0,40)};
       if(dmPush(r.thread_id,msg)&&msg.by==="M"){n++;actAdd("💬",title(m.rank)+" "+title(lastOf(m))+": “"+msg.txt.slice(0,60)+"”","dms")}}
-    if(rows&&rows.length)save();if(n){toast("💬 "+n+" new message"+(n>1?"s":""));try{navigator.vibrate&&navigator.vibrate([60,40,60])}catch(e){}renderTabs();if(view==="dms"||view==="dm")redraw(render)}}
+    if(rows&&rows.length)save();if(n){toast("💬 "+n+" new message"+(n>1?"s":""));try{navigator.vibrate&&navigator.vibrate([60,40,60])}catch(e){}renderTabs();if(view==="dms"||view==="dm"||view==="grp")redraw(render)}}
   catch(e){}finally{dmBusy=false}}
 const myDm=()=>S.me&&S.me.d&&S.me.d.dm&&S.me.d.dm.id?S.me.d.dm:null;
 async function dmPollMember(){const th=myDm();if(dmBusy||!th)return;dmBusy=true;let n=0;
   try{const rows=await SB.rpc("dm_get",{p_id:th.id,p_key:th.k,p_after:S.dmMineAfter||0});
-    for(const r of rows||[]){S.dmMineAfter=Math.max(S.dmMineAfter||0,+r.id);const o=await fdDec(th.ek,r.ct);if(!o)continue;if(o.r){dmRxSet(o,o.by==="L"?"L":"M");continue}const msg={id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,2000),by:o.by==="L"?"L":"M",n:String(o.n||"").slice(0,30),img:imgOK(o.img)?o.img:"",aud:audOK(o.aud)?o.aud:"",d:Math.min(60,+o.d||0)};
+    for(const r of rows||[]){S.dmMineAfter=Math.max(S.dmMineAfter||0,+r.id);const o=await fdDec(th.ek,r.ct);if(!o)continue;if(o.r){dmRxSet(o,o.by==="L"?"L":"M");continue}const msg={id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,2000),by:o.by==="L"?"L":"M",n:String(o.n||"").slice(0,30),img:imgOK(o.img)?o.img:"",aud:audOK(o.aud)?o.aud:"",d:Math.min(60,+o.d||0),dv:String(o.dv||"").slice(0,40)};
       if(dmPush("mine:"+th.id,msg)&&msg.by==="L")n++}
     if(rows&&rows.length)save();if(n){toast("💬 New message from "+(th.from||"your leader"));renderTabs();if(view==="dm")redraw(render)}}catch(e){}finally{dmBusy=false}}
-every(20000,()=>{if(document.hidden)return;if(leader()&&S.dmInbox)dmPollLeader();if(myDm())dmPollMember()},"v12-dm");
-setTimeout(()=>{if(leader()&&S.dmInbox)dmPollLeader();if(myDm())dmPollMember()},2500);
-const dmUnreadLeader=()=>S.roster.reduce((a,m)=>a+(m.dm?((S.dmMsgs[m.dm.id]||[]).filter(x=>x.by==="M"&&x.id>(S.dmSeen[m.dm.id]||0)).length):0),0);
-const dmUnreadMine=()=>{const th=myDm();return th?(S.dmMsgs["mine:"+th.id]||[]).filter(x=>x.by==="L"&&x.id>(S.dmSeen["mine:"+th.id]||0)).length:0};
+every(20000,()=>{if(document.hidden)return;if(leader()&&S.dmInbox)dmPollLeader();if(myDm())dmPollMember();dmPollGroupsM()},"v12-dm");
+setTimeout(()=>{if(leader()&&S.dmInbox)dmPollLeader();if(myDm())dmPollMember();dmPollGroupsM()},2500);
+const dmUnreadLeader=()=>gUn()+S.roster.reduce((a,m)=>a+(m.dm?((S.dmMsgs[m.dm.id]||[]).filter(x=>x.by==="M"&&x.id>(S.dmSeen[m.dm.id]||0)).length):0),0);
+const dmUnreadMine=()=>{const th=myDm();return gUn()+(th?(S.dmMsgs["mine:"+th.id]||[]).filter(x=>x.by==="L"&&x.id>(S.dmSeen["mine:"+th.id]||0)).length:0)};
 let dmWith=null;
 const tlHM=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,"0")+String(d.getMinutes()).padStart(2,"0")};
 const tlDay=t=>{const d=new Date(t),td=new Date(),y=new Date(Date.now()-864e5);const D=["SUN","MON","TUE","WED","THU","FRI","SAT"],M=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
   const tag=d.toDateString()===td.toDateString()?"TODAY":d.toDateString()===y.toDateString()?"YESTERDAY":"";return (tag?tag+" · ":"")+D[d.getDay()]+" "+d.getDate()+" "+M[d.getMonth()]};
-function rxHtml(x){const M=S.dmRx[x.id];if(!M)return "";const me=(memberMode()||!leader())?"M":"L";return `<span class="tl-rx">${["L","M"].filter(k=>M[k]).map(k=>`<i class="${k===me?"mine":""}">${M[k]}</i>`).join("")}</span>`}
+function rxHtml(x){const M=S.dmRx[x.id];if(!M)return "";const mine=[gMem()?"M":"L","g"+gDev()];const c={};for(const k of Object.keys(M)){const e=M[k];(c[e]=c[e]||{n:0,me:0}).n++;if(mine.includes(k))c[e].me=1}return `<span class="tl-rx">${Object.keys(c).map(e=>`<i class="${c[e].me?"mine":""}">${e}${c[e].n>1?" "+c[e].n:""}</i>`).join("")}</span>`}
+const mnHtml=h=>h.replace(/(^|\s|>)@([A-Za-z0-9_'-]{1,20})/g,(m,a,n)=>{const me=n.toLowerCase()==="all"||String(myName()||"").toLowerCase().split(/\s+/).pop()===n.toLowerCase();return a+`<b class="mn${me?" me":""}">@${n}</b>`});
 function rxPick(x){return `<div class="tl-pick" data-pickfor="${x.id}" hidden>${RX.map(e=>`<button type="button" data-v12rx="${x.id}" data-e="${e}">${e}</button>`).join("")}</div>`}
-function bubble(x,mine){return `<div class="tl-e ${mine?"me":""}" data-mid="${x.id||""}"><span class="tl-t">${tlHM(x.t)}</span><div class="tl-c">${x.img?`<img src="${x.img}" alt="Photo" class="v12img">`:""}${x.aud?`<audio class="tl-aud" controls preload="none" src="${x.aud}"></audio>`:""}${x.txt?`<div>${esc(x.txt).replace(/\n/g,"<br>")}</div>`:""}<small class="tl-w">${mine?"You":esc(x.n||"")}</small>${x.id?rxHtml(x):""}</div></div>${x.id?rxPick(x):""}`}
+function bubble(x,mine){return `<div class="tl-e ${mine?"me":""}" data-mid="${x.id||""}"><span class="tl-t">${tlHM(x.t)}</span><div class="tl-c">${x.img?`<img src="${x.img}" alt="Photo" class="v12img">`:""}${x.aud?`<audio class="tl-aud" controls preload="none" src="${x.aud}"></audio>`:""}${x.txt?`<div>${mnHtml(esc(x.txt).replace(/\n/g,"<br>"))}</div>`:""}<small class="tl-w">${mine?"You":esc(x.n||"")}</small>${x.id?rxHtml(x):""}</div></div>${x.id?rxPick(x):""}`}
 function tlList(list,mineBy){let day="",h="";for(const x of list){const k=new Date(x.t).toDateString();if(k!==day){day=k;h+=`<div class="tl-d">${tlDay(x.t)}</div>`}h+=bubble(x,x.by===mineBy)}return h}
 {const c=document.createElement("style");c.textContent=`.tl-chat{gap:0!important;position:relative;padding:10px 0 10px 0!important}.tl-d{font-size:11.5px;font-weight:800;letter-spacing:.06em;color:var(--muted);text-align:center;margin:10px 0 12px}
 .tl-e{position:relative;margin:0 0 14px 62px}.tl-e:before{content:"";position:absolute;left:-17px;top:-8px;bottom:-14px;width:2px;background:var(--line)}.tl-e:after{content:"";position:absolute;left:-21px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--line);border:2px solid var(--bg,#fff)}.tl-e.me:after{background:var(--brass)}
@@ -169,8 +182,8 @@ function ibRows(){const q=ibQ.trim().toLowerCase();let T=ibThreads();
 function renderDmList(){const T=ibThreads();const nu=T.filter(x=>x.un).length;
   let h=banner()+`<div class="sechead" style="margin-top:12px"><h2>Inbox</h2></div>
   <div class="ib-srch"><span aria-hidden="true">🔍</span><input id="ibQ" type="search" placeholder="Search people or messages" value="${esc(ibQ)}" autocomplete="off"></div>
-  <div class="ib-chips">${[["all","All"],["unread","Unread"+(nu?" "+nu:"")],["reply","Needs reply"],["sent","Sent"]].map(([k,l])=>`<button type="button" class="ib-chip${ibF===k?" on":""}" data-ibf="${k}">${l}</button>`).join("")}</div>
-  <div id="ibList">${ibRows()}</div>
+  <div class="ib-chips">${[["all","All"],["unread","Unread"+(nu?" "+nu:"")],["reply","Needs reply"],["sent","Sent"]].map(([k,l])=>`<button type="button" class="ib-chip${ibF===k?" on":""}" data-ibf="${k}">${l}</button>`).join("")}<button type="button" class="ib-chip" id="gNewBtn">👥 New group</button></div>
+  ${gBoxHtml()}<div id="gList">${gRows()}</div><div id="ibList">${ibRows()}</div>
   <div class="ib-new" id="ibNewBox"${ibNew?"":" hidden"}><label for="v12DmPick">Start a message</label><select id="v12DmPick" class="wsel"><option value="">Pick a person…</option>${sorted(S.roster).map(m=>`<option value="${m.id}">${esc(m.rank+" "+m.name)}${m.pk?"":" (needs My page)"}</option>`).join("")}</select>
     <p class="note">People read and answer on their My page. Turn on My page for someone from their card first.</p></div>
   <button type="button" class="ib-fab" id="ibFab">✎ New message</button>`;
@@ -185,13 +198,23 @@ document.addEventListener("input",e=>{if(e.target&&e.target.id==="ibQ"){ibQ=e.ta
 .ib-dot{position:absolute;right:-1px;bottom:-1px;width:13px;height:13px;border-radius:50%;background:#22c55e;border:2.5px solid var(--bg,#fff)}.ib-dot.off{background:#cbd5e1}
 .ib-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.ib-nm{font-weight:700;font-size:15px;color:var(--ink)}.ib-pv{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ib-pv.hot{color:var(--ink);font-weight:600}.ib-arr{color:var(--brass);font-size:11.5px}
 .ib-tm{flex:none;text-align:right;font-size:11.5px;color:var(--muted);display:flex;flex-direction:column;align-items:flex-end;gap:4px}.ib-un{background:var(--warn,#e5322d);color:#fff;border-radius:99px;font-size:11px;font-weight:800;padding:2px 7px}.ib-ok{color:#22c55e;font-weight:700}
-.ib-new{margin:14px 0 90px}.ib-fab{all:unset;cursor:pointer;position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));height:52px;padding:0 20px;border-radius:99px;background:var(--brass);color:var(--on-brass,#fff);font-weight:800;display:flex;align-items:center;box-shadow:0 10px 24px rgba(8,87,232,.4);z-index:20}`;document.head.appendChild(c)}
-function renderDm(){if(memberMode()||!leader()){const th=myDm();if(!th){$("#main").innerHTML=`<div class="panel" style="margin-top:14px"><p class="note" style="margin:0">Messages open once your leader turns on your My page.</p></div>`;return}
-    const L=S.dmMsgs["mine:"+th.id]||[];$("#main").innerHTML=meTabs("dm")+chatHTML(L,"M",th.from||"Your leader","Private chat");const top=L.length?L[L.length-1].id:0;if(top>(S.dmSeen["mine:"+th.id]||0)){S.dmSeen["mine:"+th.id]=top;save();setTimeout(renderTabs,0)}scrollChat();return}
+.mn{color:var(--brass);font-weight:800}.mn.me{background:color-mix(in srgb,var(--brass) 25%,transparent);border-radius:6px;padding:0 3px}.gpick{display:grid;gap:6px;margin:8px 0;max-height:220px;overflow:auto}.gpick label{display:flex;gap:8px;align-items:center}.ib-new{margin:14px 0 90px}.ib-fab{all:unset;cursor:pointer;position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));height:52px;padding:0 20px;border-radius:99px;background:var(--brass);color:var(--on-brass,#fff);font-weight:800;display:flex;align-items:center;box-shadow:0 10px 24px rgba(8,87,232,.4);z-index:20}`;document.head.appendChild(c)}
+function renderDm(){if(memberMode()||!leader()){const th=myDm();if(!th){$("#main").innerHTML=(myGroups().length?meTabs("dm")+gChips():"")+`<div class="panel" style="margin-top:14px"><p class="note" style="margin:0">Messages open once your leader turns on your My page.</p></div>`;return}
+    const L=S.dmMsgs["mine:"+th.id]||[];$("#main").innerHTML=meTabs("dm")+gChips()+chatHTML(L,"M",th.from||"Your leader","Private chat");const top=L.length?L[L.length-1].id:0;if(top>(S.dmSeen["mine:"+th.id]||0)){S.dmSeen["mine:"+th.id]=top;save();setTimeout(renderTabs,0)}scrollChat();return}
   const m=S.roster.find(x=>x.id===dmWith);if(!m){view="dms";return render()}
   if(!m.pk){$("#main").innerHTML=banner()+`<div class="panel" style="margin-top:14px"><p class="note">${esc(title(m.rank)+" "+title(lastOf(m)))} reads messages on their private My page. Turn it on first, then text them the link.</p><button class="btn" data-mpon="${m.id}">Turn on My page</button><button class="btn alt" data-go="dms">All messages</button></div>`;return}
   const d=dmEnsure(m);const L=S.dmMsgs[d.id]||[];$("#main").innerHTML=`<button class="chip" data-go="dms" style="cursor:pointer;margin-top:12px">◂ All messages</button>`+chatHTML(L,"L",title(m.rank)+" "+title(lastOf(m)),m.sec);
   const top=L.length?L[L.length-1].id:0;if(top>(S.dmSeen[d.id]||0)){S.dmSeen[d.id]=top;save();setTimeout(renderTabs,0)}scrollChat();if(!d.ok)dmOpenSrv(m).then(()=>mpPublish(true)).catch(()=>{})}
+function gChips(){const gs=myGroups();if(!gs.length)return "";return `<div class="ib-chips" style="margin-top:10px">${gs.map(g=>{const un=(S.dmMsgs[gKey(g)]||[]).filter(x=>x.dv!==gDev()&&x.id>(S.dmSeen[gKey(g)]||0)).length;return `<button type="button" class="ib-chip" data-v12g="${g.id}">👥 ${esc(g.name)}${un?" "+un:""}</button>`}).join("")}</div>`}
+function gRows(){return myGroups().map(g=>{const L=S.dmMsgs[gKey(g)]||[];const last=L[L.length-1];const un=L.filter(x=>x.dv!==gDev()&&x.id>(S.dmSeen[gKey(g)]||0)).length;return `<button class="ib-row" data-v12g="${g.id}"><span class="ib-av" style="background:#0ea5e9">👥</span><span class="ib-mid"><span class="ib-nm">${esc(g.name)}</span><span class="ib-pv${un?" hot":""}">${last?esc((last.n?last.n+": ":"")+(last.txt||(last.img?"📷 Photo":last.aud?"🎙 Voice note":""))):"Group · "+((g.ids||[]).length+1)+" people"}</span></span><span class="ib-tm">${last?esc(dmTime(last.t)):""}${un?`<span class="ib-un">${un}</span>`:""}</span></button>`}).join("")}
+function gBoxHtml(){const P=sorted(S.roster).filter(m=>m.pk);return `<div class="ib-new" id="gBox" hidden style="margin:10px 0"><label for="gName">Group name</label><input id="gName" maxlength="30" placeholder="e.g. Maintenance shop" autocomplete="off"><div class="gpick">${P.map(m=>`<label><input type="checkbox" data-gp="${m.id}"> ${esc(m.rank+" "+m.name)}</label>`).join("")||`<p class="note">Turn on My page for people first.</p>`}</div><button class="btn" id="gMake" type="button">Create group</button><div class="note" id="gOut"></div></div>`}
+function renderGrp(){const g=myGroups().find(x=>x.id===grpCur);const mem=gMem();if(!g){view=mem?"dm":"dms";return render()}
+  const raw=S.dmMsgs[gKey(g)]||[];const L=raw.map(x=>Object.assign({},x,{by:x.dv&&x.dv===gDev()?"ME":"O"}));
+  const names=[...new Set(["all"].concat(raw.filter(x=>x.dv!==gDev()&&x.n).map(x=>String(x.n).trim().split(/\s+/).pop()),mem?[]:(g.ids||[]).map(id=>S.roster.find(m=>m.id===id)).filter(Boolean).map(m=>title(lastOf(m)))))].slice(0,14);
+  const bar=`<div class="ib-chips" id="gMn" style="margin:6px 0">${names.map(n=>`<button type="button" class="ib-chip" data-v12mn="${esc(n)}">@${esc(n)}</button>`).join("")}</div>`;
+  const back=mem?meTabs("dm")+`<button class="chip" data-go="dm" style="cursor:pointer;margin-top:12px">◂ Leader chat</button>`:`<button class="chip" data-go="dms" style="cursor:pointer;margin-top:12px">◂ All messages</button>`;
+  $("#main").innerHTML=back+chatHTML(L,"ME",g.name,"Group · "+(g.ids?g.ids.length+1:g.n||"")+" people").replace('<div class="v12comp">',bar+'<div class="v12comp">').replace("only you two can read it","only people in this group can read it");
+  const top=raw.length?raw[raw.length-1].id:0;if(top>(S.dmSeen[gKey(g)]||0)){S.dmSeen[gKey(g)]=top;save();setTimeout(renderTabs,0)}scrollChat()}
 function scrollChat(){const c=$("#v12Chat");if(c)c.scrollTop=c.scrollHeight}
 let dmImg="",dmAud="",dmAudD=0,dmR=null;
 function dmDraftHtml(){
@@ -280,7 +303,7 @@ function meTabs(cur){const un=dmUnreadMine();return `<div class="evts v12tabs" s
 
 /* ================= render hook ================= */
 {const _r=render;render=function(){if(view==="w6"&&(!PRO_FEAT.w6||proOK())){renderTabs();renderW6();return}
-  if(["mepv","dms","dm","pages","pg"].includes(view)){renderTabs();({mepv:renderMePv,dms:renderDmList,dm:renderDm,pages:renderPages,pg:renderPg})[view]();if(typeof animateView==="function")animateView();return}
+  if(["mepv","dms","dm","pages","pg","grp"].includes(view)){renderTabs();({mepv:renderMePv,dms:renderDmList,dm:renderDm,pages:renderPages,pg:renderPg,grp:renderGrp})[view]();if(typeof animateView==="function")animateView();return}
   if(view==="ask"&&!aiOn()){renderTabs();$("#main").innerHTML=`<div class="panel" style="margin-top:14px"><b>Ask (AI) is off</b><p class="note">Ask is an AI helper that comes with Pro. It's on automatically with Pro, or turn it back on in Data and settings → AI.</p>${leader()?`<button class="btn" data-go="data">Open settings</button>`:""}</div>`;return}
   return _r.apply(this,arguments)}}
 {const _rt=renderTools;renderTools=function(){_rt.apply(this,arguments);const g=$("#main .tgrid");if(!g)return;const un=dmUnreadLeader();
@@ -311,14 +334,20 @@ document.addEventListener("click",e=>{const t=e.target;let b;
   if(t.id==="v12EvTAdd"){const v=($("#v12EvT").value||"").replace(/[<>|#]/g,"").trim().slice(0,30);if(!v)return;S.evTypesX=[...new Set((S.evTypesX||[]).concat(v))].slice(0,30);if(!EV_TYPES.includes(v))EV_TYPES.push(v);save();const nm=($("#evName")||{}).value||"";redraw(renderEvents);const n2=$("#evName");if(n2)n2.value=nm;const r=[...document.querySelectorAll('input[name="evType"]')].find(x=>x.value===v);if(r)r.checked=true;toast("Type added");return}
   if(t.id==="v12CustSave"){const c={};document.querySelectorAll("[data-v12c]").forEach(i=>{const v=i.value.replace(/[<>|#]/g,"").trim().slice(0,30);if(v)c[i.dataset.v12c]=v});S.customV=c;save();toast("Saved. Reloading…");setTimeout(()=>location.reload(),400);return}
   /* messages */
+  if(t.id==="gNewBtn"){const b=$("#gBox");if(b)b.hidden=!b.hidden;return}
+  if(t.id==="gMake"){const nm=(($("#gName")||{}).value||"").replace(/[<>|#]/g,"").trim().slice(0,30);const ids=[...document.querySelectorAll("[data-gp]")].filter(x=>x.checked).map(x=>x.dataset.gp);const o=$("#gOut");if(!nm||!ids.length){if(o)o.textContent="Name the group and pick at least one person.";return}
+    t.disabled=true;(async()=>{if(!S.dmInbox)S.dmInbox=rndId(32);const g={id:rndId(20),k:rndId(32),ek:newEk(),name:nm,ids,ok:0};await SB.rpc("dm_open",{p_id:g.id,p_key:g.k,p_inbox:S.dmInbox});g.ok=1;S.grps.push(g);save();try{await mpPublish(true)}catch(e){}grpCur=g.id;view="grp";render();window.scrollTo(0,0);if(typeof dmPushAttach==="function")dmPushAttach()})().catch(()=>{t.disabled=false;if(o)o.textContent="Couldn't make the group. Check signal."});return}
+  if((b=t.closest("[data-v12g]"))){grpCur=b.dataset.v12g;view="grp";render();window.scrollTo(0,0);return}
+  if((b=t.closest("[data-v12mn]"))){const x=$("#v12DmTxt");if(x){x.value=x.value+(x.value&&!/\s$/.test(x.value)?" ":"")+"@"+b.dataset.v12mn+" ";x.focus()}return}
   if((b=t.closest("[data-v12dm]"))){dmWith=b.dataset.v12dm;view="dm";render();window.scrollTo(0,0);return}
   if(t.id==="v12DmDel"){if(dmR){dmR.cancel=1;dmRecStop()}dmAud="";dmAudD=0;dmImg="";const x=$("#v12DmTxt");if(x)x.value="";const o=$("#v12DmOut");if(o)o.textContent="";dmDraftPaint();return}
-  if((b=t.closest("[data-v12rx]"))){const id=+b.dataset.v12rx,e0=b.dataset.e;const by=(memberMode()||!leader())?"M":"L";const cur=(S.dmRx[id]||{})[by];const e=cur===e0?"":e0;
-    (async()=>{let th;if(by==="M")th=myDm();else{const m=S.roster.find(x=>x.id===dmWith);th=m&&m.dm}if(!th)return;await dmReact(th,id,e,by);save();redraw(render)})().catch(()=>toast("Couldn't react. Check signal."));return}
+  if((b=t.closest("[data-v12rx]"))){const id=+b.dataset.v12rx,e0=b.dataset.e;const gr=view==="grp";const by=gr?("g"+gDev()):((memberMode()||!leader())?"M":"L");const cur=(S.dmRx[id]||{})[by];const e=cur===e0?"":e0;
+    (async()=>{let th;if(gr)th=myGroups().find(x=>x.id===grpCur);else if(by==="M")th=myDm();else{const m=S.roster.find(x=>x.id===dmWith);th=m&&m.dm}if(!th)return;await dmReact(th,id,e,by);save();redraw(render)})().catch(()=>toast("Couldn't react. Check signal."));return}
   if((b=t.closest(".tl-c"))&&b.closest(".tl-e[data-mid]")&&!t.closest("audio,a,img")){const e=b.closest(".tl-e");const pk=e.nextElementSibling;if(pk&&pk.classList.contains("tl-pick")){const was=pk.hidden;document.querySelectorAll(".tl-pick").forEach(x=>x.hidden=true);pk.hidden=!was}return}
   if(t.id==="v12DmRec"){dmRecToggle();return}
   if(t.id==="v12DmSend"){const txt=($("#v12DmTxt").value||"").trim();if(!txt&&!dmImg&&!dmAud){toast("Write a message.");return}const o=$("#v12DmOut");t.disabled=true;if(o)o.textContent="Sending…";
-    (async()=>{if(memberMode()||!leader()){const th=myDm();if(!th)return;const msg=await dmSend(th,txt,dmImg,"M",myName(),dmAud,dmAudD);dmPush("mine:"+th.id,{id:msg.id,t:Date.now(),txt,by:"M",n:myName(),img:dmImg,aud:dmAud,d:dmAudD});}
+    (async()=>{if(view==="grp"){const g=myGroups().find(x=>x.id===grpCur);if(!g)return;const mem=gMem();const nm=mem?myName():(S.postAs||S.myName||unitName());const msg=await dmSend(g,txt,dmImg,mem?"M":"L",nm,dmAud,dmAudD,nm+" · "+g.name);dmPush(gKey(g),{id:msg.id,t:Date.now(),txt,by:mem?"M":"L",n:nm,img:dmImg,aud:dmAud,d:dmAudD,dv:gDev()});S.dmSeen[gKey(g)]=Math.max(S.dmSeen[gKey(g)]||0,msg.id)}
+      else if(memberMode()||!leader()){const th=myDm();if(!th)return;const msg=await dmSend(th,txt,dmImg,"M",myName(),dmAud,dmAudD);dmPush("mine:"+th.id,{id:msg.id,t:Date.now(),txt,by:"M",n:myName(),img:dmImg,aud:dmAud,d:dmAudD});}
       else{const m=S.roster.find(x=>x.id===dmWith);const d=await dmOpenSrv(m);const msg=await dmSend(d,txt,dmImg,"L",S.postAs||S.myName||unitName(),dmAud,dmAudD);dmPush(d.id,{id:msg.id,t:Date.now(),txt,by:"L",n:"",img:dmImg,aud:dmAud,d:dmAudD});S.dmSeen[d.id]=Math.max(S.dmSeen[d.id]||0,msg.id)}
       dmImg="";dmAud="";dmAudD=0;save();redraw(render);scrollChat()})().catch(err=>{t.disabled=false;const s=String(err&&err.message||err);if(o)o.textContent=/find the function|schema/i.test(s)?"Messages aren't set up on the server yet (System check → 1.2).":"Couldn't send. Check signal and try again."});return}
   /* pages */
@@ -377,7 +406,7 @@ if(typeof SC==="object"&&Array.isArray(SC))SC.push({k:"v12",n:"1.2: messages and
 if(typeof HELP==="object"){HELP.dms=["Messages","Private chat with each person.",["Pick a person to start. They answer on their My page.","Turn on My page for someone first (their card → My page).","Messages are encrypted on the phone; only the two of you can read them."]];
   HELP.pages=["Pages","Your page and group pages.",["+ My page: your own page, like a small Instagram. + Group page: people post questions and advice.","Invite people with the link. Only people you invite can see it.","Tap ⋯ on a post to report, block or delete."]];
   HELP.w6=["6W","Incident report in your format.",["Fill the lines, then Email it or Text it.","Edit the format to add, remove, rename or reorder lines. Your format stays on this phone."]]}
-window.__v12={w6T,myDm,pgFetch,pgLink,dmPollLeader,dmPollMember,pgJoin,mpDigest:m=>mpDigest(m)};
+window.__v12={w6T,myDm,dmPollGroupsM,pgFetch,pgLink,dmPollLeader,dmPollMember,pgJoin,mpDigest:m=>mpDigest(m)};
 {const _rtb=renderTabs;renderTabs=function(){_rtb.apply(this,arguments);aiPaint()}}
 aiPaint();
 render();
