@@ -71,3 +71,18 @@ test("every My page shows who you message as, and Change saves it", async () => 
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("members see the latest Feed posts on their Today page", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    await a.w.eval(`const m=S.roster[0];S.feeds=[{id:"feedabcdef12",mk:"m".repeat(30),ek:"x",unit:"TEAM",me:"A",mid:m.id,sec:m.sec,posts:[{id:7,t:Date.now()-60000,txt:"Gear inspection at 0800",by:"OIC"}],seen:0,mine:{},hub:1}];
+      S.me={pk:"p".repeat(24),unit:"TEAM",d:mpDigest(m),t:Date.now()};S.onb=true;S.welcomed=1;S.mode="civilian";view="today";render()`);
+    await sleep(200);
+    const f = a.$("#mfFeed");
+    assert.ok(f, "feed shown on the page");
+    assert.match(f.textContent, /Gear inspection at 0800/); assert.match(f.textContent, /Got it needed/);
+    a.$("#mfFeed .mf-p").click(); await sleep(150);
+    assert.equal(a.w.eval("view"), "feed", "tapping a post opens the Feed");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});

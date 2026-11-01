@@ -82,6 +82,7 @@ export const SOURCES = [
   "features/talk.js",
   "features/feed-react.js",
   "features/dm-as.js",
+  "features/member-feed.js",
   "features/swipe-tiles.js",
   "features/today-ticker.js",
   "features/duty-swap.js",
