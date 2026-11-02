@@ -116,7 +116,7 @@ test("home: Needs you lines hide until tomorrow; Today cards show by time of day
 test("system status is one icon: blue when working, reddish black when not; tap opens the Dashboard", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
-    a.w.eval(LEAD + `healthIssues=()=>[];view="board";render();`);
+    a.w.eval(LEAD + `healthIssues=()=>[];view="board";render();afSyncState("fresh")`);
     const ic = a.$("#sysIc"); assert.ok(ic, "icon on Home");
     assert.ok(ic.classList.contains("ok")); assert.match(ic.getAttribute("aria-label"), /All systems working/);
     assert.doesNotMatch(a.$("#main").textContent, /All systems working/, "no text line any more");

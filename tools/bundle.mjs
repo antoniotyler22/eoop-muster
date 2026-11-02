@@ -103,7 +103,7 @@ export const SOURCES = [
   "features/field-mode.js",
   "features/feed-drift.js",
   "features/blue-ramp.js",
-  "features/profile-photo.js","features/home-donut.js","features/scroll-keep.js","features/today-week.js",
+  "features/profile-photo.js","features/home-donut.js","features/scroll-keep.js","features/today-week.js","features/sync-state.js",
 ];
 
 export function build() {
