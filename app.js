@@ -1839,7 +1839,7 @@ function mergeRemote(R){const Y=S.sync;const bs=Y.baseSig||{},bm=Y.baseMem||{};
     if(!l&&r){if(!b||sig(r)!==b)out.push(r)}};
   (R.roster||[]).forEach(m=>pick(m.id));S.roster.forEach(m=>pick(m.id));S.roster=out;setBase(R)}
 const ROLE_N={oic:"OIC (owner)",co:"Same rights as the OIC",sncoic:"SNCOIC (can edit)",view:"View only",newoic:"Incoming OIC"};
-const role=()=>S.role||"oic";const canEdit=()=>role()!=="view";const isOwner=()=>role()==="oic"||role()==="newoic"||role()==="co";
+const role=()=>S.role||"oic";const canEdit=()=>role()!=="view";const isOwner=()=>(role()==="oic"||role()==="newoic"||role()==="co")&&!S.lite;
 function denyMsg(){toast(role()==="view"?"This phone is view-only.":"Only the OIC's phone can do that.")}
 function syncSchedule(){if(!S.sync||!S.sync.on||!canEdit())return;clearTimeout(syncT);syncT=setTimeout(()=>syncPush(),8000)}
 async function syncPush(force){const Y=S.sync;if(!Y||!Y.on||syncBusy||!canEdit())return;if(S.source==="sample"&&!force)return;syncBusy=true;

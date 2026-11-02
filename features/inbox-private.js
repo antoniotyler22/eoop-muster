@@ -4,7 +4,8 @@
    keys rode along in the synced board, so every linked leader phone could read the owner's Inbox. */
 (()=>{
 const myRole=()=>S.role||"oic";
-const owner=()=>{const r=myRole();return (r==="oic"||r==="newoic")&&!S.link};
+const keyRole=()=>{const r=S.roleFrom||myRole();return (r==="oic"||r==="newoic")&&!S.link};  /* this phone is the OIC's, even while it is showing less */
+const owner=()=>keyRole()&&!S.lite&&(myRole()==="oic"||myRole()==="newoic");
 const member=()=>typeof memberMode==="function"&&memberMode();
 const closed=()=>!member()&&!owner();
 if(Array.isArray(SYNC_SKIP)){for(const k of ["dmInbox","grps"])if(!SYNC_SKIP.includes(k))SYNC_SKIP.push(k)}
@@ -16,12 +17,12 @@ function scrub(R){if(!R||typeof R!=="object")return R;delete R.dmInbox;delete R.
 {const _so=syncObj;syncObj=function(){const o=_so.apply(this,arguments);if(o&&Array.isArray(o.roster))o.roster=noDm(o.roster);return o}}
 
 /* 2. a pull keeps this phone's own keys (owner) and drops anyone else's (older backups still hold them) */
-{const _mr=mergeRemote;mergeRemote=function(R){scrub(R);const keep={};if(owner())for(const m of S.roster)if(m&&m.dm)keep[m.id]=m.dm;for(const m of S.roster)if(m&&m.dm)delete m.dm;
-  try{return _mr.apply(this,arguments)}finally{if(owner()){for(const m of S.roster)if(m&&keep[m.id]&&!m.dm)m.dm=keep[m.id]}else wipe()}}}
+{const _mr=mergeRemote;mergeRemote=function(R){scrub(R);const keep={};if(keyRole())for(const m of S.roster)if(m&&m.dm)keep[m.id]=m.dm;for(const m of S.roster)if(m&&m.dm)delete m.dm;
+  try{return _mr.apply(this,arguments)}finally{if(keyRole()){for(const m of S.roster)if(m&&keep[m.id]&&!m.dm)m.dm=keep[m.id]}else wipe()}}}
 {const _ar=applyRestore;applyRestore=function(code,x){if(x&&x.R)scrub(x.R);return _ar.apply(this,arguments)}}
 
 /* 3. a phone that isn't the owner holds no message keys or messages, even from an earlier sync */
-function wipe(){let ch=false;if(owner()||member())return false;
+function wipe(){let ch=false;if(keyRole()||member())return false;
   if(S.dmInbox){delete S.dmInbox;ch=true}
   if(Array.isArray(S.grps)&&S.grps.length){S.grps=[];ch=true}
   for(const m of S.roster||[])if(m&&m.dm){delete m.dm;ch=true}
@@ -35,5 +36,5 @@ try{wipe()}catch(e){}
   const r=_r.apply(this,arguments);if(closed()){try{document.querySelectorAll("#dmAsInbox").forEach(b=>b.remove())}catch(e){}}return r}}
 document.addEventListener("click",e=>{if(!closed())return;const t=e.target.closest&&e.target.closest("[data-tab='inbox'],[data-go='dms'],[data-go='dm'],[data-go='grp']");
   if(!t)return;e.stopImmediatePropagation();e.preventDefault();try{toast("The Inbox is private to the OIC's phone.")}catch(x){}},true);
-window.inboxOwner=owner;
+window.inboxOwner=owner;window.inboxKeys=keyRole;
 })();
