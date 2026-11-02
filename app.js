@@ -3141,7 +3141,7 @@ document.addEventListener("change",e=>{const V=window.VAULT;if(!V||!V.on())retur
   if(e.target.id==="secWipe"){V.set({wipe:e.target.checked});toast(e.target.checked?"Data erases after 10 wrong PINs.":"Auto-erase off.")}});
 
 /* iPhone app extras: Face ID unlock and a daily muster reminder */
-window.__mbOpen=o=>{if(typeof render!=="function")return;view=o;render();window.scrollTo(0,0)};
+window.__mbOpen=o=>{if(typeof render!=="function")return;if(typeof window.openFromAlert==="function"){window.openFromAlert(o);return}view=o;render();window.scrollTo(0,0)};
 function nativeHTML(){if(!(window.MBN&&MBN.on))return"";const r=MBN.reminder.get()||{};
   return `<h2>Phone</h2><div class="panel"><label for="natRem">Daily muster reminder</label>
     <div class="row2"><input type="time" id="natRem" value="${esc(r.t||"")}"><button class="btn alt" id="natRemSet">${r.t?"Update":"Set reminder"}</button></div>

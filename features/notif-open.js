@@ -5,6 +5,8 @@
 (()=>{
 const OK=["recall","live","feed","board","checkins","co","owner","today","me","muster","alerts","send","cal","ask"];
 function go(o,x){o=String(o||"").toLowerCase();
+  /* 4.77.0: remember this tap so the screen can show what changed (features/change-focus.js) */
+  try{if(typeof window.chgReveal==="function")window.chgReveal(o)}catch(e){}
   /* 4.72.2: Inbox, Talk and SOS alerts used to fall back to the recall screen */
   if(o==="dm"||o==="talk"){const b=document.querySelector(`[data-tab="${o==="dm"?"inbox":"talk"}"]`);if(b){b.click();window.scrollTo(0,0)}return}
   if(o==="sos"){if(x&&typeof window.sosRecv==="function")window.sosRecv(x);if(typeof fdPollAll==="function")fdPollAll(true);setTimeout(()=>{if(typeof window.sosShow==="function")window.sosShow(true)},1800);return}

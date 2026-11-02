@@ -14,7 +14,7 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
 <title>Accounted For</title>
-<link rel="stylesheet" href="app.css?v=4.76.6">
+<link rel="stylesheet" href="app.css?v=4.77.0">
 </head><body>
 <header class="top"><div class="top-in">
   <div class="brand">
@@ -86,7 +86,7 @@ const V=window.VAULT={key:null,cfg:getCfg(),ok:!!(window.crypto&&crypto.subtle),
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.hidden){hiddenAt=Date.now();return}
   const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
-window.AV="4.76.6";
+window.AV="4.77.0";
 /* self-update: an installed web app resumes without reloading, so check the live version on open, on every return, and every 10 min */
 (()=>{const NAT=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());if(NAT||!/^https?:$/.test(location.protocol))return;
   let busy=false,last=0;const typing=()=>{const a=document.activeElement;return a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)};
@@ -115,7 +115,7 @@ async function nativeSub(ask){const P=NP("PushNotifications");if(!P)return null;
 if(NATIVE)setTimeout(()=>{const P=NP("PushNotifications"),A=NP("App");
   if(P){P.addListener("registration",t=>{apnsTok=t.value;try{localStorage.setItem("eop-apns",t.value)}catch(e){}apnsWait.splice(0).forEach(f=>f(t.value))});P.addListener("registrationError",e=>{window.__pushErr=String((e&&(e.error||e.message))||"registration failed").slice(0,160);apnsWait.splice(0).forEach(f=>f(null))});
     P.addListener("pushNotificationReceived",n=>{try{toast("🔔 "+(n.title||"Update")+(n.body?": "+n.body:""))}catch(e){}});
-    P.addListener("pushNotificationActionPerformed",a=>{const o=a&&a.notification&&a.notification.data&&a.notification.data.open;if(o&&typeof render==="function"){view=o;render();window.scrollTo(0,0)}});
+    P.addListener("pushNotificationActionPerformed",a=>{const o=a&&a.notification&&a.notification.data&&a.notification.data.open;if(!o)return;if(typeof window.openFromAlert==="function")window.openFromAlert(o,a.notification.data.sos);else if(typeof render==="function"){view=o;render();window.scrollTo(0,0)}});
     nativePushPerm(false).then(v=>{if(v==="granted")P.register().catch(()=>{})})}
   if(A){const go=u=>{try{const h=new URL(u).hash;if(h&&h.length>2){location.hash=h;setTimeout(()=>location.reload(),50)}}catch(e){}};A.addListener("appUrlOpen",e=>go(e.url));A.getLaunchUrl().then(r=>{if(r&&r.url&&!sessionStorage.getItem("eop-launch")){sessionStorage.setItem("eop-launch","1");go(r.url)}}).catch(()=>{})}},300);
 Object.assign(window,{NATIVE,PUB,NP,nativeSub,nativePushPerm});
