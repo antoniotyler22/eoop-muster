@@ -5,7 +5,9 @@ Everything here is ready except the parts that need your own accounts.
 ## What's in this folder
 - `listing.md`: name, descriptions, keywords and URLs to paste into the stores
 - `privacy-labels.md`: answers for Apple's App Privacy and Google's Data safety forms
-- `screenshots/`: 7 phone screenshots at 1290 × 2796 (iPhone 6.7"/6.9" size; Google Play accepts them too)
+- `screenshots/`: 7 phone screenshots at 1290 × 2796 (iPhone 6.7"/6.9" size; Google Play does NOT accept them: its limit is 2:1)
+- `play/`: Google Play assets: `screenshots/` (5 at 1080 × 1920), `icon-512.png`, `feature-graphic-1024x500.png`
+- `play-submit.md`: step-by-step Play Console checklist
 
 ## Recommended order: Android first
 
@@ -17,9 +19,9 @@ The Android app lives in `android/` and wraps this same web app (Capacitor), lik
    Keep `upload.jks` and both passwords safe; every update needs them.
 3. GitHub → this repo → Settings → Secrets and variables → Actions → add:
    `ANDROID_KEYSTORE_B64` (run `base64 -i upload.jks` and paste the output), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`upload`), `ANDROID_KEY_PASSWORD`.
-4. GitHub → Actions → **Android build** → Run workflow (version 1.3.0). Download the `.aab` from the run's artifacts.
+4. GitHub → Actions → **Android build** → Run workflow (version 4.76.4). Download the `.aab` from the run's artifacts.
    Optional: add `PLAY_SERVICE_ACCOUNT_JSON` and later runs upload straight to Play's internal testing track (Play requires the very first .aab to be uploaded by hand).
-5. In Play Console, create the app (package `com.antoniotyler.accountedfor`), paste `listing.md`, upload `screenshots/`, answer Data safety from `privacy-labels.md`, and upload the .aab to **Closed testing**.
+5. In Play Console, create the app (package `com.antoniotyler.accountedfor`), paste `listing.md`, upload `play/screenshots/`, `play/icon-512.png` and `play/feature-graphic-1024x500.png`, answer Data safety from `privacy-labels.md`, and upload the .aab to **Closed testing**.
 6. **New personal accounts must run a closed test with at least 12 testers, opted in for 14 days in a row, before you can publish.**
 7. **App links** (check-in links open the app): Play Console → Setup → App signing → copy the SHA-256 fingerprint, put it in `store/root-site/.well-known/assetlinks.json`, and publish `store/root-site/` as the repo `antoniotyler22.github.io`.
 8. Apply for production access, then publish.
