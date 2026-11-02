@@ -24,7 +24,7 @@ export const SOURCES = [
   "features/newdots.js",
   "features/invite.js",
   "features/team.js",
-  "features/feedseen.js",
+  "features/feedseen.js","features/open-feed.js",
   "features/tour.js",
   "features/tiles17.js",
   "features/harp-tile.js",
