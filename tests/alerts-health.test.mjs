@@ -91,3 +91,14 @@ test("owner function in the repo is the deployed one plus the alerts op", () => 
   const o = readFileSync(new URL("../supabase/functions/owner/index.ts", import.meta.url), "utf8");
   for (const s of ["case \"alerts\"", "case \"broadcast\"", "case \"subcount\"", "async function pushTo", "async function allSubs", "{ stalled: 1 }"]) assert.ok(o.includes(s), s);
 });
+
+test("a notify function newer than the required version counts as current", async () => {
+  const a = await openApp({ rpc: () => null });
+  try {
+    const st = (v) => JSON.parse(a.w.eval(`JSON.stringify(ntState(${JSON.stringify({ s: 400, t: "bad", s2: 200, s3: 200, s4: 200, v, hs: 200, h: "ok" })}))`));
+    assert.equal(st("4.74.11").ok, 1, "newer deploy is current");
+    assert.equal(st("4.33.0").ok, 1, "same version is current");
+    assert.equal(st("4.9.0").ok, 0, "4.9.0 is older than 4.33.0");
+    assert.equal(st("").ok, 0, "no version answer is older");
+  } finally { await a.close(); }
+});
