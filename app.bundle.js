@@ -9528,8 +9528,14 @@ const me=()=>{const w=S.who&&S.who.id;if(!w)return null;return S.roster.find(m=>
 const pool=()=>{const L=S.link;return sorted(L&&L.mysec&&!L.whole?S.roster.filter(m=>m.sec===L.mysec):S.roster)};
 const inp="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)";
 const show=()=>real()&&!isMemberPhone()&&(!viewOnly()||!!memberFeed());
+/* 4.77.1: picking a status only stages it; "Last … ago" changes when you slide. While something is staged and not
+   sent, the chip says so instead of showing the old time, so it doesn't look like the change failed. */
+function pendingChip(m){if(!m)return"";const io=x=>x?(typeof isoOf==="function"&&isoOf(x))||String(x):"";
+  const v=c.v||{};const dirty=c.open&&c.st&&(c.st!==m.status||(c.st!=="On Hand"&&((v.from||"")!==io(m.start)||(v.to||"")!==io(m.end)||(v.loc||"")!==(m.loc||""))));
+  if(dirty)return `<span class="chip" style="background:var(--brass);color:#fff">Not sent: slide to check in</span>`;
+  return m.ckAt?`<span class="chip">Last ${esc(ago(m.ckAt))}</span>`:""}
 function cardHTML(){const m=me();
-  let h=`<div class="card" id="myCk" style="gap:8px;margin-top:10px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">MY CHECK-IN</span>${m&&m.ckAt?`<span class="chip">Last ${esc(ago(m.ckAt))}</span>`:""}</div>`;
+  let h=`<div class="card" id="myCk" style="gap:8px;margin-top:10px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">MY CHECK-IN</span>${pendingChip(m)}</div>`;
   if(!m){h+=`<label for="myWho">Which one is you?</label><select id="myWho" class="wsel"><option value="">Pick your name…</option>${pool().map(x=>`<option value="${esc(x.id)}">${esc(x.rank+" "+x.name)}${S.link&&S.link.whole||!S.link?" · "+esc(x.sec):""}</option>`).join("")}</select>
       <p class="note" style="margin:0">Not on the list? Add yourself in your section first.</p></div>`;return h}
   const cur=`<span class="dot" style="background:var(${SVAR[m.status]||"--line"})"></span> <b>${esc(SHORT[m.status]||m.status)}</b>${m.end?" thru "+esc(fmtD(isoOf(m.end)||m.end)):""}${m.loc?" · 📍 "+esc(m.loc):""}`;
