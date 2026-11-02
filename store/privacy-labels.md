@@ -31,6 +31,8 @@ Collected (not shared, processed for **App functionality**, not optional unless 
 - **Financial info → Purchase history.** Only if the person buys Pro on the web (Stripe). (The Android app doesn't sell Pro yet.)
 - **Messages → Other in-app messages.** Optional: Ask questions (processed ephemerally by Anthropic).
 - **Personal info → Name; Phone number.** Optional: only when the Server hub is turned on.
+- **Audio → Voice or sound recordings.** Optional: Talk (push-to-talk). Recorded only while the button is held, encrypted on the phone before sending, deleted from the server after 3 days.
+- **Contacts**: the optional "Add from contacts" picker reads contacts on the phone only to let you tick people for your roster; nothing is uploaded unless you add them and sync.
 
 Shared: none. (Twilio, Stripe and Anthropic act as service providers on our behalf, which Google doesn't count as sharing.)
 
@@ -40,8 +42,10 @@ Shared: none. (Twilio, Stripe and Anthropic act as service providers on our beha
 ## Permissions the app may ask for
 - **Notifications** (optional): check-ins, missed check-in deadlines, section updates, new word in Feed, daily muster reminder.
 - **Location** (optional, only while using the app): setting a rally point, and a member confirming they're at it. Only the distance is sent; the location itself never leaves the phone.
+- **Microphone** (optional): Talk push-to-talk voice clips, only while the button is held.
+- **Contacts** (optional): "Add from contacts" roster picker.
 - **Camera**: not used by the app; members scan the formation QR code with their phone's own camera.
-- No contacts, microphone or tracking permissions.
+- No tracking permission.
 
 On iPhone, the location prompt comes from the web view (the app doesn't request location in the background). If
 Apple asks, add `NSLocationWhenInUseUsageDescription` = "Used only when you set or confirm a rally point. Your location never leaves your phone." to Info.plist (already added in this version).
