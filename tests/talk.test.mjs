@@ -18,7 +18,8 @@ test("Talk tab opens the Talk screen with the switch off", async () => {
     assert.equal(a.w.eval("view"), "talk");
     assert.ok(a.$("#tkSw"), "switch shown");
     assert.equal(a.$("#tkSw").getAttribute("aria-checked"), "false");
-    assert.ok(a.$("#tkBtn").disabled, "can't talk while off");
+    assert.ok(a.$(".tk-ptt").classList.contains("off"), "talk button shows the off state (still blue, dimmed)");
+    assert.ok(!a.$("#tkBtn").disabled, "button stays tappable: a tap turns Talk on");
     assert.match(a.$("#tkSt").textContent, /Talk is off/);
     assert.equal(a.$("#tabbar [data-tab='talk']").getAttribute("aria-current"), "page");
     assert.deepEqual(a.errors, []);

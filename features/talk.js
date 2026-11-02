@@ -225,7 +225,7 @@ function html(){const f=feed();
    <div class="tk-lbl">Send to</div><div class="tk-chips" id="tkChips">${chips(f)}</div>
    ${newGroup(f)}
    <div class="tk-card tk-st ${S0.cls}" id="tkSt" role="status"><b>${esc(S0.t)}</b>${S0.s?`<small>${esc(S0.s)}</small>`:""}</div>
-   <div class="tk-ptt${on?"":" off"}${ui.rec?" live":""}"><div class="tk-ring"><button type="button" id="tkBtn" ${on?"":"disabled"} aria-label="Hold to talk to ${esc(gname(f,tk().sel))}">${ui.rec?"<span id=\"tkT\">0:00</span>":"Hold<br>to talk"}</button></div></div>
+   <div class="tk-ptt${on?"":" off"}${ui.rec?" live":""}"><div class="tk-ring"><button type="button" id="tkBtn" aria-label="${on?"":"Talk is off. Tap to turn on. "}Hold to talk to ${esc(gname(f,tk().sel))}">${ui.rec?"<span id=\"tkT\">0:00</span>":"Hold<br>to talk"}</button></div></div>
    <p class="tk-note" style="text-align:center">Release to send. Voice is saved, turned into text where this phone can, and kept in the log. Works while the app is open.</p>
    ${ui.err?`<p class="tk-note" style="color:var(--warn);text-align:center">${esc(ui.err)}</p>`:""}
    ${locCard(f)}
@@ -297,7 +297,7 @@ document.addEventListener("click",e=>{if(view!=="talk")return;const t=e.target;i
 document.addEventListener("keydown",e=>{if(view!=="talk"||(e.key!=="Delete"&&e.key!=="Backspace"))return;const a=document.activeElement;if(!a||!a.classList||!a.classList.contains("tk-msg"))return;const f=feed(),r=a.parentElement;if(f&&r&&r.dataset.tksl){e.preventDefault();fling(f,r)}});
 
 /* hold to talk: press and hold (pointer events cover finger and mouse) */
-document.addEventListener("pointerdown",e=>{const b=e.target.closest&&e.target.closest("#tkBtn");if(!b||b.disabled)return;e.preventDefault();try{b.setPointerCapture(e.pointerId)}catch(x){}startRec()},true);
+document.addEventListener("pointerdown",e=>{const b=e.target.closest&&e.target.closest("#tkBtn");if(!b)return;e.preventDefault();if(!tk().on){const sw=document.getElementById("tkSw");if(sw)sw.click();return}try{b.setPointerCapture(e.pointerId)}catch(x){}startRec()},true);
 for(const ev of ["pointerup","pointercancel","lostpointercapture"])document.addEventListener(ev,e=>{if(ui.rec&&e.target.closest&&e.target.closest("#tkBtn"))stopRec()},true);
 document.addEventListener("contextmenu",e=>{if(e.target.closest&&e.target.closest("#tkBtn"))e.preventDefault()});
 document.addEventListener("keydown",e=>{if(view==="talk"&&(e.key===" "||e.key==="Enter")&&document.activeElement&&document.activeElement.id==="tkBtn"&&!e.repeat){e.preventDefault();startRec()}});
@@ -336,7 +336,7 @@ if(typeof HELP==="object"&&HELP.feed&&Array.isArray(HELP.feed[2]))HELP.feed[2].p
 .tk-ptt{display:flex;justify-content:center;padding:6px 0}.tk-ring{width:176px;height:176px;border-radius:50%;border:2px solid color-mix(in srgb,var(--brass) 45%,transparent);display:flex;align-items:center;justify-content:center;transition:border-color .2s}
 #tkBtn{all:unset;cursor:pointer;width:136px;height:136px;border-radius:50%;background:var(--brass);color:var(--on-brass,#fff);font-weight:800;font-size:17px;line-height:1.25;text-align:center;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;transition:transform .12s,background .2s}
 #tkBtn:active,.tk-ptt.live #tkBtn{transform:scale(.95)}.tk-ptt.live #tkBtn{background:var(--warn);color:#fff}.tk-ptt.live .tk-ring{border-color:var(--warn);animation:tkp 1.2s ease-out infinite}
-.tk-ptt.off #tkBtn{background:var(--line);color:var(--muted);cursor:not-allowed;box-shadow:none}#tkBtn:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.tk-ptt.off #tkBtn{background:var(--brass);color:var(--on-brass,#fff);opacity:.6}.tk-ptt.off .tk-ring{border-color:var(--brass)}#tkBtn:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
 @keyframes tkp{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--warn) 45%,transparent)}100%{box-shadow:0 0 0 18px transparent}}@media (prefers-reduced-motion:reduce){.tk-ptt.live .tk-ring{animation:none}}
 .tk-msg{border:1px solid var(--glass-line);border-radius:20px;background:var(--card,var(--surface));box-shadow:var(--shadow);padding:12px 14px;display:flex;flex-direction:column;gap:8px}.tk-msg.old{opacity:.75}
 .tk-mh{display:flex;align-items:center;gap:10px}.tk-mp{display:flex;align-items:center;gap:10px}

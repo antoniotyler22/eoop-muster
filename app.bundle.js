@@ -10772,7 +10772,7 @@ function html(){const f=feed();
    <div class="tk-lbl">Send to</div><div class="tk-chips" id="tkChips">${chips(f)}</div>
    ${newGroup(f)}
    <div class="tk-card tk-st ${S0.cls}" id="tkSt" role="status"><b>${esc(S0.t)}</b>${S0.s?`<small>${esc(S0.s)}</small>`:""}</div>
-   <div class="tk-ptt${on?"":" off"}${ui.rec?" live":""}"><div class="tk-ring"><button type="button" id="tkBtn" ${on?"":"disabled"} aria-label="Hold to talk to ${esc(gname(f,tk().sel))}">${ui.rec?"<span id=\"tkT\">0:00</span>":"Hold<br>to talk"}</button></div></div>
+   <div class="tk-ptt${on?"":" off"}${ui.rec?" live":""}"><div class="tk-ring"><button type="button" id="tkBtn" aria-label="${on?"":"Talk is off. Tap to turn on. "}Hold to talk to ${esc(gname(f,tk().sel))}">${ui.rec?"<span id=\"tkT\">0:00</span>":"Hold<br>to talk"}</button></div></div>
    <p class="tk-note" style="text-align:center">Release to send. Voice is saved, turned into text where this phone can, and kept in the log. Works while the app is open.</p>
    ${ui.err?`<p class="tk-note" style="color:var(--warn);text-align:center">${esc(ui.err)}</p>`:""}
    ${locCard(f)}
@@ -10844,7 +10844,7 @@ document.addEventListener("click",e=>{if(view!=="talk")return;const t=e.target;i
 document.addEventListener("keydown",e=>{if(view!=="talk"||(e.key!=="Delete"&&e.key!=="Backspace"))return;const a=document.activeElement;if(!a||!a.classList||!a.classList.contains("tk-msg"))return;const f=feed(),r=a.parentElement;if(f&&r&&r.dataset.tksl){e.preventDefault();fling(f,r)}});
 
 /* hold to talk: press and hold (pointer events cover finger and mouse) */
-document.addEventListener("pointerdown",e=>{const b=e.target.closest&&e.target.closest("#tkBtn");if(!b||b.disabled)return;e.preventDefault();try{b.setPointerCapture(e.pointerId)}catch(x){}startRec()},true);
+document.addEventListener("pointerdown",e=>{const b=e.target.closest&&e.target.closest("#tkBtn");if(!b)return;e.preventDefault();if(!tk().on){const sw=document.getElementById("tkSw");if(sw)sw.click();return}try{b.setPointerCapture(e.pointerId)}catch(x){}startRec()},true);
 for(const ev of ["pointerup","pointercancel","lostpointercapture"])document.addEventListener(ev,e=>{if(ui.rec&&e.target.closest&&e.target.closest("#tkBtn"))stopRec()},true);
 document.addEventListener("contextmenu",e=>{if(e.target.closest&&e.target.closest("#tkBtn"))e.preventDefault()});
 document.addEventListener("keydown",e=>{if(view==="talk"&&(e.key===" "||e.key==="Enter")&&document.activeElement&&document.activeElement.id==="tkBtn"&&!e.repeat){e.preventDefault();startRec()}});
@@ -10883,7 +10883,7 @@ if(typeof HELP==="object"&&HELP.feed&&Array.isArray(HELP.feed[2]))HELP.feed[2].p
 .tk-ptt{display:flex;justify-content:center;padding:6px 0}.tk-ring{width:176px;height:176px;border-radius:50%;border:2px solid color-mix(in srgb,var(--brass) 45%,transparent);display:flex;align-items:center;justify-content:center;transition:border-color .2s}
 #tkBtn{all:unset;cursor:pointer;width:136px;height:136px;border-radius:50%;background:var(--brass);color:var(--on-brass,#fff);font-weight:800;font-size:17px;line-height:1.25;text-align:center;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;transition:transform .12s,background .2s}
 #tkBtn:active,.tk-ptt.live #tkBtn{transform:scale(.95)}.tk-ptt.live #tkBtn{background:var(--warn);color:#fff}.tk-ptt.live .tk-ring{border-color:var(--warn);animation:tkp 1.2s ease-out infinite}
-.tk-ptt.off #tkBtn{background:var(--line);color:var(--muted);cursor:not-allowed;box-shadow:none}#tkBtn:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.tk-ptt.off #tkBtn{background:var(--brass);color:var(--on-brass,#fff);opacity:.6}.tk-ptt.off .tk-ring{border-color:var(--brass)}#tkBtn:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
 @keyframes tkp{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--warn) 45%,transparent)}100%{box-shadow:0 0 0 18px transparent}}@media (prefers-reduced-motion:reduce){.tk-ptt.live .tk-ring{animation:none}}
 .tk-msg{border:1px solid var(--glass-line);border-radius:20px;background:var(--card,var(--surface));box-shadow:var(--shadow);padding:12px 14px;display:flex;flex-direction:column;gap:8px}.tk-msg.old{opacity:.75}
 .tk-mh{display:flex;align-items:center;gap:10px}.tk-mp{display:flex;align-items:center;gap:10px}
@@ -12216,12 +12216,12 @@ const R=58,C=2*Math.PI*R;
 .hdn .tx{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
 .hdl{display:flex;flex-wrap:wrap;gap:4px 12px;margin:0 0 10px;font-size:12px;font-weight:700;color:var(--muted)}.hdl span{display:inline-flex;align-items:center;gap:5px}.hdl i{width:9px;height:9px;border-radius:50%;flex:none}.hdl b{color:var(--ink)}`;document.head.appendChild(c)}
 function data(){const T=counts().T;const out=[];for(const [k,l,v] of SEG){const n=k==="duty"?(T["Company Duties"]||0)+(T["Duty Recovery"]||0):(T[k]||0);if(n>0)out.push({k,l,v,n})}return out}
-function build(){const T=counts().T;const d=data();const tot=d.reduce((a,x)=>a+x.n,0);if(!tot)return null;
+function build(){const T=counts().T;const d=data();const tot=d.reduce((a,x)=>a+x.n,0);if(!T.total)return null; /* 4.77.2: still shows (empty ring, 0%) when everyone is On Hand, so the second donut never disappears */
   let acc=0;const gap=d.length>1?2:0;
   const arcs=d.map(x=>{const len=x.n/tot*C,seg=Math.max(0,len-gap),off=-acc;acc+=len;return `<circle cx="66" cy="66" r="${R}" stroke-width="12" stroke="var(${x.v})" stroke-dasharray="${seg} ${C-seg}" stroke-dashoffset="${off}"/>`}).join("");
   const lab=d.map(x=>`${x.l} ${x.n}`).join(", ");
   return {donut:`<span class="hdc"><div class="hdn" role="img" aria-label="Not on hand ${tot}: ${esc(lab)}"><svg class="hdsv" viewBox="0 0 132 132" aria-hidden="true"><circle class="bg" cx="66" cy="66" r="${R}" stroke-width="12"/>${arcs}</svg><div class="tx"><b>${tot}</b><small>of ${T.total}</small></div></div><div class="hdcap"><div class="pc">${Math.round(100*tot/T.total)}%</div><div class="note">not on hand</div></div></span>`,
-    legend:`<div class="hdl">${d.map(x=>`<span><i style="background:var(${x.v})"></i>${esc(x.l)} <b>${x.n}</b></span>`).join("")}</div>`}}
+    legend:!d.length?"":`<div class="hdl">${d.map(x=>`<span><i style="background:var(${x.v})"></i>${esc(x.l)} <b>${x.n}</b></span>`).join("")}</div>`}}
 function addDonut(){const hero=document.querySelector("#main .card.hero");if(!hero||hero.querySelector(".hdn"))return;
   if(S.rc&&S.rc.open)return;const ring=hero.querySelector(".wring");if(!ring)return;const b=build();if(!b)return;
   ring.insertAdjacentHTML("beforeend",b.donut);ring.insertAdjacentHTML("afterend",b.legend)}
