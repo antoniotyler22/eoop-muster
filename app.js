@@ -3237,7 +3237,9 @@ async function lgHash(id,create){const i=id.indexOf(":"),k=id.slice(0,i),v=id.sl
   else if(k==="acc"){if(!S.sync||!S.sync.on)return null;u=accLink(v)}
   const j=u.indexOf("#");return j<0?null:u.slice(j+1)}
 function lgErr(e){const t=String(e&&e.message||e);return /taken/.test(t)?"That username is taken. Try another.":/could not find the function|schema cache|PGRST202/i.test(t)?"Logins aren't set up on the server yet. DATA → System check → Logins.":/abort|Failed to fetch|NetworkError|Load failed/i.test(t)?"No connection. Get signal and try again.":t.slice(0,80)}
-async function lgPut(L,h){const K=await lgKeys(L.user,L.pw);await SB.rpc("login_put",{p_uid:K.uid,p_owner:S.lgOwner,p_vf:K.vf,p_ct:await lgSeal(K,{v:1,h,m:S.mode||"",u:unitName(),l:L.label})});return K.uid}
+/* 4.77.9: the Feed is for everyone. A login for any role also carries the unit Feed (member link), so signing in opens it too. */
+function lgFeedHash(L){if(!L||L.vis||/^(me|feed):/.test(String(L.dest||"")))return "";const f=(typeof mainFeed==="function"&&mainFeed())||(S.feeds||[]).find(x=>x.lk&&x.mk&&x.ek);if(!f||!f.mk||!f.ek)return "";const u=fdLink(f),j=u.indexOf("#");return j<0?"":u.slice(j+1)}
+async function lgPut(L,h){const K=await lgKeys(L.user,L.pw);const fh=lgFeedHash(L);const o={v:1,h,m:S.mode||"",u:unitName(),l:L.label};if(fh)o.f=fh;await SB.rpc("login_put",{p_uid:K.uid,p_owner:S.lgOwner,p_vf:K.vf,p_ct:await lgSeal(K,o)});L.fh=fh;return K.uid}
 async function lgCreate(dest,user,pw,opt){opt=opt||{};if(!isOwner())throw new Error("Only the OIC's phone makes logins.");
   if(!lgUserOK(user))throw new Error("Username: 4–32 letters or numbers (. _ - ok).");if(lgNormP(pw).length<8)throw new Error("Password: at least 8 characters.");
   const d=lgDests().find(x=>x.id===dest);if(!d)throw new Error("Pick what it opens.");
@@ -3247,7 +3249,7 @@ async function lgCreate(dest,user,pw,opt){opt=opt||{};if(!isOwner())throw new Er
 let lgBusy=false;
 async function lgRefresh(){if(lgBusy||!isOwner()||!S.lgOwner||!(S.logins||[]).length)return;lgBusy=true;let ch=false;
   try{for(const L of S.logins){if(L.vis)continue;/* visitor logins carry their end time in the link */const h=await lgHash(L.dest,false);if(!h){if(!L.gone){L.gone=1;ch=true}continue}if(L.gone){delete L.gone;ch=true}
-    if(h!==L.h){try{await lgPut(L,h);L.h=h;delete L.err;ch=true}catch(e){L.err=lgErr(e);ch=true}}}}
+    if(h!==L.h||(L.fh||"")!==lgFeedHash(L)){try{await lgPut(L,h);L.h=h;delete L.err;ch=true}catch(e){L.err=lgErr(e);ch=true}}}}
   finally{lgBusy=false;if(ch){save();if(view==="logins")renderLogins()}}}
 function lgText(L){return unitName()+" · Accounted For login\nUsername: "+L.user+"\nPassword: "+L.pw+"\n\niPhone app: "+STORE_URL.ios+" (open it and tap Sign in)\nOr on the web: "+PUB()+"#login\n\nRole: "+(L.role||lgRoleOf(L.dest))+" · "+L.label+". Keep these private."}
 
@@ -3300,10 +3302,17 @@ async function lgSignIn(from){const R=lgScope(from),q=s=>R.querySelector(s);cons
     if(/^me=/.test(X.h)&&typeof isLeaderPhone==="function"&&isLeaderPhone()&&!S.lgSelf&&S.source!=="sample"){o.textContent="That login is for "+(X.l||"a member")+". This phone runs your board, so sign in on their phone instead. Nothing changed here.";return}
     S.lgSelf={uid:K.uid,vf:K.vf,l:String(X.l||"").slice(0,60),user:lgNormU(U.value),h:X.h,at:Date.now()};S.lgUnlocked=Date.now();save();if(typeof window.lgAfterSignIn==="function")setTimeout(window.lgAfterSignIn,900);if(!S.mode&&X.m&&MODES[X.m]){setMode(X.m);if(!S.mode){S.mode=X.m;save()}}
     o.textContent="Opening "+(X.l||"your page")+"…";closeSheet();
-    setTimeout(()=>{try{history.replaceState(null,"",location.pathname)}catch(e){}location.hash=X.h},320)}
+    setTimeout(()=>{try{history.replaceState(null,"",location.pathname)}catch(e){}location.hash=X.h},320);if(typeof X.f==="string"&&X.f)setTimeout(()=>lgJoinFeed(X.f,X.l),2600)}
   catch(e){o.textContent=/OperationError/.test(String(e&&e.name))?"This login is damaged. Ask for a new one.":lgErr(e)}
   finally{if(b.isConnected)b.disabled=false}}
 
+/* sign-in for any role: add the unit Feed quietly (no prompt), under the name this phone already uses */
+function lgJoinFeed(fh,label){try{const q=new URLSearchParams(String(fh||""));const id=(q.get("feed")||"").replace(/[^a-z0-9]/g,"").slice(0,20),mk=(q.get("k")||"").replace(/[^a-z0-9]/g,"").slice(0,40),ek=(q.get("e")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60),unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24)||"Your unit";
+  if(id.length<10||mk.length<24||ek.length<40||(S.feeds||[]).some(f=>f.id===id))return;
+  const me=String((S.who&&S.who.n)||S.myName||S.postAs||label||"MEMBER").toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim().slice(0,30);
+  const secsL=(q.get("s")||"").toUpperCase().split(",").map(x=>x.replace(/[^A-Z0-9]/g,"").slice(0,6)).filter(Boolean).slice(0,10);
+  const tf={id,mk,ek,unit,me,sec:"",secsLink:secsL,posts:[],seen:0,mine:{}};S.feeds=S.feeds||[];S.feeds.push(tf);save();
+  fdMeHash(tf).then(()=>{try{renderTabs();fdPollAll(true)}catch(e){}}).catch(()=>{})}catch(e){}}
 /* hook into the app */
 IC.key='<circle cx="7.5" cy="15.5" r="4"/><path d="M10.5 12.5L20 3"/><path d="M16 7l3 3"/><path d="M13.5 9.5l2 2"/>';
 SYNC_SKIP.push("logins","lgOwner");

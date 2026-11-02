@@ -1,6 +1,6 @@
 // Offline cache. The app opens from the phone instantly; a newer version is fetched in the background.
 // Everything the app uses is served from this site: no outside fonts, scripts or trackers.
-const CACHE = "eop-numbers-v171";
+const CACHE = "eop-numbers-v172";
 const CORE = ["./", "./index.html", "./app.bundle.js", "./terms.html", "./app.css", "./native.js", "./privacy.html", "./support.html", "./help.html", "./manifest.webmanifest",
   "./icon-180.png", "./icon-192.png", "./icon-512.png",
   "./fonts/pjs-400.woff2", "./fonts/pjs-500.woff2", "./fonts/pjs-600.woff2", "./fonts/pjs-700.woff2", "./fonts/pjs-800.woff2"];
@@ -47,6 +47,13 @@ self.addEventListener("fetch", e => {
   // App code and styles: exact version from cache, else network (and keep a copy), else any cached version.
   if (/\/app\.(js|css)$/.test(url.pathname)) {
     e.respondWith(caches.match(req).then(r => r || fetch(req, { cache: "no-cache" }).then(res => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); } return res; })
+      .catch(() => caches.match(req, { ignoreSearch: true }))));
+    return;
+  }
+  // 4.77.9: the app code is asked for by version (app.bundle.js?v=4.77.x), so a copy on the phone is always the right one: open it from there, no wait
+  // on the network. A new release changes the version and the cache name, so it is fetched once and kept.
+  if (/\/app\.bundle\.js$/.test(url.pathname)) {
+    e.respondWith(caches.match(req).then(r => r || fetch(req).then(res => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); } return res; })
       .catch(() => caches.match(req, { ignoreSearch: true }))));
     return;
   }
