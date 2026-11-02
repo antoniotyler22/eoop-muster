@@ -63,6 +63,7 @@ export const SOURCES = [
   "features/me-page.js",
   "features/header.js",
   "features/feed-tabs.js",
+  "features/paste-button.js",
   "features/stay-view.js",
   "features/feed-dates.js",
   "features/no-doubles.js",
