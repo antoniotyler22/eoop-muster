@@ -10940,14 +10940,22 @@ AFS.onChange(redraw);
 function showSheet(f){closeSheet0();const pid=sheet,S1=seenOf(f,pid),names=Object.keys(S1);
   const ppl=typeof window.talkPeople==="function"?window.talkPeople(f):[];
   const seen=n=>S1[n]||null;
-  const notSeen=ppl.filter(e=>!names.some(n=>n===e.n||(e.w&&e.w.length&&S1[n].w.length&&e.w.every(h=>S1[n].w.includes(h)))));
   const fmt=t=>{const d=new Date(t);return d.toLocaleDateString([],{weekday:"short",day:"numeric",month:"short"})+" "+String(d.getHours()).padStart(2,"0")+String(d.getMinutes()).padStart(2,"0")};
-  const o=document.createElement("div");o.id="rxSheet";o.className="rx-ov";o.innerHTML=`<div class="rx-pn" role="dialog" aria-label="Seen by"><div class="rx-gr"></div><b>Seen by ${names.length}${ppl.length>=names.length?` of ${ppl.length}`:""}</b>
+  const o=document.createElement("div");o.id="rxSheet";o.className="rx-ov";o.innerHTML=`<div class="rx-pn" role="dialog" aria-label="Seen by"><div class="rx-gr"></div><b>Seen by ${names.length}</b>
     <div class="rx-ls">${names.sort().map(n=>`<div class="rx-r"><span>${esc(n)}</span><small>${esc(fmt(S1[n].t))}</small></div>`).join("")||`<p class="rx-n">Nobody yet.</p>`}</div>
-    ${notSeen.length?`<b style="margin-top:12px">Not yet (${notSeen.length})</b><div class="rx-ls">${notSeen.map(e=>`<div class="rx-r"><span>${esc(e.n)}</span><small>—</small></div>`).join("")}</div><p class="rx-n">People are counted once they open the Feed on their phone.</p>`:""}
     <button class="btn alt" id="rxClose" style="width:100%;margin-top:12px">Close</button></div>`;
-  o.addEventListener("click",e=>{if(e.target===o||e.target.id==="rxClose")closeSheet0()});document.body.appendChild(o)}
+  const pn=o.querySelector(".rx-pn");
+  o.addEventListener("click",e=>{if(e.target===o||e.target.closest("#rxClose")){e.stopPropagation();closeSheet0()}});
+  /* swipe the sheet down (from the top of it) or tap outside to put it away */
+  let y0=null,dy=0;
+  pn.addEventListener("touchstart",e=>{if(e.touches.length!==1||pn.scrollTop>0){y0=null;return}y0=e.touches[0].clientY;dy=0;pn.style.transition="none"},{passive:true});
+  pn.addEventListener("touchmove",e=>{if(y0==null)return;dy=e.touches[0].clientY-y0;if(dy>0)pn.style.transform="translateY("+dy+"px)";else dy=0},{passive:true});
+  const endDrag=()=>{if(y0==null)return;const go=dy>70;y0=null;if(go){closeSheet0();return}pn.style.transition="transform .18s";pn.style.transform=""};
+  pn.addEventListener("touchend",endDrag);pn.addEventListener("touchcancel",endDrag);
+  o.addEventListener("touchend",e=>{if(e.target===o){e.preventDefault();closeSheet0()}});
+  document.body.appendChild(o)}
 function closeSheet0(){const o=document.getElementById("rxSheet");if(o)o.remove()}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet0()});
 
 /* ---- mark posts as seen when the Feed is open ---- */
 let marking=false;
