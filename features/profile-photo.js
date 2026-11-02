@@ -19,7 +19,11 @@ async function store(k,v){try{const d=await idb();await new Promise((ok,no)=>{co
 async function loadAll(){try{const d=await idb();const rows=await new Promise((ok,no)=>{const out=[],c=d.transaction(DB.store).objectStore(DB.store).openCursor();c.onsuccess=()=>{const x=c.result;if(x){out.push([x.key,x.value]);x.continue()}else ok(out)};c.onerror=()=>no(c.error)});d.close();
   let n=0;for(const [k,v] of rows)if(typeof v==="string"&&OK.test(v)&&v.length<=MAXB&&!mem.has(k)){mem.set(k,v);n++}return n}catch(e){return 0}}
 /* who am I, by every name this phone uses for me */
-function myKeys(){const s=new Set();const add=n=>{n=key(n);if(n)s.add(n)};add(S.myName);add(S.postAs);if(S.who)add(S.who.n);
+/* 4.77.7: my photo belongs to the person I picked on this phone (S.who: "Which one is you?"), under that name only.
+   Old names left in S.myName / S.postAs / a Feed's "me" (for example someone you tested as) no longer take my photo. */
+function myKeys(){const s=new Set();const add=n=>{n=key(n);if(n)s.add(n)};
+  if(S.who&&S.who.n){add(S.who.n);return s}
+  add(S.myName);add(S.postAs);
   for(const f of (S.feeds||[])){add(f.me);try{add(fdBy(f))}catch(e){}}return s}
 /* 4.77.6: nobody else is me. If another name's photo is the same picture as the one I took, it's my photo wrongly sent out under
    their name (an older copy of the app on their phone did that), so it's never shown for them and never kept. */
@@ -57,7 +61,7 @@ document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;
 
 /* ---------- Settings panel ---------- */
 window.ppPanelHtml=()=>panel();
-function panel(){const nm=S.myName||(typeof fdCur==="function"&&fdCur()?fdBy(fdCur()):"")||"ME";
+function panel(){const nm=(S.who&&S.who.n)||S.myName||(typeof fdCur==="function"&&fdCur()?fdBy(fdCur()):"")||"ME";
   return `<div class="panel" id="ppPanel"><b>Profile photo</b><div class="lrow" style="margin:8px 0"><div class="fch">${fdAv(nm)}</div><span style="flex:1;min-width:0"><span class="t" style="display:block">${esc(nm)}</span><span class="s" style="display:block">${mine()?"Your team sees this photo":"Showing your initials"}</span></span></div>
   <div style="display:flex;gap:8px"><button class="btn" id="ppTake" style="flex:1">Take photo</button><button class="btn" id="ppPick" style="flex:1">Upload photo</button></div>${mine()?`<button class="btn alt" id="ppDel" style="width:100%;margin-top:8px">Use my initials</button>`:""}
   <p class="note">It shows instead of your initials. Your team sees a small copy that travels inside your encrypted posts, never as a separate file.</p></div>`}

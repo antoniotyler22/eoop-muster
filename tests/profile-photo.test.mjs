@@ -87,3 +87,14 @@ test("my own picture sent out under someone else's name is never shown or kept f
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("my photo follows the person I picked, not an old name left on the phone", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    await setup(a);
+    a.w.eval(`S.myName="CPL RODGERS";S.who={id:"x1",n:"CWO4 TYLER"};afPhotoOwn(${JSON.stringify(PHOTO)});render()`); await sleep(60);
+    assert.match(a.w.eval(`fdAv("CWO4 TYLER")`), /class="av avp"/, "my photo shows on the person I picked");
+    assert.match(a.w.eval(`fdAv("CPL RODGERS")`), />CR</, "an old name on the phone does not take my photo");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
