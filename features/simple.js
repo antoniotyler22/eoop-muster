@@ -26,7 +26,7 @@ const GROUPS=[
   {k:"rollup",l:"Rollup",s:"Add up the teams under you",ic:"rollup",keys:["co","rollup"]},
   {k:"home",l:"My day",s:"Dashboard, today, my log",ic:"today",keys:["dash","today","log"]},
   {k:"help",l:"Help",s:"Ask a question, guide, short tour",ic:"help",keys:["support","guide","trStart","v11SignInTool","v11ShareApp","ask"]},
-  {k:"settings",l:"Settings",s:"Teams, data, version, connections",ic:"data",keys:["teams","data","sys","modeOpen","integ","owner","nwOn"]}];
+  {k:"settings",l:"Settings",s:"Teams, data, version, connections",ic:"data",keys:["teams","data","sys","modeOpen","integ","owner","nwOn","alvl"]}];
 const tileKey=b=>{if(b.id)return b.id;if(b.dataset.go)return b.dataset.go;const d=Object.keys(b.dataset)[0];if(d)return d;
   const h=b.getAttribute&&b.getAttribute("href")||"";if(/help\.html/.test(h)||/Help guide/i.test(b.textContent))return "guide";return (b.textContent||"").trim().slice(0,20)};
 let STORE={};

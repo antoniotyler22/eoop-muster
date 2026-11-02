@@ -55,14 +55,20 @@ function panel(){
   if(S.who&&S.who.n&&!(typeof memberMode==="function"&&memberMode())&&!picOwner()){
     h+=`<div class="panel" id="alAcct"><h3 style="margin:0">Your account</h3><p class="note">Signed in as <b>${esc(S.who.n)}</b> · ${esc(here())}. Your name is locked to this phone. To change it, ask your OIC for a new link.</p></div>`}
   return h}
-{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(view==="data"){const m=$("#main");if(m&&!m.querySelector("#alPanel,#alKeys,#alAcct")){const h=panel();if(h)m.insertAdjacentHTML("beforeend",h)}}}catch(e){}return r}}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);try{if(view==="data"){const m=$("#main");if(m&&!m.querySelector("#alPanel,#alKeys,#alAcct")){const h=panel();if(h)m.insertAdjacentHTML("afterbegin",h)}}}catch(e){}return r}}
+
+/* ---- its own tile in Tools → Settings, and its own page, so nobody has to dig through Data ---- */
+{const _to=tabOf;tabOf=function(v){return v==="alvl"?"tools":_to.apply(this,arguments)}}
+{const _r=render;render=function(){if(view==="alvl"){renderTabs();const h=panel();$("#main").innerHTML=`<button class="chip" data-go="tools" style="cursor:pointer;margin-top:12px">◂ Tools</button><h2>Role and message keys</h2>`+(h||`<div class="panel"><p class="note">Nothing to change on this phone.</p></div>`);if(typeof animateView==="function")animateView();return}return _r.apply(this,arguments)}}
+{const _rt=renderTools;renderTools=function(){const r=_rt.apply(this,arguments);try{if(!panel())return r;let g=[...document.querySelectorAll("#main .tgrid")].find(x=>x.id!=="sgGrid");if(!g){g=document.createElement("div");g.className="tgrid";$("#main").appendChild(g)}
+  g.insertAdjacentHTML("beforeend",`<button data-go="alvl"><span class="ic">🔑</span><span><b>Role and message keys</b><small>${esc(here())} · show less, reset keys</small></span></button>`);if(typeof sgRegroup==="function")sgRegroup()}catch(e){}return r}}
 const again=()=>{const y=window.scrollY;render();window.scrollTo(0,y)};
 document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest)return;
   const d=t.closest("[data-alDown]");if(d){e.stopImmediatePropagation();if(stepDown(d.dataset.aldown)){view="board";render();window.scrollTo(0,0);toast("This phone now shows "+here()+".")}return}
   if(t.closest("#alUp")){e.stopImmediatePropagation();const r=stepUp(($("#alCode")||{}).value);if(r==="ok"){msg="";view="board";render();window.scrollTo(0,0);toast("Back to full access.")}else{msg="That isn't the recovery code.";again()}return}
-  if(t.closest("#alReset")){e.stopImmediatePropagation();if(!picOwner())return;if(!sup){sup=true;again();setTimeout(()=>{if(sup){sup=false;if(view==="data")again()}},4000);return}
+  if(t.closest("#alReset")){e.stopImmediatePropagation();if(!picOwner())return;if(!sup){sup=true;again();setTimeout(()=>{if(sup){sup=false;if(view==="data"||view==="alvl")again()}},4000);return}
     sup=false;const b=t.closest("#alReset");b.disabled=true;b.textContent="Resetting…";
-    resetKeys().then(()=>{if(view==="data")again();toast("Message keys reset. Members get new ones on their next update.")}).catch(()=>{b.disabled=false;b.textContent="Reset message keys";toast("Couldn't reset. Check signal.")});return}
+    resetKeys().then(()=>{if(view==="data"||view==="alvl")again();toast("Message keys reset. Members get new ones on their next update.")}).catch(()=>{b.disabled=false;b.textContent="Reset message keys";toast("Couldn't reset. Check signal.")});return}
   /* an account's name is locked once picked */
   if(t.closest("#myCkWho")&&lockedName()){e.stopImmediatePropagation();e.preventDefault();toast("This is your account. Ask your OIC for a new link to change it.")}},true);
 document.addEventListener("change",e=>{if(e.target.id!=="myWho"||!lockedName())return;e.stopImmediatePropagation();e.target.value="";toast("This is your account. Ask your OIC for a new link to change it.")},true);
