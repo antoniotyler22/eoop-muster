@@ -1650,7 +1650,10 @@ function mpSchedule(){if(!S.roster.some(m=>m.pk))return;clearTimeout(mpT);mpT=se
 async function mpPutOne(m){const d=mpDigest(m);const sg=sigF(d);d.at=Date.now();const K=await mpKeys(m.pk);const ct=await sealObj(K,d);await SB.rpc("put_page",{p_id:K.id,p_wk:K.wk,p_ct:ct});m.pkSig=sg;m.pkAt=Date.now()}
 async function mpPublish(force){if(mpBusy){clearTimeout(mpT);mpT=setTimeout(()=>mpPublish(force),4000);return 0}mpBusy=true;let n=0,err="";
   try{for(const m of S.roster.filter(m=>m.pk)){try{const d=mpDigest(m);const sg=sigF(d);if(!force&&sg===m.pkSig&&Date.now()-(m.pkAt||0)<12*3600000)continue;await mpPutOne(m);n++}catch(e){err=String(e.message||e).slice(0,80)}}
-    if(n||S.mpErr||err){S.mpErr=err;rawSave()}}
+    if(n||S.mpErr||err){S.mpErr=err;rawSave()}
+    /* 4.77.8: a dropped connection ("Load failed" on iPhone) is not a setup problem: try again in 20 s, up to 6 times, so the warning clears by itself */
+    if(err&&/load failed|failed to fetch|network|timed? ?out|connection/i.test(err)&&(mpPublish.retry=(mpPublish.retry||0)+1)<=6){clearTimeout(mpT);mpT=setTimeout(()=>mpPublish(force),20000)}
+    else if(!err)mpPublish.retry=0}
   finally{mpBusy=false}return n}
 /* the link only goes out once their page is really on the server, so it never opens to "not published yet" */
 async function mpTurnOn(m){if(!m.pk){m.pk=rndId(28);m.pkSig="";save()}
