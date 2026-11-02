@@ -2039,7 +2039,7 @@ function renderPerson(){const m=S.roster.find(x=>x.id===pid);if(!m){view=pBack||
   const since=sinceOf(m);const secName=m.sec==="ATT"?"Attached"+(m.parent?" · from "+m.parent:""):((SECTIONS.find(x=>x[0]===m.sec)||[])[1]||m.sec);
   h+=`<div class="sechead" style="margin-top:8px"><h2 style="margin:0">${esc(m.rank)} ${esc(m.name)}</h2></div><div class="note">${esc(m.sec)} · ${esc(secName)}</div>
     <div class="panel"><div class="pick">${statusSelect(m.id,m.status)}${dutySelect(m.id,dutyOf(m))}</div>
-    <div class="note">${since?`${esc(SHORT[m.status]||m.status)} since ${dtg(new Date(since)).slice(0,7)} ${dtg(new Date(since)).slice(8)} (${ago(since).replace(" ago","")})`:"No history yet for this person."}${m.detail?" · "+esc(m.detail):""}${m.loc?" · "+esc(m.loc):""}</div>
+    <div class="note">${since?`${esc(SHORT[m.status]||m.status)} since ${dtg(new Date(since)).slice(0,7)} ${dtg(new Date(since)).slice(8)} (${ago(since).replace(" ago","")})`:"No history yet for this person."}${m.status!=="On Hand"&&m.detail?" · "+esc(m.detail):""}${m.status!=="On Hand"&&m.loc?" · "+esc(m.loc):""}</div>
     <div class="row2">${m.phone?`<a class="btn" href="${telHref(m.phone)}">Call ${fmtPh(m.phone)}</a><a class="btn alt" href="${smsTo(m.phone)}">Text</a>`:`<button class="btn alt" data-pedit="ph">Add phone</button><span></span>`}</div>
     ${m.phone2?`<a class="btn alt" href="${telHref(m.phone2)}">Call alt ${fmtPh(m.phone2)}</a>`:""}
     ${pEdit==="ph"?`<div class="addph"><input type="tel" id="pPh" placeholder="808 555 0100" value="${esc(fmtPh(m.phone||""))}"><button data-psave="ph">Save</button></div>`:""}</div>`;
@@ -5158,7 +5158,7 @@ function rowDet(m){if(m.status==="On Hand")return null;
   return [m.parent?"From "+m.parent:"",rangeTxt(isoOf(m.start)||m.start,isoOf(m.end)||m.end),m.loc?"📍 "+m.loc:"",m.detail||""].filter(Boolean).join(" · ")}
 {const _rs=renderSection;renderSection=function(code){_rs.apply(this,arguments);const main=$("#main");if(!main)return;
   const hd=main.querySelector(".sechead");if(hd&&code!=="ATT")hd.insertAdjacentHTML("afterend",`<p class="note secupd" style="margin:2px 4px 6px">↻ ${esc(updTxt(secAt(code)))}</p>`);
-  main.querySelectorAll(".m").forEach(row=>{const p=row.querySelector("[data-pcard]");const m=p&&S.roster.find(x=>x.id===p.dataset.pcard);if(!m)return;const t=rowDet(m);if(t==null)return;
+  main.querySelectorAll(".m").forEach(row=>{const p=row.querySelector("[data-pcard]");const m=p&&S.roster.find(x=>x.id===p.dataset.pcard);if(!m)return;const t=rowDet(m);if(t==null){/* 4.77.10: On Hand has nothing to add: drop the old status text (like "Urgent care") that was left on the row */const od=row.querySelector(".det");if(od&&!od.querySelector("[data-stdet]"))od.remove();return}
     let d=row.querySelector(".det");if(!t&&!canEdit()){if(d)d.remove();return}if(!d){d=document.createElement("div");d.className="det";const rm=row.querySelector(".who .rm");rm?rm.before(d):row.querySelector(".who").appendChild(d)}d.textContent=t;
     if(canEdit())d.insertAdjacentHTML("beforeend",` <button class="chip" data-stdet="${esc(m.id)}" style="cursor:pointer">${!m.start&&!m.end&&!m.loc?"+ Dates, location":"✎ Edit"}</button>`)})}}
 {const _rb=renderBoard;renderBoard=function(){_rb.apply(this,arguments);

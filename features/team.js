@@ -33,7 +33,7 @@ function rowDet(m){if(m.status==="On Hand")return null;
   return [m.parent?"From "+m.parent:"",rangeTxt(isoOf(m.start)||m.start,isoOf(m.end)||m.end),m.loc?"📍 "+m.loc:"",m.detail||""].filter(Boolean).join(" · ")}
 {const _rs=renderSection;renderSection=function(code){_rs.apply(this,arguments);const main=$("#main");if(!main)return;
   const hd=main.querySelector(".sechead");if(hd&&code!=="ATT")hd.insertAdjacentHTML("afterend",`<p class="note secupd" style="margin:2px 4px 6px">↻ ${esc(updTxt(secAt(code)))}</p>`);
-  main.querySelectorAll(".m").forEach(row=>{const p=row.querySelector("[data-pcard]");const m=p&&S.roster.find(x=>x.id===p.dataset.pcard);if(!m)return;const t=rowDet(m);if(t==null)return;
+  main.querySelectorAll(".m").forEach(row=>{const p=row.querySelector("[data-pcard]");const m=p&&S.roster.find(x=>x.id===p.dataset.pcard);if(!m)return;const t=rowDet(m);if(t==null){/* 4.77.10: On Hand has nothing to add: drop the old status text (like "Urgent care") that was left on the row */const od=row.querySelector(".det");if(od&&!od.querySelector("[data-stdet]"))od.remove();return}
     let d=row.querySelector(".det");if(!t&&!canEdit()){if(d)d.remove();return}if(!d){d=document.createElement("div");d.className="det";const rm=row.querySelector(".who .rm");rm?rm.before(d):row.querySelector(".who").appendChild(d)}d.textContent=t;
     if(canEdit())d.insertAdjacentHTML("beforeend",` <button class="chip" data-stdet="${esc(m.id)}" style="cursor:pointer">${!m.start&&!m.end&&!m.loc?"+ Dates, location":"✎ Edit"}</button>`)})}}
 {const _rb=renderBoard;renderBoard=function(){_rb.apply(this,arguments);

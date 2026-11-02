@@ -2036,7 +2036,7 @@ function renderPerson(){const m=S.roster.find(x=>x.id===pid);if(!m){view=pBack||
   const since=sinceOf(m);const secName=m.sec==="ATT"?"Attached"+(m.parent?" · from "+m.parent:""):((SECTIONS.find(x=>x[0]===m.sec)||[])[1]||m.sec);
   h+=`<div class="sechead" style="margin-top:8px"><h2 style="margin:0">${esc(m.rank)} ${esc(m.name)}</h2></div><div class="note">${esc(m.sec)} · ${esc(secName)}</div>
     <div class="panel"><div class="pick">${statusSelect(m.id,m.status)}${dutySelect(m.id,dutyOf(m))}</div>
-    <div class="note">${since?`${esc(SHORT[m.status]||m.status)} since ${dtg(new Date(since)).slice(0,7)} ${dtg(new Date(since)).slice(8)} (${ago(since).replace(" ago","")})`:"No history yet for this person."}${m.detail?" · "+esc(m.detail):""}${m.loc?" · "+esc(m.loc):""}</div>
+    <div class="note">${since?`${esc(SHORT[m.status]||m.status)} since ${dtg(new Date(since)).slice(0,7)} ${dtg(new Date(since)).slice(8)} (${ago(since).replace(" ago","")})`:"No history yet for this person."}${m.status!=="On Hand"&&m.detail?" · "+esc(m.detail):""}${m.status!=="On Hand"&&m.loc?" · "+esc(m.loc):""}</div>
     <div class="row2">${m.phone?`<a class="btn" href="${telHref(m.phone)}">Call ${fmtPh(m.phone)}</a><a class="btn alt" href="${smsTo(m.phone)}">Text</a>`:`<button class="btn alt" data-pedit="ph">Add phone</button><span></span>`}</div>
     ${m.phone2?`<a class="btn alt" href="${telHref(m.phone2)}">Call alt ${fmtPh(m.phone2)}</a>`:""}
     ${pEdit==="ph"?`<div class="addph"><input type="tel" id="pPh" placeholder="808 555 0100" value="${esc(fmtPh(m.phone||""))}"><button data-psave="ph">Save</button></div>`:""}</div>`;
