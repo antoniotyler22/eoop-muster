@@ -67,3 +67,17 @@ test("A picked name is locked to the account on a linked phone", async () => {
     assert.equal(a.w.eval(`accountLocked()`), false);
   } finally { await a.close(); }
 });
+
+test("Role and message keys has its own page, reachable from Tools", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    await a.w.eval(owner);
+    a.w.eval(`view="alvl";render()`);
+    assert.ok(a.w.eval(`!!document.querySelector("#main #alKeys")`), "reset button is on the page");
+    assert.ok(a.w.eval(`!!document.querySelector("#main [data-aldown='co']")`), "step-down choices are on the page");
+    assert.equal(a.w.eval(`tabOf("alvl")`), "tools");
+    a.w.eval(`view="tools";render()`);
+    a.w.eval(`document.querySelector("[data-sgrp='settings'],[data-sg1='settings']").click()`);
+    assert.ok(a.w.eval(`!!document.querySelector("#sheet [data-go='alvl']")`), "tile is in Tools → Settings");
+  } finally { await a.close(); }
+});
