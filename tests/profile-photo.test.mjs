@@ -74,3 +74,16 @@ test("a photo that synced in from another phone is not mine: ignored, dropped an
     assert.equal(o.sent, false); assert.equal(o.shown, false); assert.equal(o.skip, true);
   } finally { await a.close(); }
 });
+
+test("my own picture sent out under someone else's name is never shown or kept for them", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    await setup(a);
+    a.w.eval(`afPhotoOwn(${JSON.stringify(PHOTO)})`);
+    const ct = await a.w.eval(`fdEnc(S.feeds[0].ek,{t:"hi",u:false,to:{},by:"CPL HUME",av:${JSON.stringify(PHOTO)}})`);
+    await a.w.eval(`fdDec(S.feeds[0].ek,${JSON.stringify(ct)})`); await sleep(500);
+    assert.match(a.w.eval(`fdAv("CPL HUME")`), />CH</, "CPL HUME keeps initials, not my picture");
+    assert.match(a.w.eval(`fdAv("CPL TEST")`), /class="av avp"/, "I still see my own photo");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});

@@ -21,9 +21,12 @@ async function loadAll(){try{const d=await idb();const rows=await new Promise((o
 /* who am I, by every name this phone uses for me */
 function myKeys(){const s=new Set();const add=n=>{n=key(n);if(n)s.add(n)};add(S.myName);add(S.postAs);if(S.who)add(S.who.n);
   for(const f of (S.feeds||[])){add(f.me);try{add(fdBy(f))}catch(e){}}return s}
-const photoOf=name=>{const k=key(name);if(!k)return "";if(mine()&&myKeys().has(k))return mine();return mem.get(k)||""};
+/* 4.77.6: nobody else is me. If another name's photo is the same picture as the one I took, it's my photo wrongly sent out under
+   their name (an older copy of the app on their phone did that), so it's never shown for them and never kept. */
+const isMyPic=v=>{const m=mine();return !!(m&&v&&hsh(v)===hsh(m))};
+const photoOf=name=>{const k=key(name);if(!k)return "";if(mine()&&myKeys().has(k))return mine();const v=mem.get(k)||"";if(isMyPic(v)){mem.delete(k);store(k,null);return ""}return v};
 window.afPhoto=photoOf;
-function learn(by,av){const k=key(by);if(!k||typeof av!=="string"||av.length>MAXB||!OK.test(av)||myKeys().has(k)||mem.get(k)===av)return;
+function learn(by,av){const k=key(by);if(!k||typeof av!=="string"||av.length>MAXB||!OK.test(av)||myKeys().has(k)||mem.get(k)===av||isMyPic(av))return;
   mem.set(k,av);if(mem.size>KEEP){const old=mem.keys().next().value;mem.delete(old);store(old,null)}store(k,av);
   if(typeof view!=="undefined"&&(view==="talk"||view==="people")&&!document.querySelector("input:focus,textarea:focus")){clearTimeout(learn.t);learn.t=setTimeout(()=>{try{render()}catch(e){}},400)}}
 
@@ -62,6 +65,6 @@ function panel(){const nm=S.myName||(typeof fdCur==="function"&&fdCur()?fdBy(fdC
 
 {const c=document.createElement("style");c.textContent=`.av.avp{background-size:cover;background-position:center;background-repeat:no-repeat;font-size:0}#main .tk-you .tk-av{cursor:pointer}`;document.head.appendChild(c)}
 /* one-time clean-up: a photo this phone didn't take is dropped, and pictures learned from others are re-learned fresh */
-try{if(S.myPhoto&&!mine()){delete S.myPhoto;save()}if(!localStorage.getItem("af-av-v2")){localStorage.setItem("af-av-v2","1");idb().then(d=>{const t=d.transaction(DB.store,"readwrite");t.objectStore(DB.store).clear();t.oncomplete=()=>d.close()}).catch(()=>{})}}catch(e){}
+try{if(S.myPhoto&&!mine()){delete S.myPhoto;save()}if(!localStorage.getItem("af-av-v3")){localStorage.setItem("af-av-v3","1");idb().then(d=>{const t=d.transaction(DB.store,"readwrite");t.objectStore(DB.store).clear();t.oncomplete=()=>d.close()}).catch(()=>{})}}catch(e){}
 loadAll().then(n=>{if(n&&typeof view!=="undefined"&&(view==="feed"||view==="talk"||view==="people"))try{render()}catch(e){}});
 })();
