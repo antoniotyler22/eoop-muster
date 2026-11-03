@@ -181,7 +181,8 @@ test("calendar conflicts: same person on the same day; events only at the same d
     a.w.eval(`S.roster[0].cal=[{id:"c1",d:window.__D,ty:"LEAVE",ti:"Leave"}];save();`);
     assert.equal(set([{ id: "e1", name: "Range", tm: "08:00", secs: ["HE"] }]), 1, "the person is somewhere else that day");
     a.w.eval(`S.roster[0].cal=[];S.roster[1].duty="LIMDU";S.events=[{id:"e1",name:"Range",date:window.__D,tm:"08:00",secs:["HE"],att:false,done:{}}];save();evOpen="e1";view="events";render();`);
-    assert.match(a.$("#main").textContent, /No conflicts on the event date/, "LIMDU isn't being somewhere else");
+    assert.equal(a.w.eval(`busyOn(S.roster[1],window.__D,{event:"e1",tm:"08:00"}).length`), 0, "LIMDU isn't being somewhere else");
+    assert.doesNotMatch(a.$("#main").textContent, /Conflicts on|No conflicts/, "no conflicts panel; a conflict turns the name red");
     assert.match(a.$("#main").textContent, /08:00/, "event shows its time");
     assert.equal(a.w.eval(`busyOn(S.roster[0],window.__D,{}).filter(x=>x.ty==="EVENT").length`), 1, "adding something for that person that day still warns");
   } finally { a.close(); }

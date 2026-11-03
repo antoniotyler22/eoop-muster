@@ -1,6 +1,6 @@
 /* Accounted For 4.77.17: every event is a Go / No-Go roster.
-   Each required person gets GO or NO-GO (tap again to clear). NO-GO takes a reason: Medical, Duty, Leave, Appointment, Other.
-   The event shows GO / NO-GO / not marked counts, a one-tap "Mark conflicts No-Go" for people busy on the event date, and the
+   Tap a person's name to cycle GO, then NO-GO, then cleared. NO-GO takes a reason: Medical, Duty, Leave, Appointment, Other.
+   A name shows red when that person has a conflict on the event date. The event shows GO / NO-GO / not marked counts, and the
    Text and Copy lists read GO, NO-GO with reasons, and NOT MARKED. GO is the same mark as "attended" was, so older events and the
    Excel export keep working; the export adds Go/No-Go and Reason columns. */
 (()=>{
@@ -23,11 +23,11 @@ evText=function(ev){const req=sorted(evReq(ev));const t=tally(ev);
   if(left.length){L.push("");L.push("NOT MARKED ("+left.length+")");left.forEach(m=>L.push(line(m," ("+SHORT[m.status]+")")))}
   return L.join("\n")};
 
-function rowHTML(ev,m){const s=state(ev,m),k=esc(nkey(m));
-  return `<div class="mrow gng" data-gk="${k}" style="display:block;padding:8px 0"><div style="display:flex;align-items:center;gap:8px"><span class="nm2" style="flex:1;min-width:0"><b>${esc(m.rank)}</b> ${esc(m.name)} <span class="note">${esc(SHORT[m.status])}</span></span>
-    <button class="chip" data-gng="go" data-gk="${k}" aria-pressed="${s==="go"}" style="cursor:pointer;min-width:58px;${s==="go"?"background:var(--s-onhand);color:#fff;border-color:transparent":""}">GO</button>
-    <button class="chip" data-gng="no" data-gk="${k}" aria-pressed="${s==="no"}" style="cursor:pointer;min-width:70px;${s==="no"?"background:var(--warn);color:#fff;border-color:transparent":""}">NO-GO</button></div>
-    ${s==="no"?`<select class="wsel" data-gnr="${k}" aria-label="Reason" style="margin-top:6px;width:100%"><option value="">Reason…</option>${REASONS.map(r=>`<option${ng(ev,m)===r?" selected":""}>${r}</option>`).join("")}</select>`:""}</div>`}
+function rowHTML(ev,m,cf){const s=state(ev,m),k=esc(nkey(m));
+  const red=cf&&cf.length;const why=red?cf.map(x=>x.why).join(" · "):"";
+  const tag=s==="go"?`<b style="color:var(--s-onhand)">GO</b>`:s==="no"?`<b style="color:var(--warn)">NO-GO</b>`:`<span class="note">tap</span>`;
+  return `<div class="mrow gng" data-gk="${k}" style="display:block;padding:0"><button type="button" data-gng="1" data-gk="${k}" aria-pressed="${s!==""}" ${why?`title="${esc(why)}" `:""}style="display:flex;align-items:center;gap:8px;width:100%;padding:10px 0;background:none;border:0;text-align:left;cursor:pointer;font:inherit;color:inherit"><span class="nm2" style="flex:1;min-width:0;${red?"color:var(--warn);":""}"><b>${esc(m.rank)}</b> ${esc(m.name)} <span class="note">${esc(SHORT[m.status])}</span></span>${tag}</button>
+    ${s==="no"?`<select class="wsel" data-gnr="${k}" aria-label="Reason" style="margin:0 0 8px;width:100%"><option value="">Reason…</option>${REASONS.map(r=>`<option${ng(ev,m)===r?" selected":""}>${r}</option>`).join("")}</select>`:""}</div>`}
 
 {const _re=renderEvents;renderEvents=function(){_re.apply(this,arguments);const main=$("#main");if(!main)return;const ev=cur();
   if(!ev){ /* list of events + new-event form */
@@ -42,25 +42,21 @@ function rowHTML(ev,m){const s=state(ev,m),k=esc(nkey(m));
   const bar=main.querySelector(".mbar");
   if(bar)bar.insertAdjacentHTML("afterend",`<div class="note" id="gngSum" style="margin:6px 0"><b style="color:var(--s-onhand)">GO ${t.go}</b> · <b style="color:var(--warn)">NO-GO ${t.no}</b> · Not marked ${t.left}</div>`);
   const own=main.querySelector("label.tog input#evOnly");if(own)own.parentElement.lastChild.textContent=" Show only people not yet GO";
-  /* conflicts panel: one-tap No-Go */
-  const d=isoOf(ev.date)||ev.date;
-  if(/^\d{4}-\d{2}-\d{2}$/.test(d||"")&&d>=dkey()&&canEdit()){const c=evReq(ev).filter(m=>state(ev,m)!=="no"&&busyOn(m,d,{event:ev.id,tm:ev.tm||""}).length);
-    if(c.length){const anchor=main.querySelector("#gngSum");if(anchor)anchor.insertAdjacentHTML("afterend",`<button class="btn alt" id="gngConf" style="width:100%;margin:0 0 8px">Mark ${c.length} with conflicts NO-GO</button>`)}}
+  /* no separate conflicts panel: a conflict just turns the name red */
+  [...main.querySelectorAll(".panel")].filter(x=>/Conflicts on/.test(x.textContent)).forEach(x=>x.remove());
+  [...main.querySelectorAll("p.note")].filter(x=>/No conflicts on the event date/.test(x.textContent)).forEach(x=>x.remove());
+  const d=isoOf(ev.date)||ev.date;const dated=/^\d{4}-\d{2}-\d{2}$/.test(d||"")&&d>=dkey();
   main.querySelectorAll("a.btn").forEach(x=>{if(/^Text owe list$/.test(x.textContent.trim()))x.textContent="Text Go/No-Go list"});
   /* rows */
-  main.querySelectorAll("button.mrow[data-evtog]").forEach(b=>{const k=b.dataset.evtog;const m=evReq(ev).find(x=>nkey(x)===k);if(m)b.outerHTML=rowHTML(ev,m)});
+  main.querySelectorAll("button.mrow[data-evtog]").forEach(b=>{const k=b.dataset.evtog;const m=evReq(ev).find(x=>nkey(x)===k);if(m)b.outerHTML=rowHTML(ev,m,dated?busyOn(m,d,{event:ev.id,tm:ev.tm||""}):[])});
   main.querySelectorAll("button[data-evall]").forEach(b=>{b.textContent="All "+b.dataset.evall+" GO"});
   /* group counts: GO/total */
   main.querySelectorAll(".mgrp h3 > span").forEach(sp=>{const k=(sp.textContent.match(/^([A-Z0-9]+) ·/)||[])[1];if(!k)return;const ms=evReq(ev).filter(m=>m.sec===k);sp.textContent=k+" · GO "+ms.filter(m=>state(ev,m)==="go").length+"/"+ms.length})}}
 
 document.addEventListener("click",e=>{
   const b=e.target.closest("[data-gng]");if(b){e.stopImmediatePropagation();if(!canEdit())return denyMsg();const ev=cur();if(!ev)return;const m=evReq(ev).find(x=>nkey(x)===b.dataset.gk);if(!m)return;
-    const want=b.dataset.gng,s=state(ev,m);setState(ev,m,s===want?"":want,"");save();const y=window.scrollY;renderEvents();window.scrollTo(0,y);return}
+    const s0=state(ev,m);setState(ev,m,s0===""?"go":s0==="go"?"no":"","");save();const y=window.scrollY;renderEvents();window.scrollTo(0,y);return}
   const a=e.target.closest("[data-evall]");if(a){e.stopImmediatePropagation();if(!canEdit())return denyMsg();const ev=cur();if(!ev)return;evReq(ev).filter(m=>m.sec===a.dataset.evall).forEach(m=>{if(state(ev,m)!=="no")setState(ev,m,"go")});save();const y=window.scrollY;renderEvents();window.scrollTo(0,y);return}
-  if(e.target.id==="gngConf"){e.stopImmediatePropagation();if(!canEdit())return denyMsg();const ev=cur();if(!ev)return;const d=isoOf(ev.date)||ev.date;let n=0;
-    for(const m of evReq(ev)){if(state(ev,m)==="no")continue;const cf=busyOn(m,d,{event:ev.id,tm:ev.tm||""});if(!cf.length)continue;const w=cf.map(x=>x.why).join("").toLowerCase();
-      setState(ev,m,"no",/duty|watch/.test(w)?"Duty":/leave|tad|liberty/.test(w)?"Leave":/appoint|medical|sick|sniq|siq/.test(w)?(/medical|sick|siq|sniq/.test(w)?"Medical":"Appointment"):"Other");n++}
-    save();renderEvents();toast(n+" marked NO-GO from conflicts. Check the reasons.");return}
 },true);
 document.addEventListener("change",e=>{const s=e.target.closest&&e.target.closest("[data-gnr]");if(!s)return;e.stopImmediatePropagation();if(!canEdit())return denyMsg();
   const ev=cur();if(!ev)return;const m=evReq(ev).find(x=>nkey(x)===s.dataset.gnr);if(!m)return;setState(ev,m,"no",s.value);save()},true);
