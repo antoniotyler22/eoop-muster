@@ -1403,8 +1403,6 @@ function renderPeople(){const {c,A}=counts();let h=banner()+(canEdit()&&isLeader
   h+=SECTIONS.map(([k,n])=>{const o=c[k];const p=pct(o["On Hand"],o.total);const away=o.total-present(o);const r=S.board?secLast(k):null;
     return `<button class="pcard" data-go="${k.toLowerCase()}"><span style="display:flex;justify-content:space-between;width:100%"><b style="font-size:15px">${esc(k)}</b><b style="font-variant-numeric:tabular-nums">${o["On Hand"]}/${o.total}</b></span><span class="note" style="margin:0">${esc(n)}</span><span class="hbar" style="width:100%"><i style="width:${p}%"></i></span><span class="note" style="margin:0">${away} away${r?` · updated <span data-livet="${esc(k)}">${ago(r.t)}</span>`:""}</span></button>`}).join("");
   h+=`<button class="pcard" data-go="att"><span style="display:flex;justify-content:space-between;width:100%"><b style="font-size:15px">ATT</b><b>+${A.total}</b></span><span class="note" style="margin:0">Attached, not on strength</span><span class="note" style="margin:0">${A["On Hand"]} on hand</span></button></div>`;
-  h+=`<div class="sech"><h2>More</h2></div><div class="tgrid">
-    <button data-go="data"><span class="ic">${svg("data")}</span><span><b>Load roster</b><small>${S.source==="sample"?"Using sample data":S.source==="link"?"From your OIC's board":"MOL list or backup"}</small></span></button></div>`;
   h+=`<div class="dutyline" style="margin-top:12px">${dutyChips(S.roster.filter(m=>m.sec!=="ATT"))}</div>`;
   $("#main").innerHTML=h}
 function renderTools(){const al=alerts();const cf=upcomingConflicts(14).length;const R=readySum();const b=bcActive();

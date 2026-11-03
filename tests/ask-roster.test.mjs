@@ -51,11 +51,11 @@ test("members never get the roster box", async () => {
   } finally { await a.close(); }
 });
 
-test("Tools has a Utilities tile that opens the screen", async () => {
+test("Tools → Help has a Utilities tile that opens the screen", async () => {
   const a = await openApp({ rpc: () => null });
   try {
     a.w.eval(SETUP); a.w.eval(`view="tools";render()`); await sleep(50);
-    const t = a.$('[data-go="utilities"]'); assert.ok(t, "tile in Tools"); t.click(); await sleep(80);
+    a.w.eval(`openToolGroup("help")`); const t = a.$('#sheetOpts [data-go="utilities"]'); assert.ok(t, "tile in Tools → Help"); t.click(); await sleep(80);
     assert.equal(a.w.eval("view"), "utilities");
     assert.ok(a.$("#arCard") && a.$("#hmAsk"));
     assert.deepEqual(a.errors, []);

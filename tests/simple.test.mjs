@@ -3,15 +3,16 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { openApp, sleep } from "./harness.mjs";
 
-test("Tools shows at most 13 groups (12 + Utilities) and every old tool is still inside one", async () => {
+test("Tools shows at most 13 groups and every tool without its own tab is still inside one", async () => {
   const a = await openApp();
   try {
     a.w.eval(`S.welcomed=1;S.onb=true;S.leaderMode=true;view="tools";render()`);
     const groups = a.$$("#sgGrid > *");
     assert.ok(groups.length > 0 && groups.length <= 13, "groups: " + groups.length);
     assert.ok(!a.$("#main #v11Em"), "emergency check-in is on Home only");
-    for (const k of ["invite", "checkins", "access", "support", "dms", "integ", "data"]) {
-      const g = a.w.eval(`(()=>{for(const k of ["checkin","feed","people","reports","plan","home","help","settings","rollup"]){openToolGroup(k);if(document.querySelector('#sheetOpts [data-go="${k}"]'))return k}return ""})()`);
+    for (const k of ["feed", "send", "dms", "cal", "events", "duty", "ready"]) assert.ok(!a.$(`#sgGrid [data-go="${k}"]`), k + " has its own tab, so Tools does not repeat it");
+    for (const k of ["invite", "checkins", "access", "support", "pt", "utilities", "integ", "data"]) {
+      const g = a.w.eval(`(()=>{for(const k of ["checkin","feed","people","reports","home","help","settings","rollup"]){openToolGroup(k);if(document.querySelector('#sheetOpts [data-go="${k}"]'))return k}return ""})()`);
       assert.ok(g, k + " is inside a group");
     }
     a.w.eval(`view="board";render()`);

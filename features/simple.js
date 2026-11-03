@@ -15,23 +15,23 @@ const leader=()=>!(typeof memberMode==="function"&&memberMode());
 /* ================= 1. TOOLS: 12 groups ================= */
 const GROUPS=[
   {k:"checkin",l:"Muster",s:"Check people in, visitors, confirm check-ins",ic:"muster",keys:["muster","checkins","alerts","visitors","field"]},
-  {k:"feed",l:"Feed",s:"Post, text, messages, pages",ic:"feed",keys:["feed","send","dms","pages"]},
-  {k:"people",l:"People & access",s:"Invite, logins, accounts, who has access",ic:"people",keys:["invite","access","logins","live","acct"]},
+  {k:"feed",l:"Pages",s:"Group pages",ic:"feed",keys:["pages"]},
+  {k:"people",l:"People & access",s:"Invite, logins, accounts, who has access",ic:"people",keys:["invite","access","logins","live","pt","acct"]},
   {k:"reports",l:"Reports",s:"Headcount, PDF, incident report, HARP, scan",ic:"text",keys:["text","pdfReport","w6","trends","harp","scan"]},
-  {k:"utilities",l:"Utilities",s:"Needs you, ask your roster, help",ic:"help",keys:["utilities"]},
-  {k:"plan",l:"Calendar",s:"Calendar, events, duty, meetings",ic:"cal",keys:["cal","events","duty","pt"]},
-  {k:"ready",l:"Readiness",s:"Who's due for what",ic:"ready",keys:["ready"]},
   {k:"recall",l:"Recall",s:"Call or text everyone",ic:"recall",keys:["recall"]},
   {k:"armory",l:"Armory",s:"Sign gear in and out",ic:"armory",keys:["armory"]},
-  {k:"rollup",l:"Rollup",s:"Add up the teams under you",ic:"rollup",keys:["co","rollup"]},
+  {k:"rollup",l:"Company & rollup",s:"Company view, add up the teams under you",ic:"rollup",keys:["co","rollup"]},
   {k:"home",l:"My day",s:"Dashboard, today, my log",ic:"today",keys:["dash","today","log"]},
-  {k:"help",l:"Help",s:"Ask a question, guide, short tour",ic:"help",keys:["support","guide","trStart","v11SignInTool","v11ShareApp","ask"]},
+  {k:"help",l:"Help",s:"Ask a question, guide, short tour",ic:"help",keys:["utilities","support","guide","trStart","v11SignInTool","v11ShareApp","ask"]},
   {k:"settings",l:"Settings",s:"Teams, data, version, connections",ic:"data",keys:["teams","data","sys","modeOpen","integ","owner","nwOn","alvl"]}];
+/* These already have a bottom tab (Feed: Feed/Send; Plan: Calendar/Duty/Readiness/Events; Inbox: Messages), so Tools does not repeat them.
+   They stay searchable from the Tools search box. */
+const HIDE=["feed","send","dms","cal","events","duty","ready"];
 const tileKey=b=>{if(b.id)return b.id;if(b.dataset.go)return b.dataset.go;const d=Object.keys(b.dataset)[0];if(d)return d;
   const h=b.getAttribute&&b.getAttribute("href")||"";if(/help\.html/.test(h)||/Help guide/i.test(b.textContent))return "guide";return (b.textContent||"").trim().slice(0,20)};
 let STORE={};
 function groupTiles(){const main=$("#main");if(!main)return;const grids=[...main.querySelectorAll(".tgrid")];if(!grids.length)return;
-  const tiles=[];grids.forEach(g=>[...g.children].forEach(c=>tiles.push(c)));
+  const tiles=[];grids.forEach(g=>[...g.children].forEach(c=>{if(!HIDE.includes(tileKey(c)))tiles.push(c)}));
   STORE={};const left=[];for(const t of tiles){const k=tileKey(t);const g=GROUPS.find(G=>G.keys.includes(k));(g?(STORE[g.k]=STORE[g.k]||[]):left).push(t)}
   if(left.length)STORE.settings=(STORE.settings||[]).concat(left);
   for(const G of GROUPS)if(STORE[G.k])STORE[G.k].sort((a,b)=>G.keys.indexOf(tileKey(a))-G.keys.indexOf(tileKey(b)));
@@ -48,7 +48,7 @@ function groupTiles(){const main=$("#main");if(!main)return;const grids=[...main
 {const _rt=renderTools;renderTools=function(){_rt.apply(this,arguments);try{groupTiles()}catch(e){}}}
 /* tiles added by later features (news, owner) land in a grid of their own; fold them into the groups too */
 window.sgRegroup=function(){const main=$("#main");if(!main)return;const sg=$("#sgGrid");if(!sg)return;const extra=[...main.querySelectorAll(".tgrid")].filter(g=>g!==sg);if(!extra.length)return;
-  const tiles=[];extra.forEach(g=>{[...g.children].forEach(c=>tiles.push(c));g.remove()});let ch=false;
+  const tiles=[];extra.forEach(g=>{[...g.children].forEach(c=>{if(!HIDE.includes(tileKey(c)))tiles.push(c)});g.remove()});let ch=false;
   for(const t of tiles){const k=tileKey(t);const G=GROUPS.find(x=>x.keys.includes(k))||GROUPS.find(x=>x.k==="settings");STORE[G.k]=(STORE[G.k]||[]).concat([t]);ch=true}
   if(!ch)return;for(const G of GROUPS)if(STORE[G.k])STORE[G.k].sort((a,b)=>G.keys.indexOf(tileKey(a))-G.keys.indexOf(tileKey(b)));
   for(const G of GROUPS){const L=STORE[G.k];if(!L||!L.length)continue;const have=sg.querySelector(`[data-sgrp="${G.k}"],[data-sg1="${G.k}"]`);
