@@ -39,6 +39,8 @@ export const SOURCES = [
   "features/visitors.js",
   "features/contacts.js",
   "features/people-delete.js",
+  "features/phone-edit.js",
+  "features/rank-edit.js",
   "features/keep-deleted.js",
   "features/feed-coleaders.js",
   "features/team-alerts.js",
