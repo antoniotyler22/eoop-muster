@@ -1,4 +1,4 @@
-/* Accounted For 4.77.14: Home no longer looks live while it is still showing saved numbers.
+/* Accounted For 4.77.15: Home no longer looks live while it is still showing saved numbers.
    The app paints the last saved board first, then pulls fresh section updates a moment later. Until that pull finishes
    the numbers are dimmed, the "● Live sections" badge reads "Updating…" (with the time of the saved data), and "All systems
    working" waits. When it finishes the badge goes back to live with "synced HHMM". If the server can't be reached the badge

@@ -3976,7 +3976,7 @@ function pgCard(p,x){const C=p.posts.filter(y=>y.k===1&&y.par===x.id).sort((a,b)
 function renderPages(){let h=(memberMode()?meTabs("pages"):banner())+`<div class="sechead" style="margin-top:12px"><h2>Pages</h2></div>`;
   const mine=S.pages.filter(p=>p.ok),fol=S.pages.filter(p=>!p.ok);
   h+=`<div class="panel"><p class="note" style="margin:0">Your own page, like a small Instagram, and group pages where people post, ask questions and give advice. Only people you invite can see a page. Posts and photos are encrypted on your phone.</p>
-    <div class="row2"><button class="btn" id="v12PgNew">+ My page</button><button class="btn alt" id="v12PgNewG">+ Group page</button></div></div>`;
+    <div class="row2"><button class="btn" id="v12PgNew">${S.pages.some(p=>p.ok&&!p.group)?"Open my page":"+ My page"}</button><button class="btn alt" id="v12PgNewG">+ Group page</button></div></div>`;
   const row=p=>`<button class="lrow card" data-v12pg="${p.id}" style="width:100%;text-align:left;cursor:pointer;color:inherit;margin:4px 0">${fdAv(p.name)}<span style="flex:1;min-width:0"><span class="t" style="display:block">${esc(p.name)}</span><span class="s" style="display:block">${p.ok?(p.group?"Your group page":"Your page"):(p.group?"Group page":"Following")}${p.posts.length?" · "+p.posts.filter(x=>x.k===0).length+" posts":""}${p.top>(p.seen||0)&&!p.ok?` · <b style="color:var(--brass)">new</b>`:""}</span></span></button>`;
   if(mine.length)h+=`<div class="sech"><h2>Yours</h2></div><div class="alist">${mine.map(row).join("")}</div>`;
   h+=`<div class="sech"><h2>Following</h2></div>`+(fol.length?`<div class="alist">${fol.map(row).join("")}</div>`:`<p class="note">When someone invites you, tap their link and the page shows up here. Or paste the link: <button class="chip" id="v11SignInTool" style="cursor:pointer">Open a link</button></p>`);
@@ -4054,6 +4054,7 @@ document.addEventListener("click",e=>{const t=e.target;let b;
       else{const m=S.roster.find(x=>x.id===dmWith);const d=await dmOpenSrv(m);const msg=await dmSend(d,txt,dmImg,"L",S.postAs||S.myName||unitName(),dmAud,dmAudD);dmPush(d.id,{id:msg.id,t:Date.now(),txt,by:"L",n:"",img:dmImg,aud:dmAud,d:dmAudD});S.dmSeen[d.id]=Math.max(S.dmSeen[d.id]||0,msg.id)}
       dmImg="";dmAud="";dmAudD=0;save();redraw(render);scrollChat()})().catch(err=>{t.disabled=false;const s=String(err&&err.message||err);if(o)o.textContent=/find the function|schema/i.test(s)?"Messages aren't set up on the server yet (System check → 1.2).":"Couldn't send. Check signal and try again."});return}
   /* pages */
+  if(t.id==="v12PgNew"){const mine=S.pages.find(p=>p.ok&&!p.group);if(mine){pgCur=mine.id;view="pg";render();window.scrollTo(0,0);return}}
   if(t.id==="v12PgNew"||t.id==="v12PgNewG"){t.disabled=true;pgCreate(t.id==="v12PgNewG").then(p=>{pgCur=p.id;view="pg";render();window.scrollTo(0,0);toast("Page made. Invite people from Invite and settings.")}).catch(err=>{t.disabled=false;toast(/find the function|schema/i.test(String(err.message))?"Pages aren't set up on the server yet (System check → 1.2).":"Couldn't make the page: "+(err.message||err))});return}
   if((b=t.closest("[data-v12pg]"))){pgCur=b.dataset.v12pg;pgOpenC=null;pgMenu=null;view="pg";render();window.scrollTo(0,0);return}
   if(t.id==="v12PgJoin"){const X=sheetCtx;if(!X||X.kind!=="v12pg")return;if(!$("#v12PgTos").checked){toast("Agree to the Terms of Use to join.");return}S.tos=Math.max(S.tos||0,1);const nm=($("#v12PgMe").value||"").replace(/[<>|#]/g,"").trim().slice(0,30);if(nm)S.myName=S.myName||nm;
@@ -12392,7 +12393,7 @@ document.addEventListener("click",e=>{const g=e.target.closest&&e.target.closest
 })();
 
 /* ===== features/sync-state.js ===== */
-/* Accounted For 4.77.14: Home no longer looks live while it is still showing saved numbers.
+/* Accounted For 4.77.15: Home no longer looks live while it is still showing saved numbers.
    The app paints the last saved board first, then pulls fresh section updates a moment later. Until that pull finishes
    the numbers are dimmed, the "● Live sections" badge reads "Updating…" (with the time of the saved data), and "All systems
    working" waits. When it finishes the badge goes back to live with "synced HHMM". If the server can't be reached the badge
