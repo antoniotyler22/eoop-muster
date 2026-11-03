@@ -96,16 +96,16 @@ test("a change made on an access phone is logged with that person's name; arrivi
 test("syncing keeps both phones' change logs and on-the-app marks", async () => {
   const a = await openApp({ rpc: () => null });
   try {
-    a.w.eval(`S.source="mol";S.role="oic";S.chg=[{id:"aaa",t:Date.now()-1000,by:"OIC",f:"status",mid:"x"}];S.seen={p1:{t:5,who:"A",how:"Feed link"}};
+    a.w.eval(`S.source="mol";S.role="oic";S.chg=[{id:"aaa",t:Date.now()-1000,by:"OIC",f:"status",mid:"x"}];S.seen={p1:{t:5,who:"A",how:"Word of Mouth link"}};
       S.sync={on:false,baseSig:{chg:sig([]),seen:sig({})},baseMem:{}};
-      mergeRemote({roster:S.roster,chg:[{id:"bbb",t:Date.now(),by:"SSGT ROE",f:"duty",mid:"y"}],seen:{p1:{t:9,who:"A",how:"View only access link"},p2:{t:3,who:"B",how:"Feed link"}}});`);
+      mergeRemote({roster:S.roster,chg:[{id:"bbb",t:Date.now(),by:"SSGT ROE",f:"duty",mid:"y"}],seen:{p1:{t:9,who:"A",how:"View only access link"},p2:{t:3,who:"B",how:"Word of Mouth link"}}});`);
     assert.deepEqual(JSON.parse(a.w.eval("JSON.stringify(S.chg.map(e=>e.id).sort())")), ["aaa", "bbb"]);
     assert.equal(a.w.eval("S.seen.p1.how"), "View only access link", "newest wins");
     assert.equal(a.w.eval("S.seen.p2.who"), "B");
   } finally { a.close(); }
 });
 
-test("a Feed link picks from names only (part 28), and the leader sees them on the app", async () => {
+test("a Word of Mouth link picks from names only (part 28), and the leader sees them on the app", async () => {
   const reqs = [];
   let A;
   const a = (A = await openApp({ rpc: (fn, b) => {
@@ -116,7 +116,7 @@ test("a Feed link picks from names only (part 28), and the leader sees them on t
   try {
     await a.w.eval(`(async()=>{window.__ct=await fdEnc("${EK}",{v:1,ms:[{i:"m1",r:"SGT",n:"SMITH, JOHN",s:"HE"},{i:"m2",r:"CPL",n:"LEE, ANN",s:"HQ"}]})})()`);
     a.w.eval(`S.welcomed=1;S.onb=true;S.mode="military";S.feeds=[{id:"feedabcdef12",mk:"${"m".repeat(30)}",ek:"${EK}",unit:"1ST PLT",posts:[],seen:0,me:"SGT SMITH",mine:{}}];save();view="feed";render();`);
-    assert.ok(a.$("#whoBan"), "old Feed link sees the banner");
+    assert.ok(a.$("#whoBan"), "old Word of Mouth link sees the banner");
     await sleep(1600); a.w.eval("closeSheet()"); // the first-run welcome (decided before this test set up the phone) is out of the way
     a.$("#whoGo").click();
     for (let i = 0; i < 80 && a.$$("[data-whoid]").length < 2; i++) await sleep(25);
@@ -135,15 +135,15 @@ test("a Feed link picks from names only (part 28), and the leader sees them on t
   try {
     b.w.eval(OWNER + `S.roster[0].id="m1";`);
     b.w.eval(`whoIn(S.feeds[0]||{},{k:"who",mid:"m1",me:"SGT SMITH"},{created_at:new Date().toISOString()})`);
-    assert.equal(b.w.eval(`S.seen.m1.how`), "Feed link");
+    assert.equal(b.w.eval(`S.seen.m1.how`), "Word of Mouth link");
     b.w.eval(`whoIn({},{k:"join",rid:"j1",rank:"CPL",name:"NEW, GUY",sec:"HQ",phone:"8085550111",me:"CPL NEW"},{})`);
     b.w.eval(`whoIn({},{k:"join",rid:"j1",rank:"CPL",name:"NEW, GUY",sec:"HQ",phone:"8085550111",me:"CPL NEW"},{})`);
     assert.equal(b.w.eval(`S.roster.filter(m=>m.name==="NEW, GUY"&&m.sec==="HQ"&&m.rank==="CPL"&&m.phone==="8085550111").length`), 1, "added once");
-    assert.ok(b.w.eval(`S.chg.some(e=>e.f==="added"&&e.by==="CPL NEW"&&e.src==="Feed link")`));
+    assert.ok(b.w.eval(`S.chg.some(e=>e.f==="added"&&e.by==="CPL NEW"&&e.src==="Word of Mouth link")`));
   } finally { b.close(); }
 });
 
-test("the leader's phone shares names only with its Feed", async () => {
+test("the leader's phone shares names only with its Word of Mouth", async () => {
   const puts = [];
   const a = await openApp({ rpc: (fn, b) => { if (fn === "feed_names_put") puts.push(b); return null; } });
   try {
@@ -200,7 +200,7 @@ test("new events take an optional start time", async () => {
   } finally { a.close(); }
 });
 
-test("a co-leader's Feed posts carry the name they picked, not the OIC's synced 'post as'; posts are logged", async () => {
+test("a co-leader's Word of Mouth posts carry the name they picked, not the OIC's synced 'post as'; posts are logged", async () => {
   const a = await openApp({ rpc: () => null });
   try {
     a.w.eval(`S.source="mol";S.leaderMode=true;S.welcomed=1;S.onb=true;S.role="co";S.postAs="EOP OIC";S.who={id:S.roster[0].id,n:"SSGT ROE"};

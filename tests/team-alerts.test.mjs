@@ -1,4 +1,4 @@
-// Everyone on the team gets alerts: leaders join the Feed alert list, and edits send one batched "Team update".
+// Everyone on the team gets alerts: leaders join Word of Mouth alert list, and edits send one batched "Team update".
 import test from "node:test";
 import assert from "node:assert/strict";
 import { openApp, sleep } from "./harness.mjs";
@@ -7,7 +7,7 @@ const FEED = `{id:"feedabcdef12",mk:"${"m".repeat(30)}",lk:"${"l".repeat(30)}",e
 const setup = (role = "oic") => `S.source="mol";S.leaderMode=true;S.welcomed=1;S.onb=true;S.role="${role}";S.feeds=[${FEED}];S.pushOn=true;
   window.pushSub=async()=>({endpoint:"https://push.example/me",toJSON:()=>({endpoint:"https://push.example/me",keys:{}})});save();`;
 
-test("a leader phone with alerts on joins its own Feed's alert list", async () => {
+test("a leader phone with alerts on joins its own Word of Mouth's alert list", async () => {
   const rpcs = [];
   const a = await openApp({ rpc: (fn, b) => { rpcs.push([fn, b]); return null; } });
   try {
@@ -60,7 +60,7 @@ test("view-only phones never send Team updates", async () => {
   } finally { a.close(); }
 });
 
-test("Team alerts switch shows on Feed for a phone without alerts", async () => {
+test("Team alerts switch shows on Word of Mouth for a phone without alerts", async () => {
   const a = await openApp({ rpc: () => null });
   try {
     a.w.eval(`S.source="mol";S.leaderMode=true;S.welcomed=1;S.onb=true;S.feeds=[${FEED}];S.pushOn=false;Object.defineProperty(navigator,"serviceWorker",{value:{},configurable:true});window.PushManager=function(){};window.Notification={permission:"default"};save();view="feed";render()`);
@@ -69,7 +69,7 @@ test("Team alerts switch shows on Feed for a phone without alerts", async () => 
   } finally { a.close(); }
 });
 
-test("a platoon change also alerts the company Feed it rolls up to", async () => {
+test("a platoon change also alerts the company Word of Mouth it rolls up to", async () => {
   const sent = [];
   const a = await openApp({ rpc: () => null, fn: (n, b) => { sent.push(b); return { status: 200, body: "sent 1" }; } });
   try {

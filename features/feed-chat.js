@@ -1,4 +1,4 @@
-/* Accounted For 4.45: the Feed as a conversation.
+/* Accounted For 4.45: Word of Mouth as a conversation.
    - Posts read as chat bubbles: yours on the right, everyone else's on the left.
    - Anything still waiting for your Confirm sits on top as a one-at-a-time card: tap Confirm and the next one slides in.
      When it is empty you get "All caught up".

@@ -33,7 +33,7 @@ test("a leader post with no signal shows right away as waiting, then the stand-i
     assert.ok(id < 0, "a stand-in id comes back");
     assert.match(a.w.eval("S.outbox[0].lb"), /Post/);
     a.w.eval(`S.feeds[0].posts=[{id:${id},t:Date.now(),txt:"Water at 1100",to:{k:"all"}}];fdSel="${FEED.id}";view="feed";render()`); await sleep(20);
-    assert.ok(a.$(".fm-wait"), "marked as waiting in the Feed");
+    assert.ok(a.$(".fm-wait"), "marked as waiting in Word of Mouth");
     const ctl = await a.w.eval(`SB.rpc("feed_post",{p_feed:"${FEED.id}",p_leader_key:"x",p_ct:"c:pin"}).then(()=>"sent",e=>"failed")`);
     assert.equal(ctl, "failed", "pins and tallies are not held");
     down = false; a.w.eval(`window.dispatchEvent(new Event("online"))`); await sleep(400);

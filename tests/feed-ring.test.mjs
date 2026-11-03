@@ -1,4 +1,4 @@
-// 4.54.0: leader Feed posts as Ring Receipt cards.
+// 4.54.0: leader Word of Mouth posts as Ring Receipt cards.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { openApp } from "./harness.mjs";

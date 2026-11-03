@@ -1,8 +1,8 @@
-/* Accounted For 4.67.0 — Talk: push-to-talk voice for your Feed.
+/* Accounted For 4.67.0 — Talk: push-to-talk voice for your Word of Mouth.
    Hold the big button, speak, let go: the clip goes to everyone in the group you picked. A group is a shared channel:
    everyone in it hears everyone else. Talk has an on/off switch (off = nothing plays and you can't send; clips
    still land in the log). A radio icon sits by the name of anyone who has Talk on.
-   Everything (voice, groups, who has Talk on, "heard by" receipts) is encrypted with the Feed key before it leaves
+   Everything (voice, groups, who has Talk on, "heard by" receipts) is encrypted with Word of Mouth key before it leaves
    the phone, so the server only stores ciphertext for 3 days. Needs supabase/setup/38_talk.sql.
    Talk works while the app is open: it is not a background phone call. */
 (()=>{
@@ -33,7 +33,7 @@ window.talkPeople=f=>people(f);
 window.talkIsOn=n=>{const f=feed();return !!(f&&n&&isOn(f,String(n).toUpperCase().slice(0,30)))};
 const mySec=f=>String(f.sec||"").toUpperCase().slice(0,12);
 const mineH=f=>f.meH||[];
-/* a person is {n:name, w:[hashes of the name's words], s:section}. Name or hashes can match (the same way Feed posts to one person work) */
+/* a person is {n:name, w:[hashes of the name's words], s:section}. Name or hashes can match (the same way Word of Mouth posts to one person work) */
 const match=(e,by,w)=>e.n===by||(Array.isArray(e.w)&&e.w.length>0&&Array.isArray(w)&&e.w.every(h=>w.includes(h)));
 const entryMe=(f,e)=>match(e,me(f),mineH(f));
 const entryOn=(f,e)=>{if(entryMe(f,e))return !!tk().on;const now=Date.now();for(const [n,p] of st(f).pres)if(p.on&&now-p.t<STALE&&match(e,n,p.w))return true;return false};
@@ -150,8 +150,8 @@ function locCard(f){const now=Date.now(),mine=sharing();
   const others=AFS.all(f,"loc").map(r=>r.o).filter(o=>o&&!o.off&&o.by!==me(f)&&o.until>now&&now-o.t<30*60e3).sort((a,b)=>a.by.localeCompare(b.by));
   const me0=geo.pos?{lat:geo.pos.latitude,lon:geo.pos.longitude}:null;
   return `<div class="tk-card" id="tkLoc"><b>Live location</b>
-    ${mine?`<p class="tk-note" style="margin:4px 0 8px">You're sharing · ${Math.max(1,Math.ceil((tk().locUntil-now)/60e3))} min left. Everyone in this Feed can see where you are.</p><button class="btn alt" id="tkLocStop" style="width:100%">Stop sharing</button>`
-    :`<p class="tk-note" style="margin:4px 0 8px">Share where you are with this Feed. Updates while the app is open. You can stop any time.</p><div class="tk-row"><button class="btn alt" data-tkloc="15">15 min</button><button class="btn alt" data-tkloc="60">1 hour</button><button class="btn alt" data-tkloc="480">8 hours</button></div>`}
+    ${mine?`<p class="tk-note" style="margin:4px 0 8px">You're sharing · ${Math.max(1,Math.ceil((tk().locUntil-now)/60e3))} min left. Everyone in this Word of Mouth can see where you are.</p><button class="btn alt" id="tkLocStop" style="width:100%">Stop sharing</button>`
+    :`<p class="tk-note" style="margin:4px 0 8px">Share where you are with this Word of Mouth. Updates while the app is open. You can stop any time.</p><div class="tk-row"><button class="btn alt" data-tkloc="15">15 min</button><button class="btn alt" data-tkloc="60">1 hour</button><button class="btn alt" data-tkloc="480">8 hours</button></div>`}
     ${others.map(o=>{const d=me0?fmtD(dist(me0,o))+" away · ":"";return `<div class="tk-lr">${av(f,o.by,36)}<div class="tk-who"><b>${esc(o.by)}</b><small>${d}updated ${esc(hhmm(o.t))} · ${Math.max(1,Math.ceil((o.until-now)/60e3))} min left</small></div><a class="tk-map" href="https://maps.apple.com/?ll=${o.lat},${o.lon}&q=${encodeURIComponent(o.by)}" target="_blank" rel="noopener">Map</a></div>`}).join("")}</div>`}
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest||view!=="talk")return;const f=feed();if(!f)return;
   const l=t.closest("[data-tkloc]");if(l){if(!navigator.geolocation){toast("Location isn't available on this device.");return}locStart(f,+l.dataset.tkloc);return}
@@ -214,7 +214,7 @@ function listHTML(f){const s=st(f);const live=[...s.msgs.values()].filter(m=>!is
   if(!live.length&&!old.length)return `<p class="tk-note" style="text-align:center">No messages yet. Hold the button and say hello.</p>`;
   return live.map(m=>msgCard(f,m)).join("")+old.map(x=>logCard(f,x)).join("")}
 function html(){const f=feed();
-  if(!f)return `<h2>Talk</h2><div class="tk-card"><p class="tk-note" style="margin:0">Talk runs on your Feed. Start a Feed (or open the link your leader sent), then come back.</p><button class="btn" data-go="feed" style="margin-top:10px">Go to Feed</button></div>`;
+  if(!f)return `<h2>Talk</h2><div class="tk-card"><p class="tk-note" style="margin:0">Talk runs on your Word of Mouth. Start a Word of Mouth (or open the link your leader sent), then come back.</p><button class="btn" data-go="feed" style="margin-top:10px">Go to Word of Mouth</button></div>`;
   if(tk().sel!=="all"&&!chips(f).includes(`data-tkg="${esc(tk().sel)}"`))tk().sel="all";
   const on=tk().on,S0=status(f),n=listening(f).length,nm=me(f);
   return `<div class="tk">
@@ -235,7 +235,7 @@ function draw(){if(view!=="talk")return;const main=$("#main");if(!main)return;co
 function tickUI(){const r=ui.rec;if(!r)return;const s=Math.floor((Date.now()-r.t0)/1e3);const el=$("#tkT");if(el)el.textContent=Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
 function paintRec(on){const w=document.querySelector(".tk-ptt"),sc=$("#tkSt");if(w)w.classList.toggle("live",on);if(on){const f=feed();if(sc){sc.className="tk-card tk-st live";sc.innerHTML=`<b>You are live</b><small>Sending to ${esc(gname(f,tk().sel))}. Let go to send.</small>`}const b=$("#tkBtn");if(b)b.innerHTML='<span id="tkT">0:00</span>'}}
 
-/* ---------- decorations: radio icon by names in the Feed ---------- */
+/* ---------- decorations: radio icon by names in Word of Mouth ---------- */
 function decorate(){const f=feed();if(!f||view!=="feed")return;
   document.querySelectorAll(".fc .fch").forEach(h=>{const nm=h.querySelector(".nm");if(!nm)return;const n=nm.textContent.trim().toUpperCase().slice(0,30);const on=isOn(f,n);
     const has=nm.querySelector(".tk-ri");if(on&&!has)nm.insertAdjacentHTML("beforeend",` <span class="tk-ri" title="Talk is on">${RADIO(13)}</span>`);else if(!on&&has)has.remove();

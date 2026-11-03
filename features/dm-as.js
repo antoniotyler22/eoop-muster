@@ -1,6 +1,6 @@
 /* Accounted For 4.70.0 — "Messaging as": a strip at the top of every My page (My status, Calendar, Today, My log and a
    leader's preview of a member page) that shows the name your messages and posts go out under, with a Change button.
-   A member's name is their rank and last name (the same one the Feed uses). A leader's is the "Posting as" name
+   A member's name is their rank and last name (the same one Word of Mouth uses). A leader's is the "Posting as" name
    (like GYSGT TYLER or EOP OIC). Changing it here changes it everywhere. */
 (()=>{
 const VIEWS=["me","mecal","mepv","today","log"];

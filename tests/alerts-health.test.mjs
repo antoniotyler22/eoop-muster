@@ -1,6 +1,6 @@
 // 4.34.0: alerts that never went out. The server's service role lost its table rights, so notify read nothing and
 // answered "no sub". The System check now says so, and a member's page check-in buzzes the leaders when the page
-// carries the Feed keys.
+// carries Word of Mouth keys.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { openApp, sleep, waitFor } from "./harness.mjs";
@@ -17,7 +17,7 @@ test("System check tells you when the server can't read its own tables", async (
   } finally { await a.close(); }
 });
 
-test("a page check-in with the Feed keys on the page also sends the leader alert", async () => {
+test("a page check-in with Word of Mouth keys on the page also sends the leader alert", async () => {
   const sent = [], alerts = [];
   const a = await openApp({ rpc: (fn, body) => { if (fn === "page_req") { sent.push(body); return 9; } return []; } });
   try {
@@ -48,7 +48,7 @@ test("leader sees how many phones get alerts against the roster, in Utilities", 
   try {
     a.w.eval(`S.source="mol";S.leaderMode=true;S.welcomed=1;S.onb=true;S.role="oic";S.feeds=[{id:"feedabcdef12",mk:"${"m".repeat(30)}",lk:"${"l".repeat(30)}",ek:"${"e".repeat(43)}",unit:"1ST",main:1,posts:[],seen:0}];save();view="feed";render()`);
     await new Promise(r => setTimeout(r, 300));
-    assert.equal(a.$("#taStat"), null, "not at the top of the Feed or Home any more");
+    assert.equal(a.$("#taStat"), null, "not at the top of Word of Mouth or Home any more");
     a.w.eval(`view="utilities";render()`);
     await waitFor(() => a.$("#taStat"));
     const t = a.$("#taStat").textContent;

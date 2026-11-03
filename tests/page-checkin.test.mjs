@@ -1,4 +1,4 @@
-// Everyone with a My page has a Check in button, Feed or no Feed. Without a Feed the check-in rides on the page
+// Everyone with a My page has a Check in button, Word of Mouth or no Word of Mouth. Without a Word of Mouth the check-in rides on the page
 // itself (page_req, sealed with the page key) and the leader pulls it with one call (page_reqs_get).
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -8,15 +8,15 @@ const click = (a, sel) => { const el = a.$(sel); assert.ok(el, "found " + sel); 
 const setVal = (a, sel, v) => { const el = a.$(sel); assert.ok(el, "found " + sel); el.value = v; };
 const PK = "p".repeat(28);
 
-test("member with a page but no Feed still gets Check in, and it goes out on the page channel", async () => {
+test("member with a page but no Word of Mouth still gets Check in, and it goes out on the page channel", async () => {
   const sent = [];
   const a = await openApp({ rpc: (fn, body) => { if (fn === "page_req") { sent.push(body); return 9; } return []; } });
   try {
     await a.w.eval(`(async()=>{const m=S.roster[0];const D=mpDigest(m);D.feed=null;D.cofeed=null;D.cks=[];window.__mid=m.id;
       S.feeds=[];S.me={pk:"${PK}",unit:"UTILITIES",d:D,t:Date.now()};S.onb=true;S.welcomed=1;view="me";render()})()`);
     await sleep(50);
-    assert.ok(a.$("#ckSend"), "Check in is there with no Feed");
-    assert.doesNotMatch(a.$("#ckCard").textContent, /connected to your leader's Feed/);
+    assert.ok(a.$("#ckSend"), "Check in is there with no Word of Mouth");
+    assert.doesNotMatch(a.$("#ckCard").textContent, /connected to your leader's Word of Mouth/);
     click(a, '[data-ckst="Leave"]');
     setVal(a, "#ckF", "2026-10-30"); setVal(a, "#ckT", "2026-11-02"); setVal(a, "#ckL", "Maui");
     click(a, "#ckSend");

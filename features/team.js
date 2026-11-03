@@ -1,6 +1,6 @@
 /* Accounted For 1.4: Team.
    1) People with access: everyone who can open your board, on your roster or not (My pages, logins, invites, open links).
-   2) Check in from My page (or the Feed): pick a status or Other (write it in). Anything but On Hand asks From, To and Location.
+   2) Check in from My page (or Word of Mouth): pick a status or Other (write it in). Anything but On Hand asks From, To and Location.
       It goes to the leader, encrypted, on the request channel. Nothing new on the server.
    3) Leader: check-ins land in Check-ins and Activity. Confirm puts them on the roster. Every Activity item can be confirmed.
    4) Status details: picking anything but On Hand asks From, To and Location. Sections show when they were last updated.
@@ -68,11 +68,11 @@ document.addEventListener("click",e=>{if(e.target.id!=="sdSave"||!sheetCtx||shee
   const set=(k,v)=>{v=String(v||"").trim();if(v)m[k]=v;else delete m[k]};set("start",f);set("end",t);set("loc",($("#sdL").value||"").slice(0,60));set("detail",($("#sdD").value||"").slice(0,80));
   S.secAt=S.secAt||{};S.secAt[m.sec]=Date.now();save();closeSheet();const y=window.scrollY;render();window.scrollTo(0,y);toast("Saved")});
 
-/* =============== 2. CHECK IN (members: My page and the Feed) =============== */
+/* =============== 2. CHECK IN (members: My page and Word of Mouth) =============== */
 let ck={open:false,st:"",busy:false,v:{}};
 function ckFeed(){const D=S.me&&S.me.d;if(D&&D.feed&&D.feed.id){const f=S.feeds.find(x=>x.id===D.feed.id&&!x.lk);if(f)return f}
   if(view==="feed"){const f=fdCur();if(f&&!f.lk)return f}return S.feeds.find(x=>!x.lk)||null}
-/* No Feed on the page yet? The page itself is the channel: sealed with the page key, read by the leader's page write key.
+/* No Word of Mouth on the page yet? The page itself is the channel: sealed with the page key, read by the leader's page write key.
    So anyone with a My page always has a Check in button. */
 const ckPage=()=>S.me&&S.me.d&&String(S.me.pk)!=="preview"?S.me:null;
 function ckGrab(){for(const [k,id] of [["from","ckF"],["to","ckT"],["loc","ckL"],["oth","ckO"],["note","ckN"]]){const el=document.getElementById(id);if(el)ck.v[k]=el.value}}
@@ -103,7 +103,7 @@ function ckCardHTML(){const f=ckFeed();const last=(S.myCks||[])[0];
   return h}
 function ckRedraw(){const el=document.getElementById("ckCard");if(el){el.outerHTML=ckCardHTML()}else{const y=window.scrollY;render();window.scrollTo(0,y)}}
 async function ckSend(){ckGrab();const f=ckFeed();const P=f?null:ckPage();if(!f&&!P)return;const v=ck.v;const st=ck.st;
-  if(f&&!f.me){toast("Set your name in the Feed first.");return}
+  if(f&&!f.me){toast("Set your name in Word of Mouth first.");return}
   if(st===CK_OTHER&&!String(v.oth||"").trim()){toast("Write what's going on.");return}
   if(st!=="On Hand"){if(!v.from){toast("Pick the From date.");return}if(v.to&&v.to<v.from){toast("To can't be before From.");return}}
   const D=P&&P.d;const pgMe=D?String((D.rank||"")+" "+((String(D.name||"").split(",")[0])||D.name||"")).trim().toUpperCase().slice(0,30):"";
@@ -149,7 +149,7 @@ const startTeamHTML=()=>`<div class="panel" style="margin-top:12px"><b>Run your 
   const hero=main.querySelector(".card.hero");if(hero)hero.insertAdjacentHTML("afterend",ckCardHTML());
   const u=meUpdHTML();if(u){const anchor=main.querySelector(".v12tabs")||main.firstElementChild;anchor?anchor.insertAdjacentHTML("afterend",u):main.insertAdjacentHTML("afterbegin",u)}
   const off=$("#meOff");const extra=startTeamHTML()+`<p class="note" style="text-align:center;margin-top:10px"><button class="chip" data-go="support" style="cursor:pointer">💬 Help & support</button></p>`;off?off.insertAdjacentHTML("beforebegin",extra):main.insertAdjacentHTML("beforeend",extra)}}
-/* Feed-only members (no My page) check in from the Feed */
+/* Word of Mouth-only members (no My page) check in from Word of Mouth */
 {const _rf=renderFeed;renderFeed=function(){_rf.apply(this,arguments);const f=fdCur();if(!f||f.lk||S.me||(typeof fdNew!=="undefined"&&fdNew))return;
   const main=$("#main");const anchor=main.querySelector(".sechead");anchor?anchor.insertAdjacentHTML("afterend",ckCardHTML()):main.insertAdjacentHTML("afterbegin",ckCardHTML())}}
 /* the leader's page publish carries check-in confirmations back to each member */
@@ -169,7 +169,7 @@ window.ckIn=function(f,o,r){S.cks=S.cks||[];const cid=String(o.cid||"").slice(0,
   toast("📍 "+who+" checked in");try{navigator.vibrate&&navigator.vibrate([80,60,80])}catch(e){}
   localAlert("📍 "+who+" checked in",ckLine(x)+(canEdit()?". Open Check-ins to confirm.":". Open Check-ins to see it."),"checkins");
   if(view==="checkins"){const y=window.scrollY;renderCk();window.scrollTo(0,y)}};
-/* leader: pull check-ins dropped on My pages (members with no Feed on their page). One call for every page. */
+/* leader: pull check-ins dropped on My pages (members with no Word of Mouth on their page). One call for every page. */
 const pgK={};let pgBusy=false;
 async function pgPoll(){if(pgBusy||!leaderHere())return;const L=S.roster.filter(m=>m.pk);if(!L.length)return;pgBusy=true;
   try{const ids=[],wks=[],by={};for(const m of L){const K=pgK[m.pk]||(pgK[m.pk]=await mpKeys(m.pk));ids.push(K.id);wks.push(K.wk);by[K.id]=K}
@@ -199,12 +199,12 @@ function ckRow(x){const m=x.mid&&S.roster.find(y=>y.id===x.mid);const open=x.sta
       <input type="text" id="ckDn${x.cid}" maxlength="80" placeholder="Note back to them (optional)">
       <div class="row2"><button class="btn" data-ckok="${x.cid}">✓ Confirm</button><button class="btn alt" data-ckno="${x.cid}">Not right</button></div>`}
   return h+`</div>`}
-function renderCk(){let h=banner()+`<div class="sechead" style="margin-top:12px"><h2>Check-ins</h2><span class="note" style="margin:0">From My page and the Feed</span></div>`;
+function renderCk(){let h=banner()+`<div class="sechead" style="margin-top:12px"><h2>Check-ins</h2><span class="note" style="margin:0">From My page and Word of Mouth</span></div>`;
   if(!leaderHere()){$("#main").innerHTML=h+`<div class="panel"><p class="note">Check in from your My page. Your leader sees it here.</p></div>`;return}
   const open=ckOpen(),done=(S.cks||[]).filter(x=>x.state!=="new").slice(0,30);
   h+=`<div class="panel"><label class="tog"><input type="checkbox" id="ckAuto"${S.ckAuto?" checked":""}> Confirm check-ins from people on my roster by themselves</label><p class="note" style="margin:0">Off: you confirm each one before it changes the roster. Other always waits for you.</p></div>`;
   if(S.pgErr)h+=`<div class="panel" style="border-color:var(--warn)"><p class="note" style="margin:0">⚠️ ${esc(S.pgErr)} (DATA → System check → My page check-in)</p></div>`;
-  if(!(S.feeds||[]).some(f=>f.lk)&&!S.roster.some(m=>m.pk))h+=`<div class="panel"><p class="note">Check-ins come in from My pages and the Feed. Send people their My page link (Tools → Invite) and the Check in button is on their page.</p><button class="btn alt" data-go="invite">Invite</button></div>`;
+  if(!(S.feeds||[]).some(f=>f.lk)&&!S.roster.some(m=>m.pk))h+=`<div class="panel"><p class="note">Check-ins come in from My pages and Word of Mouth. Send people their My page link (Tools → Invite) and the Check in button is on their page.</p><button class="btn alt" data-go="invite">Invite</button></div>`;
   h+=open.length?`<div class="sech"><h2>To confirm · ${open.length}</h2>${open.length>1?`<button class="chip" id="ckAll" style="cursor:pointer">Confirm all matched</button>`:""}</div><div class="alist">${open.map(ckRow).join("")}</div>`:`<div class="panel"><p class="note">Nothing to confirm. New check-ins show up here and in Activity.</p></div>`;
   if(done.length)h+=`<details class="panel"><summary class="note">Confirmed and not confirmed (${done.length})</summary><div class="alist">${done.map(ckRow).join("")}</div></details>`;
   $("#main").innerHTML=h}
@@ -251,7 +251,7 @@ function accData(){const R=[],out=[],links=[];const Ls=S.logins||[];const seen=S
   const B=S.board;if(B)for(const [k] of SECTIONS){const last=B.last&&B.last[k];const keyed=B.sk&&B.sk[k];if(keyed||last)links.push({n:k+" section leader link",sub:last?"Last update "+ago(last.t):"Not opened yet",go:"live"})}
   if(S.sync&&S.sync.on)links.push({n:"Access links (view, edit, same as you)",sub:"Anyone with one of these links sees your whole board",go:"data"});
   if(S.coBoard)links.push({n:"Company links",sub:(S.coBoard.name||"Company")+" · CO, 1stSgt, XO and platoon reporting",go:"co"});
-  for(const f of S.feeds||[])if(f.lk)links.push({n:"Feed · "+(f.unit||unitName()),sub:"Anyone with the Feed link reads it and taps Got it",go:"feed"});
+  for(const f of S.feeds||[])if(f.lk)links.push({n:"Word of Mouth · "+(f.unit||unitName()),sub:"Anyone with Word of Mouth link reads it and taps Got it",go:"feed"});
   return {R,out:out.sort((a,b)=>b.t-a.t),links,un}}
 function renderAccess(){let h=`<div class="sechead" style="margin-top:12px"><h2>People with access</h2></div>`;
   if(!isOwner()||!leaderHere()){$("#main").innerHTML=h+`<div class="panel"><p class="note">Only the phone that runs the team sees who has access.</p></div>`;return}
@@ -259,9 +259,9 @@ function renderAccess(){let h=`<div class="sechead" style="margin-top:12px"><h2>
   h+=`<div class="tgrid"><div class="cdt"><div class="k">ON ROSTER</div><div class="v">${R.length}</div></div><div class="cdt"><div class="k">NOT ON ROSTER</div><div class="v">${out.filter(x=>!x.own).length+un}</div></div><div class="cdt"><div class="k">OPEN LINKS</div><div class="v">${links.length}</div></div></div>`;
   h+=`<div class="row2" style="margin-top:8px"><button class="btn" data-go="invite">Invite someone</button><button class="btn alt" data-go="logins">Logins</button></div>`;
   h+=`<div class="sech"><h2>On your roster · ${R.length}</h2></div>`+(R.length?`<div class="alist">${R.map(({m,page,logins,seen,acked})=>`<div class="rrow" style="--sc:var(${SVAR[m.status]||"--line"})"><div class="who"><b><span data-pcard="${esc(m.id)}" style="cursor:pointer;text-decoration:underline;text-decoration-color:var(--line)">${esc(m.rank+" "+m.name)}</span></b> <span class="chip">${esc(m.sec)}</span>
-      <div class="ph">${[page?"My page link":"",...logins.map(L=>"Login "+L.user),acked?"In the Feed":""].filter(Boolean).map(esc).join(" · ")}</div>${seen?`<div class="ph">${seen.how&&seen.how!=="check-in"?"On the app · "+esc(seen.how)+" · "+ago(seen.t):"Last check-in "+ago(seen.t)}</div>`:""}</div></div>`).join("")}</div>`:`<div class="panel"><p class="note">No one on your roster has a link or login yet. Send My page links from Invite.</p></div>`);
+      <div class="ph">${[page?"My page link":"",...logins.map(L=>"Login "+L.user),acked?"In Word of Mouth":""].filter(Boolean).map(esc).join(" · ")}</div>${seen?`<div class="ph">${seen.how&&seen.how!=="check-in"?"On the app · "+esc(seen.how)+" · "+ago(seen.t):"Last check-in "+ago(seen.t)}</div>`:""}</div></div>`).join("")}</div>`:`<div class="panel"><p class="note">No one on your roster has a link or login yet. Send My page links from Invite.</p></div>`);
   h+=`<div class="sech"><h2>Not on your roster · ${out.length+(un?1:0)}</h2></div>`;
-  if(out.length||un)h+=`<div class="alist">${out.map(x=>`<div class="rrow" style="--sc:var(${x.own?"--line":"--brass"})"><div class="who"><b>${esc(x.n)}</b> <span class="chip">${esc(x.role)}</span><div class="ph">${esc(x.sub)}</div></div></div>`).join("")}${un?`<div class="rrow" style="--sc:var(--brass)"><div class="who"><b>${un} in the Feed</b> <span class="chip">Feed</span><div class="ph">Tapped Got it but didn't match a name on your roster. Their names are scrambled before they leave their phone.</div></div></div>`:""}</div>`;
+  if(out.length||un)h+=`<div class="alist">${out.map(x=>`<div class="rrow" style="--sc:var(${x.own?"--line":"--brass"})"><div class="who"><b>${esc(x.n)}</b> <span class="chip">${esc(x.role)}</span><div class="ph">${esc(x.sub)}</div></div></div>`).join("")}${un?`<div class="rrow" style="--sc:var(--brass)"><div class="who"><b>${un} in Word of Mouth</b> <span class="chip">Word of Mouth</span><div class="ph">Tapped Got it but didn't match a name on your roster. Their names are scrambled before they leave their phone.</div></div></div>`:""}</div>`;
   else h+=`<div class="panel"><p class="note">No one yet. Logins, invites and check-ins from people who aren't on your roster show up here.</p></div>`;
   h+=`<div class="sech"><h2>Open links · ${links.length}</h2></div>`+(links.length?`<div class="alist">${links.map(x=>`<div class="rrow" style="--sc:var(--line)"><div class="rtop"><div class="who"><b>${esc(x.n)}</b><div class="ph">${esc(x.sub)}</div></div><button class="chip" data-go="${esc(x.go)}" style="cursor:pointer">Manage</button></div></div>`).join("")}</div>`:`<div class="panel"><p class="note">No shared links yet.</p></div>`);
   h+=`<p class="note">To cut someone off: remove their login (Logins), turn off their My page (their card), or make new section or access links (Manage). Invites to start their own team never connect to you.</p>`;
@@ -310,11 +310,11 @@ const VIEWS={access:renderAccess,checkins:renderCk,support:renderSupport};
 {const _render=render;render=function(){const f=VIEWS[view];if(f){renderTabs();f();if(view!=="support"&&leaderHere())$("#main").insertAdjacentHTML("beforeend",`<div style="margin-top:14px">${pvBtn()}</div>`);if(typeof animateView==="function")animateView();return}
   return _render.apply(this,arguments)}}
 {const _rt=renderTools;renderTools=function(){_rt.apply(this,arguments);const g=document.querySelector("#main .tgrid");if(!g)return;const n=ckOpen().length;
-  g.insertAdjacentHTML("beforeend",`<button data-go="checkins"${n?' class="hot"':""}><span class="ic">${svg("checkin")}</span><span><b>Check-ins</b><small>${n?n+" to confirm":"From My page and the Feed"}</small></span></button>
+  g.insertAdjacentHTML("beforeend",`<button data-go="checkins"${n?' class="hot"':""}><span class="ic">${svg("checkin")}</span><span><b>Check-ins</b><small>${n?n+" to confirm":"From My page and Word of Mouth"}</small></span></button>
     <button data-go="access"><span class="ic">${svg("access")}</span><span><b>People with access</b><small>On your roster or not</small></span></button>
     <button data-go="support"><span class="ic">${svg("support")}</span><span><b>Help & support</b><small>Ask, or email a person</small></span></button>`)}}
 if(typeof HELP==="object"){
-  HELP.access=["People with access","Everyone who can open your team, whether they're on your roster or not.",["On your roster: people with a My page link, a login, or who tapped Got it in the Feed.","Not on your roster: logins for section leaders, viewers and editors, invites you sent to any number or email, and people who checked in without a roster match.","Open links: section leader, access, company and Feed links. Tap Manage to cut them off."]];
+  HELP.access=["People with access","Everyone who can open your team, whether they're on your roster or not.",["On your roster: people with a My page link, a login, or who tapped Got it in Word of Mouth.","Not on your roster: logins for section leaders, viewers and editors, invites you sent to any number or email, and people who checked in without a roster match.","Open links: section leader, access, company and Word of Mouth links. Tap Manage to cut them off."]];
   HELP.checkins=["Check-ins","People check in from their phone. You confirm, and the roster updates.",["They pick a status or Other (and write it in). Anything but On Hand asks From, To and Location.","Confirm puts it on their roster line. Not right sends your note back to their My page.","Turn on auto-confirm to skip this for people on your roster."]];
   HELP.support=["Help & support","Answers about the app, any time.",["Type a question; the answer comes from AI and can be wrong.","Email a person for billing, account or bug problems."]];
   HELP.act=HELP.act||["Activity","Everything that happens on your team.",[]];HELP.act[2]=(HELP.act[2]||[]).concat("Tap ✓ Confirm on an item once you've seen it, or Confirm all.")}

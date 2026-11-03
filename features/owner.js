@@ -1,7 +1,7 @@
 /* Accounted For 4.13: the app owner.
    One username and password, set on the server, that work on the normal Sign in screen from any phone and open the
    Owner console (Tools → App owner): how the app is being used (counts only; team data is encrypted on phones), an
-   announcement every phone shows on Home, switches for Ask and the news card, removing a team, Feed, page, login or
+   announcement every phone shows on Home, switches for Ask and the news card, removing a team, Word of Mouth, page, login or
    company by id, comping Pro with a code, and crash reports. The sign-in lasts 12 hours on that phone.
    Every phone also reads the announcement and switches (app_cfg_get, setup part 29) once an hour. */
 (()=>{
@@ -46,8 +46,8 @@ function html(){if(!tok())return `<h2>App owner</h2><div class="panel"><p class=
       <button class="btn warn" id="owAnnPush" style="width:100%;margin-top:6px">${pushArm?"Tap again: post and alert every phone":"Post and also push an alert to every phone"}</button><p class="note">The push goes to every phone that has alerts on, once. Phones without alerts on only see the banner. One send a minute.</p>${c.announce_at?`<p class="note">Showing since ${when(c.announce_at)}.</p>`:`<p class="note">Nothing showing.</p>`}
       <label class="tog"><input type="checkbox" id="owAsk"${c.ask_off?" checked":""}> Turn Ask (AI) off for everyone</label>
       <label class="tog"><input type="checkbox" id="owNews"${c.news_off?" checked":""}> Hide the news card for everyone</label><p class="note">Phones pick these up within an hour, or on their next open.</p></div>`}
-  if(tab==="mod"){h+=`<div class="panel"><p class="note">Removing a team's Feed, board, page, login or company deletes it on the server for good; phones that had it lose the connection. Ids come from the person reporting a problem (their link or share sheet), or from a report emailed to you.</p>
-      <label for="owKind">What</label><select id="owKind" class="wsel">${[["feed","Team Feed"],["board","Live board"],["recall","Recall"],["page","Page"],["company","Company"],["login","Login (uid)"],["backup","Backup (access code board)"],["dm","Message thread"]].map(([k,l])=>`<option value="${k}"${rm&&rm.kind===k?" selected":""}>${l}</option>`).join("")}</select>
+  if(tab==="mod"){h+=`<div class="panel"><p class="note">Removing a team's Word of Mouth, board, page, login or company deletes it on the server for good; phones that had it lose the connection. Ids come from the person reporting a problem (their link or share sheet), or from a report emailed to you.</p>
+      <label for="owKind">What</label><select id="owKind" class="wsel">${[["feed","Team Word of Mouth"],["board","Live board"],["recall","Recall"],["page","Page"],["company","Company"],["login","Login (uid)"],["backup","Backup (access code board)"],["dm","Message thread"]].map(([k,l])=>`<option value="${k}"${rm&&rm.kind===k?" selected":""}>${l}</option>`).join("")}</select>
       <label for="owId">Id</label><input type="text" id="owId" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="paste the id" value="${esc(rm?rm.id:"")}">
       <button class="btn warn" id="owRemove">${busy==="armrm"?"Tap again to remove it":"Remove"}</button></div>`}
   if(tab==="pro"){h+=`<div class="panel"><p class="note">Give a team Pro without a purchase. They paste the code at Tools → Pro → “Have a Pro code?”.</p>

@@ -8,7 +8,7 @@ const FEED = { id: "feedabcdef12", mk: "m".repeat(30), lk: "l".repeat(30) };
 const click = (a, sel) => { const el = a.$(sel); assert.ok(el, "found " + sel); el.click(); };
 const setVal = (a, sel, v) => { const el = a.$(sel); assert.ok(el, "found " + sel); el.value = v; };
 
-/* a member phone: My page open, joined to the leader's Feed */
+/* a member phone: My page open, joined to the leader's Word of Mouth */
 async function memberApp(rpc) {
   const a = await openApp({ rpc });
   await a.w.eval(`(async()=>{
@@ -52,7 +52,7 @@ test("member checks in from My page: Other needs words, dates and location ride 
   } finally { await a.close(); }
 });
 
-test("leader gets the check-in through the Feed, confirms it, roster updates with dates and location", async () => {
+test("leader gets the check-in through Word of Mouth, confirms it, roster updates with dates and location", async () => {
   let rows = [];
   const a = await openApp({ rpc: (fn) => fn === "feed_reqs_get" ? rows : [] });
   try {

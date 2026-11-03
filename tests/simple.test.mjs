@@ -42,7 +42,7 @@ test("starting a team: type, then name, then an empty team with Add your people"
   } finally { await a.close(); }
 });
 
-test("joining shows sign-in and link; members get My status, Feed, Calendar", async () => {
+test("joining shows sign-in and link; members get My status, Word of Mouth, Calendar", async () => {
   const a = await openApp();
   try {
     await sleep(600); // the first-open welcome shows itself at ~380 ms

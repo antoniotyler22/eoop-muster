@@ -22,11 +22,11 @@ function leaderLib(){return [
   {go:"recall",s:"#dlAlarm, #dlCsv",opt:1,t:"Drill history and alarms",b:"Every closed-out check-in is logged: how long to get everyone, who was missing, who needed help, rooms cleared. Export it for your safety records. Buzz me every 2, 5 or 10 min tells you how many are still missing."},
   {s:tab("people"),tap:1,t:"People",b:"Tap <b>People</b>."},
   {s:"#main .pcard",t:"Sections and people",b:"Open a section to see everyone in it. Tap a person's status to change it. The numbers update right away."},
-  {s:"#hSearch",t:"Search",b:"The magnifier at the top searches people, messages and the Feed all at once. Tap a result to jump to it."},
+  {s:"#hSearch",t:"Search",b:"The magnifier at the top searches people, messages and Word of Mouth all at once. Tap a result to jump to it."},
   {s:"#gq",opt:1,t:"Find anyone",b:"Type a name, rank or section to jump straight to a person."},
   {s:'#main [data-go="data"]',opt:1,t:"Load your roster",b:"Bring in your people from Excel or CSV. Until then you're looking at sample people."},
   {s:'#main [data-go="live"]',opt:1,t:"Live sections",b:"Lets each section leader update their own section from their phone. It all rolls up to you."},
-  {s:tab("feed"),tap:1,t:"Feed",b:"Tap <b>Feed</b>."},
+  {s:tab("feed"),tap:1,t:"Word of Mouth",b:"Tap <b>Word of Mouth</b>."},
   {t:"Pass the word",b:"Post once and everyone gets it. Each person taps <b>Got it</b>, so you see who saw it and who hasn't.",s:"#main .panel, #main .card, #fdCreate",opt:1},
   {s:tab("plan"),tap:1,t:"Plan",b:"Tap <b>Plan</b>."},
   {s:"#subnav",opt:1,t:"Plan tabs",b:"Calendar, duty roster, readiness (who's due for what) and events. Everything on the calendar can go to your phone's calendar."},
@@ -36,7 +36,7 @@ function leaderLib(){return [
   {s:tab("tools"),tap:1,t:"Tools",b:"Tap <b>Tools</b>."},
   {s:"#tsQ",opt:1,t:"Search any feature",b:"Type a word (room, visitor, PDF, calendar) to find any screen in the app and open it in one tap."},
   {s:'#sgGrid [data-sgrp="checkin"], #sgGrid [data-sg1="checkin"]',opt:1,t:"Muster",b:"Formation muster with QR check-in, check-ins people send from their phones, missed check-in alerts, and Visitors: sign guests, contractors and deliveries in and out so they count in an emergency. Kiosk mode turns a tablet at the door into a sign-in screen."},
-  {s:'#sgGrid [data-sgrp="feed"], #sgGrid [data-sg1="feed"]',opt:1,t:"Feed",b:"Post to everyone with Confirm I saw it, send texts, direct messages, and each person's page."},
+  {s:'#sgGrid [data-sgrp="feed"], #sgGrid [data-sg1="feed"]',opt:1,t:"Word of Mouth",b:"Post to everyone with Confirm I saw it, send texts, direct messages, and each person's page."},
   {s:'#sgGrid [data-sgrp="people"], #sgGrid [data-sg1="people"]',opt:1,t:"People & access",b:"Send out links or logins (pick people, roles, linked to your roster or building their own team), see everyone with access, paste a roster from a spreadsheet, Live sections, and your account for the same teams on any phone."},
   {s:'#sgGrid [data-sgrp="reports"], #sgGrid [data-sg1="reports"]',opt:1,t:"Reports",b:"Headcount text, PDF report, incident report and trends. They build themselves from your board."},
   {s:'#sgGrid [data-sgrp="plan"], #sgGrid [data-sg1="plan"]',opt:1,t:"Calendar",b:"Calendar, events, duty roster, meetings and PT. Everything can go on each person's phone calendar."},
@@ -47,7 +47,7 @@ function leaderLib(){return [
   {s:'#sgGrid [data-sgrp="home"], #sgGrid [data-sg1="home"]',opt:1,t:"My day",b:"Dashboard, today's items and your own log."},
   {s:'#sgGrid [data-sgrp="help"], #sgGrid [data-sg1="help"]',opt:1,t:"Help",b:"Ask any question about the app, read the guide, or replay this tour."},
   {s:'#sgGrid [data-sgrp="settings"], #sgGrid [data-sg1="settings"]',opt:1,t:"Settings",b:"Teams, your data and backup, app version, connections, news on Home and the system check."},
-  {go:"data",s:"#qhPanel",opt:1,t:"Quiet hours",b:"Mute alerts at night on this phone. Urgent ones (help, urgent Feed posts, SOS) still come through."},
+  {go:"data",s:"#qhPanel",opt:1,t:"Quiet hours",b:"Mute alerts at night on this phone. Urgent ones (help, urgent Word of Mouth posts, SOS) still come through."},
   {go:"data",s:"#gfLead",opt:1,t:"Muster place",b:"Stand at your muster place and tap <b>Use where I am now</b>. People who turn on place check-in are checked in On Hand once a day when they open the app there. Their location never leaves their phone."},
   {s:'#main [data-go="dash"]',opt:1,t:"Dashboard",b:"Everything on one screen: present, requests, reports, overdue items and who's logged in."},
   {s:'#main [data-go="invite"]',opt:1,t:"Invite",b:"Send links or logins to everyone from one place: pick people, Linked to this roster or Building their own team, a role, then a login or a link. Send next texts each person their own message."},
@@ -79,7 +79,7 @@ function memberLib(){return [
   {s:'#main a[href="#start"]',opt:1,t:"Start your own team",b:"Run a squad, crew, club or job of your own? Start your own team here. Nothing connects back to this one."},
   {s:'#main [data-go="support"]',opt:1,t:"Help & support",b:"Ask any question about the app and get an answer right away, or email a person."},
   {s:"[data-v12g]",opt:1,t:"Group chats",b:"Groups your leader adds you to show up here in Messages. Tap one to chat, tap a message to react, and tap a name chip to @mention someone."},
-  {s:tab("feed"),tap:1,opt:1,t:"Feed",b:"Tap <b>Feed</b>. Word from your leader shows up here. Tap <b>Got it</b> on each post so they know you saw it."},
+  {s:tab("feed"),tap:1,opt:1,t:"Word of Mouth",b:"Tap <b>Word of Mouth</b>. Word from your leader shows up here. Tap <b>Got it</b> on each post so they know you saw it."},
   {s:tab("log"),tap:1,opt:1,t:"My log",b:"Tap <b>My log</b>. Write down what you did today. It stays on your phone."},
   {s:"#v13Hdr",opt:1,t:"Your account button",b:"This person button opens <b>My page</b>: SOS, your photo, quiet hours, muster place and your account."},
   {s:"#helpBtn",opt:1,t:"Stuck? Tap ?",b:"Tap <b>?</b> on any screen to have it walk you through that screen, or replay this tour."},
@@ -90,7 +90,7 @@ function sectionLib(){return [
   {s:tab("people"),tap:1,opt:1,t:"People",b:"Tap <b>People</b>."},
   {s:"#main .pcard",opt:1,t:"Your people",b:"Open your section and tap a person's status to change it. Anything but On Hand asks <b>From</b>, <b>To</b> and <b>Location</b>. It goes to your leader automatically, and the section shows when it was last updated."},
   {s:tab("plan"),tap:1,opt:1,t:"Plan",b:"Tap <b>Plan</b>. Add appointments, leave and duty for your people. They roll up to your leader's calendar."},
-  {s:tab("feed"),tap:1,opt:1,t:"Feed",b:"Tap <b>Feed</b>. Post to your people and see who tapped Got it."},
+  {s:tab("feed"),tap:1,opt:1,t:"Word of Mouth",b:"Tap <b>Word of Mouth</b>. Post to your people and see who tapped Got it."},
   {s:tab("tools"),tap:1,opt:1,t:"Tools",b:"Tap <b>Tools</b>. Check-ins, reports and messages are here."},
   {s:"#v13Hdr",opt:1,t:"Your account",b:"Change your password or log out here."},
   {s:"#helpBtn",opt:1,t:"Stuck? Tap ?",b:"Tap <b>?</b> on any screen to have it walk you through that screen, or replay this tour."},
@@ -102,16 +102,16 @@ function leaderSteps(){return [
   {t:"Welcome",b:"Five quick stops. Tap <b>Next</b>, or <b>Exit</b> any time.",go:"board"},
   {s:"#sgAdd, #main .card.hero",t:"Your headcount",b:"Who's here out of everyone. Start by adding your people: type names, paste a list, upload a file or send an invite."},
   {s:"#main .qa",t:"Quick actions",b:"Check people in, reach everyone, share your headcount and invite people. Emergency check-in is right below."},
-  {s:tab("feed"),t:"Feed",b:"Post once. Everyone taps <b>Confirm I saw it</b>, so you see who hasn't."},
+  {s:tab("feed"),t:"Word of Mouth",b:"Post once. Everyone taps <b>Confirm I saw it</b>, so you see who hasn't."},
   {s:"#hHelp",t:"Help on every screen",b:"Tap <b>?</b> to walk through the screen you're on. Everything else is in <b>Tools</b>, in 12 groups.",end:1}]}
 function memberSteps(){return [
   {s:tab("me"),opt:1,t:"My status",b:"Your status, your updates and the <b>Check in</b> button. Tap Confirm on updates so your leader knows you saw them."},
-  {s:tab("feed"),opt:1,t:"Feed",b:"Word from your leader. Tap <b>Confirm I saw it</b> on each post."},
+  {s:tab("feed"),opt:1,t:"Word of Mouth",b:"Word from your leader. Tap <b>Confirm I saw it</b> on each post."},
   {s:tab("mecal"),opt:1,t:"Calendar",b:"Your duty, appointments and plan of the day. Tap <b>?</b> on any screen for help.",end:1}]}
 function sectionSteps(){return [
   {s:"#main .card.hero",opt:1,t:"Your section",b:"Your section's count. Your leader sees it the moment you change anything."},
   {s:tab("people"),opt:1,t:"People",b:"Open your section and tap a person's status to change it."},
-  {s:tab("feed"),opt:1,t:"Feed",b:"Post to your people and see who confirmed."},
+  {s:tab("feed"),opt:1,t:"Word of Mouth",b:"Post to your people and see who confirmed."},
   {s:"#hHelp",opt:1,t:"Stuck? Tap ?",b:"Tap <b>?</b> on any screen to walk through it.",end:1}]}
 function tourPv(){if(!window.setPv)return;const m=S.roster.find(x=>x.id===window.getPv())||S.roster.find(x=>x.sec!=="ATT")||S.roster[0];if(m)window.setPv(m.id)}
 function kindNow(){if(typeof memberMode==="function"&&memberMode())return "member";if(S.link&&!S.board&&S.source==="sample")return "section";return "leader"}
@@ -156,7 +156,7 @@ window.startTour=start;window.__tour=()=>T;
 function screenSteps(){const v=typeof view==="string"?view:"board";const k=kindNow();
   const from=(list,titles)=>titles.map(t=>list.find(x=>x.t===t)).filter(Boolean).map(x=>Object.assign({},x,{tap:0,go:0}));
   const Ld=leaderLib(),Mb=memberLib();let st=[];
-  if(k==="member"){st=v==="me"?from(Mb,["Updates","Your status","Check in","SOS","Check in at the muster place","Countdowns","Your calendar","Your account","Start your own team","Help & support"]):v==="feed"?[{t:"Feed",b:"Word from your leader shows up here. Tap <b>Got it</b> on each post so they know you saw it."}]:v==="log"?[{t:"My log",b:"Write down what you did today. It stays on your phone."}]:[]}
+  if(k==="member"){st=v==="me"?from(Mb,["Updates","Your status","Check in","SOS","Check in at the muster place","Countdowns","Your calendar","Your account","Start your own team","Help & support"]):v==="feed"?[{t:"Word of Mouth",b:"Word from your leader shows up here. Tap <b>Got it</b> on each post so they know you saw it."}]:v==="log"?[{t:"My log",b:"Write down what you did today. It stays on your phone."}]:[]}
   else if(v==="board"||v==="today")st=from(Ld,["Your app name","Your numbers","Sections","Quick actions","Emergency check-in","SOS","Search","Help on every screen","Settings"]);
   else if(v==="text")st=from(Ld,["Your report"]);
   else if(v==="people"||v==="live"||v==="pt")st=from(Ld,["Sections and people","Load your roster","Live sections"]);
@@ -169,8 +169,8 @@ function screenSteps(){const v=typeof view==="string"?view:"board";const k=kindN
     {s:'#sgGrid [data-sgrp="help"]',opt:1,t:"Help & support",b:"Ask any question about the app, read the guide or take the short tour."},
     {s:'#sgGrid [data-sgrp="settings"]',opt:1,t:"Settings",b:"Your data, app version, connections and system check."}];
   else if(v==="mepv")st=from(Ld,["What your people see: My page","Their Check in button","Their updates","Their own team"]).map(x=>Object.assign(x,{pre:0}));
-  else if(v==="checkins")st=[{s:"#ckAuto",opt:1,t:"Auto-confirm",b:"Off: you confirm each check-in before it changes the roster. On: check-ins from people on your roster go straight on. Other always waits for you."},{s:"#main .alist .rrow",opt:1,t:"A check-in",b:"Who, their status, From, To, Location and their note. Pick who it is if it didn't match your roster, change the status if you need to, then tap <b>Confirm</b> or <b>Not right</b>."},{s:'#main [data-go="mepv"], #main .panel',opt:1,t:"Where it comes from",b:"Your people tap <b>Check in</b> on their My page or in the Feed."}];
-  else if(v==="access")st=[{s:"#main .tgrid",opt:1,t:"The count",b:"How many people on your roster have access, how many aren't on your roster, and how many shared links are open."},{s:"#main .alist",opt:1,t:"Everyone, one list",b:"On your roster: My page links, logins and Feed. Not on your roster: logins, invites you sent and check-ins that didn't match. Open links: tap Manage to cut them off."}];
+  else if(v==="checkins")st=[{s:"#ckAuto",opt:1,t:"Auto-confirm",b:"Off: you confirm each check-in before it changes the roster. On: check-ins from people on your roster go straight on. Other always waits for you."},{s:"#main .alist .rrow",opt:1,t:"A check-in",b:"Who, their status, From, To, Location and their note. Pick who it is if it didn't match your roster, change the status if you need to, then tap <b>Confirm</b> or <b>Not right</b>."},{s:'#main [data-go="mepv"], #main .panel',opt:1,t:"Where it comes from",b:"Your people tap <b>Check in</b> on their My page or in Word of Mouth."}];
+  else if(v==="access")st=[{s:"#main .tgrid",opt:1,t:"The count",b:"How many people on your roster have access, how many aren't on your roster, and how many shared links are open."},{s:"#main .alist",opt:1,t:"Everyone, one list",b:"On your roster: My page links, logins and Word of Mouth. Not on your roster: logins, invites you sent and check-ins that didn't match. Open links: tap Manage to cut them off."}];
   else if(v==="co")st=[{s:"#main .card.hero",opt:1,t:"The company",b:"Everyone on hand across every platoon, and who's off and why."},{s:"#cmdQs",opt:1,t:"Questions",b:"Tap <b>❓ Question</b> on a platoon to mark one. The CO, XO and 1stSgt all see it; <b>Resolved</b> clears it for everyone."},{s:"#cmdAsks",opt:1,t:"Asks to platoons",b:"Send a task to one platoon or all of them, for officers, SNCOs or both. Each platoon's answer shows here."},{s:"#coAsks",opt:1,t:"Asks from the company",b:"Answer here. Your answer goes straight back to the company."}];
   else if(v==="act")st=[{s:"[data-actok]",opt:1,t:"Confirm",b:"Everything that happens on your team lands here. Tap <b>✓ Confirm</b> once you've seen it, or <b>Confirm all</b>."}];
   else if(v==="support")st=[{s:"#supQ",opt:1,t:"Ask",b:"Type any question about the app. The answer comes right away; check anything important."},{s:'#main a[href^="mailto:"]',opt:1,t:"A person",b:"Billing, account or a bug? Email a person."}];

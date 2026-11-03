@@ -1,6 +1,6 @@
-/* Accounted For 4.68.0 — Feed, the WhatsApp way: reactions, "seen by" and swipe to reply.
+/* Accounted For 4.68.0 — Word of Mouth, the WhatsApp way: reactions, "seen by" and swipe to reply.
    Reactions: tap + under a post and pick one (thumbs up, check, heart, fire, thanks). One per person per post; tap yours
-   again to take it back. Seen by: opening the Feed marks the posts you can see as seen; leaders see "Seen by N of M" and
+   again to take it back. Seen by: opening Word of Mouth marks the posts you can see as seen; leaders see "Seen by N of M" and
    can tap it for who has and hasn't. Swipe right on a post to open the reply box (the same reply as the 💬 Reply button).
    Uses AFS (features/signals.js) and supabase/setup/39_signals.sql. */
 (()=>{
@@ -58,7 +58,7 @@ function showSheet(f){closeSheet0();const pid=sheet,S1=seenOf(f,pid),names=Objec
 function closeSheet0(){const o=document.getElementById("rxSheet");if(o)o.remove()}
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet0()});
 
-/* ---- mark posts as seen when the Feed is open ---- */
+/* ---- mark posts as seen when Word of Mouth is open ---- */
 let marking=false;
 async function markSeen(){if(marking||view!=="feed"||document.hidden)return;const f=fdCur();if(!f||!f.mk)return;marking=true;
   try{S.waSeen=S.waSeen&&typeof S.waSeen==="object"?S.waSeen:{};const me=AFS.me(f);let n=0;

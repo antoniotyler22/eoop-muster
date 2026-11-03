@@ -1,4 +1,4 @@
-/* Accounted For 4.76.6 — a Paste button under the Feed post boxes. On some iPhones the phone's own Paste menu does nothing in
+/* Accounted For 4.76.6 — a Paste button under Word of Mouth post boxes. On some iPhones the phone's own Paste menu does nothing in
    a web page; this reads the clipboard directly (the phone asks "Allow Paste" once) and drops it in at the cursor. */
 (()=>{
 const IDS=["fdTxt","fdSlTxt"];

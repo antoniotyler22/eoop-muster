@@ -1,5 +1,5 @@
 /* Accounted For 4.72 — Search everything.
-   The magnifier at the top opens one search box that looks through people, Inbox messages and Feed posts on this phone
+   The magnifier at the top opens one search box that looks through people, Inbox messages and Word of Mouth posts on this phone
    (everything is read from what is already on the phone; nothing goes to the server). Tap a result to open it. */
 (function(){
   let q="",flt="all";
@@ -25,17 +25,17 @@
     return {w,people,msgs:msgs.slice(0,15),feed:feed.slice(0,15)};
   }
   function rows(){
-    const r=find();if(!r.w.length)return `<p class="note gs-empty">Type a name, a word from a message, or something from the Feed.</p>`;
+    const r=find();if(!r.w.length)return `<p class="note gs-empty">Type a name, a word from a message, or something from Word of Mouth.</p>`;
     let h="",n=0;
     const sec=(t,c,body)=>{if(!c)return;n+=c;h+=`<div class="gs-h">${t} · ${c}</div>${body}`};
     if(flt==="all"||flt==="people")sec("PEOPLE",r.people.length,r.people.map(m=>`<button class="gs-r" data-gsp="${esc(m.id)}"><span class="gs-av">${esc(((m.rank||"")[0]||"")+(lastOf(m)[0]||""))}</span><span class="gs-t"><b>${hl(m.rank+" "+m.name,r.w)}</b><small>${esc(m.sec)} · ${esc(typeof SHORT==="object"&&SHORT[m.status]||m.status||"")}</small></span></button>`).join(""));
     if(flt==="all"||flt==="msgs")sec("MESSAGES",r.msgs.length,r.msgs.map(o=>`<button class="gs-r" data-gsm="${esc(o.tid)}" data-gsmm="${esc(o.m?o.m.id:"")}"><span class="gs-av">💬</span><span class="gs-t"><b>${o.m?esc(o.m.rank+" "+lastOf(o.m)):"Your leader"}</b><span>${hl(snip(o.x.txt,r.w),r.w)}</span><small>Inbox · ${esc(dt(o.t))}</small></span></button>`).join(""));
-    if(flt==="all"||flt==="feed")sec("FEED",r.feed.length,r.feed.map(o=>`<button class="gs-r" data-gsf="${esc(o.p.id)}"><span class="gs-av">📰</span><span class="gs-t"><b>${esc(o.p.by||"Feed")}</b><span>${hl(snip(o.p.txt,r.w),r.w)}</span><small>Feed · ${esc(dt(o.t))}</small></span></button>`).join(""));
+    if(flt==="all"||flt==="feed")sec("WORD OF MOUTH",r.feed.length,r.feed.map(o=>`<button class="gs-r" data-gsf="${esc(o.p.id)}"><span class="gs-av">📰</span><span class="gs-t"><b>${esc(o.p.by||"Word of Mouth")}</b><span>${hl(snip(o.p.txt,r.w),r.w)}</span><small>Word of Mouth · ${esc(dt(o.t))}</small></span></button>`).join(""));
     return n?h:`<p class="note gs-empty">Nothing found for “${esc(q)}”.</p>`}
-  function chips(){return [["all","All"],["people","People"],["msgs","Messages"],["feed","Feed"]].map(([k,l])=>`<button class="gs-c${flt===k?" on":""}" data-gsc="${k}">${l}</button>`).join("")}
+  function chips(){return [["all","All"],["people","People"],["msgs","Messages"],["feed","Word of Mouth"]].map(([k,l])=>`<button class="gs-c${flt===k?" on":""}" data-gsc="${k}">${l}</button>`).join("")}
   function paint(){const e=document.getElementById("gsRes");if(e)e.innerHTML=rows();const c=document.getElementById("gsChips");if(c)c.innerHTML=chips()}
   function openSearch(){close();q="";flt="all";
-    const d=document.createElement("div");d.id="gsOv";d.innerHTML=`<div class="gs-top"><input id="gsQ" type="search" placeholder="Search people, messages, Feed" autocomplete="off" aria-label="Search"><button class="gs-x" id="gsX">Cancel</button></div><div class="gs-chips" id="gsChips">${chips()}</div><div id="gsRes" class="gs-res">${rows()}</div>`;
+    const d=document.createElement("div");d.id="gsOv";d.innerHTML=`<div class="gs-top"><input id="gsQ" type="search" placeholder="Search people, messages, Word of Mouth" autocomplete="off" aria-label="Search"><button class="gs-x" id="gsX">Cancel</button></div><div class="gs-chips" id="gsChips">${chips()}</div><div id="gsRes" class="gs-res">${rows()}</div>`;
     document.body.appendChild(d);const i=document.getElementById("gsQ");setTimeout(()=>{try{i.focus()}catch(e){}},30)}
   function close(){const d=document.getElementById("gsOv");if(d)d.remove()}
   const tab=t=>{const b=document.querySelector(`[data-tab="${t}"]`);if(b)b.click()};

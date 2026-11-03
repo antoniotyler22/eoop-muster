@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { openApp, sleep } from "./harness.mjs";
 
-test("Search: the magnifier finds people, Inbox messages and Feed posts on this phone", async () => {
+test("Search: the magnifier finds people, Inbox messages and Word of Mouth posts on this phone", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     await a.w.eval(`S.onb=true;S.welcomed=1;S.leaderMode=true;
@@ -15,7 +15,7 @@ test("Search: the magnifier finds people, Inbox messages and Feed posts on this 
     const i = a.w.document.getElementById("gsQ"); i.value = "trailer";
     i.dispatchEvent(new a.w.Event("input", { bubbles: true })); await sleep(30);
     const res = a.w.document.getElementById("gsRes").innerHTML;
-    assert.match(res, /MESSAGES · 1/); assert.match(res, /FEED · 1/);
+    assert.match(res, /MESSAGES · 1/); assert.match(res, /WORD OF MOUTH · 1/);
     assert.match(res, /<mark>TRAILER<\/mark>/i, "the match is highlighted");
     a.w.document.querySelector('[data-gsc="feed"]').click(); await sleep(20);
     assert.doesNotMatch(a.w.document.getElementById("gsRes").innerHTML, /MESSAGES/);

@@ -1,6 +1,6 @@
 /* Accounted For 4.72.1 — Quiet hours.
    Settings → Quiet hours: pick a night window (default 2200–0600). While it is on, this phone's alerts are held back,
-   except urgent ones (help, urgent Feed posts, SOS). The window rides on this phone's alert sign-up ("qh" minutes + "tz"),
+   except urgent ones (help, urgent Word of Mouth posts, SOS). The window rides on this phone's alert sign-up ("qh" minutes + "tz"),
    and the notify function skips non-urgent alerts for a phone whose local time is inside it. Nothing else changes. */
 (function(){
   const mins=s=>{const m=/^(\d{1,2}):(\d{2})$/.exec(String(s||""));return m?Math.min(1439,(+m[1])*60+(+m[2])):0};
@@ -15,7 +15,7 @@
     try{S.dmSubs={};if(typeof window.dmPushAttach==="function")window.dmPushAttach()}catch(e){}}
   function panel(){const z=q();
     return `<div class="panel" id="qhPanel"><b>🌙 Quiet hours</b>
-      <label class="lrow" style="margin:8px 0;cursor:pointer"><input type="checkbox" id="qhOn" ${z.on?"checked":""}><span style="flex:1;min-width:0"><span class="t" style="display:block">Mute alerts at night</span><span class="s" style="display:block">Urgent alerts (help, urgent Feed posts, SOS) still come through.</span></span></label>
+      <label class="lrow" style="margin:8px 0;cursor:pointer"><input type="checkbox" id="qhOn" ${z.on?"checked":""}><span style="flex:1;min-width:0"><span class="t" style="display:block">Mute alerts at night</span><span class="s" style="display:block">Urgent alerts (help, urgent Word of Mouth posts, SOS) still come through.</span></span></label>
       <div class="row2" style="gap:10px"><label style="flex:1;font-size:13px;font-weight:700">From<input type="time" id="qhFrom" value="${esc(z.from)}" style="margin-top:4px"></label><label style="flex:1;font-size:13px;font-weight:700">To<input type="time" id="qhTo" value="${esc(z.to)}" style="margin-top:4px"></label></div>
       <div class="note" id="qhNote">${z.on?"On: "+esc(z.from)+" to "+esc(z.to)+" on this phone.":"Off."}</div></div>`}
   {const _r=render;render=function(){const r=_r.apply(this,arguments);

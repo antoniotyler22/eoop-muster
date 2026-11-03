@@ -1,8 +1,8 @@
-/* Accounted For 4.44: one Feed per unit, one tab.
+/* Accounted For 4.44: one Word of Mouth per unit, one tab.
    A phone could end up with several of its own Feeds under the same name (a second phone started its own before sync
-   arrived, "Start a feed" tapped twice...), and the Feed screen showed the same title once per copy. Now:
+   arrived, "Start a feed" tapped twice...), and Word of Mouth screen showed the same title once per copy. Now:
    - tabs with the same title collapse into one; the copy with the most posts is the one you see (and becomes the main
-     Feed, the one new pages and links use);
+     Word of Mouth, the one new pages and links use);
    - an empty extra copy that nobody but leaders' phones is listening to is deleted from the server and this phone
      (it is remembered in S.feedGone so synced phones don't bring it back). A copy with posts, or with member phones
      on it, is only hidden, never deleted. */

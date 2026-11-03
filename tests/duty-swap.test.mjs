@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { openApp, sleep } from "./harness.mjs";
 
 const FEED = { id: "feedabcdef12", lk: "l".repeat(30), mk: "m".repeat(30) };
-test("leader: a swap request is posted to the Feed; an offer can be approved and the duty roster changes", async () => {
+test("leader: a swap request is posted to Word of Mouth; an offer can be approved and the duty roster changes", async () => {
   const posts = [];
   const a = await openApp({ rpc: (fn, b) => { if (fn === "feed_post") { posts.push(b); return 50 + posts.length; } return []; } });
   try {
@@ -15,7 +15,7 @@ test("leader: a swap request is posted to the Feed; an offer can be approved and
       S.feeds=[{id:"${FEED.id}",lk:"${FEED.lk}",mk:"${FEED.mk}",ek:"x",unit:"1ST",posts:[],acks:{},mine:{},pins:[]}];fdSel="${FEED.id}";save()`);
     a.w.eval("fdEnc=async(k,o)=>JSON.stringify(o)");
     await a.w.eval("swapPostNow(S.feeds[0])");
-    assert.equal(posts.length, 1, "posted to the Feed");
+    assert.equal(posts.length, 1, "posted to Word of Mouth");
     assert.equal(a.w.eval("S.reqs[0].posted>0"), true);
     a.w.eval(`S.feeds[0].posts=[{id:51,t:Date.now(),txt:"swap",to:{k:"all"},swap:{rid:"rx1",d:"2026-11-01",ro:"Duty NCO",who:"SGT RUIZ",done:""}}];
       S.feeds[0].acks={"51":{r2:{c:1,note:"🔁 take",t:Date.now()}}};view="feed";render()`);

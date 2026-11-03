@@ -1,5 +1,5 @@
-/* Accounted For: co-leaders and editors can post to the Feed.
-   Their phones are linked to the leader's board by sync. Sync used to skip the feed list whenever this phone's
+/* Accounted For: co-leaders and editors can post to Word of Mouth.
+   Their phones are linked to the leader's board by sync. Sync used to skip Word of Mouth list whenever this phone's
    copy had changed at all (new posts or read counts change it constantly), so a feed the leader started, or a new
    posting key, never reached them and they had no Post box. Now feeds merge one by one: every feed the leader
    has, with its posting key, lands on every co-leader and editor phone. Phones already stuck repair themselves
@@ -16,7 +16,7 @@ function mergeFeeds(remote){if(!Array.isArray(remote)||!canPostRole())return 0;S
     if(Array.isArray(rf.posts)){const have=new Set((keep.posts||[]).map(p=>p.id));const add=rf.posts.filter(p=>!have.has(p.id));if(add.length)keep.posts=(keep.posts||[]).concat(add).sort((a,b)=>b.id-a.id)}
     if(rf.acks&&typeof rf.acks==="object"){keep.acks=keep.acks||{};for(const p of Object.keys(rf.acks))keep.acks[p]=Object.assign({},rf.acks[p],keep.acks[p]||{})}
     S.feeds=S.feeds.filter(f=>f.id!==rf.id||f===keep)}
-  /* feeds you can post to come first, so the Feed tab opens on one with a Post box */
+  /* feeds you can post to come first, so Word of Mouth tab opens on one with a Post box */
   S.feeds.sort((a,b)=>(b.lk?1:0)-(a.lk?1:0));return n}
 window.fcMergeFeeds=mergeFeeds;
 
@@ -28,18 +28,18 @@ let fixed=false;
 async function repair(){if(fixed||!canPostRole()||S.role==="oic")return;fixed=true;
   try{const Y=S.sync;const K=await codeKeys(Y.code);const rows=await SB.rpc("backup_get",{p_id:K.id,p_key:K.wk});const r=rows&&rows[0];if(!r)return;
     const R=await openBlob(K,r.ct);const before=(S.feeds||[]).filter(f=>f.lk).length;const n=mergeFeeds(R.feeds);
-    if(n||(S.feeds||[]).filter(f=>f.lk).length!==before){rawSave();if(view==="feed"){const y=window.scrollY;render();window.scrollTo(0,y)}toast("Feed posting is on for this phone")}}
+    if(n||(S.feeds||[]).filter(f=>f.lk).length!==before){rawSave();if(view==="feed"){const y=window.scrollY;render();window.scrollTo(0,y)}toast("Word of Mouth posting is on for this phone")}}
   catch(e){fixed=false}}
 window.fcRepair=repair;
 setTimeout(repair,2500);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!(S.feeds||[]).some(f=>f.lk))repair()});
 
-/* if this phone can post but the Feed tab shows a read-only copy, point it at the one with the Post box */
+/* if this phone can post but Word of Mouth tab shows a read-only copy, point it at the one with the Post box */
 {const _rf=renderFeed;renderFeed=function(){if(canPostRole()&&S.role!=="view"&&typeof fdSel!=="undefined"){const cur=fdCur();if(cur&&!cur.lk){const alt=S.feeds.find(f=>f.lk&&f.id===cur.id)||(!fdSel?S.feeds.find(f=>f.lk):null);if(alt)fdSel=alt.id}}return _rf.apply(this,arguments)}}
 
 /* "Couldn't post: not allowed" means the server didn't accept this phone's posting key for that feed.
    Heal it before giving up: (1) a linked co-leader/editor phone re-reads the leader's board for the current key,
-   (2) if the feed's server record expired (unused 90 days), re-register it with the same keys so members keep reading,
+   (2) if Word of Mouth's server record expired (unused 90 days), re-register it with the same keys so members keep reading,
    then post again. Only if both fail does the person see a plain explanation. */
 {const _rpc=SB.rpc.bind(SB);
   async function fresh(){if(!(S.sync&&S.sync.on)||S.role==="oic")return false;try{const K=await codeKeys(S.sync.code);const rows=await _rpc("backup_get",{p_id:K.id,p_key:K.wk});const r=rows&&rows[0];if(!r)return false;const R=await openBlob(K,r.ct);mergeFeeds(R.feeds);rawSave();return true}catch(e){return false}}
@@ -49,5 +49,5 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!(S.feeds
       if(await fresh()){const g=(S.feeds||[]).find(x=>x.id===args.p_feed&&x.lk);if(g&&g.lk!==args.p_leader_key){try{return await _rpc(fn,Object.assign({},args,{p_leader_key:g.lk}))}catch(e2){}}}
       const g=(S.feeds||[]).find(x=>x.id===args.p_feed&&x.lk)||f;
       if(g&&g.mk&&g.lk){try{await _rpc("create_feed",{p_id:g.id,p_member_key:g.mk,p_leader_key:g.lk});return await _rpc(fn,Object.assign({},args,{p_leader_key:g.lk}))}catch(e3){}}
-      throw new Error(S.role&&S.role!=="oic"?"this phone's posting key is out of date. Ask your leader to open Accounted For once (it backs up the Feed), then tap Post again.":"the server doesn't recognize this Feed's key. Tools → System check, or start a new Feed.")}}}
+      throw new Error(S.role&&S.role!=="oic"?"this phone's posting key is out of date. Ask your leader to open Accounted For once (it backs up Word of Mouth), then tap Post again.":"the server doesn't recognize this Word of Mouth's key. Tools → System check, or start a new Word of Mouth.")}}}
 })();

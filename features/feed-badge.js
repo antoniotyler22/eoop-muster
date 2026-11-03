@@ -1,6 +1,6 @@
-/* Accounted For 4.57: the red number on the Feed tab counts new posts on every phone, leaders' phones included
-   (it used to count only on members' phones). Opening the Feed clears it. Copies of the same Feed that are hidden
-   (one Feed per unit) don't count twice. A leader phone starts at zero the first time, not at "9+". */
+/* Accounted For 4.57: the red number on Word of Mouth tab counts new posts on every phone, leaders' phones included
+   (it used to count only on members' phones). Opening Word of Mouth clears it. Copies of the same Word of Mouth that are hidden
+   (one Word of Mouth per unit) don't count twice. A leader phone starts at zero the first time, not at "9+". */
 (()=>{
 function hidden(){try{return typeof window.oneFeedHidden==="function"?window.oneFeedHidden():new Set()}catch(e){return new Set()}}
 const maxId=f=>Math.max(0,...fdVisible(f).map(p=>p.id));

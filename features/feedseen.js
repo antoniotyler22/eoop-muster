@@ -1,11 +1,11 @@
-/* ---------- Feed: "Confirm I saw it" on every post, for everyone ----------
+/* ---------- Word of Mouth: "Confirm I saw it" on every post, for everyone ----------
    - Every post and every Plan of the Day has a Confirm button for whoever is reading it.
    - The person who posted it sees "✓ I posted it" and still has the Confirm button (4.42.1: everyone confirms everything).
    - OIC: confirming a section leader's post stays on this phone (f.lseen); "Confirm all" sits above the posts.
    - Members: Confirm sends a normal Got it, so the OIC's count goes up. Posts aimed at another section have it too.
    - Today and My page: the Plan of the Day and new word carry the same Confirm button. */
 const FS_LBL="✓ Confirm I saw it";
-function fsOwn(f,p){if(f.lk)return !p.sl;return !!(p.sl&&f.pk&&f.me&&String(p.by||"").toUpperCase().trim()===String(f.me).toUpperCase().trim())}
+function fsOwn(f,p){if(f.lk)return !p.sl&&!p.mb;const mine=f.me&&String(p.by||"").toUpperCase().trim()===String(f.me).toUpperCase().trim();if(p.mb)return !!mine;return !!(p.sl&&f.pk&&mine)}
 function fsNeeds(f,p){return !!f.lk&&!fsOwn(f,p)&&!(f.lseen||{})[p.id]}
 function fsOpen(f){return f&&f.lk?fdVisible(f).filter(p=>fsNeeds(f,p)):[]}
 const fsChip=(txt,t)=>`<div class="fsok"><span class="fcchip" style="color:var(--s-onhand)">${txt}${t?` · <span data-ago="${t}">${ago(t)}</span>`:""}</span></div>`;

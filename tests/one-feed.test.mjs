@@ -1,4 +1,4 @@
-// 4.44.0: one Feed per unit, one tab.
+// 4.44.0: one Word of Mouth per unit, one tab.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { openApp, sleep } from "./harness.mjs";

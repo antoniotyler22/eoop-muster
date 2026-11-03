@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { openApp, sleep } from "./harness.mjs";
 
-test("Feed post box has a Paste button that inserts clipboard text", async () => {
+test("Word of Mouth post box has a Paste button that inserts clipboard text", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     a.w.eval(`S.onb=true;S.welcomed=1;S.leaderMode=true;S.feeds=[{id:"t",lk:1,k:"x",nm:"T",me:"OIC",posts:[]}];view="feed";render()`);

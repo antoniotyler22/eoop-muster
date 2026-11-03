@@ -1,4 +1,4 @@
-// 4.67.0: Talk, push-to-talk voice on the Feed.
+// 4.67.0: Talk, push-to-talk voice on Word of Mouth.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { openApp, sleep } from "./harness.mjs";

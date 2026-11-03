@@ -66,7 +66,7 @@ test("tapping a Team update with nothing found says so instead of a blank screen
   } finally { await a.close(); }
 });
 
-test("tapping a Feed alert highlights the new posts and lists them", async () => {
+test("tapping a Word of Mouth alert highlights the new posts and lists them", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     a.w.eval(`${setup}S.feeds=[{id:"feedabcdef12",lk:"l".repeat(30),mk:"m".repeat(30),ek:"x",unit:"1ST",posts:[{id:1,t:Date.now()-9e5,txt:"old word",to:{k:"all"}}],acks:{},mine:{},pins:[],seen:1}];fdSel="feedabcdef12";`);
@@ -77,7 +77,7 @@ test("tapping a Feed alert highlights the new posts and lists them", async () =>
     await sleep(50);
     const box = a.$("#chgBanner");
     assert.ok(box, "box at top");
-    assert.match(box.textContent, /New in Feed/);
+    assert.match(box.textContent, /New in Word of Mouth/);
     assert.match(box.textContent, /Formation moved to 0600/);
     assert.equal(a.$$("article.chg-hit").length, 1, "only the new post is highlighted");
     assert.match(a.$("article.chg-hit").textContent, /NEW/);
@@ -99,7 +99,7 @@ test("highlights go away when the app is backgrounded", async () => {
   } finally { await a.close(); }
 });
 
-test("your own Feed post is not shown as a change", async () => {
+test("your own Word of Mouth post is not shown as a change", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     a.w.eval(`${setup}S.feeds=[{id:"feedabcdef12",lk:"l".repeat(30),mk:"m".repeat(30),ek:"x",unit:"1ST",posts:[{id:1,t:Date.now()-9e5,txt:"old",to:{k:"all"}}],acks:{},mine:{},pins:[],seen:1}];fdSel="feedabcdef12";`);

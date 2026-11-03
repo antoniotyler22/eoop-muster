@@ -1,12 +1,12 @@
 /* Accounted For: everyone on the team gets an alert when something is posted or changed.
-   "The team" is everyone whose phone is on the team's Feed: the OIC, co-leaders, editors and viewers (linked by
-   sync or login), section leaders (board link) and members (My page or Feed link). Each of them is on the Feed's
+   "The team" is everyone whose phone is on the team's Word of Mouth: the OIC, co-leaders, editors and viewers (linked by
+   sync or login), section leaders (board link) and members (My page or Word of Mouth link). Each of them is on Word of Mouth's
    alert list once alerts are on for that phone.
-   1) Posts: every phone on the list gets "New word in Feed", leaders included, except the phone that posted.
+   1) Posts: every phone on the list gets "New word in Word of Mouth", leaders included, except the phone that posted.
    2) Changes: when someone with edit rights changes people, statuses, calendar, duty, due-outs or events, the
       whole team gets "📋 Team update" (no names in the alert; at most one every 90 s, batched).
-      A platoon that rolls up to a company also alerts the company's Feed.
-   3) A "Team alerts" switch on Home and Feed for any phone on the team that doesn't have alerts on yet. */
+      A platoon that rolls up to a company also alerts the company's Word of Mouth.
+   3) A "Team alerts" switch on Home and Word of Mouth for any phone on the team that doesn't have alerts on yet. */
 (()=>{
 const LS="af-tsub";
 const teamFeed=()=>{const F=S.feeds||[];return F.find(f=>f.lk&&f.main)||F.find(f=>f.lk)||F.find(f=>f.hub&&f.mk)||F.find(f=>f.mk)||null};
@@ -27,7 +27,7 @@ async function attachOnce(force){if(!S.pushOn)return 0;let n=0;lastErr="";
   try{const s=await pushSub(false);if(!s){lastErr=window.__pushWhy==="notoken"?"this phone didn't get an alert token from Apple. Close the app fully, open it and try again.":window.__pushWhy==="noplugin"?"alerts aren't in this build of the app.":"alerts aren't allowed for this app in Settings.";return 0}
     const j=Object.assign({},s.toJSON(),{dev:devId()});myEnd=j.endpoint||myEnd;const M=subMap();
     /* v2: leader phones are marked "lead" so member check-ins, requests and problem reports reach them (co-leaders
-       too), and the OIC's phone is also the feed's leader alert phone. Phones attached before re-attach once. */
+       too), and the OIC's phone is also Word of Mouth's leader alert phone. Phones attached before re-attach once. */
     if(M.__v!==4){force=true;M.__v=4}M.__nm=M.__nm||{};
     for(const f of S.feeds||[]){if(!f.mk)continue;const nm=String(typeof fdBy==="function"?fdBy(f):(S.myName||"")).toUpperCase().slice(0,30);if(!force&&M[f.id]===j.endpoint&&M.__nm[f.id]===nm){f.push=true;continue}
       try{const jf=Object.assign({},j,nm?{nm}:{});await SB.rpc("feed_sub",{p_feed:f.id,p_member_key:f.mk,p_sub:f.lk?Object.assign({},jf,{lead:1}):jf});M[f.id]=j.endpoint;M.__nm[f.id]=nm;f.push=true;n++;
@@ -58,7 +58,7 @@ function watch(){if(!Array.isArray(S.roster))return;const now=snap();
 async function flush(){if(!pend.size)return;const f=teamFeed();if(!f||!eligible()){pend.clear();return}
   const what=[...pend];pend.clear();const skip=await endpoint();
   SB.notify(null,Object.assign({team:f.id,k:f.lk||f.mk,what},skip?{skip}:{}));
-  /* the company this platoon rolls up to sees the same people: its Feed (CO, XO, 1stSgt, other platoons) gets it too */
+  /* the company this platoon rolls up to sees the same people: its Word of Mouth (CO, XO, 1stSgt, other platoons) gets it too */
   for(const c of (S.feeds||[]).filter(x=>x.hub2&&x.mk&&x.id!==f.id).slice(0,2))SB.notify(null,Object.assign({team:c.id,k:c.lk||c.mk,what},skip?{skip}:{}))}
 window.taFlush=flush;
 {const _save=save;save=function(){const r=_save.apply(this,arguments);try{watch()}catch(e){}return r}}
@@ -80,15 +80,15 @@ document.addEventListener("visibilitychange",()=>{if(document.hidden&&pend.size)
 function card(){const f=teamFeed();if(!f||hasAlerts())return "";
   if(typeof pushOK==="function"&&!NATIVE&&!pushOK())return typeof isIOS==="function"&&isIOS()&&typeof standalone==="function"&&!standalone()?`<div class="panel" id="taCard"><b>🔔 Team alerts</b><p class="note" style="margin:2px 0 0">To get alerts when anything is posted or changed: Share → <b>Add to Home Screen</b>, then open the app from there.</p></div>`:"";
   if(typeof Notification!=="undefined"&&Notification.permission==="denied")return `<div class="panel" id="taCard"><b>🔔 Team alerts are blocked</b><p class="note" style="margin:2px 0 0">Turn notifications on for this app in your phone's Settings.</p></div>`;
-  return `<div class="panel" id="taCard" style="border-color:var(--brass)"><b>🔔 Team alerts</b><p class="note" style="margin:2px 0 8px">Get an alert on this phone when anything is posted to the Feed or changed on the team.</p><button class="btn" id="taOn">Turn on team alerts</button></div>`}
+  return `<div class="panel" id="taCard" style="border-color:var(--brass)"><b>🔔 Team alerts</b><p class="note" style="margin:2px 0 8px">Get an alert on this phone when anything is posted to Word of Mouth or changed on the team.</p><button class="btn" id="taOn">Turn on team alerts</button></div>`}
 /* leader only: how many phones are on the alert list, against the people on the roster */
 let stat=null,statAt=0,statBusy=false;
 async function loadStat(){const f=teamFeed();if(!f||!f.lk||statBusy||Date.now()-statAt<300000)return;statBusy=true;
   try{const r=await SB.rpc("feed_sub_stats",{p_feed:f.id,p_leader_key:f.lk});const x=Array.isArray(r)?r[0]:r;if(x){stat={t:+x.total||0,l:+x.leads||0};statAt=Date.now();placeStat()}}catch(e){statAt=Date.now()}finally{statBusy=false}}
-/* 4.66: lives in Utilities, not at the top of Home / Feed */
+/* 4.66: lives in Utilities, not at the top of Home / Word of Mouth */
 function placeStat(){const m=$("#main");if(!m)return;const old=$("#taStat");if(old)old.remove();const f=teamFeed();if(!stat||!f||!f.lk||view!=="utilities")return;
   const n=(S.roster||[]).length,low=n>0&&stat.t<n;
-  const hd=m.querySelector(".sechead");(hd||m).insertAdjacentHTML(hd?"afterend":"afterbegin",`<div class="panel" id="taStat"${low?' style="border-color:var(--warn)"':""}><b>🔔 ${stat.t} phone${stat.t===1?"":"s"} get your alerts</b><p class="note" style="margin:2px 0 0">${stat.l} leader phone${stat.l===1?"":"s"}. Your roster has ${n} ${n===1?"person":"people"}.${low?" Some may not hear your Feed posts. Ask them to open the app and tap <b>Turn on team alerts</b>.":""}</p></div>`)}
+  const hd=m.querySelector(".sechead");(hd||m).insertAdjacentHTML(hd?"afterend":"afterbegin",`<div class="panel" id="taStat"${low?' style="border-color:var(--warn)"':""}><b>🔔 ${stat.t} phone${stat.t===1?"":"s"} get your alerts</b><p class="note" style="margin:2px 0 0">${stat.l} leader phone${stat.l===1?"":"s"}. Your roster has ${n} ${n===1?"person":"people"}.${low?" Some may not hear your Word of Mouth posts. Ask them to open the app and tap <b>Turn on team alerts</b>.":""}</p></div>`)}
 function place(){const m=$("#main");if(!m)return;if(!$("#taCard")){const h=card();if(h)m.insertAdjacentHTML("afterbegin",h)}placeStat();loadStat()}
 window.taPlaceStat=()=>{try{placeStat();loadStat()}catch(e){}};
 {const _rf=renderFeed;renderFeed=function(){_rf.apply(this,arguments);place()}}
@@ -106,5 +106,5 @@ setTimeout(()=>attachAll(),3000);
 every(10*60000,()=>attachAll(),"team-alerts");
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)attachAll()});
 
-if(typeof HELP==="object")HELP.teamalerts=["Team alerts","Everyone on the team gets an alert when something is posted or changed.",["Turn on team alerts on Home or Feed (once per phone).","New Feed posts alert everyone on the team except the person who posted.","Changes to people, statuses, calendar, duty, due-outs or events send one \"Team update\" alert to the team, at most every 90 seconds. Alerts never include names."]];
+if(typeof HELP==="object")HELP.teamalerts=["Team alerts","Everyone on the team gets an alert when something is posted or changed.",["Turn on team alerts on Home or Word of Mouth (once per phone).","New Word of Mouth posts alert everyone on the team except the person who posted.","Changes to people, statuses, calendar, duty, due-outs or events send one \"Team update\" alert to the team, at most every 90 seconds. Alerts never include names."]];
 })();

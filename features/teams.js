@@ -1,6 +1,6 @@
 /* Accounted For 1.7: More than one team on one phone.
    A coach with two teams, or a manager with three sites, keeps each team separate (its own people, groups,
-   Feed, calendar, settings and type) and switches with one tap. Built on the same stash the platoon/company
+   Word of Mouth, calendar, settings and type) and switches with one tap. Built on the same stash the platoon/company
    views use: the open team lives in S, the others wait in S.ws. Only the open team refreshes; the others
    catch up when you open them. */
 (()=>{
@@ -32,7 +32,7 @@ window.TEAMS={list,nameOf,switchTo,create,openNew,remove};
 let tv={armed:"",adding:false,mode:"",msg:""};
 const MK=["civilian","jobs","hr","police","military","custom"].filter(k=>typeof MODES==="object"&&MODES[k]);
 function renderTeams(){const L=list();const here=teamKey(cur());
-  let h=`<h2>Your teams</h2><p class="note" style="margin:0 4px 8px">Each team keeps its own people, groups, Feed and settings. Only the open team updates live; the others catch up when you open them.</p><div class="alist">`;
+  let h=`<h2>Your teams</h2><p class="note" style="margin:0 4px 8px">Each team keeps its own people, groups, Word of Mouth and settings. Only the open team updates live; the others catch up when you open them.</p><div class="alist">`;
   for(const k of L){const on=k===here;const n=sizeOf(k);
     h+=`<div class="rrow" style="--sc:var(${on?"--s-onhand":"--line"})"><div class="rtop"><div class="who"><b>${on?"✓ ":""}${esc(nameOf(k))}</b><div class="ph">${esc((MODES[modeOf(k)]||{}).name||"")}${n?" · "+n+" people":""}${on?" · open now":""}</div></div>
       ${on?"":`<button class="btn" data-tmgo="${esc(k)}">Open</button><button class="chip" data-tmdel="${esc(k)}" style="cursor:pointer">${tv.armed===k?"Tap again: delete from this phone":"Delete"}</button>`}</div></div>`}
@@ -63,5 +63,5 @@ document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="tmNam
   wb.innerHTML=chip+views}catch(e){}}}
 
 /* ---------- Tools tile + help ---------- */
-if(typeof HELP==="object")HELP.teams=["Teams","Run more than one team on this phone.",["+ New team: pick the kind of team and a name. It opens empty, ready for people.","Open switches teams. Each keeps its own people, Feed, calendar and settings.","Once you have two or more, the team name under the title switches with one tap.","Delete removes a team from this phone only."]];
+if(typeof HELP==="object")HELP.teams=["Teams","Run more than one team on this phone.",["+ New team: pick the kind of team and a name. It opens empty, ready for people.","Open switches teams. Each keeps its own people, Word of Mouth, calendar and settings.","Once you have two or more, the team name under the title switches with one tap.","Delete removes a team from this phone only."]];
 })();

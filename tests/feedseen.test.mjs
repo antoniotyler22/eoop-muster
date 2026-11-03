@@ -1,4 +1,4 @@
-// Feed: a "Confirm I saw it" button on posts that didn't have one.
+// Word of Mouth: a "Confirm I saw it" button on posts that didn't have one.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { openApp, sleep } from "./harness.mjs";

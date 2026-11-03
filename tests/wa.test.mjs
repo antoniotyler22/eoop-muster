@@ -30,7 +30,7 @@ test("a post gets a reaction bar; tapping a reaction sends it and shows the coun
   } finally { await a.close(); }
 });
 
-test("opening the Feed marks posts seen once and a leader sees Seen by", async () => {
+test("opening Word of Mouth marks posts seen once and a leader sees Seen by", async () => {
   const puts = [];
   const a = await openApp({ rpc: (fn, b) => { if (fn === "signal_put") puts.push(b); return []; } });
   try {
@@ -72,7 +72,7 @@ test("every My page shows who you message as, and Change saves it", async () => 
   } finally { await a.close(); }
 });
 
-test("members see the latest Feed posts on their Today page", async () => {
+test("members see the latest Word of Mouth posts on their Today page", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     await a.w.eval(`const m=S.roster[0];S.feeds=[{id:"feedabcdef12",mk:"m".repeat(30),ek:"x",unit:"TEAM",me:"A",mid:m.id,sec:m.sec,posts:[{id:7,t:Date.now()-60000,txt:"Gear inspection at 0800",by:"OIC"}],seen:0,mine:{},hub:1}];
@@ -82,12 +82,12 @@ test("members see the latest Feed posts on their Today page", async () => {
     assert.ok(f, "feed shown on the page");
     assert.match(f.textContent, /Gear inspection at 0800/); assert.match(f.textContent, /Got it needed/);
     a.$("#mfFeed .mf-p").click(); await sleep(150);
-    assert.equal(a.w.eval("view"), "feed", "tapping a post opens the Feed");
+    assert.equal(a.w.eval("view"), "feed", "tapping a post opens Word of Mouth");
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
 
-test("a leader has an Inbox next to Feed and Send, and on every My page strip", async () => {
+test("a leader has an Inbox next to Word of Mouth and Send, and on every My page strip", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     await a.w.eval(`const m=S.roster[0];m.pk="p".repeat(24);m.dm={id:"t1",k:"k".repeat(32),ek:"x",ok:1};S.dmMsgs={t1:[{id:1,t:Date.now()-5000,txt:"Reporting at 0700",by:"M",n:"CPL"},{id:2,t:Date.now()-2000,txt:"Copy",by:"L",n:""}]};S.dmSeen={};
@@ -96,7 +96,7 @@ test("a leader has an Inbox next to Feed and Send, and on every My page strip", 
     const tabs = a.w.eval(`[...document.querySelectorAll("#tabbar [data-tab]")].map(b=>b.dataset.tab).join(",")`);
     assert.match(tabs, /tools,inbox/, "Inbox tab sits right beside Tools");
     assert.equal(a.$("#tabbar [data-tab='inbox'] .bd").textContent.trim(), "1", "unread shown in red on the tab");
-    assert.ok(!a.$("#tabbar [data-tab='feed'] .bd"), "not counted on Feed");
+    assert.ok(!a.$("#tabbar [data-tab='feed'] .bd"), "not counted on Word of Mouth");
     a.$("#tabbar [data-tab='inbox']").click(); await sleep(200);
     assert.equal(a.w.eval("view"), "dms");
     assert.match(a.$("#main").textContent, /Reporting at 0700|Copy/);

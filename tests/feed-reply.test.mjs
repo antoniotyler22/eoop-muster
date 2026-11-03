@@ -1,4 +1,4 @@
-// 4.42.0: reply to a Feed post (a Got it that carries a short note); the leader sees it by name.
+// 4.42.0: reply to a Word of Mouth post (a Got it that carries a short note); the leader sees it by name.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { openApp, sleep } from "./harness.mjs";

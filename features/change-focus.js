@@ -3,7 +3,7 @@
      duty, a new calendar entry, someone added or removed, an event, the duty roster. Alerts themselves still carry no names.
    - Tap a Team update / board alert: the app syncs, jumps to the first person who changed, scrolls to them and highlights the row
      in bold with "Now: Leave · was On Hand". A "What changed" box at the top lists every change; each line jumps to that person.
-   - Tap a Feed alert: the new posts are highlighted and the first one is scrolled into view.
+   - Tap a Word of Mouth alert: the new posts are highlighted and the first one is scrolled into view.
    - Tap a Check-ins alert: the new check-ins are highlighted. Inbox alert: unread conversations are highlighted.
      Talk and Company alerts show a box saying what is new.
    - "Got it" clears the highlight. Highlights also clear when the app goes to the background. */
@@ -105,7 +105,7 @@ function decorate(){if(!R)return;const m=rows();if(!m)return;const o=R.o;
   if(o==="feed"){if(view!=="feed")return;const f=typeof fdCur==="function"?fdCur():null;if(!f)return;const P=R.posts[f.id]||[];
     const items=P.slice(0,20).map(p=>({h:`<b>${E(p.by||"Leader")}</b>: “${E(String(p.txt||"").slice(0,90))}${String(p.txt||"").length>90?"…":""}”${p.urg?` <span class="chg-urg">URGENT</span>`:""}`,go:`data-chg-post="${p.id}"`}));
     let first=null;for(const p of P){const el=m.querySelector(`article[data-pid="${p.id}"]`)||m.querySelector(`[data-pid="${p.id}"]`);if(el){const a=el.closest("article")||el;mark(a);if(!a.querySelector(".chg-tag"))a.insertAdjacentHTML("afterbegin",`<span class="chg-tag">NEW</span>`);if(!first)first=a}}
-    put(m,box(items.length?"New in Feed":R.busy?"Checking Feed…":"You're caught up",items,items.length?"":`<p class="chg-n">${R.busy?"Loading the newest posts…":"No new posts since you last looked."}</p>`));focusEl(first);return}
+    put(m,box(items.length?"New in Word of Mouth":R.busy?"Checking Word of Mouth…":"You're caught up",items,items.length?"":`<p class="chg-n">${R.busy?"Loading the newest posts…":"No new posts since you last looked."}</p>`));focusEl(first);return}
   if(o==="checkins"){if(view!=="checkins")return;const open=(S.cks||[]).filter(x=>x&&x.state==="new");
     const line=x=>{const st=x.st===(typeof CK_OTHER!=="undefined"?CK_OTHER:"Other")&&x.oth?x.oth:(x.st||"");return st+(x.from?" "+dLabel(x.from)+(x.to&&x.to!==x.from?" – "+dLabel(x.to):""):"")+(x.loc?" · "+x.loc:"")};
     const items=open.slice(0,20).map(x=>({h:`<b>${E(x.who)}</b>: <b>${E(line(x))}</b>`,go:`data-chg-ck="${E(x.cid)}"`}));
@@ -170,5 +170,5 @@ document.addEventListener("click",e=>{const t=e.target&&e.target.closest?e.targe
 @media (prefers-reduced-motion:reduce){.chg-hit{animation:none}}`;document.head.appendChild(s)}
 
 window.__chg={ST,get R(){return R},diff,snap,unseen,watch};
-if(typeof HELP==="object")HELP.changes=["What changed","Tap an alert and the app shows you exactly what changed.",["Team update alerts jump to the first person who changed and highlight them in bold with what they were before.","Feed alerts highlight the new posts.","Check-ins and Inbox alerts highlight the new check-ins and unread conversations.","Tap Got it to clear the highlight."]];
+if(typeof HELP==="object")HELP.changes=["What changed","Tap an alert and the app shows you exactly what changed.",["Team update alerts jump to the first person who changed and highlight them in bold with what they were before.","Word of Mouth alerts highlight the new posts.","Check-ins and Inbox alerts highlight the new check-ins and unread conversations.","Tap Got it to clear the highlight."]];
 })();

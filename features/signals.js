@@ -1,5 +1,5 @@
-/* Accounted For 4.68.0 — Signals: the small live things a Feed shares (reactions, "seen by", live location, online
-   and recording). One row per person per kind on the server (an upsert), encrypted on the phone with the Feed key,
+/* Accounted For 4.68.0 — Signals: the small live things a Word of Mouth shares (reactions, "seen by", live location, online
+   and recording). One row per person per kind on the server (an upsert), encrypted on the phone with Word of Mouth key,
    so the server sees only the kind, a hashed id and the time. Other features use window.AFS:
      AFS.put(f,kind,ident,obj)   save my row (kind: rx, seen, loc, live)
      AFS.all(f,kind)             every row of that kind -> [{o,t}]

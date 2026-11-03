@@ -14,7 +14,7 @@ for (const role of ["co", "sncoic"]) {
         S.feeds=[{id:"feedabcdef12",mk:"${"m".repeat(30)}",unit:"1ST",posts:[],seen:4,hub:1}];save();
         mergeRemote({roster:S.roster,feeds:[${FEED}]});view="feed";render()`);
       await sleep(30);
-      assert.equal(a.w.eval(`S.feeds.length`), 1, "one copy of the feed");
+      assert.equal(a.w.eval(`S.feeds.length`), 1, "one copy of Word of Mouth");
       assert.equal(a.w.eval(`S.feeds[0].lk`), "l".repeat(30));
       assert.ok(a.$("#fdPost"), "Post box shows");
     } finally { a.close(); }
@@ -36,7 +36,7 @@ test("a rejected post re-registers an expired feed and goes through", async () =
     a.w.eval(`${phone("co")}S.feeds=[${FEED}];save();view="feed";render()`);
     await sleep(30);
     a.$("#fdTxt").value = "test"; a.$("#fdPost").click(); await sleep(300);
-    assert.ok(calls.includes("create_feed"), "re-registered the feed");
+    assert.ok(calls.includes("create_feed"), "re-registered Word of Mouth");
     assert.equal(a.w.eval(`S.feeds[0].posts[0].id`), 9, "post went through");
   } finally { a.close(); }
 });

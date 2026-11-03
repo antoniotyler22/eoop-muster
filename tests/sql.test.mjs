@@ -208,7 +208,7 @@ test("text-back check-in: only the server stores routes; a reply checks in as th
   assert.throws(() => asServer(`select public.sms_routes_put(${q(rc)}, ${q(rows)}::jsonb)`), /recall closed/);
 });
 
-test("server push hooks (part 27): check-ins call notify, Feed posts wait on the queue, only the server reads it", { skip }, () => {
+test("server push hooks (part 27): check-ins call notify, Word of Mouth posts wait on the queue, only the server reads it", { skip }, () => {
   const asServer = (sql) => pg.psql(`set role service_role; ${sql}`);
   const rid = "hookrc0001", fid = "hookfd0001";
   pg.psql(`truncate net.calls`);
@@ -234,7 +234,7 @@ test("server push hooks (part 27): check-ins call notify, Feed posts wait on the
   assert.match(pg.psql(`select schedule || '|' || command from cron.job where jobname = 'accounted-for-push-queue'`), /^20 seconds\|[\s\S]*"drain":1/);
 });
 
-test("Feed names (part 28): only the leader key writes, only the member key reads, the table is closed", { skip }, () => {
+test("Word of Mouth names (part 28): only the leader key writes, only the member key reads, the table is closed", { skip }, () => {
   const mk = "member-key-names-0123456789", lk = "leader-key-names-0123456789";
   pg.psql(`insert into public.feeds(id, member_key_hash, leader_key_hash) values ('namesfd001', ${q(sha(mk))}, ${q(sha(lk))})`);
   assert.throws(() => anon(`select public.feed_names_put('namesfd001', ${q(mk)}, 'x')`), /not allowed/, "a member can't write the list");

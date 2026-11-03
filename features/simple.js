@@ -6,7 +6,7 @@
       A new team starts empty (no sample people) with an "Add your people" card.
    5. Plain words outside Military: Share headcount, Phone list, Incident report, Combine teams, Group leaders update you.
       Groups show the full names people typed (Red Team, not RED).
-   6. Members see three tabs: My status, Feed, Calendar.
+   6. Members see three tabs: My status, Word of Mouth, Calendar.
    7. After common actions, the toast says what happens next. */
 (()=>{
 const mil=()=>!S.mode||S.mode==="military";
@@ -24,7 +24,7 @@ const GROUPS=[
   {k:"home",l:"My day",s:"Dashboard, today, my log",ic:"today",keys:["dash","today","log"]},
   {k:"help",l:"Help",s:"Ask a question, guide, short tour",ic:"help",keys:["utilities","support","guide","trStart","v11SignInTool","v11ShareApp","ask"]},
   {k:"settings",l:"Settings",s:"Teams, data, version, connections",ic:"data",keys:["teams","data","sys","modeOpen","integ","owner","nwOn","alvl"]}];
-/* These already have a bottom tab (Feed: Feed/Send; Plan: Calendar/Duty/Readiness/Events; Inbox: Messages), so Tools does not repeat them.
+/* These already have a bottom tab (Word of Mouth: Word of Mouth/Send; Plan: Calendar/Duty/Readiness/Events; Inbox: Messages), so Tools does not repeat them.
    They stay searchable from the Tools search box. */
 const HIDE=["feed","send","dms","cal","events","duty","ready"];
 const tileKey=b=>{if(b.id)return b.id;if(b.dataset.go)return b.dataset.go;const d=Object.keys(b.dataset)[0];if(d)return d;
@@ -101,7 +101,7 @@ function startHTML(){if(wv.step==="type")return `<div class="panel sgw-start" st
     <b style="margin-top:6px">Or pick a type</b><p class="note" style="margin:0">Sets the words the app uses. You can change it later.</p>
     ${MK.map(k=>`<button class="btn alt" data-sgmode="${k}" style="text-align:left;display:block"><b>${esc(MODES[k].name)}</b><br><span class="note" style="margin:0">${esc(MODES[k].desc)}</span></button>`).join("")}
     <button class="btn alt" data-sgback="1">Back</button></div>`;
-  return `<div class="panel sgw-start" style="margin:0"><b>Name your team</b><p class="note" style="margin:0">${esc(wv.tpl?TPL[wv.tpl].n:MODES[wv.mode].name)}. Shows on your reports, texts and the Feed.</p>
+  return `<div class="panel sgw-start" style="margin:0"><b>Name your team</b><p class="note" style="margin:0">${esc(wv.tpl?TPL[wv.tpl].n:MODES[wv.mode].name)}. Shows on your reports, texts and Word of Mouth.</p>
     <label for="sgName">Team name</label><input type="text" id="sgName" maxlength="40" placeholder="${esc(MODES[wv.mode].v?MODES[wv.mode].v.coEx:"1ST PLATOON")}" autocomplete="off">
     <button class="btn" id="sgGo">Go</button><button class="btn alt" data-sgback="type">Back</button></div>`}
 function shapeWelcome(){const w=$("#v11Welcome");if(!w||w.hidden)return;const inner=w.querySelector(".v11w-in");if(!inner)return;
@@ -156,9 +156,9 @@ function fullNames(){if(mil())return;const att=(MODE().v&&MODE().v.attC)||"Attac
       if(x.toUpperCase()===String(k).toUpperCase()||x===(MODE().v||{}).code||x==="ATT"){tn.nodeValue=tn.nodeValue.replace(x,n);b.setAttribute("data-noxl","")}break}})}
 {const _rT=renderTabs;renderTabs=function(){_rT.apply(this,arguments);try{fullNames()}catch(e){}}}
 
-/* ================= 6. MEMBERS: My status, Feed, Calendar ================= */
+/* ================= 6. MEMBERS: My status, Word of Mouth, Calendar ================= */
 {const _tl=tabsList;tabsList=function(){if(!(typeof memberMode==="function"&&memberMode()))return _tl.apply(this,arguments);
-  return S.me?[["me","My status","me"],["feed","Feed","feed"],["mecal","Calendar","cal"]]:[["today","Today","today"],["feed","Feed","feed"]]}}
+  return S.me?[["me","My status","me"],["feed","Word of Mouth","feed"],["mecal","Calendar","cal"]]:[["today","Today","today"],["feed","Word of Mouth","feed"]]}}
 {const _to=tabOf;tabOf=function(v){if(v==="mecal")return "mecal";return _to.apply(this,arguments)}}
 function renderMeCal(){const D=S.me&&S.me.d;let h=`<div class="sech" style="margin-top:12px"><h2>Calendar</h2><button class="chip" id="meIcs" style="cursor:pointer">Add to phone calendar</button></div>`;
   if(!D){$("#main").innerHTML=h+`<div class="card"><p class="note" style="margin:0">Your calendar shows up once your leader sends your link.</p></div>`;return}
@@ -180,13 +180,13 @@ document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest
 /* ================= 7. WHAT HAPPENS NEXT ================= */
 {const _t=toast;toast=function(msg){let m=String(msg==null?"":msg);
   try{if(m==="Posted"){const f=typeof fdCur==="function"&&fdCur();const p=f&&(f.posts||[])[0];
-      m=f&&f.lk&&p?"Posted. 0 of "+fdPool(p).length+" have confirmed. Watch the count on the post.":"Posted. Your people see it in Feed now."}
+      m=f&&f.lk&&p?"Posted. 0 of "+fdPool(p).length+" have confirmed. Watch the count on the post.":"Posted. Your people see it in Word of Mouth now."}
     else if(m==="Got it sent")m="Confirmed. Your leader sees it.";
     else if(m==="Request sent")m="Request sent. You'll see the answer under My requests.";
     else if(/^(Invite|Join) link copied$/.test(m))m+=". Paste it in a text. They show up in People & access once they open it.";
     else if(m==="Marked as sent")m="Marked as sent. Read receipts show here as people tap Got it.";
     else if(/^🚨 Emergency/.test(m))m+=". Watch the count fill in here.";
-    else if(m==="Feed created. Invite your people.")m="Feed created. Next: Invite your people so they can confirm posts."}catch(e){}
+    else if(m==="Word of Mouth created. Invite your people.")m="Word of Mouth created. Next: Invite your people so they can confirm posts."}catch(e){}
   return _t.call(this,m)}}
 
 if(typeof HELP==="object"){if(HELP.tools)HELP.tools[1]="Everything else, in 12 groups. Tap a group to see its tools.";}

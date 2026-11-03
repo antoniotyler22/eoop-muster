@@ -1,6 +1,6 @@
 import { test } from "node:test"; import assert from "node:assert/strict";
 import { openApp, sleep } from "./harness.mjs";
-test("dates in Feed posts are tappable and fill the calendar form", async () => {
+test("dates in Word of Mouth posts are tappable and fill the calendar form", async () => {
   const a = await openApp(); const w = a.w;
   try {
     const hits = JSON.parse(w.eval(`JSON.stringify(fdDatesIn("Range Friday 11/20/26, dental Nov 3rd at 9:30 am, leave 2026-12-20, tomorrow", Date.parse("2026-10-28T12:00:00")).map(x=>x.d))`));

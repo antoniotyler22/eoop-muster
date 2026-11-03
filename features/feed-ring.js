@@ -1,4 +1,4 @@
-/* Accounted For 4.54: Feed posts for leaders, "Ring Receipt" style.
+/* Accounted For 4.54: Word of Mouth posts for leaders, "Ring Receipt" style.
    On a leader's phone each post is a clean white card: the words first, a small ring in the corner that fills as
    people confirm (red while it's low, amber, then green), one thin bar per section under the words, and one toolbar:
    Who · Remind · Replies · Pin · Delete. The big dark stat box and the stack of chips are gone.
@@ -25,7 +25,7 @@ function toolbar(f,p,st,pinned){const pool=fdPool(p);const miss=sorted(pool.filt
   const reps=pool.filter(m=>st.A[m.id]&&st.A[m.id].c===1&&st.A[m.id].note).length;const open=fdOpen===p.id;
   let remind;
   if(!miss.length)remind=`<button type="button" disabled>${IC.bell}All in</button>`;
-  else{const b=bcBatches(miss,f.unit+": new word in the Feed you haven't confirmed. Open Accounted For → Feed.");
+  else{const b=bcBatches(miss,f.unit+": new word in Word of Mouth you haven't confirmed. Open Accounted For → Word of Mouth.");
     remind=b.length===1?`<a class="rr-b" href="${esc(b[0].href)}">${IC.bell}Remind ${miss.length}</a>`:`<button type="button" data-fdopen="${p.id}">${IC.bell}Remind ${miss.length}</button>`}
   const armedDel=armed==="fddel"+p.id;
   return `<div class="rr-tool"><button type="button" data-fdopen="${p.id}" class="${open?"on":""}" aria-expanded="${open}">${IC.who}Who</button>${remind}<button type="button" data-fdopen="${p.id}">${IC.chat}${reps}</button><button type="button" data-fdpin="${p.id}" class="${pinned?"on":""}">${IC.pin}${pinned?"Unpin":"Pin"}</button><button type="button" data-fddel="${p.id}" class="d${armedDel?" arm":""}">${IC.del}${armedDel?"Tap again":"Delete"}</button></div>`}

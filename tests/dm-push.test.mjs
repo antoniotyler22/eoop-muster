@@ -52,7 +52,7 @@ test("Talk alerts go only to the people a message was sent to", async () => {
   } finally { await a.close(); }
 });
 
-test("Feed photo pickers live outside the page so a Feed redraw can't throw the chosen photo away", async () => {
+test("Word of Mouth photo pickers live outside the page so a Word of Mouth redraw can't throw the chosen photo away", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     await a.w.eval(`S.onb=true;S.welcomed=1;S.leaderMode=true;S.feeds=[{id:"feedabcdef12",mk:"m".repeat(30),lk:"l".repeat(30),ek:"x",unit:"TEAM",me:"A",posts:[],seen:0,mine:{},hub:1,pk:1}];view="feed";render()`);
@@ -65,7 +65,7 @@ test("Feed photo pickers live outside the page so a Feed redraw can't throw the 
   } finally { await a.close(); }
 });
 
-test("Feed auto-scroll stays off while you are on the Post tab", async () => {
+test("Word of Mouth auto-scroll stays off while you are on the Post tab", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     await a.w.eval(`S.onb=true;S.welcomed=1;S.leaderMode=true;S.feeds=[{id:"feedabcdef12",mk:"m".repeat(30),lk:"l".repeat(30),ek:"x",unit:"TEAM",me:"A",posts:[],seen:0,mine:{},hub:1,pk:1}];view="feed";render()`);

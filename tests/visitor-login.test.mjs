@@ -30,7 +30,7 @@ test("leader makes a visitor login with an end time; it goes in the visitor log;
   } finally { await a.close(); }
 });
 
-test("visitor's phone: an ended login won't open; a live one drops the Feed at the end time", async () => {
+test("visitor's phone: an ended login won't open; a live one drops Word of Mouth at the end time", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     const ek = "A".repeat(43);
@@ -40,7 +40,7 @@ test("visitor's phone: an ended login won't open; a live one drops the Feed at t
     assert.ok(a.$("#fjYes"), "join sheet for a live one");
     a.w.eval(`S.tos=99;$("#fjMe").value="JORDAN LEE"`); a.$("#fjYes").click(); await sleep(20);
     a.w.eval(`vlTick()`);
-    assert.ok(a.w.eval(`S.feeds.find(f=>f.id==="feedcccccccc").until>Date.now()`), "end time kept on the feed");
+    assert.ok(a.w.eval(`S.feeds.find(f=>f.id==="feedcccccccc").until>Date.now()`), "end time kept on Word of Mouth");
     a.w.eval(`S.feeds.find(f=>f.id==="feedcccccccc").until=Date.now()-1;vlTick()`);
     assert.equal(a.w.eval(`S.feeds.some(f=>f.id==="feedcccccccc")`), false, "feed dropped at the end time");
   } finally { await a.close(); }

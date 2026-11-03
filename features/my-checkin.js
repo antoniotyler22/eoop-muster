@@ -4,7 +4,7 @@
    From/To and Location for anything but On Hand, and a note.
    - Phones that can edit (OIC, co-leader, editor, section leader): the check-in goes straight onto their own row on
      the roster, so it shows on the board, syncs and rolls up like any other status change.
-   - View-only phones: it goes to the leader as a check-in to Confirm (through the team Feed), like a member's.
+   - View-only phones: it goes to the leader as a check-in to Confirm (through the team Word of Mouth), like a member's.
    First time, the phone asks "Which one is you?" (pick from the roster) and remembers it (S.who). */
 (()=>{
 let c={open:false,st:"",v:{}};
@@ -48,7 +48,7 @@ async function send(){grab();const m=me();if(!m)return;const st=c.st,v=c.v;
   if(st==="Other"&&!String(v.oth||"").trim()){toast("Write what's going on.");return}
   if(st!=="On Hand"){if(!v.from){toast("Pick the From date.");return}if(v.to&&v.to<v.from){toast("To can't be before From.");return}}
   const x={st,oth:st==="Other"?String(v.oth||"").trim().slice(0,80):"",from:st==="On Hand"?"":String(v.from||"").slice(0,10),to:st==="On Hand"?"":String(v.to||"").slice(0,10),loc:st==="On Hand"?"":String(v.loc||"").trim().slice(0,60),note:String(v.note||"").trim().slice(0,80)};
-  if(viewOnly()){const f=memberFeed();if(!f){toast("No team Feed on this phone to send it through.");return}
+  if(viewOnly()){const f=memberFeed();if(!f){toast("No team Word of Mouth on this phone to send it through.");return}
     const o={k:"ck",cid:"c"+Date.now().toString(36)+rndId(4),me:m.rank+" "+lastOf(m),mid:m.uid||m.id,sec:m.sec||"",st,oth:x.oth,from:x.from,to:x.to,loc:x.loc,note:x.note,at:Date.now()};
     try{const ct=await fdEnc(f.ek,o);const meta={alert:{alert:"ck",feed:f.id,mk:f.mk}};const r=await SB.rpc("feed_req",{p_feed:f.id,p_member_key:f.mk,p_ct:ct},meta);if(r!==null)try{SB.notify(null,meta.alert)}catch(e){}
       m.ckAt=Date.now();c={open:false,st:"",v:{}};rawSave();redraw();toast("📍 Sent. Your leader confirms it.")}catch(e){toast("Couldn't send. Check signal and try again.")}return}

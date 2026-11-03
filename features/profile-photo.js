@@ -1,7 +1,7 @@
 /* Accounted For: Profile photos.
    Anyone can add a photo (Settings → Profile photo: take one with the camera or upload one; or tap your picture on the Talk screen). It shows instead of your
-   initials wherever you appear: Feed posts, People, Talk. Your team sees it too: a small 128-pixel copy rides inside your
-   encrypted Feed posts and Talk presence, so the server never holds a separate picture. Photos from other people are
+   initials wherever you appear: Word of Mouth posts, People, Talk. Your team sees it too: a small 128-pixel copy rides inside your
+   encrypted Word of Mouth posts and Talk presence, so the server never holds a separate picture. Photos from other people are
    kept on this phone only (IndexedDB), up to 80 of them. "Use my initials" removes yours. */
 (()=>{
 const SZ=128,MAXB=16000,KEEP=80,OK=/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/;
@@ -20,7 +20,7 @@ async function loadAll(){try{const d=await idb();const rows=await new Promise((o
   let n=0;for(const [k,v] of rows)if(typeof v==="string"&&OK.test(v)&&v.length<=MAXB&&!mem.has(k)){mem.set(k,v);n++}return n}catch(e){return 0}}
 /* who am I, by every name this phone uses for me */
 /* 4.77.7: my photo belongs to the person I picked on this phone (S.who: "Which one is you?"), under that name only.
-   Old names left in S.myName / S.postAs / a Feed's "me" (for example someone you tested as) no longer take my photo. */
+   Old names left in S.myName / S.postAs / a Word of Mouth's "me" (for example someone you tested as) no longer take my photo. */
 function myKeys(){const s=new Set();const add=n=>{n=key(n);if(n)s.add(n)};
   if(S.who&&S.who.n){add(S.who.n);return s}
   add(S.myName);add(S.postAs);

@@ -1,6 +1,6 @@
 /* Accounted For 4.64: Field mode. Works with no signal and catches up later.
    - Check-ins, Got its, requests, problems and now leader posts made with no signal are saved on the phone and
-     sent in order the moment there's a bar. A post shows in your Feed right away (marked "waiting") and is swapped
+     sent in order the moment there's a bar. A post shows in your Word of Mouth right away (marked "waiting") and is swapped
      for the real one once it goes out.
    - A bar at the bottom says what's going on: "No signal · 3 waiting", "Sending 3…", "All sent". Tap it for the
      Field mode screen: signal, last sync, what's waiting (send now or delete one), and what works without signal.
@@ -19,7 +19,7 @@ const ctl=(fn,args)=>fn==="feed_post"&&String(args&&args.p_ct||"").startsWith("c
 function okNet(){if(netDown){netDown=false;setTimeout(()=>window.dispatchEvent(new Event("online")),50)}S.fmSync=Date.now()}
 async function label(fn,args){const f=(S.feeds||[]).find(x=>x.id===(args&&args.p_feed));let o=null;
   try{if(f&&f.ek&&args.p_ct)o=await fdDec(f.ek,args.p_ct)}catch(e){}
-  if(fn==="feed_post")return{lb:"📣 Post: "+String(o&&o.t||"to the Feed").slice(0,70),urg:!!(o&&o.u)};
+  if(fn==="feed_post")return{lb:"📣 Post: "+String(o&&o.t||"to Word of Mouth").slice(0,70),urg:!!(o&&o.u)};
   if(fn==="feed_ack")return{lb:args&&args.p_note?"💬 Reply: "+String(args.p_note).slice(0,60):"✓ Got it on a post"};
   if(fn==="feed_req"){if(o&&o.k==="ck")return{lb:"📍 Check-in: "+(o.me?o.me+" → ":"")+(o.st||"")};return{lb:"🙋 "+(o&&o.ty?o.ty:"Request")+(o&&o.note?": "+String(o.note).slice(0,50):"")}}
   if(fn==="page_req")return{lb:"📍 Check-in"};return{lb:fn}}
@@ -65,9 +65,9 @@ function html(){const n=S.outbox.length,o=off();
   ${n?`<div class="card fm-q">${S.outbox.map((x,i)=>`<div class="fm-row"><span style="flex:1;min-width:0"><span class="fm-t">${esc(x.lb||x.fn)}</span><span class="fm-s">Saved ${esc(ago2(x.t))}</span></span><button class="chip fm-del" data-fmdel="${i}" style="cursor:pointer">${armedDel===i?"Tap again":"Delete"}</button></div>`).join("")}</div>
     <button class="btn" id="fmSend" style="width:100%;margin-top:10px">↑ Send now</button>`:`<div class="card" style="align-items:center;text-align:center"><b style="color:var(--s-onhand)">✓ Nothing waiting</b></div>`}
   <div class="sech"><h2>Before you lose signal</h2></div>
-  <div class="card"><p class="note" style="margin:0 0 8px">Pull the latest roster, Feed and calendar onto this phone so it's all there in the field.</p><button class="btn alt" id="fmReady" style="width:100%">${readyAt&&Date.now()-readyAt<3e4?"Getting the latest…":"⬇ Get ready for the field"}</button>${S.fmReady?`<p class="note" style="margin:8px 0 0">✓ Saved on this phone ${esc(ago2(S.fmReady))}</p>`:""}</div>
+  <div class="card"><p class="note" style="margin:0 0 8px">Pull the latest roster, Word of Mouth and calendar onto this phone so it's all there in the field.</p><button class="btn alt" id="fmReady" style="width:100%">${readyAt&&Date.now()-readyAt<3e4?"Getting the latest…":"⬇ Get ready for the field"}</button>${S.fmReady?`<p class="note" style="margin:8px 0 0">✓ Saved on this phone ${esc(ago2(S.fmReady))}</p>`:""}</div>
   <div class="sech"><h2>Works with no signal</h2></div>
-  <div class="card fm-list"><div>✓ Roster, statuses and headcounts</div><div>✓ Check-ins and Got its (they wait, then send)</div><div>✓ Feed posts and replies (they wait, then send)</div><div>✓ Muster, duty, calendar and your notes</div>
+  <div class="card fm-list"><div>✓ Roster, statuses and headcounts</div><div>✓ Check-ins and Got its (they wait, then send)</div><div>✓ Word of Mouth posts and replies (they wait, then send)</div><div>✓ Muster, duty, calendar and your notes</div>
   <div class="fm-need">Needs signal: phone alerts going out, recall texts and calls, invites, Scan and Ask.</div></div></div>`}
 function draw(){const m=$("#main");if(m&&view==="field")m.innerHTML=html()}
 {const _r=render;render=function(){if(view==="field"){renderTabs();draw();if(typeof animateView==="function")animateView();return}return _r.apply(this,arguments)}}

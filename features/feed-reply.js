@@ -1,8 +1,8 @@
-/* Accounted For 4.42: reply to a Feed post.
+/* Accounted For 4.42: reply to a Word of Mouth post.
    Under a post a member can tap "💬 Reply", type a short answer (60 characters) and send it. It counts as their Got it
    and carries the words with it. Their leader sees it in the post's "Who" list next to their rank and name
    ("Replies"). It rides on the same Got it the server already stores (a Got it with a note), so nothing new is needed
-   on the server. The reply is encrypted the same way as the rest of the Feed: the server keeps only the text of the
+   on the server. The reply is encrypted the same way as the rest of Word of Mouth: the server keeps only the text of the
    note, never the name (names are hashed). Members see their own reply under the post; replies are for leaders. */
 (()=>{
 let open=null;

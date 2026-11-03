@@ -1,10 +1,10 @@
-/* Accounted For: a poll on the Feed.
+/* Accounted For: a poll on Word of Mouth.
    Leader: "+ Poll" opens a Question box and one box per choice (starts with 2, "+ Add a choice" up to 6, ✕ to drop
    one). Post sends it; the question is the post's text (anything typed in Pass the word goes under it).
    Everyone: tap a choice to vote. As soon as you vote, the choices turn into a bar graph: each choice's share and
    count, yours marked ✓. Tap another bar to change your vote. A vote also counts as your Confirm.
    How members see the count: votes go to the leader (members can't read each other's), and the leader's phone posts
-   an encrypted running tally to the Feed whenever the count changes (at most every 20 s, hidden from view). Until
+   an encrypted running tally to Word of Mouth whenever the count changes (at most every 20 s, hidden from view). Until
    it arrives, your own vote shows in the bars right away. The leader also sees who picked what under "Who". */
 (()=>{
 const PV="🗳 ",MAXO=6;

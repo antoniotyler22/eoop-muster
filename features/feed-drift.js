@@ -1,4 +1,4 @@
-/* Accounted For: Feed Drift. The Feed glides upward on its own, like a live ticker, with soft fades at the top and bottom.
+/* Accounted For: Word of Mouth Drift. Word of Mouth glides upward on its own, like a live ticker, with soft fades at the top and bottom.
    You are always in control: touching, scrolling, typing, or opening anything stops the glide at once (every button and link
    still works while it moves), and it picks up again a few seconds after you let go. At the end it fades and starts over.
    The pill at the bottom right pauses/resumes it (remembered on this phone). Off by default if the phone asks for reduced motion. */

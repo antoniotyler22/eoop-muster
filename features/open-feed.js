@@ -1,8 +1,8 @@
-/* Accounted For 4.77.11: open on the Feed when there is something new to confirm.
-   Section leaders, co-leaders, editors, viewers and anyone else who has a Feed land on it when they open the app (or come back to it)
+/* Accounted For 4.77.11: open on Word of Mouth when there is something new to confirm.
+   Section leaders, co-leaders, editors, viewers and anyone else who has a Word of Mouth land on it when they open the app (or come back to it)
    and a post is waiting for their Confirm. The OIC's own phone keeps opening on Home.
    Only while they are still on Home and haven't tapped anything yet, so it never pulls anyone away from what they're doing.
-   The Feed arrives a moment after the app opens, so it checks a few times in the first seconds. */
+   Word of Mouth arrives a moment after the app opens, so it checks a few times in the first seconds. */
 (()=>{
 const HOME=v=>v==="board"||v==="today";
 let touched=false,done=false,timers=[];

@@ -1,4 +1,4 @@
-// Feed Drift: the Feed glides on its own; touch/typing stops it; a pill turns it off and on.
+// Word of Mouth Drift: Word of Mouth glides on its own; touch/typing stops it; a pill turns it off and on.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { openApp, sleep } from "./harness.mjs";
@@ -11,7 +11,7 @@ const setup = async (a) => {
   a.w.eval(`const t=document.querySelector('[data-fdtab="feed"]');if(t)t.click()`);await sleep(80);
 };
 
-test("the Feed shows an auto-scroll pill that turns the glide off and on, and it is remembered", async () => {
+test("Word of Mouth shows an auto-scroll pill that turns the glide off and on, and it is remembered", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     await setup(a);
@@ -28,7 +28,7 @@ test("the Feed shows an auto-scroll pill that turns the glide off and on, and it
   } finally { await a.close(); }
 });
 
-test("touching or typing stops the glide, and it is hidden away from the Feed", async () => {
+test("touching or typing stops the glide, and it is hidden away from Word of Mouth", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     await setup(a);
@@ -38,7 +38,7 @@ test("touching or typing stops the glide, and it is hidden away from the Feed", 
     assert.equal(a.w.eval("feedDrift.why()"), "touch", "and it waits a few seconds after you let go");
     a.w.eval(`view="home";render()`); await sleep(80);
     assert.equal(a.w.eval("feedDrift.why()"), "view");
-    assert.notEqual(a.$("#fdDrift").style.display, "inline-flex", "pill hidden off the Feed");
+    assert.notEqual(a.$("#fdDrift").style.display, "inline-flex", "pill hidden off Word of Mouth");
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });

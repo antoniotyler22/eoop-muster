@@ -1,6 +1,6 @@
 /* Accounted For: progress bars in blue. Every check-in bar and ring runs from light blue (nobody in yet) to deep blue
    (everyone in): the fill itself fades from light to dark, and the dark end only shows once the bar is nearly full.
-   Covers the Home headcount bar, the Feed post bar, the per-section bars and ring on each post, and the % bar. */
+   Covers the Home headcount bar, Word of Mouth post bar, the per-section bars and ring on each post, and the % bar. */
 (()=>{
 const css=document.createElement("style");css.textContent=`:root{--pr-lo:#a9ccff;--pr-hi:#0857e8}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--pr-lo:#8fbaff;--pr-hi:#2f6bff}}

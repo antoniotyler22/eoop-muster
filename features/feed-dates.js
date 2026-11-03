@@ -1,4 +1,4 @@
-/* Accounted For 4.21: dates in the Feed are tappable.
+/* Accounted For 4.21: dates in Word of Mouth are tappable.
    Any date written in a post — "15 NOV", "NOV 15", "11/15", "2026-11-15", "Friday", "tomorrow" — and every line of a Plan of the Day
    schedule becomes a button. Tapping it opens the calendar with everything filled in: date, time, what (the line it was in),
    type (appointment, leave, training, event) and a note saying which post it came from. The leader checks it and taps Add.
@@ -63,11 +63,11 @@ function fill(d,tm,ti,ty,note,whoV){const set=(id,v)=>{const el=document.getElem
   const w=document.getElementById("caWho");if(w&&whoV&&[...w.options].some(o=>o.value===whoV))w.value=whoV;
   const pnl=document.getElementById("caSave");if(pnl)try{pnl.closest(".panel").scrollIntoView({behavior:"smooth",block:"center"})}catch(e){}const ti0=document.getElementById("caTi");if(ti0&&!ti0.value)ti0.focus()}
 document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest("[data-fdt]");if(!t)return;e.preventDefault();e.stopImmediatePropagation();
-  const d=t.dataset.fdt,tm=t.dataset.fdtm||"",ti=t.dataset.fdti||"From the Feed",ty=t.dataset.fdty||"EVENT";const p=post(t);const f=typeof fdCur==="function"?fdCur():null;
-  const note=("Feed · "+(p&&p.by?p.by:(f&&f.unit)||"")+(p?" · posted "+short(new Date(p.t)):"")).slice(0,80);
+  const d=t.dataset.fdt,tm=t.dataset.fdtm||"",ti=t.dataset.fdti||"From Word of Mouth",ty=t.dataset.fdty||"EVENT";const p=post(t);const f=typeof fdCur==="function"?fdCur():null;
+  const note=("Word of Mouth · "+(p&&p.by?p.by:(f&&f.unit)||"")+(p?" · posted "+short(new Date(p.t)):"")).slice(0,80);
   if(leader()&&typeof renderCal==="function"){calDay=d;calAdd=true;calFor=null;view="cal";render();window.scrollTo(0,0);
-    setTimeout(()=>{fill(d,tm,ti,ty,note,who(p));toast("Filled in from the Feed · check it, then tap Add")},60);return}
-  if(typeof icsFor==="function"&&typeof shareFile==="function"){shareFile(icsFor([{d,tm,ti:ti||"From the Feed",no:note}],true),(ti||"event").replace(/[^\w]+/g,"-").slice(0,30)+".ics","text/calendar");toast("Sent to your phone's calendar")}
+    setTimeout(()=>{fill(d,tm,ti,ty,note,who(p));toast("Filled in from Word of Mouth · check it, then tap Add")},60);return}
+  if(typeof icsFor==="function"&&typeof shareFile==="function"){shareFile(icsFor([{d,tm,ti:ti||"From Word of Mouth",no:note}],true),(ti||"event").replace(/[^\w]+/g,"-").slice(0,30)+".ics","text/calendar");toast("Sent to your phone's calendar")}
 },true);
 if(typeof HELP==="object"&&HELP.feed&&Array.isArray(HELP.feed[2]))HELP.feed[2].push("Dates in a post and every line of a Plan of the Day are tappable: tap one and the calendar opens with the date, time, what and who already filled in. Check it and tap Add.");
 })();

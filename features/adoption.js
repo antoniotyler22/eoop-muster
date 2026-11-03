@@ -82,7 +82,7 @@ function oaHTML(full){if(!own())return "";const D=oaData();if(!D.R.length)return
   if(D.off.length){if(full)h+=`<details><summary class="note">Not on yet (${D.off.length})</summary>${sorted(D.off).map(m=>`<div class="ph">${esc(m.sec+" · "+m.rank+" "+m.name)}${digits(m.phone).length>=7?"":" · no phone"}</div>`).join("")}</details>`;
     h+=`<button type="button" class="btn${full?"":" alt"}" id="oaSend" style="width:100%;margin-top:8px">Send to the ${D.off.length} not on the app</button>`}
   else h+=`<p class="note" style="margin:6px 0 0">Everyone is on. 🎉</p>`;
-  return h+`<p class="note" style="margin:6px 0 0">On the app: signed in with their login, checked in, or tapped Got it in the Feed.</p></div>`}
+  return h+`<p class="note" style="margin:6px 0 0">On the app: signed in with their login, checked in, or tapped Got it in Word of Mouth.</p></div>`}
 
 /* ---------- 3) reminders on Home ---------- */
 const DAY=864e5;

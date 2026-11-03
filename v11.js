@@ -1,5 +1,5 @@
 /* Accounted For 1.1 — loaded by index.html right after app.js.
-   1. Feed safety: report a post, hide a post, block a poster, Terms agreement, leader review queue.
+   1. Word of Mouth safety: report a post, hide a post, block a poster, Terms agreement, leader review queue.
    2. Delete my account (member logins and the person running the team), server copies included.
    3. One-tap emergency muster + missed check-in alerts.
    4. Offline outbox: Got its, problems, requests and reports wait for signal and send themselves.
@@ -13,7 +13,7 @@ S.rep=S.rep||[];S.outbox=S.outbox||[];
 const sheetOpen=()=>{const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")))};
 const redraw=fn=>{const y=window.scrollY;fn();window.scrollTo(0,y)};
 
-/* ================= 1. Feed SAFETY ================= */
+/* ================= 1. Word of Mouth SAFETY ================= */
 function termsSheet(after){sheetCtx={kind:"terms"};termsAfter=after||null;
   $("#sheetT").innerHTML=`Community rules<small>Before you join, sign in or post, agree to the Terms of Use.</small>`;
   $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><ul class="note" style="margin:0;padding-left:18px;line-height:1.5">
@@ -24,6 +24,7 @@ function termsSheet(after){sheetCtx={kind:"terms"};termsAfter=after||null;
     <button class="btn" id="tosYes">I agree</button><button class="btn alt" data-sclose="1">Not now</button></div>`;sheetOpen()}
 let termsAfter=null;
 const termsOK=()=>(S.tos||0)>=TERMS_VER;
+window.afTos={ok:()=>termsOK(),line:()=>tosLine(),agree:()=>{S.tos=TERMS_VER;save()}};
 const tosLine=()=>`<label class="tog" style="align-items:flex-start"><input type="checkbox" id="tosChk"${termsOK()?" checked":""}> <span>I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of Use</a>: no objectionable or abusive content.</span></label>`;
 
 /* member side: hidden posts and blocked posters never show */
@@ -57,7 +58,7 @@ async function repSend(f,p,why,note,alsoBlk){const o={k:"rep",rid:"x"+Date.now()
 window.repIn=function(f,o,r){if(S.rep.some(x=>x.rid===o.rid))return;
   const x={rid:String(o.rid).slice(0,20),feed:f.id,pid:+o.pid||0,why:String(o.why||"Other").slice(0,40),note:String(o.note||"").slice(0,140),me:String(o.me||"").slice(0,30),by:String(o.by||"").slice(0,30),sl:String(o.sl||"").replace(/[^A-Z0-9]/g,"").slice(0,6),snip:String(o.snip||"").slice(0,160),t:Date.parse(r.created_at)||Date.now(),st:"open"};
   S.rep.unshift(x);S.rep=S.rep.slice(0,200);actAdd("⚑",(x.me||"Someone")+" reported a post ("+x.why+"): “"+x.snip.slice(0,60)+"”","feed");
-  toast("⚑ A post was reported. Review it in Feed.");try{navigator.vibrate&&navigator.vibrate([200,80,200])}catch(e){}};
+  toast("⚑ A post was reported. Review it in Word of Mouth.");try{navigator.vibrate&&navigator.vibrate([200,80,200])}catch(e){}};
 const repOpenList=()=>S.rep.filter(x=>x.st==="open"&&S.feeds.some(f=>f.lk&&f.id===x.feed));
 function repHTML(f){const L=S.rep.filter(x=>x.feed===f.id);if(!L.length)return"";const open=L.filter(x=>x.st==="open");const done=L.filter(x=>x.st!=="open").slice(0,10);
   const old=open.filter(x=>Date.now()-x.t>20*3600000).length;
@@ -113,10 +114,10 @@ function emStart(){if(S.rc.open&&!S.rc.em){armed=null;}
   actAdd("🚨","Started an EMERGENCY MUSTER. Check-in deadline "+S.emMin+" min.","recall");
   setTimeout(livePoll,50);
   const f=mainFeed();if(f&&f.lk)setTimeout(()=>{const txt="🚨 EMERGENCY MUSTER. Check in now: tap the button below and pick Good, Delayed or Need help.";const ci=ciLink();
-    fdEnc(f.ek,{t:txt,u:true,ci,to:{k:"all"},sa:SECTIONS.map(x=>x[0]),by:fdBy(f)}).then(ct=>SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct})).then(id=>{SB.notify(null,{feed:f.id,lk:f.lk,urg:true});f.posts=[{id:+id,t:Date.now(),txt,urg:true,ci,to:{k:"all"},by:fdBy(f)}].concat(f.posts||[]);f.ra=f.ra||{};f.ra[+id]=Math.min(S.emMin,15);save()}).catch(()=>toast("Couldn't post to Feed. Text the check-in link below."))},400);
+    fdEnc(f.ek,{t:txt,u:true,ci,to:{k:"all"},sa:SECTIONS.map(x=>x[0]),by:fdBy(f)}).then(ct=>SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct})).then(id=>{SB.notify(null,{feed:f.id,lk:f.lk,urg:true});f.posts=[{id:+id,t:Date.now(),txt,urg:true,ci,to:{k:"all"},by:fdBy(f)}].concat(f.posts||[]);f.ra=f.ra||{};f.ra[+id]=Math.min(S.emMin,15);save()}).catch(()=>toast("Couldn't post to Word of Mouth. Text the check-in link below."))},400);
   view="recall";render();window.scrollTo(0,0);toast("🚨 Emergency muster started")}
 const emBtn=()=>leaderPhone()?(S.rc.open?`<button class="btn warn" data-go="recall" style="width:100%;margin-top:12px">${S.rc.em?"🚨 Emergency muster in progress":"Recall in progress"} · ${recallPool().filter(m=>(S.rc.res||{})[m.id]==="ok").length}/${recallPool().length}</button>`
-  :`<button class="btn warn" id="v11Em" style="width:100%;margin-top:12px;font-size:17px">${armed==="v11em"?"Tap again to start · texts + Feed alert to everyone":"🚨 Emergency muster"}</button>`):"";
+  :`<button class="btn warn" id="v11Em" style="width:100%;margin-top:12px;font-size:17px">${armed==="v11em"?"Tap again to start · texts + Word of Mouth alert to everyone":"🚨 Emergency muster"}</button>`):"";
 function missing(){const ci=S.rc.ci||{},res=S.rc.res||{};return sorted(recallPool().filter(m=>!ci[m.id]&&res[m.id]!=="ok"))}
 function dlHTML(){if(!S.rc.open)return"";const m=missing();const left=S.rc.dl?Math.ceil((S.rc.dl-Date.now())/60000):null;
   let h=`<div class="panel" style="border-color:var(${S.rc.dl&&left<=0&&m.length?"--warn":"--line"})">${S.rc.em?`<b style="color:var(--warn)">🚨 EMERGENCY MUSTER</b>`:""}
@@ -128,7 +129,7 @@ function dlHTML(){if(!S.rc.open)return"";const m=missing();const left=S.rc.dl?Ma
     else h+=`<p class="note" style="color:var(--s-onhand);font-weight:700">✓ Everyone accounted for.</p>`}
   return h+`</div>`}
 {const _rr=renderRecall;renderRecall=function(){if(!S.rc.open&&leaderPhone()&&!proOK()){}_rr.apply(this,arguments);if(S.rc.open){const mb=$("#main .mbar");mb?mb.insertAdjacentHTML("afterend",dlHTML()):$("#main").insertAdjacentHTML("afterbegin",dlHTML())}
-  else if(leaderPhone()){const p=$("#main .panel");if(p)p.insertAdjacentHTML("beforebegin",`<div class="panel" style="border-color:var(--warn)"><b>🚨 Emergency muster</b> <span class="chip">Free</span><p class="note">One tap starts a live check-in, posts an URGENT alert to your Feed with the check-in link, and alerts you about anyone who hasn't checked in after the deadline.</p>
+  else if(leaderPhone()){const p=$("#main .panel");if(p)p.insertAdjacentHTML("beforebegin",`<div class="panel" style="border-color:var(--warn)"><b>🚨 Emergency muster</b> <span class="chip">Free</span><p class="note">One tap starts a live check-in, posts an URGENT alert to your Word of Mouth with the check-in link, and alerts you about anyone who hasn't checked in after the deadline.</p>
       <label for="v11EmMin">Check-in deadline</label><select id="v11EmMin" class="wsel">${[5,10,15,30,60].map(v=>`<option value="${v}"${S.emMin===v?" selected":""}>${v} min</option>`).join("")}</select>${emBtn()}</div>`)}}}
 function dlCheck(){if(!S.rc.open||!S.rc.dl||S.rc.dlFired||Date.now()<S.rc.dl)return;S.rc.dlFired=Date.now();const m=missing();save();if(!m.length)return;
   const t=m.length+" missed the check-in deadline";actAdd("⏰",t+(S.rc.em?" (emergency muster)":""),"recall");toast("⏰ "+t);try{navigator.vibrate&&navigator.vibrate([250,100,250,100,250])}catch(e){}
@@ -168,7 +169,7 @@ function renderDash(){const {c,T}=counts();const pres=present(T);const al=alerts
   h+=`<div class="v11grid">`;
   h+=`<div class="panel"><b>By ${esc(LV().sec||"section")}</b><table class="v11tb"><thead><tr><th></th><th>Total</th><th>On hand</th><th>Present</th><th>%</th></tr></thead><tbody>${SECTIONS.map(([k])=>{const o=c[k];const p=present(o);return `<tr><td><b>${esc(k)}</b></td><td>${o.total}</td><td>${o["On Hand"]}</td><td>${p}</td><td>${pct(p,o.total)}%</td></tr>`}).join("")}<tr><td><b>ATT</b></td><td>${c.ATT.total}</td><td>${c.ATT["On Hand"]}</td><td>${present(c.ATT)}</td><td>${pct(present(c.ATT),c.ATT.total)}%</td></tr></tbody><tfoot><tr><td><b>Total</b></td><td>${T.total}</td><td>${T["On Hand"]}</td><td>${pres}</td><td>${pct(pres,T.total)}%</td></tr></tfoot></table>
     <div class="note">${STATUSES.filter(s=>T[s]).map(s=>esc(SHORT[s]||s)+" "+T[s]).join(" · ")}</div></div>`;
-  h+=`<div class="panel"><b>Announcements · read receipts</b>${f?posts.length?posts.map(p=>{const st=fdStats(f,p);return `<div class="v11post"><div class="note" style="margin:0">${ago(p.t)}${p.urg?` · <b style="color:var(--warn)">URGENT</b>`:""}</div><div>${esc(p.txt.slice(0,140))}${p.txt.length>140?"…":""}</div><div class="v11bar"><i style="width:${pct(st.got,st.pool)}%"></i></div><div class="note" style="margin:0">${st.got}/${st.pool} confirmed${st.prob?` · <b style="color:var(--warn)">${st.prob} problem${st.prob>1?"s":""}</b>`:""}</div></div>`}).join(""):`<p class="note">Nothing posted yet.</p>`:`<p class="note">No Feed yet.</p>`}<button class="btn alt" data-go="feed">Open Feed</button></div>`;
+  h+=`<div class="panel"><b>Announcements · read receipts</b>${f?posts.length?posts.map(p=>{const st=fdStats(f,p);return `<div class="v11post"><div class="note" style="margin:0">${ago(p.t)}${p.urg?` · <b style="color:var(--warn)">URGENT</b>`:""}</div><div>${esc(p.txt.slice(0,140))}${p.txt.length>140?"…":""}</div><div class="v11bar"><i style="width:${pct(st.got,st.pool)}%"></i></div><div class="note" style="margin:0">${st.got}/${st.pool} confirmed${st.prob?` · <b style="color:var(--warn)">${st.prob} problem${st.prob>1?"s":""}</b>`:""}</div></div>`}).join(""):`<p class="note">Nothing posted yet.</p>`:`<p class="note">No Word of Mouth yet.</p>`}<button class="btn alt" data-go="feed">Open Word of Mouth</button></div>`;
   if(S.rc.open){const m=missing();h+=`<div class="panel" style="border-color:var(--warn)"><b>${S.rc.em?"🚨 Emergency muster":"Recall"} · not checked in (${m.length})</b><div class="note">${m.slice(0,60).map(x=>esc((x.sec==="ATT"?"ATT":x.sec)+" "+x.rank+" "+lastOf(x))).join(" · ")||"Everyone accounted for."}</div><button class="btn" data-go="recall">Open recall</button></div>`}
   else h+=`<div class="panel"><b>Emergency</b><p class="note">Start a live headcount with one tap. Everyone gets the check-in link; you get alerted about anyone who misses the deadline.</p>${emBtn()}</div>`;
   const A=(S.act||[]).slice(0,10);h+=`<div class="panel"><b>Activity</b>${A.length?A.map(a=>`<div class="note" style="margin:0">${esc(a.ic)} ${esc(a.txt)} · ${ago(a.t)}</div>`).join(""):`<p class="note">Nothing yet.</p>`}<button class="btn alt" data-go="act">See all</button></div>`;
@@ -184,7 +185,7 @@ function renderDash(){const {c,T}=counts();const pres=present(T);const al=alerts
 /* ================= events ================= */
 document.addEventListener("click",e=>{const t=e.target;
   /* Terms gate on posting */
-  if((t.id==="fdPost"||t.id==="fdSlPost")&&!termsOK()){const c=$("#tosChk");if(c&&c.checked){S.tos=TERMS_VER;save();return}e.stopImmediatePropagation();e.preventDefault();toast("Agree to the Terms of Use first (checkbox above Post).");return}
+  if((t.id==="fdPost"||t.id==="fdSlPost"||t.id==="fdMPost")&&!termsOK()){const c=$("#tosChk");if(c&&c.checked){S.tos=TERMS_VER;save();return}e.stopImmediatePropagation();e.preventDefault();toast("Agree to the Terms of Use first (checkbox above Post).");return}
   if(t.id==="fjYes"&&!termsOK()){const c=$("#tosChk");if(!c||!c.checked){e.stopImmediatePropagation();e.preventDefault();toast("Agree to the Terms of Use to join.");return}S.tos=TERMS_VER;save()}
 },true);
 document.addEventListener("click",e=>{const t=e.target;
@@ -207,7 +208,7 @@ document.addEventListener("click",e=>{const t=e.target;
       actAdd("⚑","Removed a reported post"+(rm.dataset.v11cut?" and cut off the "+x.sl+" leader link":"")+".","feed");save();redraw(renderFeed);toast(rm.dataset.v11cut?"Removed. New "+x.sl+" link made; the old one can't post.":"Post removed for everyone")})()
       .catch(err=>{rm.disabled=false;rm.textContent="Try again";toast("Couldn't finish: "+(err.message||err))});return}
   if(t.id==="v11Del"){if(armed!=="v11del"){armed="v11del";t.textContent="Tap again: delete my account and all data";return}t.disabled=true;delAccount().finally(()=>{if(t.isConnected)t.disabled=false});return}
-  if(t.id==="v11Em"){if(armed!=="v11em"){armed="v11em";t.textContent="Tap again to start · texts + Feed alert to everyone";setTimeout(()=>{if(armed==="v11em"){armed=null;if(t.isConnected)t.textContent="🚨 Emergency muster"}},5000);return}emStart();return}
+  if(t.id==="v11Em"){if(armed!=="v11em"){armed="v11em";t.textContent="Tap again to start · texts + Word of Mouth alert to everyone";setTimeout(()=>{if(armed==="v11em"){armed=null;if(t.isConnected)t.textContent="🚨 Emergency muster"}},5000);return}emStart();return}
 });
 document.addEventListener("change",e=>{const t=e.target;
   if(t.id==="v11Dl"){const v=+t.value;S.rc.dl=v?S.rc.start+v*60000:0;S.rc.dlFired=0;save();redraw(renderRecall);setTimeout(dlCheck,100);return}
@@ -229,7 +230,7 @@ function paintTitle(){const b=$("#bMode");if(b){b.setAttribute("data-noxl","");c
 {const _ms=openModeSheet;openModeSheet=function(first){_ms.apply(this,arguments);
   $("#sheetOpts").insertAdjacentHTML("afterbegin",`<div class="panel" data-noxl style="margin:0 0 10px"><b>Names</b>
     <label for="v11AppN">App name on your header</label><input type="text" id="v11AppN" maxlength="24" placeholder="Accounted For" value="${esc(S.appName||"")}">
-    <label for="v11UnitN">Unit or team name (on reports, texts and the Feed)</label><input type="text" id="v11UnitN" maxlength="24" placeholder="1ST PLATOON" value="${esc(S.unit||"")}" autocapitalize="characters">
+    <label for="v11UnitN">Unit or team name (on reports, texts and Word of Mouth)</label><input type="text" id="v11UnitN" maxlength="24" placeholder="1ST PLATOON" value="${esc(S.unit||"")}" autocapitalize="characters">
     <button class="btn" id="v11NameSave">Save names</button><p class="note" style="margin:0">Only changes this phone. People you invite still download <b>Accounted For</b>.</p></div>`)}}
 document.addEventListener("click",e=>{if(e.target.id!=="v11NameSave")return;S.appName=String($("#v11AppN").value||"").replace(/[<>#|]/g,"").trim().slice(0,24);
   const u=cleanName($("#v11UnitN").value||"");if(u||S.unit)S.unit=u;save();closeSheet();paintTitle();render();toast("Saved: "+appName()+" · "+unitName())});

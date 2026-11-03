@@ -1,7 +1,7 @@
 /* Accounted For 4.59: duty swap board.
-   1. A member opens My page (or the Feed request form), taps "Find someone to take it" on an upcoming duty, adds a
+   1. A member opens My page (or Word of Mouth request form), taps "Find someone to take it" on an upcoming duty, adds a
       note if they like, and sends it. It goes to the leader like any request (encrypted).
-   2. The leader's phone (the OIC's) posts it to the Feed for everyone: "SGT Ruiz needs someone for Duty NCO, Sat 1 Nov."
+   2. The leader's phone (the OIC's) posts it to Word of Mouth for everyone: "SGT Ruiz needs someone for Duty NCO, Sat 1 Nov."
    3. Anyone taps "✋ I'll take it". That also counts as their Confirm.
    4. The leader sees who offered and taps Approve on one. The duty roster changes, the request is marked approved,
       and a short "Swap done" post tells everyone (members' My pages update with the roster).
@@ -15,7 +15,7 @@ async function ackNote(f,pid,note){const me=f.me||(f.lk?(S.who&&S.who.n)||S.post
   await SB.rpc("feed_ack",{p_feed:f.id,p_member_key:f.mk,p_post:pid,p_words:hs,p_code:1,p_note:note.slice(0,60)});
   f.mine=f.mine||{};f.mine[pid]={c:1,note,t:Date.now()};save()}
 /* ---------- member: ask ---------- */
-async function askSwap(d,ro,note){const f=memberFeed();if(!f)throw new Error("Your team Feed isn't on this phone yet.");if(!f.me)throw new Error("Set your name on the Feed first.");
+async function askSwap(d,ro,note){const f=memberFeed();if(!f)throw new Error("Your team Word of Mouth isn't on this phone yet.");if(!f.me)throw new Error("Set your name on Word of Mouth first.");
   const o={k:"req",rid:"r"+Date.now().toString(36)+rndId(4),ty:"Duty swap",from:d,to:"",tm:"",note:(ro+(note?" · "+note:"")).slice(0,200),me:f.me};
   const ct=await fdEnc(f.ek,o);await SB.rpc("feed_req",{p_feed:f.id,p_member_key:f.mk,p_ct:ct});try{SB.notify(null,{alert:"req",feed:f.id,mk:f.mk})}catch(e){}
   f.myReqs=[{rid:o.rid,ty:o.ty,from:d,to:"",tm:"",t:Date.now()}].concat(f.myReqs||[]).slice(0,30);S.swapAsked=S.swapAsked||{};S.swapAsked[d+"|"+ro]=Date.now();save()}
@@ -35,7 +35,7 @@ document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;
     askSwap(d,ro,note).then(()=>{open="";renderMe();toast("🔁 Sent. Your leader posts it to the team.")}).catch(err=>{s.disabled=false;toast(err.message||"Couldn't send. Check signal.")});return}
   const tk=t.closest("[data-swtake]");if(tk){e.stopImmediatePropagation();const f=fdCur();tk.disabled=true;ackNote(f,+tk.dataset.swtake,TAKE).then(()=>{const y=window.scrollY;renderFeed();window.scrollTo(0,y);toast("✋ Offered. Your leader decides.")}).catch(err=>{tk.disabled=false;toast(err.message||"Couldn't send.")});return}
   const ok=t.closest("[data-swok]");if(ok){e.stopImmediatePropagation();const [pid,mid]=ok.dataset.swok.split("|");approve(fdCur(),+pid,mid,ok);return}},true);
-/* ---------- the Feed card ---------- */
+/* ---------- Word of Mouth card ---------- */
 const doneFor=(f,rid)=>(f.posts||[]).find(p=>p.swap&&p.swap.done&&p.swap.rid===rid);
 {const _card=fdCard;fdCard=function(f,p){let h=_card.apply(this,arguments);if(!p||!p.swap)return h;
   try{const sw=p.swap;if(sw.done)return h.replace(/<\/article>$/,`<div class="fci"><span class="ttl">✅ Duty swap done</span><div><b>${esc(sw.done)}</b> takes ${esc(sw.ro)} on ${esc(dShort(sw.d))}${sw.who?` (was ${esc(sw.who)})`:""}.</div></div></article>`);
@@ -66,5 +66,5 @@ async function approve(f,pid,mid,btn){if(!f||!f.lk)return;const p=(f.posts||[]).
     try{SB.notify(null,{feed:f.id,lk:f.lk,urg:false})}catch(e){}}catch(e){toast("Roster changed; couldn't post the update. Check signal.")}
   try{actAdd("🔁",taker+" takes "+sw.ro+" "+dShort(sw.d)+(sw.who?" from "+sw.who:""),"duty")}catch(e){}
   save();const y=window.scrollY;renderFeed();window.scrollTo(0,y);toast(ro?"✅ Approved. Duty roster updated.":"✅ Approved. (No roster named "+sw.ro+"; update it in Duty.)")}
-if(typeof HELP==="object"){HELP.swap=["Duty swap","Members ask for someone to take a duty; the team sees it in the Feed; the leader approves one.",["My page → Duty → Find someone.","Your leader's phone posts it to the Feed. Anyone taps I'll take it.","The leader taps Approve on one person: the duty roster changes and everyone sees Swap done."]]}
+if(typeof HELP==="object"){HELP.swap=["Duty swap","Members ask for someone to take a duty; the team sees it in Word of Mouth; the leader approves one.",["My page → Duty → Find someone.","Your leader's phone posts it to Word of Mouth. Anyone taps I'll take it.","The leader taps Approve on one person: the duty roster changes and everyone sees Swap done."]]}
 })();

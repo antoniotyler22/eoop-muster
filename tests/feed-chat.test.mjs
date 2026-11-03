@@ -1,4 +1,4 @@
-// 4.45.0: the Feed as a conversation: bubbles plus a one-at-a-time Confirm card.
+// 4.45.0: Word of Mouth as a conversation: bubbles plus a one-at-a-time Confirm card.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { openApp, sleep } from "./harness.mjs";

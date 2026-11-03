@@ -5,8 +5,8 @@
    - Section-leader links: pick from the section's roster. A self-add goes to the OIC with the next update and the
      OIC's phone puts them on the roster.
    - Access links (view, can edit, same as me, incoming OIC): pick from the board. A self-add lands on the shared
-     board (from a view-only phone it goes to the OIC through the Feed, like a request).
-   - Feed links: the OIC's phone shares names only (rank, name, section; setup part 28), encrypted with the Feed key.
+     board (from a view-only phone it goes to the OIC through Word of Mouth, like a request).
+   - Word of Mouth links: the OIC's phone shares names only (rank, name, section; setup part 28), encrypted with Word of Mouth key.
      Picking a name or adding yourself goes to the OIC as an encrypted request.
    - My page links already know who the person is, so they're never asked.
    Phones that joined before this (old links keep working) see a banner until they pick.
@@ -112,7 +112,7 @@ function autoAsk(){const c=need();if(!c)return;const sh=$("#sheet");if(sh&&!sh.h
   try{sessionStorage.setItem(ASK,key)}catch(e){}whoSheet(c)}
 every(4000,()=>{try{autoAsk()}catch(e){}},"who-ask");
 
-/* ---------- names for Feed links (setup part 28) ---------- */
+/* ---------- names for Word of Mouth links (setup part 28) ---------- */
 let nBusy=false;
 async function namesPub(force){if(nBusy||!real()||typeof isOwner!=="function"||!isOwner())return;nBusy=true;
   try{const list=S.roster.map(m=>({i:m.id,r:m.rank,n:m.name,s:m.sec}));const sg=sigF(list);
@@ -133,9 +133,9 @@ every(60000,()=>{namesPub(false);const f=memberFeed()||(S.feeds||[]).find(x=>!x.
 const addFrom=(x,sec,by,how)=>whoAddFrom(x,sec,by,how);
 /* a section leader's update (applied inside livePollCal by whoCalApply, which the server hub runs too) */
 window.whoCalIn=whoCalApply;
-/* a Feed link (or a view-only phone): picked their name, or added themselves */
+/* a Word of Mouth link (or a view-only phone): picked their name, or added themselves */
 const doneRid=new Set();
-window.whoIn=function(f,o,r){const how=String(o.how||"Feed link").slice(0,40);const me=up(o.me).slice(0,40);S.seen=S.seen||{};
+window.whoIn=function(f,o,r){const how=String(o.how||"Word of Mouth link").slice(0,40);const me=up(o.me).slice(0,40);S.seen=S.seen||{};
   if(o.k==="who"){const m=S.roster.find(x=>x.id===String(o.mid||""));const k=m?m.id:"n:"+me;const was=S.seen[k];S.seen[k]={t:Date.parse(r&&r.created_at)||Date.now(),who:m?nm(m):me,how};
     if(!was||was.how!==how)actAdd("👤",(m?nm(m):me)+" is on the app ("+how+")","people");save();return}
   if(o.k==="join"){const rid=String(o.rid||"");if(rid&&(doneRid.has(rid)||(S.whoRids||[]).includes(rid)))return;doneRid.add(rid);S.whoRids=(S.whoRids||[]).concat(rid).slice(-200);
@@ -181,9 +181,9 @@ function watch(){if(!Array.isArray(S.roster))return;const now=snap();
 {const _save=save;save=function(){const r=_save.apply(this,arguments);try{watch()}catch(e){}return r}}
 {const _raw=rawSave;rawSave=function(){const r=_raw.apply(this,arguments);try{if(base)base=snap()}catch(e){}return r}}
 setTimeout(()=>{try{base=snap()}catch(e){}},0);
-/* Feed posts and direct messages sent from this phone are logged too */
+/* Word of Mouth posts and direct messages sent from this phone are logged too */
 {const _rpc=SB.rpc.bind(SB);SB.rpc=async function(fn,args){const r=await _rpc(fn,args);
-  try{if((fn==="feed_post"||fn==="feed_post_sl")&&real()&&Date.now()-touchT<60000)logEntry({mid:"",who:"",f:"feed",b:"posted to the Feed"})}catch(e){}return r}}
+  try{if((fn==="feed_post"||fn==="feed_post_sl")&&real()&&Date.now()-touchT<60000)logEntry({mid:"",who:"",f:"feed",b:"posted to Word of Mouth"})}catch(e){}return r}}
 /* data arriving from other phones is never logged as a change made here */
 for(const fn of ["livePollBoard","livePollCal","rosterPull","syncPull","fdPollAll","mpFetch"]){const f0=window[fn];if(typeof f0!=="function")continue;
   window[fn]=async function(){remote++;try{return await f0.apply(this,arguments)}finally{remote--;try{base=snap()}catch(e){}}}}
@@ -202,5 +202,5 @@ window.whoChgFor=m=>(S.chg||[]).filter(e=>e.mid&&(e.mid===m.id||e.mid===m.uid));
   main.insertAdjacentHTML("beforeend",`<div class="sech" id="whoAll"><h2>Who changed what · ${L.length}</h2></div>${L.length?`<div class="alist">${L.map(e=>rowHTML(e,true)).join("")}</div>`:`<div class="panel"><p class="note">Every change made on your phone, section leaders' phones and access phones shows here with the person's name.</p></div>`}`)}catch(e){}return r}}
 
 /* My page members are known by their link; nobody else on this phone is asked twice */
-if(typeof SC==="object"&&Array.isArray(SC))SC.push({k:"who",n:"4.11: Feed links pick their name",f:["28_feed_names"],t:[["feed_names_get",{p_feed:"zz",p_member_key:"x"}]]});
+if(typeof SC==="object"&&Array.isArray(SC))SC.push({k:"who",n:"4.11: Word of Mouth links pick their name",f:["28_feed_names"],t:[["feed_names_get",{p_feed:"zz",p_member_key:"x"}]]});
 })();

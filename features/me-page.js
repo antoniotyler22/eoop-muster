@@ -1,6 +1,6 @@
 /* Accounted For 4.18 — My page, laid out by what matters first (layout A).
    Greeting with the day, date and 24-hour time; an open emergency muster on top in red; the daily Check in card;
-   updates to confirm; the word from the Feed for everyone or their section, each with Got it; today's items;
+   updates to confirm; the word from Word of Mouth for everyone or their section, each with Got it; today's items;
    Needs you; the next 7 days (own items, section duty, events for everyone); countdowns; then duty, due-outs,
    requests and the full calendar. The leader's phone can still preview it (People → a person → My page). */
 (()=>{
@@ -30,14 +30,14 @@ function comingHTML(D){const k=iso(new Date()),k7=plus(7);const L=items(D).filte
 function wordHTML(){const f=typeof fdCur==="function"?fdCur():null;if(!f||!Array.isArray(f.posts))return "";
   const forMe=p=>typeof fdForMe!=="function"||fdForMe(f,p);const L=f.posts.filter(p=>!p.pod&&!(p.ci&&Date.now()-p.t<12*3600000)&&forMe(p)).slice(0,3);if(!L.length)return "";
   const open=L.filter(p=>!(f.mine||{})[p.id]).length;
-  return `<div class="sech"><h2>The word</h2><span style="display:flex;gap:6px;align-items:center">${open?`<span class="chip" style="background:var(--brass);color:#fff;border:0">${open} to confirm</span>`:""}<button class="chip" data-go="feed" style="cursor:pointer">Feed ▸</button></span></div><div id="meWord">${L.map(p=>fdCard(f,p,false,false)).join("")}</div>`}
+  return `<div class="sech"><h2>The word</h2><span style="display:flex;gap:6px;align-items:center">${open?`<span class="chip" style="background:var(--brass);color:#fff;border:0">${open} to confirm</span>`:""}<button class="chip" data-go="feed" style="cursor:pointer">Word of Mouth ▸</button></span></div><div id="meWord">${L.map(p=>fdCard(f,p,false,false)).join("")}</div>`}
 /* an open emergency muster: the newest post with a check-in link, less than 12 hours old */
 function musterHTML(){const f=typeof fdCur==="function"?fdCur():null;if(!f||!Array.isArray(f.posts))return "";const p=f.posts.find(x=>x.ci&&Date.now()-x.t<12*3600000);if(!p)return "";
   const h=String(p.ci).split("#")[1]||"";const txt=String(p.txt||"").split("\n")[0].slice(0,120);
   return `<div class="card me-muster"><div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:12px;letter-spacing:.08em">🚨 EMERGENCY MUSTER</b><span style="font-size:12px;font-weight:800">${esc(ago(p.t))}</span></div>
     <div style="font-weight:700;line-height:1.35">${esc(txt)}</div>
     <button class="btn" data-meci="${esc(h)}" style="background:#fff;color:#b42318">Reply now · 1 I'm OK · 2 Delayed · 3 Need help</button></div>`}
-function bottomHTML(){return `<div class="me-bottom"><button class="btn alt" data-go="feed">📣 Feed</button><button class="btn alt" data-go="mecal">📅 Calendar</button><button class="btn alt" data-go="log">📓 My log</button><button class="btn alt" data-go="support">❓ Help</button></div>`}
+function bottomHTML(){return `<div class="me-bottom"><button class="btn alt" data-go="feed">📣 Word of Mouth</button><button class="btn alt" data-go="mecal">📅 Calendar</button><button class="btn alt" data-go="log">📓 My log</button><button class="btn alt" data-go="support">❓ Help</button></div>`}
 /* collect the page the app built, then put it back together in order */
 function blocks(main){const out={};let cur=null;const kids=[...main.children];
   for(const el of kids){

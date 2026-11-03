@@ -1,10 +1,10 @@
 /* Accounted For 4.29: visitor logins that cut off at a time you set.
    Visitors screen → "Visitor login": name, phone or email, and how long (2 h … 1 week, or an exact end time).
-   It makes a username + password that opens the team Feed (read the word, tap Got it), signs them into the
+   It makes a username + password that opens the team Word of Mouth (read the word, tap Got it), signs them into the
    visitor log, and opens a text/email with the login and when it ends.
    When the time is up:
    - the leader's phone deletes the login, signs them out of the visitor log, and notes it in Activity;
-   - the visitor's phone drops the Feed and the login by itself (the end time is sealed inside the login);
+   - the visitor's phone drops Word of Mouth and the login by itself (the end time is sealed inside the login);
    - with setup part 33, the server also refuses the login after that time, even if the leader's phone is off.
    "End now" cuts one off early. A visitor never sees the roster, the board or anyone's numbers. */
 (()=>{
@@ -20,11 +20,11 @@ let vf={open:false,h:8,end:"",msg:"",busy:false,armed:""};
 async function make(){const g=id=>((document.getElementById(id)||{}).value||"").trim();const name=g("vlName").slice(0,60),to=g("vlTo").slice(0,80);
   if(!name){vf.msg="Type the visitor's name.";return draw()}
   if(to&&!isEmail(to)&&String(to).replace(/\D/g,"").length<10){vf.msg="Phone with area code, or an email (or leave it blank and copy the login).";return draw()}
-  const f=teamFeed();if(!f){vf.msg="Start your team Feed first (Feed tab). Visitors sign in to the Feed.";return draw()}
+  const f=teamFeed();if(!f){vf.msg="Start your team Word of Mouth first (Word of Mouth tab). Visitors sign in to Word of Mouth.";return draw()}
   let end=vf.h?Date.now()+vf.h*3600000:Date.parse(g("vlEnd"));if(!end||end<Date.now()+5*60000){vf.msg="Pick an end time at least 5 minutes from now.";return draw()}
   if(end>Date.now()+31*864e5){vf.msg="Visitor logins last 31 days at most.";return draw()}
   vf.busy=true;vf.msg="Making the login…";draw();
-  try{if(!S.lgOwner)S.lgOwner=rndId(32);const base=await lgHash("feed:"+f.id,true);if(!base)throw new Error("Couldn't make the Feed link.");
+  try{if(!S.lgOwner)S.lgOwner=rndId(32);const base=await lgHash("feed:"+f.id,true);if(!base)throw new Error("Couldn't make Word of Mouth link.");
     const h=base+"&until="+end+"&vis=1";const L={user:lgUser(name.split(/\s+/).pop()),pw:lgPw(),dest:"feed:"+f.id,label:"Visitor · "+name,role:"Visitor",h,at:Date.now(),until:end,vis:1,who:name,to};
     let tries=0;while(!L.uid&&tries<3){tries++;try{const K=await lgKeys(L.user,L.pw);await SB.rpc("login_put",{p_uid:K.uid,p_owner:S.lgOwner,p_vf:K.vf,p_ct:await lgSeal(K,{v:1,h,m:S.mode||"",u:unitName(),l:L.label,until:end})});L.uid=K.uid}
       catch(e){if(/taken/.test(String(e&&e.message)))L.user=lgUser(name.split(/\s+/).pop());else throw e}}
@@ -55,14 +55,14 @@ function sweepVisitor(){let ch=false;for(const f of S.feeds||[])if(!f.lk&&pend[f
   if(gone.length){S.feeds=S.feeds.filter(f=>!gone.includes(f));if(S.lgSelf&&/until=/.test(S.lgSelf.h||"")){const u=+((S.lgSelf.h.match(/until=(\d+)/)||[])[1]||0);if(u&&u<=Date.now())delete S.lgSelf}
     ch=true;toast("Your visitor access ended. Thanks for visiting.");if(view==="feed"){view="board";setTimeout(()=>{try{render()}catch(e){}},0)}}
   if(ch)save()}
-/* a Feed banner so the visitor knows when it ends */
+/* a Word of Mouth banner so the visitor knows when it ends */
 {const _rf=renderFeed;renderFeed=function(){_rf.apply(this,arguments);try{const f=fdCur();if(f&&!f.lk&&f.until&&!$("#vlBan")){const m=$("#main");if(m)m.insertAdjacentHTML("afterbegin",`<div class="banner" id="vlBan" style="border-color:var(--brass)"><span>🪪 Visitor access until <b>${esc(until(f.until))}</b></span></div>`)}}catch(e){}}}
 
 /* ---------- Visitors screen panel ---------- */
 function panelHTML(){if(typeof isOwner!=="function"||!isOwner())return "";const L=vis();const f=teamFeed();
   let h=`<div class="panel" id="vlBox" style="border-color:var(--brass)"><div style="display:flex;justify-content:space-between;align-items:center"><b>🪪 Visitor logins</b>${vf.open?"":`<button class="btn" id="vlOpen" style="width:auto;padding:8px 14px;margin:0">+ Visitor login</button>`}</div>
-    <p class="note" style="margin:4px 0 0">A login that opens your Feed only and cuts off at the time you set. No roster, no numbers.</p>`;
-  if(!f)h+=`<p class="note" style="color:var(--warn)">Start your team Feed first (Feed tab): visitors sign in to it.</p>`;
+    <p class="note" style="margin:4px 0 0">A login that opens your Word of Mouth only and cuts off at the time you set. No roster, no numbers.</p>`;
+  if(!f)h+=`<p class="note" style="color:var(--warn)">Start your team Word of Mouth first (Word of Mouth tab): visitors sign in to it.</p>`;
   if(vf.open)h+=`<label for="vlName">Visitor's name</label><input type="text" id="vlName" maxlength="60" placeholder="Jordan Lee" autocomplete="off">
     <label for="vlTo">Their phone or email (to send the login)</label><input type="text" id="vlTo" maxlength="80" inputmode="email" autocapitalize="none" placeholder="(808) 555-0123 or name@example.com">
     <div class="note" style="margin:10px 0 4px">Cuts off after</div><div class="evts">${DUR.map(([v,l])=>`<button type="button" data-vlh="${v}" aria-pressed="${vf.h===v}">${l}</button>`).join("")}<button type="button" data-vlh="0" aria-pressed="${!vf.h}">Pick a time</button></div>

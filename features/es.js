@@ -1,6 +1,6 @@
 /* Accounted For 1.6: Español.
    Turns on by itself when the phone's language is Spanish, or from Settings / the welcome screen (Idioma).
-   Translates the screens people use most: welcome and setup, Home, Feed, check-in, My status, Calendar, Tools, the demo
+   Translates the screens people use most: welcome and setup, Home, Word of Mouth, check-in, My status, Calendar, Tools, the demo
    drill and the share card. Anything not in the list stays in English. */
 (()=>{
 const ES={
@@ -14,7 +14,7 @@ const ES={
 "At assembly point":"En el punto de reunión","AT ASSEMBLY POINT":"EN EL PUNTO DE REUNIÓN","Still inside":"Aún adentro","Remote today":"Remoto hoy","Floor warden":"Brigadista","Traveling":"De viaje","PTO":"Vacaciones",
 "Players":"Jugadores","Students":"Estudiantes","Runners":"Corredores","Staff":"Personal","Employees":"Empleados","Coaches":"Entrenadores","Chaperones":"Acompañantes","Volunteers":"Voluntarios","Visitors":"Visitantes",
 /* tabs and header */
-"Home":"Inicio","Feed":"Avisos","People":"Personas","Plan":"Plan","Tools":"Herramientas","My status":"Mi estado","Calendar":"Calendario","Today":"Hoy","My page":"Mi página","My log":"Mi registro","Ask":"Preguntar",
+"Home":"Inicio","Word of Mouth":"Avisos","People":"Personas","Plan":"Plan","Tools":"Herramientas","My status":"Mi estado","Calendar":"Calendario","Today":"Hoy","My page":"Mi página","My log":"Mi registro","Ask":"Preguntar",
 /* welcome and setup */
 "Welcome to Accounted For":"Bienvenido a Accounted For","Know who's here, who's not, and who got the word.":"Sepa quién está, quién no y quién recibió el aviso.",
 "I'm joining a team":"Me uno a un equipo","I got a link, username or invite":"Recibí un enlace, usuario o invitación","I'm starting a team":"Voy a crear un equipo","I'm the leader, coach or organizer":"Soy el líder, entrenador u organizador",
@@ -45,7 +45,7 @@ const ES={
 "Help":"Ayuda","Ask a question, guide, short tour":"Preguntar, guía, recorrido corto","Settings":"Ajustes","Data, version, connections, system check":"Datos, versión, conexiones, revisión",
 "Demo drill":"Simulacro","Watch 24 people check in":"Vea a 24 personas reportarse","Share card":"Tarjeta para compartir","Headcount as an image":"El conteo como imagen",
 "Language / Idioma":"Idioma / Language","Due-outs tracker":"Seguimiento de pendientes","Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.":"App independiente. No es un sistema oficial ni está respaldada por el DoD, ninguna rama militar, policía o gobierno.","Privacy":"Privacidad","Terms":"Términos","English or Español":"Español o English",
-/* Feed */
+/* Word of Mouth */
 "✓ Confirm I saw it":"✓ Confirmo que lo vi","✓ I posted it":"✓ Yo lo publiqué","✓ Confirmed":"✓ Confirmado","✓ You confirmed":"✓ Usted confirmó","Post":"Publicar","Posting…":"Publicando…",
 "Nothing posted yet. New posts show up here.":"Aún no hay publicaciones. Las nuevas aparecen aquí.","Nothing posted yet.":"Aún no hay publicaciones.","Problem":"Problema","Who ▸":"Quién ▸","📌 Pin":"📌 Fijar","Unpin":"Quitar",
 "Leave feed":"Salir de avisos","👤 My page":"👤 Mi página","Start another feed":"Iniciar otro canal","Delete feed":"Borrar canal","URGENT":"URGENTE",
