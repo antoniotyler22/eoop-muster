@@ -7,8 +7,8 @@
 let used=0;
 const leader=()=>!(typeof memberMode==="function"&&memberMode())&&S.source!=="sample"&&Array.isArray(S.roster)&&S.roster.length>0;
 const DAYS=["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
-const STAT=[[/\b(on leave|leave)\b/,"Leave"],[/\btad\b/,"TAD"],[/\b(at pt|pt)\b/,"At PT"],[/\b(siq|sick)\b/,"SIQ"],[/\b(appointments?|appts?)\b/,"Appointment"],
-  [/\b(company duties|co duties|duty)\b/,"Company Duties"],[/\b(operation|deployed|deployment)\b/,"Operation"],[/\bduty rec(overy)?\b/,"Duty Recovery"]];
+const STAT=[[/\bdanco\b/,"DANCO"],[/\bdnco\b/,"DNCO"],[/\bduty driver\b/,"Duty Driver"],[/\bood\b|officer of the day/,"OOD"],[/\b(on leave|leave)\b/,"Leave"],[/\btad\b/,"TAD"],[/\b(at pt|pt)\b/,"At PT"],[/\b(siq|sick)\b/,"SIQ"],[/\b(appointments?|appts?)\b/,"Appointment"],
+  [/\b(company duties|co duties|duty)\b/,"@duty"],[/\b(operation|deployed|deployment)\b/,"Operation"],[/\bduty rec(overy)?\b/,"Duty Recovery"]];
 const pad=n=>String(n).padStart(2,"0");
 const key=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
 function dayFrom(q){const now=new Date();let d=null,label="today";
@@ -42,7 +42,7 @@ function part(q){q=q.toLowerCase().trim().replace(/[?.!]+$/,"");if(!q)return "";
   const hits=nameHits(q);if(hits.length&&!count&&!/\b(in|from)\s+\w+$/.test(q)||(hits.length&&/\b(where|status|who is|whos|find)\b/.test(q))){
     return hits.slice(0,5).map(m=>{const st=statusOn(m,d.iso);const dates=(m.start||m.end)?` (${esc(m.start||"")}${m.end?" – "+esc(m.end):""})`:"";
       return `<div class="rrow" data-pcard="${esc(m.id)}" style="cursor:pointer;margin-top:4px"><div class="who"><b>${esc(who(m))}</b> · ${esc(m.sec||"")}<div class="ph">${esc(SHORT[st]||st)}${m.loc?" · "+esc(m.loc):""}${dates}${m.phone?" · "+esc(m.phone):" · no phone number"}</div></div></div>`}).join("")}
-  for(const [re,st] of STAT)if(re.test(q)){const l=R.filter(m=>statusOn(m,d.iso)===st);return head(l.length,`${esc(SHORT[st]||st)} ${esc(d.label)}${where}`)+people(l)}
+  for(const [re,st] of STAT)if(re.test(q)){const set=st==="@duty"?dutySts():[st];const l=R.filter(m=>set.includes(statusOn(m,d.iso)));return head(l.length,`${esc(st==="@duty"?"Duty":SHORT[st]||st)} ${esc(d.label)}${where}`)+people(l)}
   if(/\b(out|away|gone|unavailable|not here|off)\b/.test(q)){const l=R.filter(m=>AWAY.includes(statusOn(m,d.iso)));return head(l.length,`out ${esc(d.label)}${where}`)+people(l,m=>SHORT[statusOn(m,d.iso)]||statusOn(m,d.iso))}
   if(/\b(on hand|here|present|available)\b/.test(q)){const l=R.filter(m=>statusOn(m,d.iso)==="On Hand");return head(l.length,`on hand ${esc(d.label)}${where}`)+people(l)}
   if(sec){return head(R.length,`in ${esc(sec)}`)+(count?"":people(R))}

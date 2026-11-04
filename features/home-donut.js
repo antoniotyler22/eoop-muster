@@ -15,7 +15,7 @@ const R=58,C=2*Math.PI*R;
 .hdc{display:contents}.hdn circle{fill:none}.hdn .bg{stroke:var(--line,#e3e6ea)}.hdn svg{transform:rotate(-90deg);flex:none}
 .hdn .tx{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
 .hdl{display:flex;flex-wrap:wrap;gap:4px 12px;margin:0 0 10px;font-size:12px;font-weight:700;color:var(--muted)}.hdl span{display:inline-flex;align-items:center;gap:5px}.hdl i{width:9px;height:9px;border-radius:50%;flex:none}.hdl b{color:var(--ink)}`;document.head.appendChild(c)}
-function data(){const T=counts().T;const out=[];for(const [k,l,v] of SEG){const n=k==="duty"?(T["Company Duties"]||0)+(T["Duty Recovery"]||0):(T[k]||0);if(n>0)out.push({k,l,v,n})}return out}
+function data(){const T=counts().T;const out=[];for(const [k,l,v] of SEG){const n=k==="duty"?(T["Company Duties"]||0)+(T["OOD"]||0)+(T["Duty Driver"]||0)+(T["DNCO"]||0)+(T["DANCO"]||0)+(T["Duty Recovery"]||0):(T[k]||0);if(n>0)out.push({k,l,v,n})}return out}
 function build(){const T=counts().T;const d=data();const tot=d.reduce((a,x)=>a+x.n,0);if(!T.total)return null; /* 4.77.2: still shows (empty ring, 0%) when everyone is On Hand, so the second donut never disappears */
   let acc=0;const gap=d.length>1?2:0;
   const arcs=d.map(x=>{const len=x.n/tot*C,seg=Math.max(0,len-gap),off=-acc;acc+=len;return `<circle cx="66" cy="66" r="${R}" stroke-width="12" stroke="var(${x.v})" stroke-dasharray="${seg} ${C-seg}" stroke-dashoffset="${off}"/>`}).join("");

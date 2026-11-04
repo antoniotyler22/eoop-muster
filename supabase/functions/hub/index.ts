@@ -64,7 +64,10 @@ function makeCore() {
   const toast = () => {}, render = () => {}, renderTabs = () => {}, save = () => {}, rawSave = () => {};
   const document = { activeElement: null }, navigator = {};
   const window = Object.assign(Object.create(globalThis), { scrollY: 0, scrollTo() {}, VAULT: undefined });
-const SHORT={"On Hand":"On Hand","Appointment":"Appt","Company Duties":"Co Duties","Duty Recovery":"Duty Rec","At PT":"At PT","SIQ":"SIQ","Operation":"Operation","TAD":"TAD","Leave":"Leave","Other":"Other"};
+const MIL_DUTY=["OOD","Duty Driver","DNCO","DANCO"];
+const STATUSES=["On Hand","Appointment",...MIL_DUTY,"Duty Recovery","At PT","SIQ","Operation","TAD","Leave","Other"];
+const SHORT={"OOD":"OOD","Duty Driver":"Duty Driver","DNCO":"DNCO","DANCO":"DANCO","On Hand":"On Hand","Appointment":"Appt","Company Duties":"Co Duties","Duty Recovery":"Duty Rec","At PT":"At PT","SIQ":"SIQ","Operation":"Operation","TAD":"TAD","Leave":"Leave","Other":"Other"};
+const okSt=s=>STATUSES.includes(s)?s:s==="Company Duties"?"On Hand":MIL_DUTY.includes(s)?"Company Duties":s;
 const SECTIONS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
 const DEF_SECS=[["HQ","Headquarters"],["HE","Heavy Equipment"],["CE","Combat Engineer"],["ORD","Ordnance"],["UT","Utilities"]];
 const MODES={
@@ -120,7 +123,7 @@ const RANKS=["CWO5","CWO4","CWO3","CWO2","WO","MAJ","CAPT","1STLT","2NDLT","SGTM
 const dutyOf=m=>DUTIES.includes(m.duty)?m.duty:"Full Duty";
 let secSigs=null;
 function secLast(k){const B=S.board,r=B&&B.last&&B.last[k],t=+((S.secAt||{})[k])||0;if(r&&(!t||r.t>=t))return r;if(t)return {t,by:(S.secBy||{})[k]||"",ch:0,local:true};return null}
-const SCODE={"Appointment":"APPT","Company Duties":"DUTY","Duty Recovery":"REC","At PT":"PT","SIQ":"SIQ","Operation":"OP","TAD":"TAD","Leave":"LV","Other":"OTH"};
+const SCODE={"Appointment":"APPT","Company Duties":"DUTY","OOD":"OOD","Duty Driver":"DDRV","DNCO":"DNCO","DANCO":"DANCO","Duty Recovery":"REC","At PT":"PT","SIQ":"SIQ","Operation":"OP","TAD":"TAD","Leave":"LV","Other":"OTH"};
 const SDEC=Object.assign({AOB:"Appointment",AOFF:"Appointment"},Object.fromEntries(Object.entries(SCODE).map(([a,b])=>[b,a])));
 function tok(m){const [last,rest]=m.name.split(",");const first=((rest||"").trim().split(/\s+/)[0]||"").replace(/[^A-Z]/gi,"").slice(0,3);
   return (m.rank+"."+(last||"").trim()+"."+first).toUpperCase().replace(/[;|=]/g,"")}
@@ -170,7 +173,7 @@ async function livePollBoard(){const B=S.board;if(!B||lvBusy)return;lvBusy=true;
           for(const m of ms){const a=await SB.h(B.id,"N:"+fullK(m)),b=await SB.h(B.id,"L:"+lf(m)),ih=await SB.h(B.id,"I:"+m.id);(byT[a]=byT[a]||[]).push(m);(byL[b]=byL[b]||[]).push(m);byI[ih]=[m]}
           const st={},du={};
           for(const it of r.items||[]){const [a,b,c]=it.split(":");const m=byI[a]?byI[a][0]:(byT[a]||[]).length===1?byT[a][0]:(!byT[a]&&(byL[b]||[]).length===1)?byL[b][0]:null;if(!m){res.miss++;continue}
-            if(c==="LD")du[m.id]="Light Duty";else if(c==="LIM")du[m.id]="LIMDU";else if(SDEC[c])st[m.id]=SDEC[c]}
+            if(c==="LD")du[m.id]="Light Duty";else if(c==="LIM")du[m.id]="LIMDU";else if(SDEC[c])st[m.id]=okSt(SDEC[c])}
           const chg=[];for(const m of ms){const ns=st[m.id]||"On Hand",nd=du[m.id]||"Full Duty";if(m.status!==ns||dutyOf(m)!==nd){chg.push(m.rank+" "+lastOf(m)+" → "+(m.status!==ns?(SHORT[ns]||ns):nd));m.status=ns;m.duty=nd;m.upd={t:res.t,sec};res.ch++}}res.chg=chg;
           const set=new Set(r.sender||[]);if(set.size){const hit=[];for(const m of S.roster){const lw=SB.words(lastOf(m));if(!lw.length)continue;const hs=await Promise.all(lw.map(w=>SB.h(B.id,w)));if(hs.every(h=>set.has(h)))hit.push(m)}
             if(hit.length){const rk=await Promise.all(hit.map(m=>SB.h(B.id,String(m.rank).toUpperCase().replace(/[^A-Z0-9]/g,""))));const both=hit.filter((m,i)=>set.has(rk[i]));const pick=both.length===1?both[0]:hit.length===1?hit[0]:null;if(pick)res.by=pick.rank+" "+lastOf(pick)}}}

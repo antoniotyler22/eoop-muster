@@ -2,10 +2,25 @@
 
 /* ===== app.js ===== */
 /* Accounted For app. Loaded by index.html after the PIN lock (if on) opens the vault. */
-const STATUSES=["On Hand","Appointment","Company Duties","Duty Recovery","At PT","SIQ","Operation","TAD","Leave","Other"];
-const SHORT={"On Hand":"On Hand","Appointment":"Appt","Company Duties":"Co Duties","Duty Recovery":"Duty Rec","At PT":"At PT","SIQ":"SIQ","Operation":"Operation","TAD":"TAD","Leave":"Leave","Other":"Other"};
-const SVAR={"On Hand":"--s-onhand","Appointment":"--s-aob","Company Duties":"--s-duty","Duty Recovery":"--s-aoff","At PT":"--s-pt","SIQ":"--s-siq","Operation":"--s-op","TAD":"--s-tad","Leave":"--s-leave","Other":"--s-other"};
-const PRESENT=["On Hand","Appointment","Company Duties","Duty Recovery","At PT"];
+/* Military version: Company Duties is replaced by four duty statuses. Other versions (Police, Jobs, Custom...) keep "Company Duties" under their own label. syncStatuses() swaps the list in place when the version changes. */
+const MIL_DUTY=["OOD","Duty Driver","DNCO","DANCO"];
+const STATUSES=["On Hand","Appointment",...MIL_DUTY,"Duty Recovery","At PT","SIQ","Operation","TAD","Leave","Other"];
+const SHORT={"OOD":"OOD","Duty Driver":"Duty Driver","DNCO":"DNCO","DANCO":"DANCO","On Hand":"On Hand","Appointment":"Appt","Company Duties":"Co Duties","Duty Recovery":"Duty Rec","At PT":"At PT","SIQ":"SIQ","Operation":"Operation","TAD":"TAD","Leave":"Leave","Other":"Other"};
+const SVAR={"On Hand":"--s-onhand","Appointment":"--s-aob","Company Duties":"--s-duty","OOD":"--s-duty","Duty Driver":"--s-duty","DNCO":"--s-duty","DANCO":"--s-duty","Duty Recovery":"--s-aoff","At PT":"--s-pt","SIQ":"--s-siq","Operation":"--s-op","TAD":"--s-tad","Leave":"--s-leave","Other":"--s-other"};
+const PRESENT=["On Hand","Appointment","Company Duties",...MIL_DUTY,"Duty Recovery","At PT"]; /* Company Duties stays here only so old counts from other phones still add up */
+const dutySts=()=>STATUSES.includes("OOD")?MIL_DUTY.slice():["Company Duties"];
+const okSt=s=>STATUSES.includes(s)?s:s==="Company Duties"?"On Hand":MIL_DUTY.includes(s)?"Company Duties":s;
+function syncStatuses(){let mil=true;try{mil=!S||!S.mode||S.mode==="military"}catch(e){}
+  const d=mil?MIL_DUTY:["Company Duties"];
+  const st=["On Hand","Appointment",...d,"Duty Recovery","At PT","SIQ","Operation","TAD","Leave","Other"];
+  if(STATUSES.join()!==st.join())STATUSES.splice(0,STATUSES.length,...st);
+  try{if(RSTAT.join()!==st.join())RSTAT.splice(0,RSTAT.length,...st)}catch(e){}
+  try{if(!S||typeof S!=="object")return;
+    const mv=s=>mil?(s==="Company Duties"?"On Hand":s):(MIL_DUTY.includes(s)?"Company Duties":s);
+    if(Array.isArray(S.roster))for(const m of S.roster)if(m&&typeof m==="object"&&m.status&&mv(m.status)!==m.status)m.status=mv(m.status);
+    const fl=a=>{if(!Array.isArray(a))return a;const o=[];for(const x of a){if(mil&&x==="Company Duties")MIL_DUTY.forEach(y=>o.push(y));else o.push(mv(x))}return [...new Set(o)]};
+    if(S.pt)S.pt.inc=fl(S.pt.inc);if(S.mus)S.mus.inc=fl(S.mus.inc);
+    if(S.duty&&Array.isArray(S.duty.rosters))for(const r of S.duty.rosters)if(r&&Array.isArray(r.skip))r.skip=fl(r.skip)}catch(e){}}
 /* An appointment counts as present on deck unless its location says off base. Duty Recovery counts as present (on base, not usable). */
 const apptOff=m=>!!m&&((m.status==="Appointment"&&/\boff\b/i.test(String(m.loc||"")))||(m.status==="Duty Recovery"&&typeof S==="object"&&S&&S.mode&&S.mode!=="military"));
 const isPresent=m=>!!m&&PRESENT.includes(m.status)&&!apptOff(m);
@@ -134,7 +149,7 @@ function startXL(){if(XOBS){XOBS.disconnect();XOBS=null}XL=modeDict(MODE());docu
   XOBS=new MutationObserver(rs=>{for(const r of rs){if(r.type==="characterData")xlText(r.target);else r.addedNodes.forEach(xlTree)}});
   XOBS.observe(document.body,{subtree:true,childList:true,characterData:true})}
 let ORIG=null;
-function applyLists(){if(!ORIG)ORIG={events:EVENTS.slice(),evTypes:EV_TYPES.slice(),wTypes:W_TYPES.slice(),items:WEAPONS.slice()};const md=MODE();
+function applyLists(){try{syncStatuses()}catch(e){}if(!ORIG)ORIG={events:EVENTS.slice(),evTypes:EV_TYPES.slice(),wTypes:W_TYPES.slice(),items:WEAPONS.slice()};const md=MODE();
   for(const [arr,k] of [[EVENTS,"events"],[EV_TYPES,"evTypes"],[W_TYPES,"wTypes"],[WEAPONS,"items"]])arr.splice(0,arr.length,...(md[k]||ORIG[k]));
   RANKS.splice(0,RANKS.length,...(md.ranks||MIL_RANKS))}
 function setMode(k){if(!MODES[k])return false;const was=MODES[S.mode]?S.mode:"military";if(k===was)return false;
@@ -241,7 +256,7 @@ const KEY="eoop-muster-v1";setTimeout(()=>{try{const n=localStorage.getItem("eop
 
 function sampleRoster(){
   const spec=[["HQ",["MSGT","SGT","CPL","LCPL"],["On Hand","On Hand","TAD","Leave"]],
-    ["HE",["GYSGT","SGT","CPL","CPL","LCPL","LCPL","PFC"],["On Hand","On Hand","TAD","On Hand","Leave","On Hand","Company Duties"]],
+    ["HE",["GYSGT","SGT","CPL","CPL","LCPL","LCPL","PFC"],["On Hand","On Hand","TAD","On Hand","Leave","On Hand",STATUSES.includes("OOD")?"Duty Driver":"Company Duties"]],
     ["CE",["SGT","CPL","LCPL","LCPL"],["On Hand","TAD","On Hand","Appointment"]],
     ["ORD",["SSGT","CPL","LCPL","PFC"],["Leave","On Hand","On Hand","On Hand"]],
     ["UT",["GYSGT","SGT","CPL","LCPL","LCPL","PFC"],["On Hand","Operation","Operation","Duty Recovery","On Hand","At PT"]]];
@@ -274,7 +289,7 @@ if(S.newCo&&S.source==="sample"){S.roster=sampleRoster();let si=0;const sb=MIL_S
 S.mus=Object.assign({open:false,seen:{},inc:["On Hand"],att:true,only:false,last:null},S.mus||{});
 S.pt=Object.assign({event:"Unit PT",when:"",inc:["On Hand"],att:true},S.pt||{});
 /* one-time move from the old two appointment statuses to one */
-try{for(const m of S.roster)fixMember(m);const fl=a=>Array.isArray(a)?[...new Set(a.map(fixStatus))]:a;S.pt.inc=fl(S.pt.inc);S.mus.inc=fl(S.mus.inc);
+try{syncStatuses();for(const m of S.roster)fixMember(m);const fl=a=>Array.isArray(a)?[...new Set(a.map(fixStatus))]:a;S.pt.inc=fl(S.pt.inc);S.mus.inc=fl(S.mus.inc);
   for(const r of S.duty.rosters)if(r&&Array.isArray(r.skip))r.skip=fl(r.skip);
   const fst=o=>{if(!o||typeof o!=="object")return;for(const k of Object.keys(OLD_STATUS))if(o[k]!=null){o.Appointment=(o.Appointment||0)+(+o[k]||0);delete o[k]}};
   for(const d of Object.values(S.days))if(d&&d.st)fst(d.st);for(const u of Object.values(S.roll.units))if(u&&u.st)fst(u.st)}catch(e){}
@@ -524,7 +539,7 @@ function renderPT(){
   let h=banner();
   h+=`<h2>Physical activity roster</h2><div class="panel"><div class="evts">${EVENTS.map(e=>`<button data-evt="${e}" aria-pressed="${S.pt.event===e}">${e}</button>`).join("")}</div>
     <div class="row2"><div><label for="ptEvt">Event</label><input type="text" id="ptEvt" value="${esc(S.pt.event)}"></div><div><label for="ptWhen">When</label><input type="text" id="ptWhen" value="${esc(S.pt.when)}" placeholder="${dtg()}"></div></div>
-    <div class="note">Count Marines whose status is:</div><div class="evts">${STATUSES.filter(x=>["On Hand","Company Duties","Appointment","Duty Recovery","At PT"].includes(x)).map(x=>`<label class="tog"><input type="checkbox" data-inc="${x}"${S.pt.inc.includes(x)?" checked":""}> ${SHORT[x]}</label>`).join("")}<label class="tog"><input type="checkbox" id="ptAtt"${S.pt.att?" checked":""}> Attached</label></div></div>`;
+    <div class="note">Count Marines whose status is:</div><div class="evts">${STATUSES.filter(x=>["On Hand",...dutySts(),"Appointment","Duty Recovery","At PT"].includes(x)).map(x=>`<label class="tog"><input type="checkbox" data-inc="${x}"${S.pt.inc.includes(x)?" checked":""}> ${SHORT[x]}</label>`).join("")}<label class="tog"><input type="checkbox" id="ptAtt"${S.pt.att?" checked":""}> Attached</label></div></div>`;
   h+=`<div class="pt-sum" style="margin-top:12px"><div class="go"><b>${go.length}</b><span>Available</span></div><div><b>${ld.length+lim.length}</b><span>LD / LIMDU</span></div><div><b>${out.length}</b><span>Not here</span></div></div>`;
   h+=`<div class="row2" style="margin-top:12px"><button class="btn" id="ptCopy">Copy list</button><a class="btn alt" id="ptSms" href="${esc(smsHref(ptText()))}">Text list</a></div>`;
   for(const [k,ms] of bySec(go)) h+=`<div class="grp"><h3><span>${k}</span><span>${ms.length}</span></h3><div class="names">${ms.map(m=>`<div><b>${esc(m.rank)}</b> ${esc(m.name)}${m.sec==="ATT"&&m.parent?` <span class="note">(${esc(m.parent)})</span>`:""}</div>`).join("")}</div></div>`;
@@ -633,7 +648,7 @@ function renderMuster(){const M=S.mus;let h=banner();if(M.open&&M.qr&&!qrTimer)s
     const last=(S.hist||[]).filter(x=>x.type==="muster").slice(-5).reverse();
     h+=`<h2>Formation muster</h2><div class="panel">
       <div class="note">Who is expected at formation:</div>
-      <div class="evts">${["On Hand","Company Duties","Appointment","Duty Recovery","At PT"].map(x=>`<label class="tog"><input type="checkbox" data-minc="${x}"${M.inc.includes(x)?" checked":""}> ${SHORT[x]}</label>`).join("")}<label class="tog"><input type="checkbox" id="mAtt"${M.att?" checked":""}> Attached</label></div>
+      <div class="evts">${["On Hand",...dutySts(),"Appointment","Duty Recovery","At PT"].map(x=>`<label class="tog"><input type="checkbox" data-minc="${x}"${M.inc.includes(x)?" checked":""}> ${SHORT[x]}</label>`).join("")}<label class="tog"><input type="checkbox" id="mAtt"${M.att?" checked":""}> Attached</label></div>
       <div><b>${musPool().length}</b> Marines expected</div>
       <button class="btn" id="mStart">Start muster</button></div>`;
     if(M.last){h+=`<h2>Last muster</h2><div class="panel"><textarea id="mMsg" readonly>${esc(musText(M.last))}</textarea>
@@ -702,7 +717,7 @@ function changeLines(){const sn=S.snap;if(!sn)return [];const cur={};S.roster.fo
 function markSent(kind){S.snap=snapNow();S.hist=(S.hist||[]).concat({type:kind,t:S.snap.t}).slice(-60);save()}
 
 /* ---------- section leader rollup ---------- */
-const SCODE={"Appointment":"APPT","Company Duties":"DUTY","Duty Recovery":"REC","At PT":"PT","SIQ":"SIQ","Operation":"OP","TAD":"TAD","Leave":"LV","Other":"OTH"};
+const SCODE={"Appointment":"APPT","Company Duties":"DUTY","OOD":"OOD","Duty Driver":"DDRV","DNCO":"DNCO","DANCO":"DANCO","Duty Recovery":"REC","At PT":"PT","SIQ":"SIQ","Operation":"OP","TAD":"TAD","Leave":"LV","Other":"OTH"};
 const SDEC=Object.assign({AOB:"Appointment",AOFF:"Appointment"},Object.fromEntries(Object.entries(SCODE).map(([a,b])=>[b,a])));
 function tok(m){const [last,rest]=m.name.split(",");const first=((rest||"").trim().split(/\s+/)[0]||"").replace(/[^A-Z]/gi,"").slice(0,3);
   return (m.rank+"."+(last||"").trim()+"."+first).toUpperCase().replace(/[;|=]/g,"")}
@@ -725,7 +740,7 @@ function applySectionUpdates(text){const lines=String(text).split(/\r?\n/).map(x
     const stSet={},dSet={};const miss=[];
     for(const part of p.slice(4)){const [cd,list]=part.split("=");if(!list)continue;
       for(const t of list.split(";")){const m=find(t);if(!m){miss.push(t.replace(/\./g," "));continue}
-        if(cd==="LD")dSet[m.id]="Light Duty";else if(cd==="LIM")dSet[m.id]="LIMDU";else if(SDEC[cd])stSet[m.id]=SDEC[cd]}}
+        if(cd==="LD")dSet[m.id]="Light Duty";else if(cd==="LIM")dSet[m.id]="LIMDU";else if(SDEC[cd])stSet[m.id]=okSt(SDEC[cd])}}
     let ch=0;ms.forEach(m=>{const ns=stSet[m.id]||"On Hand";const nd=dSet[m.id]||"Full Duty";if(m.status!==ns||dutyOf(m)!==nd)ch++;m.status=ns;m.duty=nd});
     const sent=+p[2];res.push(code+": "+ch+" changed"+(miss.length?", "+miss.length+" not found ("+miss.join(", ")+")":"")+(sent!==ms.length?" · their strength "+sent+", yours "+ms.length:""))}
   save();return res}
@@ -793,7 +808,7 @@ function renderRollup(){const L0=rollUnits();const R=rollSum(L0);const others=Ob
    OIC phone owns a "board" with a private read key. Section leaders get a link with the write key.
    Their phone sends only salted hashes of each Marine not On Hand / Full Duty plus a status code.
    OIC phone matches the hashes to its own roster. Everyone not listed in that section = On Hand, Full Duty. */
-const LCODES=["APPT","DUTY","REC","PT","OP","TAD","LV","LD","LIM"];
+const LCODES=["APPT","DUTY","OOD","DDRV","DNCO","DANCO","REC","PT","OP","TAD","LV","LD","LIM"];
 let lvBusy=false,lkBusy=false,lkTimer=null,lvIdx={};
 const lf=m=>tok(m).split(".").slice(1).join(".");
 const fullK=m=>String(m.name).toUpperCase().replace(/[^A-Z0-9]+/g," ").trim();
@@ -869,7 +884,7 @@ async function livePollBoard(){const B=S.board;if(!B||lvBusy)return;livePollCal(
           for(const m of ms){const a=await SB.h(B.id,"N:"+fullK(m)),b=await SB.h(B.id,"L:"+lf(m)),ih=await SB.h(B.id,"I:"+m.id);(byT[a]=byT[a]||[]).push(m);(byL[b]=byL[b]||[]).push(m);byI[ih]=[m]}
           const st={},du={};
           for(const it of r.items||[]){const [a,b,c]=it.split(":");const m=byI[a]?byI[a][0]:(byT[a]||[]).length===1?byT[a][0]:(!byT[a]&&(byL[b]||[]).length===1)?byL[b][0]:null;if(!m){res.miss++;continue}
-            if(c==="LD")du[m.id]="Light Duty";else if(c==="LIM")du[m.id]="LIMDU";else if(SDEC[c])st[m.id]=SDEC[c]}
+            if(c==="LD")du[m.id]="Light Duty";else if(c==="LIM")du[m.id]="LIMDU";else if(SDEC[c])st[m.id]=okSt(SDEC[c])}
           const chg=[];for(const m of ms){const ns=st[m.id]||"On Hand",nd=du[m.id]||"Full Duty";if(m.status!==ns||dutyOf(m)!==nd){chg.push(m.rank+" "+lastOf(m)+" → "+(m.status!==ns?(SHORT[ns]||ns):nd));m.status=ns;m.duty=nd;m.upd={t:res.t,sec};res.ch++}}res.chg=chg;
           const set=new Set(r.sender||[]);if(set.size){const hit=[];for(const m of S.roster){const lw=SB.words(lastOf(m));if(!lw.length)continue;const hs=await Promise.all(lw.map(w=>SB.h(B.id,w)));if(hs.every(h=>set.has(h)))hit.push(m)}
             if(hit.length){const rk=await Promise.all(hit.map(m=>SB.h(B.id,String(m.rank).toUpperCase().replace(/[^A-Z0-9]/g,""))));const both=hit.filter((m,i)=>set.has(rk[i]));const pick=both.length===1?both[0]:hit.length===1?hit[0]:null;if(pick)res.by=pick.rank+" "+lastOf(pick)}}}
@@ -1398,7 +1413,7 @@ function renderBoard(){const {c,T,A}=counts();const P=pct(T["On Hand"],T.total);
   h+=`<details class="card" style="gap:8px"><summary style="font-weight:800;cursor:pointer">Numbers by status and section</summary><div class="gridwrap"><table><thead><tr><th>Status</th>${SECTIONS.map(([k])=>`<th><button data-go="${k.toLowerCase()}">${k}</button></th>`).join("")}<th class="tot">Total</th></tr></thead><tbody>`;
   for(const st of STATUSES){h+=`<tr><td><span class="dot" style="background:var(${SVAR[st]})"></span>${SHORT[st]}</td>${SECTIONS.map(([k])=>`<td class="${c[k][st]?"":"z"}">${c[k][st]}</td>`).join("")}<td class="tot">${T[st]}</td></tr>`}
   h+=`<tr class="sum"><td>Present on deck</td>${SECTIONS.map(([k])=>`<td>${present(c[k])}</td>`).join("")}<td>${present(T)}</td></tr><tr class="sum"><td>% On hand</td>${SECTIONS.map(([k])=>`<td>${pct(c[k]["On Hand"],c[k].total)}%</td>`).join("")}<td>${P}%</td></tr></tbody></table></div>
-    <div class="note">Present on deck = On Hand + Appt (on base) + Co Duties + Duty Rec + At PT.${A.total?` Attached (not on strength): ${A.total}, ${A["On Hand"]} on hand. Total accounted for ${T.total+A.total}.`:""}</div><div class="row2"><button class="btn alt" data-go="text">Send the numbers</button><button class="btn alt" data-go="trends">Trends</button></div></details>`;
+    <div class="note">Present on deck = On Hand + Appt (on base) + duty statuses + Duty Rec + At PT.${A.total?` Attached (not on strength): ${A.total}, ${A["On Hand"]} on hand. Total accounted for ${T.total+A.total}.`:""}</div><div class="row2"><button class="btn alt" data-go="text">Send the numbers</button><button class="btn alt" data-go="trends">Trends</button></div></details>`;
   $("#main").innerHTML=h}
 function renderPeople(){const {c,A}=counts();let h=banner()+(canEdit()&&isLeaderPhone()?`<button class="btn alt" data-addm="" style="width:100%;margin-top:10px">+ Add Marines</button>`:"");
   h+=`<div style="margin-top:12px"><input class="search" id="gq" type="search" placeholder="Find anyone: name, rank or section" autocomplete="off" style="margin:0"><div id="gqr" class="alist" style="margin-top:6px"></div></div>`;
@@ -5798,7 +5813,7 @@ const KINDS=[["roster","👥","Roster update","Names and statuses from a muster 
   ["doc","📄","Document (PDF)","Any paper, one or more pages, as a PDF to save or email",false],["text","🔤","Text","The words typed out, to copy, email or save",false]];
 function mapStatus(s){s=String(s||"").trim().toLowerCase();if(!s)return "";
   for(const x of STATUSES)if(x.toLowerCase()===s||String(SHORT[x]||"").toLowerCase()===s)return x;
-  if(/^(p|oh|present|here|on hand|✓|x)$/.test(s))return "On Hand";if(/leave|^lv$|^l$/.test(s))return "Leave";if(/tad|travel/.test(s))return "TAD";if(/siq|sick/.test(s))return "SIQ";if(/appt|appoint|medical|dental/.test(s))return "Appointment";if(/duty rec/.test(s))return "Duty Recovery";if(/duty|co dut/.test(s))return "Company Duties";if(/pt/.test(s))return "At PT";if(/op/.test(s))return "Operation";
+  if(/^(p|oh|present|here|on hand|✓|x)$/.test(s))return "On Hand";if(/leave|^lv$|^l$/.test(s))return "Leave";if(/tad|travel/.test(s))return "TAD";if(/siq|sick/.test(s))return "SIQ";if(/appt|appoint|medical|dental/.test(s))return "Appointment";if(/duty rec/.test(s))return "Duty Recovery";if(STATUSES.includes("OOD")){if(/danco|asst?\.? ?dnco|assistant/.test(s))return "DANCO";if(/dnco/.test(s))return "DNCO";if(/driver|\bdd\b/.test(s))return "Duty Driver";if(/\bood\b|officer of the day/.test(s))return "OOD"}else if(/duty|co dut/.test(s))return "Company Duties";if(/pt/.test(s))return "At PT";if(/op/.test(s))return "Operation";
   return STATUSES.includes("Other")?"Other":""}
 /* ---------- images ---------- */
 function loadImg(file){return new Promise((res,rej)=>{const url=URL.createObjectURL(file);const im=new Image();im.onload=()=>{res({im,url})};im.onerror=()=>{URL.revokeObjectURL(url);rej(new Error("That photo couldn't be opened."))};im.src=url})}
@@ -10139,8 +10154,8 @@ try{ckDedupe()}catch(e){}
 let used=0;
 const leader=()=>!(typeof memberMode==="function"&&memberMode())&&S.source!=="sample"&&Array.isArray(S.roster)&&S.roster.length>0;
 const DAYS=["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
-const STAT=[[/\b(on leave|leave)\b/,"Leave"],[/\btad\b/,"TAD"],[/\b(at pt|pt)\b/,"At PT"],[/\b(siq|sick)\b/,"SIQ"],[/\b(appointments?|appts?)\b/,"Appointment"],
-  [/\b(company duties|co duties|duty)\b/,"Company Duties"],[/\b(operation|deployed|deployment)\b/,"Operation"],[/\bduty rec(overy)?\b/,"Duty Recovery"]];
+const STAT=[[/\bdanco\b/,"DANCO"],[/\bdnco\b/,"DNCO"],[/\bduty driver\b/,"Duty Driver"],[/\bood\b|officer of the day/,"OOD"],[/\b(on leave|leave)\b/,"Leave"],[/\btad\b/,"TAD"],[/\b(at pt|pt)\b/,"At PT"],[/\b(siq|sick)\b/,"SIQ"],[/\b(appointments?|appts?)\b/,"Appointment"],
+  [/\b(company duties|co duties|duty)\b/,"@duty"],[/\b(operation|deployed|deployment)\b/,"Operation"],[/\bduty rec(overy)?\b/,"Duty Recovery"]];
 const pad=n=>String(n).padStart(2,"0");
 const key=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
 function dayFrom(q){const now=new Date();let d=null,label="today";
@@ -10174,7 +10189,7 @@ function part(q){q=q.toLowerCase().trim().replace(/[?.!]+$/,"");if(!q)return "";
   const hits=nameHits(q);if(hits.length&&!count&&!/\b(in|from)\s+\w+$/.test(q)||(hits.length&&/\b(where|status|who is|whos|find)\b/.test(q))){
     return hits.slice(0,5).map(m=>{const st=statusOn(m,d.iso);const dates=(m.start||m.end)?` (${esc(m.start||"")}${m.end?" – "+esc(m.end):""})`:"";
       return `<div class="rrow" data-pcard="${esc(m.id)}" style="cursor:pointer;margin-top:4px"><div class="who"><b>${esc(who(m))}</b> · ${esc(m.sec||"")}<div class="ph">${esc(SHORT[st]||st)}${m.loc?" · "+esc(m.loc):""}${dates}${m.phone?" · "+esc(m.phone):" · no phone number"}</div></div></div>`}).join("")}
-  for(const [re,st] of STAT)if(re.test(q)){const l=R.filter(m=>statusOn(m,d.iso)===st);return head(l.length,`${esc(SHORT[st]||st)} ${esc(d.label)}${where}`)+people(l)}
+  for(const [re,st] of STAT)if(re.test(q)){const set=st==="@duty"?dutySts():[st];const l=R.filter(m=>set.includes(statusOn(m,d.iso)));return head(l.length,`${esc(st==="@duty"?"Duty":SHORT[st]||st)} ${esc(d.label)}${where}`)+people(l)}
   if(/\b(out|away|gone|unavailable|not here|off)\b/.test(q)){const l=R.filter(m=>AWAY.includes(statusOn(m,d.iso)));return head(l.length,`out ${esc(d.label)}${where}`)+people(l,m=>SHORT[statusOn(m,d.iso)]||statusOn(m,d.iso))}
   if(/\b(on hand|here|present|available)\b/.test(q)){const l=R.filter(m=>statusOn(m,d.iso)==="On Hand");return head(l.length,`on hand ${esc(d.label)}${where}`)+people(l)}
   if(sec){return head(R.length,`in ${esc(sec)}`)+(count?"":people(R))}
@@ -12407,7 +12422,7 @@ const R=58,C=2*Math.PI*R;
 .hdc{display:contents}.hdn circle{fill:none}.hdn .bg{stroke:var(--line,#e3e6ea)}.hdn svg{transform:rotate(-90deg);flex:none}
 .hdn .tx{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
 .hdl{display:flex;flex-wrap:wrap;gap:4px 12px;margin:0 0 10px;font-size:12px;font-weight:700;color:var(--muted)}.hdl span{display:inline-flex;align-items:center;gap:5px}.hdl i{width:9px;height:9px;border-radius:50%;flex:none}.hdl b{color:var(--ink)}`;document.head.appendChild(c)}
-function data(){const T=counts().T;const out=[];for(const [k,l,v] of SEG){const n=k==="duty"?(T["Company Duties"]||0)+(T["Duty Recovery"]||0):(T[k]||0);if(n>0)out.push({k,l,v,n})}return out}
+function data(){const T=counts().T;const out=[];for(const [k,l,v] of SEG){const n=k==="duty"?(T["Company Duties"]||0)+(T["OOD"]||0)+(T["Duty Driver"]||0)+(T["DNCO"]||0)+(T["DANCO"]||0)+(T["Duty Recovery"]||0):(T[k]||0);if(n>0)out.push({k,l,v,n})}return out}
 function build(){const T=counts().T;const d=data();const tot=d.reduce((a,x)=>a+x.n,0);if(!T.total)return null; /* 4.77.2: still shows (empty ring, 0%) when everyone is On Hand, so the second donut never disappears */
   let acc=0;const gap=d.length>1?2:0;
   const arcs=d.map(x=>{const len=x.n/tot*C,seg=Math.max(0,len-gap),off=-acc;acc+=len;return `<circle cx="66" cy="66" r="${R}" stroke-width="12" stroke="var(${x.v})" stroke-dasharray="${seg} ${C-seg}" stroke-dashoffset="${off}"/>`}).join("");
