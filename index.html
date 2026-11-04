@@ -134,9 +134,9 @@ const SB=window.SB={url:"https://vdhxhvklwbimjpoomnui.supabase.co",key:"sb_publi
   pingTopic(t,k){try{fetch(this.url+"/realtime/v1/api/broadcast",{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify({messages:[{topic:t,event:"ping",payload:{s:this.sid,k:k||""},private:false}]}),keepalive:true}).catch(()=>{})}catch(e){}},
   ping(fn,args){const p=this.PING[fn];const id=p&&args&&args[p];if(!id)return;this.topic(p,id).then(t=>this.pingTopic(t,p)).catch(()=>{})},
   notify(rid,body){try{fetch(this.url+"/functions/v1/"+this.nfn,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify(body||{recall:rid}),keepalive:true}).catch(()=>{})}catch(e){}},
-  async rpc(fn,args){const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),12000);
+  async rpc(fn,args){const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),20000);
     try{const r=await fetch(this.url+"/rest/v1/rpc/"+fn,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify(args),signal:ac.signal});
-      const t=await r.text();if(r.ok){SB.okAt=Date.now();SB.ping(fn,args)}else{SB.failAt=Date.now();SB.failMsg=t.slice(0,120)}if(!r.ok)throw new Error((()=>{try{return JSON.parse(t).message}catch(e){return t}})()||("HTTP "+r.status));return t?JSON.parse(t):null}finally{clearTimeout(tm)}},
+      const t=await r.text();if(r.ok){SB.okAt=Date.now();SB.ping(fn,args)}else{SB.failAt=Date.now();SB.failMsg=t.slice(0,120)}if(!r.ok)throw new Error((()=>{try{return JSON.parse(t).message}catch(e){return t}})()||("HTTP "+r.status));return t?JSON.parse(t):null}catch(e){if(e&&(e.name==="AbortError"||/abort/i.test(String(e.message))))throw new Error("Connection timed out");throw e}finally{clearTimeout(tm)}},
   words(n){return [...new Set(String(n||"").toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean))].slice(0,6)},
   async h(rid,w){const b=await crypto.subtle.digest("SHA-256",te.encode(rid+":"+w));return [...new Uint8Array(b)].slice(0,8).map(x=>x.toString(16).padStart(2,"0")).join("")}};
 /* check-in page for the person receiving a recall link (#ci=...). Shows nothing from this phone's roster. */

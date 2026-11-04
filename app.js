@@ -1142,7 +1142,7 @@ function healthIssues(){const out=[];const B=S.board;
     const quiet=keyed.filter(k=>B.last[k]&&Date.now()-lastT(k)>24*3600000);
     if(never.length)out.push({t:LV().heads+" not connected yet: "+never.join(", ")+". Text them their links.",go:"live"});
     /* a quiet section is not a problem: its tile shows when it last updated, so nothing goes in Needs attention */void quiet}
-  if(S.mpErr)out.push({t:"My pages: "+S.mpErr,go:"data"});
+  if(S.mpErr&&!(/load failed|failed to fetch|network|timed? ?out|connection|abort/i.test(S.mpErr)&&(mpPublish.retry||0)<=6))out.push({t:"My pages: "+S.mpErr,go:"data"});
   if(S.coRep&&S.coRep.err)out.push({t:"Company report: "+S.coRep.err,go:"co"});
   for(const f of S.feeds)if(f.err)out.push({t:"Word of Mouth "+f.unit+": "+f.err,go:"feed"});
   return out}
@@ -1660,7 +1660,7 @@ async function mpPublish(force){if(mpBusy){clearTimeout(mpT);mpT=setTimeout(()=>
   try{for(const m of S.roster.filter(m=>m.pk)){try{const d=mpDigest(m);const sg=sigF(d);if(!force&&sg===m.pkSig&&Date.now()-(m.pkAt||0)<12*3600000)continue;await mpPutOne(m);n++}catch(e){err=String(e.message||e).slice(0,80)}}
     if(n||S.mpErr||err){S.mpErr=err;rawSave()}
     /* 4.77.8: a dropped connection ("Load failed" on iPhone) is not a setup problem: try again in 20 s, up to 6 times, so the warning clears by itself */
-    if(err&&/load failed|failed to fetch|network|timed? ?out|connection/i.test(err)&&(mpPublish.retry=(mpPublish.retry||0)+1)<=6){clearTimeout(mpT);mpT=setTimeout(()=>mpPublish(force),20000)}
+    if(err&&/load failed|failed to fetch|network|timed? ?out|connection|abort/i.test(err)&&(mpPublish.retry=(mpPublish.retry||0)+1)<=6){clearTimeout(mpT);mpT=setTimeout(()=>mpPublish(force),20000)}
     else if(!err)mpPublish.retry=0}
   finally{mpBusy=false}return n}
 /* the link only goes out once their page is really on the server, so it never opens to "not published yet" */
