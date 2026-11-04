@@ -6,7 +6,7 @@ const feed = (extra) => `{id:"feedabcdef12",mk:"m".repeat(30),ek:"e".repeat(50),
 test("a section leader with a post to confirm lands on Word of Mouth", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
-    await a.w.eval(`S.feeds=[${feed()}];S.onb=true;S.welcomed=1;S.role="sncoic";S.link={mysec:"HE"};view="board";render()`);
+    await a.w.eval(`S.feeds=[${feed()}];S.mode="military";{const sh=document.getElementById("sheet");if(sh){sh.hidden=true;sh.classList.remove("open")}}S.onb=true;S.welcomed=1;S.role="sncoic";S.link={mysec:"HE"};view="board";render()`);
     await sleep(200);
     a.w.eval(`openFeedCheck()`); await sleep(250);
     assert.equal(a.w.eval("view"), "feed");
@@ -16,7 +16,7 @@ test("a section leader with a post to confirm lands on Word of Mouth", async () 
 test("nothing waiting: stays on Home", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
-    await a.w.eval(`S.feeds=[${feed(',mine:{5:{t:1}}').replace(',seen:0,mine:{}','').replace(/mine:\{\}/,'')}];S.onb=true;S.welcomed=1;S.role="sncoic";S.link={mysec:"HE"};view="board";render()`);
+    await a.w.eval(`S.feeds=[${feed(',mine:{5:{t:1}}').replace(',seen:0,mine:{}','').replace(/mine:\{\}/,'')}];S.mode="military";{const sh=document.getElementById("sheet");if(sh){sh.hidden=true;sh.classList.remove("open")}}S.onb=true;S.welcomed=1;S.role="sncoic";S.link={mysec:"HE"};view="board";render()`);
     await sleep(200);
     a.w.eval(`openFeedCheck()`); await sleep(250);
     assert.equal(a.w.eval("view"), "board");
