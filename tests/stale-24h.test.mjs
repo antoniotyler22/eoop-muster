@@ -58,3 +58,16 @@ test("Check-ins lists who missed the last 24 hrs and has the switch", async () =
     assert.match(a.$("#exp24").textContent, /off/i);
   } finally { await a.close(); }
 });
+
+test("Home donut counts Off Hand with every other not-on-hand status", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    a.w.eval(`${setup}
+      R[0].ckAt=Date.now()-30*36e5;S.tl[R[0].id]=[[Date.now()-30*36e5,"On Hand","Full Duty"]];
+      R[1].status="TAD";R[1].start=dkey(new Date(Date.now()-864e5));R[1].end=dkey(new Date(Date.now()+864e5));
+      save();view="board";render()`);
+    const lab = a.$(".hdn").getAttribute("aria-label");
+    assert.match(lab, /Off Hand 1/); assert.match(lab, /TAD 1/); assert.match(lab, /Not on hand 2/);
+    assert.match(a.$(".hdl").textContent, /Off Hand/);
+  } finally { await a.close(); }
+});

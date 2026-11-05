@@ -12446,7 +12446,7 @@ loadAll().then(n=>{if(n&&typeof view!=="undefined"&&(view==="feed"||view==="talk
    by why (Off base appt, SIQ, Operation, TAD, Leave, Other) in shades of navy, blue, sky and teal. Replaces the old
    "Present · Off deck · Light duty · LIMDU" text line. */
 (()=>{
-const SEG=[["Appointment","Appointment","--hd1"],["duty","Duties","--hd7"],["At PT","At PT","--hd8"],["SIQ","SIQ","--hd2"],["Operation","Operation","--hd3"],["TAD","TAD","--hd4"],["Leave","Leave","--hd5"],["Other","Other","--hd6"]];
+const SEG=[["Appointment","Appointment","--hd1"],["duty","Duties","--hd7"],["At PT","At PT","--hd8"],["SIQ","SIQ","--hd2"],["Operation","Operation","--hd3"],["TAD","TAD","--hd4"],["Leave","Leave","--hd5"],["Other","Other","--hd6"],["Off Hand","Off Hand","--warn"]]; /* 4.80.1: Off Hand (no check-in in 24 hrs) is a slice too, so the two rings still add up to the roster */
 const R=58,C=2*Math.PI*R;
 {const c=document.createElement("style");c.textContent=`:root{--hd1:#0b2a6f;--hd2:#0857e8;--hd3:#5aa9ff;--hd4:#0fa3a3;--hd5:#a9d2ff;--hd6:#0a6f7a;--hd7:#3b3fb5;--hd8:#38c6e8}
 :root[data-theme="dark"]{--hd1:#2f56c4;--hd2:#4d8dff;--hd3:#8cc4ff;--hd4:#3fd3d3;--hd5:#c9e3ff;--hd6:#1f9aa6;--hd7:#7a7ff0;--hd8:#6fdcf5}
