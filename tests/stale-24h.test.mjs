@@ -22,6 +22,7 @@ test("a status older than 24 hrs drops out of the numbers; check-in brings it ba
     a.w.eval(`view=ckStaleList()[0].sec;render()`); await sleep(40);
     assert.ok(a.$(".st24t"), "row tagged Off Hand");
     assert.match(a.$(".st24t").textContent, /Off Hand/);
+    assert.match(a.$(".st24 .pill").textContent, /Off Hand/, "status button reads Off Hand");
     // checking in starts a fresh 24 hours
     a.w.eval(`const m=ckStaleList()[0];m.ckAt=Date.now();save();render()`);
     assert.equal(a.w.eval(`counts().T.stale`), 0);

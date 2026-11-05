@@ -10170,6 +10170,7 @@ window.ckStaleList=()=>{if(!on()||!real())return[];const p=pending();return S.ro
 function tagRows(){if(!on()||!real())return;const p=pending();
   for(const m of S.roster){if(!isStale(m,p))continue;const who=document.querySelector('.m [data-pcard="'+(window.CSS&&CSS.escape?CSS.escape(m.id):m.id)+'"]');if(!who)continue;
     const row=who.closest(".m");if(row){row.style.setProperty("--sc","var(--warn)");row.classList.add("st24")}
+    const pill=row&&row.querySelector('.pill[data-pick="s"]');if(pill){pill.style.setProperty("--pc","var(--warn)");const lb=pill.querySelector("span:last-child");if(lb)lb.textContent="Off Hand"}
     if(!who.querySelector(".st24t"))who.insertAdjacentHTML("beforeend",`<span class="tag st24t" title="Off Hand: no check-in or update in 24 hours. Last: ${esc(SHORT[m.status]||m.status)}">Off Hand</span>`)}}
 function note(){if(!real()||(typeof role==="function"&&role()==="view"))return "";const n=window.ckStaleList().length;
   return `<div class="note" id="exp24" style="margin:6px 4px 0">${on()?`Status goes to Off Hand after 24 hrs without a check-in or update${n?" · <b style=\"color:var(--warn)\">"+n+" Off Hand now</b>":""}. `:"24-hour expiry is off. "}<button class="chip" id="exp24t" style="cursor:pointer">${on()?"Turn off":"Turn on"}</button></div>`}
