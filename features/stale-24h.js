@@ -30,6 +30,9 @@ function note(){if(!real()||(typeof role==="function"&&role()==="view"))return "
   if(view==="checkins"&&!document.getElementById("exp24")){const a=document.getElementById("ckMiss");if(a)a.insertAdjacentHTML("afterend",note())}}catch(e){}return r}}
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest||!t.closest("#exp24t"))return;e.stopImmediatePropagation();
   S.exp24=on()?false:true;rawSave();const y=window.scrollY;render();window.scrollTo(0,y);toast(on()?"Off Hand after 24 hrs":"24-hour expiry off")},true);
-if(typeof every==="function")every(600000,()=>{try{if(on()&&real()&&window.ckStaleList().length&&(view==="board"||view==="people"||view==="checkins")){const y=window.scrollY;render();window.scrollTo(0,y)}}catch(e){}},"stale-24h");
+/* every 10 min: redraw only when someone newly went Off Hand since the last draw, so typing and open forms aren't wiped */
+let seen="";const sig=()=>window.ckStaleList().map(m=>m.id).sort().join(",");
+{const _r2=render;render=function(){try{seen=sig()}catch(e){}return _r2.apply(this,arguments)}}
+if(typeof every==="function")every(600000,()=>{try{if(!on()||!real())return;const n=sig();if(n!==seen&&(view==="board"||view==="people"||view==="checkins")&&!/^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement||{}).tagName||"")){const y=window.scrollY;render();window.scrollTo(0,y)}}catch(e){}},"stale-24h");
 {const st=document.createElement("style");st.textContent=`.tag.st24t{color:var(--warn);font-weight:700}`;document.head.appendChild(st)}
 })();
