@@ -58,6 +58,7 @@ export const SOURCES = [
   "features/news.js",
   "features/owner.js",
   "features/access-level.js",
+  "features/tool-access.js","features/gear.js","features/licensing.js",
   "features/rooms.js",
   "features/home-clear.js",
   "features/act-ruler.js",

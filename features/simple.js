@@ -16,10 +16,11 @@ const leader=()=>!(typeof memberMode==="function"&&memberMode());
 const GROUPS=[
   {k:"checkin",l:"Muster",s:"Check people in, visitors, confirm check-ins",ic:"muster",keys:["muster","checkins","alerts","visitors","field"]},
   {k:"feed",l:"Pages",s:"Group pages",ic:"feed",keys:["pages"]},
-  {k:"people",l:"People & access",s:"Invite, logins, accounts, who has access",ic:"people",keys:["invite","access","logins","live","pt","acct"]},
+  {k:"people",l:"People & access",s:"Invite, logins, accounts, who has access",ic:"people",keys:["invite","access","logins","live","pt","acct","toolsw"]},
   {k:"reports",l:"Reports",s:"Headcount, PDF, incident report, HARP, scan",ic:"text",keys:["text","pdfReport","w6","trends","harp","scan"]},
   {k:"recall",l:"Recall",s:"Call or text everyone",ic:"recall",keys:["recall"]},
-  {k:"armory",l:"Armory",s:"Sign gear in and out",ic:"armory",keys:["armory"]},
+  {k:"armory",l:"Armory & gear",s:"Weapons, tools, keys, sign-out and inventory",ic:"armory",keys:["armory","gear"]},
+  {k:"lic",l:"Licensing",s:"Classes, seats, rosters, documents",ic:"events",keys:["lic"]},
   {k:"rollup",l:"Company & rollup",s:"Company view, add up the teams under you",ic:"rollup",keys:["co","rollup"]},
   {k:"home",l:"My day",s:"Dashboard, today, my log",ic:"today",keys:["dash","today","log"]},
   {k:"help",l:"Help",s:"Ask a question, guide, short tour",ic:"help",keys:["utilities","support","guide","trStart","v11SignInTool","v11ShareApp","ask"]},
