@@ -270,7 +270,7 @@ function sampleRoster(){
 }
 
 let S={roster:sampleRoster(),source:"sample",loadedAt:"",recipients:"",names:false,pt:{event:"Unit PT",when:"",inc:["On Hand"],att:true}};
-let storageOK=true;
+let storageOK=true,storageErr=null;
 try{const raw=window.__RAW!==undefined?window.__RAW:localStorage.getItem(KEY);window.__RAW=undefined; if(raw){const v=JSON.parse(raw); if(v&&Array.isArray(v.roster)) S=Object.assign(S,v);} }catch(e){storageOK=false}
 if(MODES[S.mode]&&MODES[S.mode].secs){DEF_SECS.splice(0,DEF_SECS.length,...MODES[S.mode].secs.map(s=>s.slice()));SECTIONS.splice(0,SECTIONS.length,...DEF_SECS.map(s=>s.slice()))}
 if(Array.isArray(S.secs)&&S.secs.length&&S.secs.every(x=>Array.isArray(x)&&x[0])){SECTIONS.splice(0,SECTIONS.length,...S.secs.slice(0,10))}secFix();
@@ -303,7 +303,28 @@ function secTouch(by){try{if(!Array.isArray(S.roster))return;const sg={};for(con
 function secBy(){if(S.link)return "this phone ("+(S.link.me||"section leader")+")";return S.role==="view"?"a synced phone":"this phone"}
 /* the latest update for a section: a section leader's push (board) or any change made here */
 function secLast(k){const B=S.board,r=B&&B.last&&B.last[k],t=+((S.secAt||{})[k])||0;if(r&&(!t||r.t>=t))return r;if(t)return {t,by:(S.secBy||{})[k]||"",ch:0,local:true};return null}
-function save(){secTouch();try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.write(t);else localStorage.setItem(KEY,t);storageOK=true}catch(e){storageOK=false}if(S.link&&typeof linkSchedule==="function")linkSchedule();if(typeof histTick==="function")histTick();if(typeof syncSchedule==="function")syncSchedule();if(typeof mpSchedule==="function")mpSchedule();if(S.board&&typeof rpSchedule==="function")rpSchedule();if(S.coRep&&typeof coSchedule==="function")coSchedule()}
+/* 4.82.1: saving that survives a full or failing browser store. Order: normal save; if it fails, trim the old caches and retry;
+   if it still fails, keep a copy in IndexedDB (restored on the next open if it is newer than the browser's copy).
+   S.savedAt says which copy is newer. The banner shows the real reason. */
+function safeJSON(o){const seen=new WeakSet();return JSON.stringify(o,(k,v)=>{if(typeof v==="bigint")return String(v);if(typeof v==="function")return undefined;if(v&&typeof v==="object"){if(typeof Node!=="undefined"&&v instanceof Node)return undefined;if(seen.has(v))return undefined;seen.add(v)}return v})}
+function compactState(lv){const keep=lv>1?0.4:1;const cut=(a,n)=>{n=Math.max(10,Math.round(n*keep));if(Array.isArray(a)&&a.length>n)a.length=n};const last=(a,n)=>{n=Math.max(10,Math.round(n*keep));return Array.isArray(a)&&a.length>n?a.slice(-n):a};
+  cut(S.act,100);cut(S.talkLog,60);cut(S.backLog,5);cut(S.cks,150);S.hist=last(S.hist,60);S.outbox=last(S.outbox,100);
+  if(S.days&&typeof S.days==="object"){const ks=Object.keys(S.days).sort(),n=Math.round(120*keep);if(ks.length>n)ks.slice(0,ks.length-n).forEach(k=>delete S.days[k])}
+  if(S.tl&&typeof S.tl==="object")for(const k of Object.keys(S.tl))S.tl[k]=last(S.tl[k],20);
+  if(S.dmMsgs&&typeof S.dmMsgs==="object")for(const k of Object.keys(S.dmMsgs))S.dmMsgs[k]=last(S.dmMsgs[k],60);
+  if(Array.isArray(S.feeds))for(const f of S.feeds)if(f&&Array.isArray(f.posts))cut(f.posts,80)}
+let mirrorBusy=false,mirrorNext=null;
+function mirrorState(t){if(window.VAULT&&VAULT.on())return;try{if(!window.indexedDB)return;mirrorNext=t;if(mirrorBusy)return;mirrorBusy=true;
+  const done=ok=>{mirrorBusy=false;if(ok&&mirrorNext===null){storageOK=true;storageErr=null}if(mirrorNext!==null){const n=mirrorNext;mirrorNext=null;mirrorState(n)}};
+  const r=indexedDB.open("af-state",1);r.onupgradeneeded=()=>r.result.createObjectStore("s");r.onerror=()=>done(false);r.onblocked=()=>done(false);
+  r.onsuccess=()=>{try{const t0=mirrorNext;mirrorNext=null;const tx=r.result.transaction("s","readwrite");tx.objectStore("s").put({t:Date.now(),raw:t0},"main");tx.oncomplete=()=>{try{r.result.close()}catch(e){}done(true)};tx.onerror=()=>{try{r.result.close()}catch(e){}done(false)};tx.onabort=tx.onerror}catch(e){done(false)}}}catch(e){mirrorBusy=false}}
+function persistState(){let t;
+  try{S.savedAt=Date.now();try{t=JSON.stringify(S)}catch(e){t=safeJSON(S)}}catch(e){storageErr={n:"Can't read state",m:String(e&&e.message||e).slice(0,80)};return false}
+  if(window.VAULT&&VAULT.on()){VAULT.write(t);return true}
+  try{localStorage.setItem(KEY,t);storageErr=null;return true}catch(e){storageErr={n:String(e&&e.name||"Error"),kb:Math.round(t.length/1024)}}
+  for(let lv=1;lv<=2;lv++){try{compactState(lv);t=JSON.stringify(S);localStorage.setItem(KEY,t);storageErr=null;return true}catch(e){}}
+  mirrorState(t);return false}
+function save(){secTouch();storageOK=persistState();if(S.link&&typeof linkSchedule==="function")linkSchedule();if(typeof histTick==="function")histTick();if(typeof syncSchedule==="function")syncSchedule();if(typeof mpSchedule==="function")mpSchedule();if(S.board&&typeof rpSchedule==="function")rpSchedule();if(S.coRep&&typeof coSchedule==="function")coSchedule()}
 
 let view="board", armed=null, query="";
 const h0=(location.hash||"").slice(1).toLowerCase();
@@ -387,7 +408,7 @@ function banner0(){
   const LK=S.link;if(LK&&LK.rk2){if(!LK.pulled)return `<div class="banner"><span>${LK.perr?esc(LK.perr):`Loading <b>${esc(LK.sec)}</b> from ${esc(LK.unit)}'s board…`}</span>${LK.perr?`<button id="lkRetry">Retry</button>`:""}</div>`;
     }
   if(S.source==="sample"&&!memberMode()) return `<div class="banner"><span>Showing <b>sample Marines</b>. Load your MOL detail list to start.</span><button data-go="data">Load roster</button></div>`;
-  if(!storageOK) return `<div class="banner"><span>This browser isn't saving changes. Export a backup from DATA before closing.</span></div>`;
+  if(!storageOK) return `<div class="banner"><span>This browser isn't saving changes${storageErr?" ("+esc(storageErr.n)+(storageErr.kb?" · "+storageErr.kb+" KB":"")+(storageErr.m?" · "+esc(storageErr.m):"")+")":""}. Export a backup from DATA before closing.</span></div>`;
   return "";
 }
 function dutyCounts(list){const d={"Full Duty":0,"Light Duty":0,"LIMDU":0};list.forEach(m=>d[dutyOf(m)]++);return d}
@@ -1874,7 +1895,7 @@ async function syncPull(quiet){const Y=S.sync;if(!Y||!Y.on||syncBusy)return fals
     Y.err="";rawSave();
     if(changed){if(!quiet){const y=window.scrollY;const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){render();window.scrollTo(0,y)}toast("Synced from your other phone")}if(sig(syncObj())!==Y.last)syncSchedule()}}
   catch(e){Y.err=String(e.message||e).slice(0,90);rawSave()}finally{syncBusy=false}return changed}
-function rawSave(){try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.write(t);else localStorage.setItem(KEY,t)}catch(e){}}
+function rawSave(){try{persistState()}catch(e){}}
 every(60000,()=>{if(S.sync&&S.sync.on)syncPull()},"sync");
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.sync&&S.sync.on)syncPull()});
 async function syncRestore(code){const K=await codeKeys(code);const rows=await SB.rpc("backup_get",{p_id:K.id,p_key:K.wk});const r=rows&&rows[0];if(!r)throw new Error("No backup found for that code.");
@@ -2095,7 +2116,7 @@ function histNow(){const {c,T}=counts();const sec={};SECTIONS.forEach(([k])=>sec
   const now=Date.now();for(const m of S.roster){const L=S.tl[m.id]=S.tl[m.id]||[];const last=L[L.length-1];const d=dutyOf(m);
     if(!last||last[1]!==m.status||last[2]!==d){L.push([now,m.status,d]);if(L.length>60)L.splice(0,L.length-60)}}
   for(const id of Object.keys(S.tl))if(!S.roster.some(m=>m.id===id))delete S.tl[id];
-  try{const t=JSON.stringify(S);if(window.VAULT&&VAULT.on())VAULT.write(t);else localStorage.setItem(KEY,t)}catch(e){}}
+  try{persistState()}catch(e){}}
 function sinceOf(m){const L=S.tl[m.id];if(!L||!L.length)return null;let i=L.length-1;while(i>0&&L[i-1][1]===m.status)i--;return L[i][0]}
 function awayDays(m,from){const L=(S.tl[m.id]||[]).filter(x=>x);let days=0;const now=Date.now();
   for(let i=0;i<L.length;i++){const a=Math.max(L[i][0],from),b=i+1<L.length?L[i+1][0]:now;if(b<=a)continue;if(AWAY.includes(L[i][1]))days+=(b-a)/86400000}return days}
