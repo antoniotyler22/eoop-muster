@@ -56,3 +56,24 @@ test("pins and poll tallies are marked as control posts and still decode", async
     assert.equal(r, "tally");
   } finally { await a.close(); }
 });
+
+test("Which one is you? is tap-to-pick: one-tap guess, type to find, and a refresh mid-pick doesn't lose it", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    a.w.eval(lead);
+    const m = a.w.eval(`(({id,rank,name})=>({id,rank,name}))(S.roster[2])`);
+    // type-to-find
+    const q = a.$("#myWhoQ"); assert.ok(q, "type-to-find box");
+    q.value = m.name; q.dispatchEvent(new a.w.Event("input", { bubbles: true }));
+    assert.ok(a.$(`[data-mywho="${m.id}"]`), "name shows as a tap target");
+    a.w.eval("render()"); await sleep(5);              // the app refreshes itself
+    a.$(`[data-mywho="${m.id}"]`).click(); await sleep(10);
+    assert.equal(a.w.eval("S.who.id"), m.id, "picked");
+    assert.ok(!a.$("#myWhoQ"), "picker gone, check-in card shows");
+    // one-tap guess when the app already knows the name
+    a.w.eval(`S.roster[4].name="UNIQUE, ZED";S.who=null;S.myName=S.roster[4].rank+" "+lastOf(S.roster[4]);render()`); await sleep(5);
+    const g = a.$("[data-mywho]"); assert.match(g.textContent, /Yes, I'm/);
+    g.click(); await sleep(10);
+    assert.equal(a.w.eval("S.who.id"), a.w.eval("S.roster[4].id"));
+  } finally { await a.close(); }
+});

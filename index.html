@@ -14,8 +14,8 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
 <title>Accounted For</title>
-<link rel="stylesheet" href="app.css?v=4.82.1">
-<link rel="preload" as="script" href="app.bundle.js?v=4.82.1">
+<link rel="stylesheet" href="app.css?v=4.82.2">
+<link rel="preload" as="script" href="app.bundle.js?v=4.82.2">
 </head><body>
 <header class="top"><div class="top-in">
   <div class="brand">
@@ -87,7 +87,7 @@ const V=window.VAULT={key:null,cfg:getCfg(),ok:!!(window.crypto&&crypto.subtle),
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.hidden){hiddenAt=Date.now();return}
   const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
-window.AV="4.82.1";
+window.AV="4.82.2";
 /* self-update: an installed web app resumes without reloading, so check the live version on open, on every return, and every 10 min */
 (()=>{const NAT=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());if(NAT||!/^https?:$/.test(location.protocol))return;
   let busy=false,last=0;const typing=()=>{const a=document.activeElement;return a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)};
@@ -100,7 +100,7 @@ window.AV="4.82.1";
       location.reload()}catch(e){}finally{busy=false}}
   window.afCheckUpdate=check;setTimeout(check,1500);setInterval(check,10*60000);
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)check()});window.addEventListener("pageshow",e=>{if(e.persisted)check()});window.addEventListener("online",check)})();
-/* 4.82.1: if the browser's own copy of the state is older than the IndexedDB copy kept when saving failed, open the newer one */
+/* 4.82.2: if the browser's own copy of the state is older than the IndexedDB copy kept when saving failed, open the newer one */
 function mirrorRead(){return new Promise(res=>{try{if(!window.indexedDB)return res(null);const r=indexedDB.open("af-state",1);r.onupgradeneeded=()=>r.result.createObjectStore("s");r.onerror=()=>res(null);r.onblocked=()=>res(null);
   r.onsuccess=()=>{try{const g=r.result.transaction("s").objectStore("s").get("main");g.onsuccess=()=>{const v=g.result||null;try{r.result.close()}catch(e){}res(v)};g.onerror=()=>res(null)}catch(e){res(null)}}}catch(e){res(null)}})}
 async function startApp(){try{if(window.__RAW===undefined&&!window.VAULT.cfg){const m=await Promise.race([mirrorRead(),new Promise(r=>setTimeout(()=>r(null),1500))]);

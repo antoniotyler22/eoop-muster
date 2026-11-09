@@ -22,10 +22,24 @@ function pendingChip(m){if(!m)return"";const io=x=>x?(typeof isoOf==="function"&
   const v=c.v||{};const dirty=c.open&&c.st&&(c.st!==m.status||(c.st!=="On Hand"&&((v.from||"")!==io(m.start)||(v.to||"")!==io(m.end)||(v.loc||"")!==(m.loc||""))));
   if(dirty)return `<span class="chip" style="background:var(--brass);color:#fff">Not sent: slide to check in</span>`;
   return m.ckAt?`<span class="chip">Last ${esc(ago(m.ckAt))}</span>`:""}
+/* 4.82.2: "Which one is you?" is tap-to-pick, not a phone wheel. The app refreshes itself while you scroll a wheel and the wheel closed before
+   a name could be chosen. Now: a one-tap "Yes, that's me" when the app knows your name, a type-to-find box, and the full wheel as a last resort. */
+let wq="";
+const pname=x=>x.rank+" "+x.name;
+function whoGuess(){const n=String(S.myName||"").trim().toUpperCase();if(!n)return null;const hit=pool().filter(x=>(x.rank+" "+lastOf(x)).toUpperCase()===n);return hit.length===1?hit[0]:null}
+function whoListHTML(){const q=wq.trim().toUpperCase();if(!q)return `<p class="note" style="margin:0">Type part of your name.</p>`;
+  const L=pool().filter(x=>(pname(x)+" "+x.sec).toUpperCase().includes(q)).slice(0,8);
+  return L.length?L.map(x=>`<button type="button" class="btn alt" data-mywho="${esc(x.id)}" style="width:100%;text-align:left;margin-top:6px">${esc(pname(x))}${S.link&&S.link.whole||!S.link?" · "+esc(x.sec):""}</button>`).join(""):`<p class="note" style="margin:0">No match. Try just your last name.</p>`}
+function whoHTML(){const g=whoGuess();
+  return `<label for="myWhoQ">Which one is you?</label>${g?`<button type="button" class="btn" data-mywho="${esc(g.id)}" style="width:100%;margin:4px 0">Yes, I'm ${esc(pname(g))}</button>`:""}
+    <input type="search" id="myWhoQ" autocomplete="off" autocapitalize="characters" value="${esc(wq)}" placeholder="Type your last name…" style="${inp}"><div id="myWhoList">${whoListHTML()}</div>
+    <details style="margin-top:6px"><summary class="note" style="cursor:pointer">Pick from the full list</summary><select id="myWho" class="wsel"><option value="">Pick your name…</option>${pool().map(x=>`<option value="${esc(x.id)}">${esc(pname(x))}${S.link&&S.link.whole||!S.link?" · "+esc(x.sec):""}</option>`).join("")}</select></details>`}
+function pickWho(id){const m=S.roster.find(x=>x.id===id);if(!m)return;
+  S.who=Object.assign({},S.who||{},{id:m.id,n:m.rank+" "+lastOf(m),t:Date.now()});S.myName=S.myName||m.rank+" "+lastOf(m);wq="";rawSave();redraw()}
+document.addEventListener("input",e=>{if(e.target.id!=="myWhoQ")return;wq=e.target.value;const l=document.getElementById("myWhoList");if(l)l.innerHTML=whoListHTML()},true);
 function cardHTML(){const m=me();
   let h=`<div class="card" id="myCk" style="gap:8px;margin-top:10px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">MY CHECK-IN</span>${pendingChip(m)}</div>`;
-  if(!m){h+=`<label for="myWho">Which one is you?</label><select id="myWho" class="wsel"><option value="">Pick your name…</option>${pool().map(x=>`<option value="${esc(x.id)}">${esc(x.rank+" "+x.name)}${S.link&&S.link.whole||!S.link?" · "+esc(x.sec):""}</option>`).join("")}</select>
-      <p class="note" style="margin:0">Not on the list? Add yourself in your section first.</p></div>`;return h}
+  if(!m){h+=whoHTML()+`<p class="note" style="margin:0">Not on the list? Add yourself in your section first.</p></div>`;return h}
   const cur=`<span class="dot" style="background:var(${SVAR[m.status]||"--line"})"></span> <b>${esc(SHORT[m.status]||m.status)}</b>${m.end?" thru "+esc(fmtD(isoOf(m.end)||m.end)):""}${m.loc?" · 📍 "+esc(m.loc):""}`;
   h+=`<div class="note" style="margin:0">${esc(m.rank+" "+m.name)} · ${cur}</div>`;
   /* 4.53: the choices and the slider show right away, with your current status picked */
@@ -65,14 +79,14 @@ async function send(){grab();const m=me();if(!m)return;const st=c.st,v=c.v;
 window.quickSafe=async function(){if(!real()||isMemberPhone())return "no";if(!me()){view="board";try{render()}catch(e){}toast("Pick which one is you first, then tap I'm safe again.");return "who"}
   c={open:true,st:"On Hand",v:{},auto:1};await send();return "ok"};
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest||!t.closest("#myCk"))return;
+  const w=t.closest("[data-mywho]");if(w){pickWho(w.dataset.mywho);return}
   if(t.closest("#myCkOpen")){const m=me();c={open:true,st:"",v:{}};redraw();return}
   if(t.closest("#myCkX")){c={open:false,st:"",v:{}};redraw();return}
   if(t.closest("#myCkWho")){S.who=null;rawSave();redraw();return}
   if(t.closest("#myStBtn")){grab();c.pick=!c.pick;redraw();return}
   const s=t.closest("[data-myst]");if(s){grab();c.st=s.dataset.myst;c.pick=false;redraw();try{buzz()}catch(e2){}return}
   if(t.closest("#myCkSend")){send();return}},true);
-document.addEventListener("change",e=>{if(e.target.id!=="myWho"||!e.target.value)return;const m=S.roster.find(x=>x.id===e.target.value);if(!m)return;
-  S.who=Object.assign({},S.who||{},{id:m.id,n:m.rank+" "+lastOf(m),t:Date.now()});S.myName=S.myName||m.rank+" "+lastOf(m);rawSave();redraw()});
+document.addEventListener("change",e=>{if(e.target.id!=="myWho"||!e.target.value)return;pickWho(e.target.value)});
 window.myCkShow=show;
 })();
 
