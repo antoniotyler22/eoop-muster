@@ -13,14 +13,14 @@ test("leader post: ring, section bars, one toolbar; no stat box; Who opens the l
       fdSel="${FEED.id}";view="feed";render()`);
     const card = a.$("article.fc.rr"); assert.ok(card, "ring card");
     assert.ok(card.querySelector(".rr-ring"), "ring in the header");
-    assert.match(card.querySelector(".rr-ring").getAttribute("aria-label"), /1 of 3 confirmed/);
+    assert.match(card.querySelector(".rr-ring").getAttribute("aria-label"), /1 of 3 seen/);
     assert.equal(card.querySelectorAll(".rr-seg > div").length, 2, "one bar per section");
     assert.ok(!/^Confirmed$/m.test([...card.querySelectorAll(".fci .ttl")].map(x => x.textContent).join("\n")), "stat box gone");
     const tool = card.querySelector(".rr-tool"); assert.ok(tool);
     assert.match(tool.textContent, /Who/); assert.match(tool.textContent, /Remind 2/); assert.match(tool.textContent, /Pin/); assert.match(tool.textContent, /Delete/);
-    assert.ok(tool.querySelector('a.rr-b[href^="sms:"]'), "Remind texts the two who haven't confirmed");
+    assert.ok(tool.querySelector('a.rr-b[href^="sms:"]'), "Remind texts the two who haven't seen it");
     card.querySelector('.rr-tool [data-fdopen]').click();
-    assert.match(a.$("article.fc.rr").textContent, /Not confirmed \(2\)/, "Who opens the list");
+    assert.match(a.$("article.fc.rr").textContent, /Not seen \(2\)/, "Who opens the list");
     a.$('article.fc.rr .rr-tool [data-fddel]').click();
     assert.match(a.$('article.fc.rr .rr-tool [data-fddel]').textContent, /Tap again/);
     assert.equal(a.$$('[data-fddel]').length, 1, "only one Delete");

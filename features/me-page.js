@@ -30,7 +30,7 @@ function comingHTML(D){const k=iso(new Date()),k7=plus(7);const L=items(D).filte
 function wordHTML(){const f=typeof fdCur==="function"?fdCur():null;if(!f||!Array.isArray(f.posts))return "";
   const forMe=p=>typeof fdForMe!=="function"||fdForMe(f,p);const L=f.posts.filter(p=>!p.pod&&!(p.ci&&Date.now()-p.t<12*3600000)&&forMe(p)).slice(0,3);if(!L.length)return "";
   const open=L.filter(p=>!(f.mine||{})[p.id]).length;
-  return `<div class="sech"><h2>The word</h2><span style="display:flex;gap:6px;align-items:center">${open?`<span class="chip" style="background:var(--brass);color:#fff;border:0">${open} to confirm</span>`:""}<button class="chip" data-go="feed" style="cursor:pointer">Word of Mouth ▸</button></span></div><div id="meWord">${L.map(p=>fdCard(f,p,false,false)).join("")}</div>`}
+  return `<div class="sech"><h2>The word</h2><span style="display:flex;gap:6px;align-items:center">${open?`<span class="chip" style="background:var(--brass);color:#fff;border:0">${open} new</span>`:""}<button class="chip" data-go="feed" style="cursor:pointer">Word of Mouth ▸</button></span></div><div id="meWord">${L.map(p=>fdCard(f,p,false,false)).join("")}</div>`}
 /* an open emergency muster: the newest post with a check-in link, less than 12 hours old */
 function musterHTML(){const f=typeof fdCur==="function"?fdCur():null;if(!f||!Array.isArray(f.posts))return "";const p=f.posts.find(x=>x.ci&&Date.now()-x.t<12*3600000);if(!p)return "";
   const h=String(p.ci).split("#")[1]||"";const txt=String(p.txt||"").split("\n")[0].slice(0,120);

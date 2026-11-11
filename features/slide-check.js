@@ -44,7 +44,7 @@ const main=document.getElementById("main");
 if(main&&"MutationObserver" in window)new MutationObserver(()=>scan()).observe(main,{childList:true,subtree:true});
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{scan()}catch(e){}return r}}
 const st=document.createElement("style");st.textContent=`
-.slck{position:relative;height:60px;border-radius:30px;background:var(--surface-2);overflow:hidden;touch-action:pan-y;-webkit-user-select:none;user-select:none;margin-top:4px}
+.slck{position:relative;height:60px;border-radius:30px;background:var(--surface-2);overflow:hidden;touch-action:pan-y pinch-zoom;-webkit-user-select:none;user-select:none;margin-top:4px}
 .slck-fill{position:absolute;left:0;top:0;bottom:0;width:60px;border-radius:30px;background:var(--s-onhand)}
 .slck-txt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding-left:52px;font-size:17px;font-weight:700;pointer-events:none;
   background:linear-gradient(90deg,var(--muted) 0%,var(--muted) 40%,var(--ink) 50%,var(--muted) 60%,var(--muted) 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:slckShim 2.6s linear infinite}

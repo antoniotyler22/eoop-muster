@@ -16,7 +16,7 @@ const IC={who:`<svg ${SV}><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-
   del:`<svg ${SV}><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>`};
 const col=pc=>"color-mix(in srgb,var(--pr-hi) "+Math.max(0,Math.min(100,pc))+"%,var(--pr-lo))";   /* light blue (nobody in) to deep blue (everyone in) */
 function ring(got,pool){const pc=pool?Math.round(100*got/pool):0,C=138.2;
-  return `<div class="rr-ring" role="img" aria-label="${got} of ${pool} confirmed"><svg width="52" height="52"><circle cx="26" cy="26" r="22" stroke="var(--rr-track)" stroke-width="6" fill="none"/><circle cx="26" cy="26" r="22" stroke="${col(pc)}" stroke-width="6" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${(C*(1-pc/100)).toFixed(1)}"/></svg><span>${pc}%</span></div>`}
+  return `<div class="rr-ring" role="img" aria-label="${got} of ${pool} seen"><svg width="52" height="52"><circle cx="26" cy="26" r="22" stroke="var(--rr-track)" stroke-width="6" fill="none"/><circle cx="26" cy="26" r="22" stroke="${col(pc)}" stroke-width="6" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${(C*(1-pc/100)).toFixed(1)}"/></svg><span>${pc}%</span></div>`}
 function segs(f,p,st){const pool=fdPool(p);const ord=(typeof SECTIONS!=="undefined"?SECTIONS.map(x=>x[0]):[]).concat("ATT");const keys=[...new Set(ord.concat(pool.map(m=>m.sec).filter(Boolean)))];
   const L=keys.map(k=>{const ms=pool.filter(m=>m.sec===k);return {k,n:ms.length,g:ms.filter(m=>st.A[m.id]).length}}).filter(x=>x.n);
   if(L.length<2)return "";
@@ -25,7 +25,7 @@ function toolbar(f,p,st,pinned){const pool=fdPool(p);const miss=sorted(pool.filt
   const reps=pool.filter(m=>st.A[m.id]&&st.A[m.id].c===1&&st.A[m.id].note).length;const open=fdOpen===p.id;
   let remind;
   if(!miss.length)remind=`<button type="button" disabled>${IC.bell}All in</button>`;
-  else{const b=bcBatches(miss,f.unit+": new word in Word of Mouth you haven't confirmed. Open Accounted For → Word of Mouth.");
+  else{const b=bcBatches(miss,f.unit+": new word in Word of Mouth you haven't seen. Open Accounted For → Word of Mouth.");
     remind=b.length===1?`<a class="rr-b" href="${esc(b[0].href)}">${IC.bell}Remind ${miss.length}</a>`:`<button type="button" data-fdopen="${p.id}">${IC.bell}Remind ${miss.length}</button>`}
   const armedDel=armed==="fddel"+p.id;
   return `<div class="rr-tool"><button type="button" data-fdopen="${p.id}" class="${open?"on":""}" aria-expanded="${open}">${IC.who}Who</button>${remind}<button type="button" data-fdopen="${p.id}">${IC.chat}${reps}</button><button type="button" data-fdpin="${p.id}" class="${pinned?"on":""}">${IC.pin}${pinned?"Unpin":"Pin"}</button><button type="button" data-fddel="${p.id}" class="d${armedDel?" arm":""}">${IC.del}${armedDel?"Tap again":"Delete"}</button></div>`}

@@ -17,7 +17,7 @@ async function memberApp(rpc) {
   return a;
 }
 
-test("my page: greeting with 24-hour clock, check-in on top, the word with Got it, today, coming up with events for everyone", async () => {
+test("my page: greeting with 24-hour clock, check-in on top, the word, today, coming up with events for everyone", async () => {
   const a = await memberApp(() => []);
   try {
     const main = a.$("#main");
@@ -26,7 +26,8 @@ test("my page: greeting with 24-hour clock, check-in on top, the word with Got i
     assert.match(main.querySelector(".me-built .hm-h").textContent, /^Good (morning|afternoon|evening), /);
     const order = a.w.eval(`[...document.querySelectorAll('#main > *')].map(x=>x.id||x.className.split(' ')[0])`);
     assert.ok(order.indexOf("ckCard") < order.indexOf("meWord"), order.join(","));
-    assert.ok(a.$("#meWord [data-fdack]"), "the word has a Got it button");
+    assert.ok(a.$("#meWord article"), "the word shows on My page");
+    assert.ok(!a.$("#meWord [data-fdack][data-c='1']"), "no Got it / Confirm button, seen is automatic");
     assert.match(main.textContent, /Today for me/);
     assert.match(main.textContent, /Duty NCO/);
     assert.match(main.textContent, /Coming up · 7 days/);

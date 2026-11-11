@@ -55,7 +55,7 @@ const main=document.getElementById("main");if(main&&"MutationObserver" in window
 window.swipeScan=scan;
 const st=document.createElement("style");st.textContent=`
 .sw{position:relative;overflow:hidden;border-radius:16px}
-.sw>.sw-t{position:relative;z-index:1;touch-action:pan-y;transition:transform .25s cubic-bezier(.3,1,.4,1);background:var(--surface-solid,var(--surface));will-change:transform}
+.sw>.sw-t{position:relative;z-index:1;touch-action:pan-y pinch-zoom;transition:transform .25s cubic-bezier(.3,1,.4,1);background:var(--surface-solid,var(--surface));will-change:transform}
 .sw-a{position:absolute;top:0;right:0;bottom:0;width:var(--aw);display:flex;z-index:0}
 .sw-b{flex:1;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#fff;font:700 12px inherit;font-family:inherit;font-size:12.5px;cursor:pointer}
 .sw-b span{font-size:12px}.sw-b.hide{background:#8b95a5}.sw-b.done{background:var(--s-onhand)}.sw-b.del{background:#e5484d}

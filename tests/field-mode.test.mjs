@@ -12,7 +12,7 @@ test("a Got it with no signal waits, shows the bar, and sends when signal comes 
   const a = await openApp({ rpc: (fn, body) => { if (down) throw new Error("Failed to fetch"); if (fn === "feed_ack") sent.push(body); return []; } });
   try {
     member(a);
-    a.$("#fStack [data-fdack]").click(); await sleep(300);
+    await sleep(1500);   // opening Word of Mouth marks the post seen by itself (no Confirm button any more)
     assert.equal(a.w.eval("S.outbox.length"), 1, "saved on the phone");
     assert.match(a.w.eval("S.outbox[0].lb"), /Got it/);
     assert.match(a.$("#fmPill").textContent, /No signal.*1 waiting/);

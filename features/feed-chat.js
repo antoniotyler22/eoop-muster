@@ -1,9 +1,6 @@
 /* Accounted For 4.45: Word of Mouth as a conversation.
    - Posts read as chat bubbles: yours on the right, everyone else's on the left.
-   - Anything still waiting for your Confirm sits on top as a one-at-a-time card: tap Confirm and the next one slides in.
-     When it is empty you get "All caught up".
-   - Uses the same Confirm / Reply buttons and handlers as before (data-fdack, data-fsok, data-fdrep), so nothing about
-     how Got it is stored changes. */
+   4.83.0: the "to confirm" card on top is gone (nothing to confirm any more: seen is automatic, see features/auto-seen.js). */
 (()=>{
 const needs=f=>{const all=fdVisible(f);
   if(f.lk)return all.filter(p=>!(typeof fsOwn==="function"&&fsOwn(f,p))&&!(f.lseen||{})[p.id]);
@@ -14,7 +11,7 @@ const ownP=(f,p)=>typeof fsOwn==="function"&&fsOwn(f,p);
 {const _card=fdCard;fdCard=function(f,p){let h=_card.apply(this,arguments);
   try{return h.replace(/^<article data-pid="\d+" /,"<article ").replace('<article ',`<article data-pid="${p.id}" `).replace('class="fc','class="fc '+(ownP(f,p)?"own ":"")+"bub")}catch(e){return h}}}
 
-function stack(f){const need=order(needs(f));const n=need.length;
+function stack(f){return "";const need=order(needs(f));const n=need.length;
   if(!n){return fdVisible(f).length?`<div class="fstack ok" id="fStack"><span>✓ All caught up</span></div>`:""}
   const p=need[0],lead=!!f.lk,by=p.by||f.unit;
   const tags=`${p.pod?`<span class="fcchip" style="color:var(--brass)">📋 Plan of the Day</span>`:""}${p.urg?`<span class="fcchip" style="color:var(--warn)">URGENT</span>`:""}${(f.pins||[]).includes(p.id)?`<span class="fcchip">📌 Pinned</span>`:""}`;
