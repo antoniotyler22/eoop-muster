@@ -20,11 +20,11 @@ test("posts are bubbles and there is no confirm card or Confirm button", async (
   } finally { await a.close(); }
 });
 
-test("Reply still opens a box under the post", async () => {
+test("Reply opens the thread screen", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     setup(a);
-    a.$('[data-fdrep="6"]').click();
-    assert.ok(a.$("#fdRep6"), "reply box opens");
+    a.$('[data-thr="6"]').click();
+    assert.ok(a.$("#thrView #thrInp"), "thread opens with a reply bar");
   } finally { await a.close(); }
 });

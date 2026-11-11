@@ -22,7 +22,7 @@ function segs(f,p,st){const pool=fdPool(p);const ord=(typeof SECTIONS!=="undefin
   if(L.length<2)return "";
   return `<div class="rr-seg">${L.map(x=>{const pc=Math.round(100*x.g/x.n);return `<div title="${esc(x.k)} ${x.g} of ${x.n}"><i><b style="width:${pc}%;background:${col(pc)}"></b></i><small>${esc(x.k)}</small></div>`}).join("")}</div>`}
 function toolbar(f,p,st,pinned){const pool=fdPool(p);const miss=sorted(pool.filter(m=>!st.A[m.id]));
-  const reps=pool.filter(m=>st.A[m.id]&&st.A[m.id].c===1&&st.A[m.id].note).length;const open=fdOpen===p.id;
+  const reps=pool.filter(m=>st.A[m.id]&&st.A[m.id].c===1&&st.A[m.id].note).length+(typeof window.thrCount==="function"?window.thrCount(f,p.id):0);const open=fdOpen===p.id;
   let remind;
   if(!miss.length)remind=`<button type="button" disabled>${IC.bell}All in</button>`;
   else{const b=bcBatches(miss,f.unit+": new word in Word of Mouth you haven't seen. Open Accounted For → Word of Mouth.");

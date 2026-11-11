@@ -75,7 +75,7 @@ document.addEventListener("touchmove",e=>{if(!sw)return;const t=e.touches[0],dx=
   if(!sw.go&&Math.abs(dy)>16&&Math.abs(dy)>Math.abs(dx)){sw=null;return}
   if(dx>8&&Math.abs(dy)<24){sw.go=true;sw.dx=Math.min(dx,90);sw.a.style.transform="translateX("+sw.dx*.6+"px)";sw.a.style.transition="none"}},{passive:true});
 function endSwipe(){if(!sw)return;const {a,dx,go}=sw;sw=null;a.style.transition="transform .18s";a.style.transform="";
-  if(go&&dx>=70){const b=a.querySelector("[data-fdrep]");if(b){try{navigator.vibrate&&navigator.vibrate(10)}catch(e){}b.click()}}}
+  if(go&&dx>=70){const b=a.querySelector("[data-thr],[data-fdrep]");if(b){try{navigator.vibrate&&navigator.vibrate(10)}catch(e){}b.click()}}}
 document.addEventListener("touchend",endSwipe);document.addEventListener("touchcancel",endSwipe);
 
 /* ---- looks ---- */

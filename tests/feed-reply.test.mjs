@@ -10,7 +10,7 @@ test("member taps Reply, types, sends: it goes as a Got it with the words, and s
   const a = await openApp({ rpc: (fn, body) => { if (fn === "feed_ack") sent.push(body); return []; } });
   try {
     a.w.eval(`S.feeds=[{id:"${FEED.id}",mk:"${FEED.mk}",ek:"x",unit:"1ST PLT",me:"CPL TEST",sec:"1ST",mine:{},seen:0,
-      posts:[{id:5,t:Date.now(),txt:"Formation 0700. Can everyone make it?"}]}];S.onb=true;S.welcomed=1;fdSel="${FEED.id}";view="feed";render()`);
+      posts:[{id:5,t:Date.now(),txt:"Formation 0700. Can everyone make it?",to:{k:"secs",s:["1ST"]}}]}];S.onb=true;S.welcomed=1;fdSel="${FEED.id}";view="feed";render()`);
     assert.ok(!a.$('[data-fdack="5"][data-c="1"]'), "no Confirm button any more");
     a.$('[data-fdrep="5"]').click();
     const i = a.$("#fdRep5"); assert.ok(i, "reply box opens");
@@ -28,7 +28,7 @@ test("an empty reply is not sent", async () => {
   const sent = [];
   const a = await openApp({ rpc: (fn, body) => { if (fn === "feed_ack") sent.push(body); return []; } });
   try {
-    a.w.eval(`S.feeds=[{id:"${FEED.id}",mk:"${FEED.mk}",ek:"x",unit:"1ST PLT",me:"CPL TEST",sec:"1ST",mine:{},seen:0,posts:[{id:5,t:Date.now(),txt:"Hello"}]}];S.onb=true;S.welcomed=1;fdSel="${FEED.id}";view="feed";render()`);
+    a.w.eval(`S.feeds=[{id:"${FEED.id}",mk:"${FEED.mk}",ek:"x",unit:"1ST PLT",me:"CPL TEST",sec:"1ST",mine:{},seen:0,posts:[{id:5,t:Date.now(),txt:"Hello",to:{k:"secs",s:["1ST"]}}]}];S.onb=true;S.welcomed=1;fdSel="${FEED.id}";view="feed";render()`);
     a.$('[data-fdrep="5"]').click(); a.$('[data-fdrepsend="5"]').click(); await sleep(100);
     assert.equal(sent.length, 0);
   } finally { await a.close(); }
@@ -53,17 +53,18 @@ test("every role has Reply (and no Confirm) on every post, the poster's own and 
   try {
     a.w.eval(`S.feeds=[{id:"${FEED.id}",mk:"${FEED.mk}",pk:"p".repeat(30),ek:"x",unit:"1ST PLT",me:"SGT HQ",sec:"HQ",mine:{},seen:0,
       posts:[{id:7,t:Date.now(),txt:"HQ at the range",by:"SGT HQ",sl:"HQ"},{id:8,t:Date.now()-1000,txt:"Gear for UT only",by:"1ST PLT",to:{k:"secs",s:["UT"]}}]}];S.onb=true;S.welcomed=1;fdSel="${FEED.id}";view="feed";render()`);
-    for (const re of [/at the range/, /Gear for UT only/]) {
+    for (const re of [/Gear for UT only/]) {
       const c = a.$$("#main article.fc").find((x) => re.test(x.textContent));
       assert.ok(!c.querySelector('[data-fdack][data-c="1"]'), "no Confirm on " + re);
       assert.ok(c.querySelector("[data-fdrep]"), "Reply on " + re);
     }
+    assert.ok(a.$$("#main article.fc").find((x) => /at the range/.test(x.textContent)).querySelector("[data-thr]"), "open post gets the thread chip");
     // leader phone: Confirm and Reply on its own post too
     a.w.eval(`S.leaderMode=true;S.feeds=[{id:"${FEED.id}",mk:"${FEED.mk}",lk:"${FEED.lk}",ek:"x",unit:"1ST PLT",main:true,un:{},mine:{},seen:0,acks:{},posts:[{id:1,t:Date.now(),txt:"Formation 0700",by:"1ST PLT"}]}];fdSel="${FEED.id}";render()`);
     const c = a.$$("#main article.fc")[0];
     assert.match(c.textContent, /I posted it/);
     assert.ok(!c.querySelector("[data-fsok]"), "no Confirm on the leader's own post");
-    assert.ok(c.querySelector("[data-fdrep]"), "leader Reply on own post");
+    assert.ok(c.querySelector("[data-thr]"), "leader has the thread chip on own post");
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
