@@ -20,6 +20,7 @@
 //  {alert:"sos", feed, mk, ti, tx, sid, kd, la, ln, ac, dev}: (4.72.2) SOS: urgent alert to the OIC and (4.73.1) every phone on the team, with the sender's name, what is wrong and where. The details travel inside the alert and are never stored.
 //  {dm, ..., grp:1}: (4.73.1) a group chat message alerts every phone on that thread except the sender's.
 //  4.72.1: Quiet hours. A sign-up with qh/tz skips non-urgent alerts (payload.help false) while that phone's local time is inside the window.
+//  4.87.0: Morning digest (setup part 43). A sign-up that also carries dg (local minutes) has those held-back alerts counted, and the minute job (escalate) sends one summary at that time.
 //  4.33.0: skips the posting phone by device id ("dev") and keeps one sign-up per phone.
 // Payloads carry no names. Turn OFF "Enforce JWT verification" (the function validates input itself).
 // Secrets: VAPID_PUBLIC, VAPID_PRIVATE (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are built in).
@@ -34,7 +35,7 @@ const cors = {
 };
 webpush.setVapidDetails("mailto:antoniotyler22@gmail.com", Deno.env.get("VAPID_PUBLIC")!, Deno.env.get("VAPID_PRIVATE")!);
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-const VER = "4.74.11";
+const VER = "4.87.0";
 const out = (t: string, status = 200) => new Response(t, { status, headers: cors });
 // A database error (for example the service role lost its table rights) must never read as "no sub": that hid a
 // week of dead alerts. Log it and answer 500 so the failure shows in the logs and the owner's Health tab.
@@ -88,9 +89,44 @@ function quietNow(sub: any): boolean {
   const m = (((Math.floor(Date.now() / 60000) + tz) % 1440) + 1440) % 1440;
   return a < b ? m >= a && m < b : m >= a || m < b;
 }
+// <digest> (4.87.0) Morning digest. A phone whose sign-up carries dg (local minutes, e.g. 420 = 07:00) gets the alerts that
+// Quiet hours held back counted instead of dropped, then ONE summary alert at that time. Counts only, never names or text.
+// Pure helpers: tests load this block on its own (types stripped), so keep it free of other helpers.
+function subKey(sub: any): any { const k = sub && typeof sub.apns === "string" ? "apns:" + sub.apns : sub && typeof sub.endpoint === "string" ? sub.endpoint : ""; return k.slice(0, 600); }
+function digestCat(open: any): any { return open === "feed" || open === "dm" || open === "talk" ? open : open === "checkins" || open === "recall" ? "checkins" : "board"; }
+function nextDigestAt(sub: any, now: any): any {
+  const dg = Number(sub && sub.dg), tz = Number(sub && sub.tz) || 0;
+  if (!(sub && sub.dg !== null && sub.dg !== undefined && dg >= 0 && dg < 1440)) return null;
+  const local = Math.floor(now / 60000) + tz;
+  let at = Math.floor(local / 1440) * 1440 + dg;
+  if (at <= local) at += 1440;
+  return (at - tz) * 60000;
+}
+function digestLabel(cat: any, n: any): any {
+  const one = n === 1;
+  if (cat === "feed") return one ? "Word of Mouth post" : "Word of Mouth posts";
+  if (cat === "dm") return one ? "message" : "messages";
+  if (cat === "talk") return one ? "Talk message" : "Talk messages";
+  if (cat === "checkins") return one ? "check-in" : "check-ins";
+  return one ? "team update" : "team updates";
+}
+function digestPayload(cats: any): any {
+  const rows: any = Object.keys(cats || {}).map((c: any): any => [c, Math.floor(Number(cats[c]))]).filter((r: any) => r[1] > 0).sort((a: any, b: any) => b[1] - a[1]);
+  if (!rows.length) return null;
+  const shown = rows.slice(0, 4).map((r: any) => r[1] + " " + digestLabel(r[0], r[1]));
+  return { title: "🌙 While you were quiet", body: shown.join(", ") + (rows.length > 4 ? " and more" : "") + ". Open the app.", help: false, dig: true, open: rows[0][0] };
+}
+// </digest>
+// deno-lint-ignore no-explicit-any
+async function digestHold(sub: any, payload: Record<string, unknown>) {
+  const due = nextDigestAt(sub, Date.now()), key = subKey(sub);
+  if (due === null || !key) return;
+  try { await db.rpc("digest_add", { p_key: key, p_sub: sub, p_cat: digestCat(payload.open), p_due: new Date(due).toISOString() }); } catch { /* part 43 not run yet: held-back alerts are dropped as before */ }
+}
 // deno-lint-ignore no-explicit-any
 async function pushAny(sub: any, payload: Record<string, unknown>, urgent: boolean, ttl: number): Promise<string> {
-  if (quietNow(sub) && !payload.help) return "ok"; // Quiet hours (4.72.1): held back unless urgent
+  // Quiet hours (4.72.1): held back unless urgent. 4.87.0: counted for the morning digest when the phone asked for one.
+  if (quietNow(sub) && !payload.help && !payload.dig) { await digestHold(sub, payload); return "ok"; }
   if (sub && typeof sub.apns === "string") return apnsSend(sub.apns, payload, urgent);
   try { await webpush.sendNotification(sub, JSON.stringify(payload), { TTL: ttl, urgency: urgent ? "high" : "normal" }); return "ok"; }
   catch (e) { const c = (e as { statusCode?: number }).statusCode; return c === 404 || c === 410 ? "gone" : "fail"; }
@@ -347,8 +383,30 @@ async function watchOwner() {
     await pushAny(data.owner_sub, { title: "⚠ Alerts not going out", body: "Accounted For: " + w + ". Open the Owner console → System check.", help: true, open: "owner" }, true, 3600);
   } catch (e) { console.error("watchOwner", e); }
 }
+// Morning digest (4.87.0, setup part 43): every minute, send each phone its one summary of what Quiet hours held back.
+// A summary that fails to send is put back for 10 minutes, for up to 12 hours.
+async function digestSend(): Promise<number> {
+  try {
+    const { data, error } = await db.rpc("digest_take", { p_max: 200 });
+    if (error || !data || !data.length) return 0;
+    let sent = 0;
+    // deno-lint-ignore no-explicit-any
+    for (const r of data as any[]) {
+      const p = digestPayload(r.cats);
+      if (!p) continue;
+      const res = await pushAny(r.sub, p, false, 6 * 3600);
+      if (res === "ok") sent++;
+      else if (res === "fail" && Date.now() - Date.parse(r.first_at) < 12 * 3600000) {
+        const due = new Date(Date.now() + 10 * 60000).toISOString();
+        for (const c of Object.keys(r.cats ?? {})) await db.rpc("digest_add", { p_key: r.sub_key, p_sub: r.sub, p_cat: c, p_due: due, p_n: r.cats[c], p_first: r.first_at });
+      }
+    }
+    return sent;
+  } catch (e) { console.error("digestSend", e); return 0; }
+}
 async function escalate() {
   await watchOwner();
+  await digestSend();
   const { data, error } = await db.rpc("esc_due");
   if (error) return out("no escalations table");
   let sent = 0;

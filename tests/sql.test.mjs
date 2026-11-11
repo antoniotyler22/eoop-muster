@@ -281,3 +281,22 @@ test("owner health and log (part 30): only the server reads health; the owner lo
   assert.throws(() => asServer(`select public.owner_remove('table', 'x')`), /bad kind/);
   assert.match(pg.psql(`select cron_token from public.app_cfg where id = 1`), /^[0-9a-f]{64}$/);
 });
+
+test("Morning summary (part 43): counts per phone and kind, hands each due summary out exactly once, server only", { skip }, () => {
+  const asServer = (sql) => pg.psql(`set role service_role; ${sql}`);
+  const sub = JSON.stringify({ endpoint: "https://push.example/abc123", dg: 420, tz: -600 });
+  const add = (cat, due, n = 1) => asServer(`select public.digest_add(${q("https://push.example/abc123")}, ${q(sub)}::jsonb, ${q(cat)}, ${q(due)}::timestamptz, ${n})`);
+  assert.throws(() => anon(`select public.digest_add('xxxxxxxxxx', '{}'::jsonb, 'feed', now())`), /permission denied/, "phones can't write");
+  assert.throws(() => anon(`select * from public.digest_take(10)`), /permission denied/, "phones can't read");
+  assert.throws(() => anon(`select count(*) from public.push_digest`), /permission denied/, "table is closed");
+  const ago = (h) => new Date(Date.now() - h * 3600000).toISOString(), past = ago(1), earlier = ago(2), future = "2999-01-01 07:00:00+00";
+  add("feed", past); add("feed", past); add("dm", past); add("feed", future);
+  assert.equal(asServer(`select n from public.push_digest where cat='feed' and due=${q(past)}::timestamptz`), "2", "same phone, kind and time: one row, counted");
+  const got = JSON.parse(asServer(`select cats from public.digest_take(10)`));
+  assert.deepEqual(got, { feed: 2, dm: 1 }, "only what is due, counted per kind");
+  assert.equal(asServer(`select count(*) from public.digest_take(10)`), "0", "taking it again gives nothing: no double summaries");
+  assert.equal(asServer(`select count(*) from public.push_digest`), "1", "the one not yet due is kept");
+  add("feed", past); add("board", earlier);
+  assert.deepEqual(JSON.parse(asServer(`select cats from public.digest_take(10)`)), { feed: 1, board: 1 }, "two delivery times due together merge into one summary");
+  assert.equal(asServer(`select public.digest_add('short', '{}'::jsonb, 'feed', now())`), "", "a bad key is ignored");
+});
