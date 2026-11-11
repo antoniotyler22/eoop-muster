@@ -1,4 +1,4 @@
--- Server hub: Supabase does the OIC phone's hub job every minute, so the phone can be off.
+-- Server hub: Supabase does the OIC phone's hub job every 5 minutes, so the phone can be off.
 -- Before running: Database > Extensions, turn on pg_cron and pg_net. Then deploy the Edge Function
 -- named hub (JWT verification OFF). Safe to re-run.
 create extension if not exists pg_cron;
@@ -51,9 +51,9 @@ begin
 end $$;
 grant execute on function public.hub_seen(text,text), public.hub_off(text,text) to anon;
 
--- Every minute: ask the hub function to run.
+-- Every 5 minutes (was every minute: 8 boards x 1440 runs/day x full backup download blew the free egress quota).
 select cron.unschedule(jobid) from cron.job where jobname = 'accounted-for-hub';
-select cron.schedule('accounted-for-hub', '* * * * *', $job$
+select cron.schedule('accounted-for-hub', '*/5 * * * *', $job$
   select net.http_post(
     url := 'https://vdhxhvklwbimjpoomnui.supabase.co/functions/v1/hub',
     headers := jsonb_build_object('Content-Type', 'application/json',

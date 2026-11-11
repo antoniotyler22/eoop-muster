@@ -1,5 +1,5 @@
 /* Accounted For — Server hub. Loaded by index.html after v12.js.
-   When the OIC turns it on, Supabase does this phone's hub job every minute (section updates, leader rosters,
+   When the OIC turns it on, Supabase does this phone's hub job every 5 minutes (section updates, leader rosters,
    company page), so the phone can be off. While the app is open on an OIC phone, the phone tells the server
    "I'm here" and the server steps aside. Needs setup part 18 + the Edge Function named hub. */
 (()=>{
@@ -27,10 +27,10 @@ async function turnOn(){if(!S.sync||!S.sync.on){S.sync={on:true,code:newCode(),v
 async function turnOff(){const K=await keys();await SB.rpc("hub_off",{p_id:K.id,p_key:K.wk});S.srvHub=false;st=null;save();syncPush(true)}
 function stLine(){if(!st)return "Checking…";if(st.err2)return `<span style="color:var(--warn)">${esc(/could not find|schema/i.test(st.err2)?"Server needs setup part 18 (DATA → System check).":st.err2)}</span>`;
   if(st.gone)return `<span style="color:var(--warn)">The server lost this board. Turn it off and on again.</span>`;
-  const bits=[];bits.push(st.ran_at?"last ran "+ago(Date.parse(st.ran_at)):"waiting for its first run (about a minute)");if(st.saved_at)bits.push("last change "+ago(Date.parse(st.saved_at)));
+  const bits=[];bits.push(st.ran_at?"last ran "+ago(Date.parse(st.ran_at)):"waiting for its first run (up to 5 minutes)");if(st.saved_at)bits.push("last change "+ago(Date.parse(st.saved_at)));
   return "Server is standing by while this phone is open · "+bits.join(" · ")+(st.err?` · <span style="color:var(--warn)">${esc(st.err)}</span>`:"")}
 function srvHTML(){if(!owner())return"";
-  if(!S.srvHub)return `<div class="panel" style="margin:10px 0 0"><b>☁ Server hub</b><p class="note">Let Supabase run your hub every minute so your phone can be off: section updates land on your board, leaders get their rosters, and the company page stays current. Your board's unlock key is kept on your server for this, so it's no longer end-to-end encrypted.</p><button class="btn" id="srvOn"${busy?" disabled":""}>${busy?"Turning on…":"Turn on server hub"}</button></div>`;
+  if(!S.srvHub)return `<div class="panel" style="margin:10px 0 0"><b>☁ Server hub</b><p class="note">Let Supabase run your hub every 5 minutes so your phone can be off: section updates land on your board, leaders get their rosters, and the company page stays current. Your board's unlock key is kept on your server for this, so it's no longer end-to-end encrypted.</p><button class="btn" id="srvOn"${busy?" disabled":""}>${busy?"Turning on…":"Turn on server hub"}</button></div>`;
   return `<div class="panel" style="margin:10px 0 0"><b style="color:var(--s-onhand)">☁ Server hub on</b><div class="note">${stLine()}</div><p class="note">Your phone can be off. Open the app any time and it catches up with what the server did.</p><button class="btn alt" id="srvOff" style="width:100%"${busy?" disabled":""}>${armed==="srvoff"?"Tap again: back to this phone as the hub":"Turn off server hub"}</button></div>`}
 const _hub=hubHTML;hubHTML=function(){return _hub.apply(this,arguments)+srvHTML()};
 document.addEventListener("click",e=>{const id=e.target.id;

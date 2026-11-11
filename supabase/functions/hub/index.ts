@@ -289,7 +289,7 @@ async function runOne(job: any) {
     const v = await SB.rpc("backup_put", { p_id: K.id, p_key: K.wk, p_ct: await C.sealObj(K, C.syncObj()), p_base: +r.ver });
     return { ver: +v, err: errs.join(" · ").slice(0, 200), saved: true };
   } catch (e) {
-    if (/conflict/.test(String(e.message || e))) return { ver: +r.ver, err: "", saved: false, note: "phone saved first; retry next minute" };
+    if (/conflict/.test(String(e.message || e))) return { ver: +r.ver, err: "", saved: false, note: "phone saved first; retry next run" };
     throw e;
   }
 }
@@ -338,7 +338,7 @@ Deno.serve(async (req) => {
       const K = await C.codeKeys(code);
       const v = await SB.rpc("backup_ver", { p_id: K.id, p_key: K.wk });
       if (v == null) return json({ error: "No backup for this board yet. Tap Back up now first." }, 404);
-      // The server hub runs every minute on our servers, so it's a Pro feature (HUB_REQUIRE_PRO=0 turns the check off).
+      // The server hub runs every 5 minutes on our servers, so it's a Pro feature (HUB_REQUIRE_PRO=0 turns the check off).
       let ent: string | null = null;
       if (typeof body.pro === "string" && body.pro) {
         try { ent = await SB.rpc("pro_ent_for", { p_tok: body.pro, p_feed: null, p_mk: null }); } catch { ent = null; }
