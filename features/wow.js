@@ -140,7 +140,7 @@ document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;
 {const _rb=renderBoard;renderBoard=function(){_rb.apply(this,arguments);if(memberMode()||$("#wDemoBtn"))return;
   if(S.source==="sample"||!S.roster.length){const qa=document.querySelector("#main .qa");const html=`<button class="btn alt" id="wDemoBtn" data-wdrill="1" style="width:100%;margin-top:10px">▶ Watch a 30-second demo drill</button>`;
     if(qa)qa.insertAdjacentHTML("afterend",html);else $("#main").insertAdjacentHTML("beforeend",html)}}}
-new MutationObserver(()=>{const w=$("#v11Welcome");if(!w||w.hidden||w.querySelector("[data-wdrill]"))return;const pick=w.querySelector(".sgw-pick");if(!pick)return;
+new MutationObserver(()=>{const w=$("#v11Welcome");if(!w||w.hidden||w.querySelector("[data-wdrill]"))return;const pick=w.querySelector(".sgw-more");if(!pick)return;
   pick.insertAdjacentHTML("beforeend",`<button class="btn alt" data-wdrill="1" style="min-height:52px">▶ See a 30-second demo</button>`)}).observe(document.body,{childList:true,subtree:true});
 {const _rt=renderTools;renderTools=function(){_rt.apply(this,arguments)}}
 if(typeof window.openToolGroup==="function"){const og=window.openToolGroup;window.openToolGroup=function(k){og.apply(this,arguments);if(k!=="help"&&k!=="reports")return;const g=document.querySelector("#sheetOpts .tgrid");if(!g)return;

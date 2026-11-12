@@ -3698,16 +3698,24 @@ document.addEventListener("click",e=>{const t=e.target;const b=t.closest("[data-
 const APP_LINKS=()=>({ios:(typeof STORE_URL==="object"&&STORE_URL.ios)||"https://apps.apple.com/app/id6826541947",web:PUB()});
 const shareAppText=()=>"Accounted For: team headcount, muster and check-in.\niPhone app: "+APP_LINKS().ios+"\nOr use it on the web: "+APP_LINKS().web;
 function welcomeHTML(){const L=APP_LINKS();
-  return `<div class="v11w-in" data-noxl><img src="icon-192.png" alt="" width="72" height="72" style="border-radius:18px">
-  <h1>Welcome to Accounted For</h1><p class="note" style="margin:0 0 6px">Know who's here, who's not, and who got the word.</p>
-  <div class="panel" style="margin:0"><b>Sign in</b><p class="note" style="margin:0">Got a username and password from your leader?</p>
-    <label for="lgSU">Username</label><input type="text" id="lgSU" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
-    <label for="lgSP">Password</label><input type="password" id="lgSP" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false">
-    ${termsOK()?"":tosLine()}<button class="btn" id="lgGo">Sign in</button><div class="note" id="lgSOut" role="status"></div></div>
-  <div class="panel" style="margin:0"><b>Got an invite link?</b><p class="note" style="margin:0">Tap the link in your text, or paste it here.</p>
-    <input type="url" id="v11WLink" placeholder="https://antoniotyler22.github.io/eoop-muster/#…" autocapitalize="none" autocorrect="off" spellcheck="false"><button class="btn alt" id="v11WOpen">Open link</button></div>
-  <div class="panel" style="margin:0"><b>Run your own team</b><p class="note" style="margin:0">Leaders, supervisors, coaches: set up your board. You can look around with sample people first.</p><button class="btn" id="v11WLead">Start my team</button></div>
-  <div class="panel" style="margin:0"><b>Get the app</b><div class="row2"><a class="btn alt" href="${esc(L.ios)}" target="_blank" rel="noopener">iPhone app</a><a class="btn alt" href="${esc(L.web)}" target="_blank" rel="noopener">Web app</a></div><button class="btn alt" id="v11WShare">Send the app to someone</button></div>
+  return `<div class="v11w-in sgw" data-noxl><img src="icon-192.png" alt="" width="72" height="72" style="border-radius:18px">
+  <h1>Accounted For</h1><p class="note" style="margin:0">Know who's here, who's not, and who got the word.</p>
+  <div class="sgw-card">
+    <div class="sgw-pick" role="group" aria-label="Sign in, use an invite link, or start a team">
+      <button type="button" class="sgw-tab" data-sgt="signin" data-sgjoin="1" aria-pressed="true">Sign in</button>
+      <button type="button" class="sgw-tab" data-sgt="link" data-sglink="1" aria-pressed="false">Invite link</button>
+      <button type="button" class="sgw-tab" data-sgt="start" data-sgstart="1" aria-pressed="false">Start a team</button>
+    </div>
+    <div class="sgw-pane" data-pane="signin"><div class="panel" style="margin:0"><b>Sign in</b><p class="note" style="margin:0">Got a username and password from your leader?</p>
+      <label for="lgSU">Username</label><input type="text" id="lgSU" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+      <label for="lgSP">Password</label><input type="password" id="lgSP" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false">
+      ${termsOK()?"":tosLine()}<button class="btn" id="lgGo">Sign in</button><div class="note" id="lgSOut" role="status"></div></div></div>
+    <div class="sgw-pane" data-pane="link" hidden><div class="panel" style="margin:0"><b>Got an invite link?</b><p class="note" style="margin:0">Tap the link in your text, or paste it here.</p>
+      <input type="url" id="v11WLink" placeholder="https://antoniotyler22.github.io/eoop-muster/#…" autocapitalize="none" autocorrect="off" spellcheck="false"><button class="btn" id="v11WOpen">Open link</button></div></div>
+    <div class="sgw-pane sgw-slot" data-pane="start" hidden></div>
+  </div>
+  <div class="sgw-more"><div class="sgw-apps"><a href="${esc(L.ios)}" target="_blank" rel="noopener">iPhone app</a><a href="${esc(L.web)}" target="_blank" rel="noopener">Web app</a><button type="button" id="v11WShare">Send the app</button></div></div>
+  <div class="sgw-peek"><div class="sgw-peek-l">Inside the app</div><div class="sgw-peek-img"><img src="welcome-peek.png" alt="Preview of the Accounted For board with on-hand and total strength counts" width="720" height="429" loading="lazy"></div></div>
   <p class="note" style="text-align:center">${esc(DISCLAIMER)} <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></p>
   ${S.mode?`<button class="btn alt" id="v11WClose">Close</button>`:""}</div>`}
 function showWelcome(){let w=$("#v11Welcome");if(!w){w=document.createElement("div");w.id="v11Welcome";w.setAttribute("role","dialog");w.setAttribute("aria-label","Welcome");document.body.appendChild(w)}
@@ -6023,7 +6031,7 @@ const TPL={
   fire:{n:"Office fire drill",ic:"🔥",d:"Floors, wardens, assembly point",m:"custom",v:{pt:"On break",p:"Employee",ps:"Employees",here:"At assembly point",aob:"Still inside",aoff:"Remote today",cod:"Floor warden",op:"Off site",tad:"Traveling",lv:"PTO",mus:"Fire drill",attPl:"Visitors",eo:"OFFICE"},
     secs:[["FLR1","Floor 1"],["FLR2","Floor 2"],["FLR3","Floor 3"],["WARD","Wardens"]]}};
 window.SG_TPL=TPL;
-let wv={step:"pick",mode:"",tpl:""};
+let wv={step:"join",mode:"",tpl:""};
 function startHTML(){if(wv.step==="type")return `<div class="panel sgw-start" style="margin:0"><b>Start from a template</b><p class="note" style="margin:0">One tap sets up your groups and status words.</p>
     <div class="sgw-tpl" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${Object.entries(TPL).map(([k,t])=>`<button class="btn alt" data-sgtpl="${k}" style="text-align:left;display:block;min-height:74px"><span style="font-size:22px">${t.ic}</span> <b>${esc(t.n)}</b><br><span class="note" style="margin:0;font-size:12px">${esc(t.d)}</span></button>`).join("")}</div>
     <b style="margin-top:6px">Or pick a type</b><p class="note" style="margin:0">Sets the words the app uses. You can change it later.</p>
@@ -6032,20 +6040,15 @@ function startHTML(){if(wv.step==="type")return `<div class="panel sgw-start" st
   return `<div class="panel sgw-start" style="margin:0"><b>Name your team</b><p class="note" style="margin:0">${esc(wv.tpl?TPL[wv.tpl].n:MODES[wv.mode].name)}. Shows on your reports, texts and Word of Mouth.</p>
     <label for="sgName">Team name</label><input type="text" id="sgName" maxlength="40" placeholder="${esc(MODES[wv.mode].v?MODES[wv.mode].v.coEx:"1ST PLATOON")}" autocomplete="off">
     <button class="btn" id="sgGo">Go</button><button class="btn alt" data-sgback="type">Back</button></div>`}
-function shapeWelcome(){const w=$("#v11Welcome");if(!w||w.hidden)return;const inner=w.querySelector(".v11w-in");if(!inner)return;
-  const panels=[...inner.querySelectorAll(":scope > .panel")];if(panels.length<3)return;
-  let pick=inner.querySelector(".sgw-pick");
-  if(!pick){inner.querySelector("h1").insertAdjacentHTML("afterend","");
-    const p=inner.querySelector(":scope > p.note");p.insertAdjacentHTML("afterend",`<div class="sgw-pick" style="display:grid;gap:12px;margin:8px 0">
-      <button class="btn" data-sgjoin="1" style="min-height:76px;font-size:19px">I'm joining a team<br><span style="font-size:13px;font-weight:500;opacity:.85">I got a link, username or invite</span></button>
-      <button class="btn alt" data-sgstart="1" style="min-height:76px;font-size:19px">I'm starting a team<br><span style="font-size:13px;font-weight:500;opacity:.85">I'm the leader, coach or organizer</span></button></div><div class="sgw-slot"></div>`);pick=inner.querySelector(".sgw-pick")}
-  const join=panels.filter(x=>x.querySelector("#lgSU,#v11WLink,#v11WShare"));const start=panels.find(x=>x.querySelector("#v11WLead"));
-  if(start)start.hidden=true;
-  join.forEach(x=>x.hidden=wv.step!=="join");pick.hidden=wv.step!=="pick";
-  const slot=inner.querySelector(".sgw-slot");slot.innerHTML=wv.step==="type"||wv.step==="name"?startHTML():wv.step==="join"?`<button class="btn alt" data-sgback="1">Back</button>`:"";
-  if(wv.step==="join"){const b=slot.firstElementChild;const last=join[join.length-1];if(last&&b)last.after(b)}
-  if(wv.step==="name")setTimeout(()=>{const i=$("#sgName");if(i)i.focus({preventScroll:true})},60)}
-new MutationObserver(()=>{const w=$("#v11Welcome");if(w&&!w.hidden&&!w.querySelector(".sgw-pick")){wv={step:"pick",mode:"",tpl:""};shapeWelcome()}}).observe(document.body,{childList:true,subtree:true});
+function shapeWelcome(){const w=$("#v11Welcome");if(!w||w.hidden)return;const inner=w.querySelector(".v11w-in.sgw");if(!inner)return;
+  const step=wv.step==="pick"?"join":wv.step;
+  const tab=step==="type"||step==="name"?"start":step==="link"?"link":"signin";
+  inner.querySelectorAll(".sgw-tab").forEach(b=>b.setAttribute("aria-pressed",b.dataset.sgt===tab?"true":"false"));
+  inner.querySelectorAll(".sgw-pane").forEach(p=>{p.hidden=p.dataset.pane!==tab});
+  const slot=inner.querySelector(".sgw-slot");if(slot)slot.innerHTML=tab==="start"?startHTML():"";
+  inner.dataset.sgshaped="1";
+  if(step==="name")setTimeout(()=>{const i=$("#sgName");if(i)i.focus({preventScroll:true})},60)}
+new MutationObserver(()=>{const w=$("#v11Welcome");const inner=w&&!w.hidden&&w.querySelector(".v11w-in.sgw");if(inner&&!inner.dataset.sgshaped){wv={step:"join",mode:"",tpl:""};shapeWelcome()}}).observe(document.body,{childList:true,subtree:true});
 function startTeam(){const k=wv.mode;const nm=(($("#sgName")||{}).value||"").trim();
   if(!nm){toast("Type your team name.");const i=$("#sgName");if(i)i.focus();return}
   const T=wv.tpl&&TPL[wv.tpl];if(T&&T.v)S.customV=Object.assign({},T.v);
@@ -6058,10 +6061,11 @@ function startTeam(){const k=wv.mode;const nm=(($("#sgName")||{}).value||"").tri
   if(typeof window.startTour==="function"&&!(S.tour&&S.tour.leader))setTimeout(()=>window.startTour("leader"),700)}
 document.addEventListener("click",e=>{if(!e.target.closest)return;const t=e.target;
   if(t.closest("[data-sgjoin]")){wv.step="join";shapeWelcome();return}
+  if(t.closest("[data-sglink]")){wv.step="link";shapeWelcome();return}
   if(t.closest("[data-sgstart]")){wv.step="type";shapeWelcome();return}
   const m=t.closest("[data-sgmode]");if(m){wv.mode=m.dataset.sgmode;wv.tpl="";wv.step="name";shapeWelcome();return}
   const tp=t.closest("[data-sgtpl]");if(tp){wv.tpl=tp.dataset.sgtpl;wv.mode=TPL[wv.tpl].m;wv.step="name";shapeWelcome();return}
-  const bk=t.closest("[data-sgback]");if(bk){wv.step=bk.dataset.sgback==="type"?"type":"pick";shapeWelcome();return}
+  const bk=t.closest("[data-sgback]");if(bk){wv.step=bk.dataset.sgback==="type"?"type":"join";shapeWelcome();return}
   if(t.id==="sgGo"){startTeam()}});
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="sgName"){e.preventDefault();startTeam()}});
 setTimeout(shapeWelcome,500);
@@ -6265,7 +6269,7 @@ document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;
 {const _rb=renderBoard;renderBoard=function(){_rb.apply(this,arguments);if(memberMode()||$("#wDemoBtn"))return;
   if(S.source==="sample"||!S.roster.length){const qa=document.querySelector("#main .qa");const html=`<button class="btn alt" id="wDemoBtn" data-wdrill="1" style="width:100%;margin-top:10px">▶ Watch a 30-second demo drill</button>`;
     if(qa)qa.insertAdjacentHTML("afterend",html);else $("#main").insertAdjacentHTML("beforeend",html)}}}
-new MutationObserver(()=>{const w=$("#v11Welcome");if(!w||w.hidden||w.querySelector("[data-wdrill]"))return;const pick=w.querySelector(".sgw-pick");if(!pick)return;
+new MutationObserver(()=>{const w=$("#v11Welcome");if(!w||w.hidden||w.querySelector("[data-wdrill]"))return;const pick=w.querySelector(".sgw-more");if(!pick)return;
   pick.insertAdjacentHTML("beforeend",`<button class="btn alt" data-wdrill="1" style="min-height:52px">▶ See a 30-second demo</button>`)}).observe(document.body,{childList:true,subtree:true});
 {const _rt=renderTools;renderTools=function(){_rt.apply(this,arguments)}}
 if(typeof window.openToolGroup==="function"){const og=window.openToolGroup;window.openToolGroup=function(k){og.apply(this,arguments);if(k!=="help"&&k!=="reports")return;const g=document.querySelector("#sheetOpts .tgrid");if(!g)return;
@@ -6304,7 +6308,7 @@ const ES={
 "Youth team":"Equipo juvenil","Players, coaches, pickups":"Jugadores, entrenadores, recogidas","Office fire drill":"Simulacro de incendio","Floors, wardens, assembly point":"Pisos, brigadistas, punto de reunión",
 "Name your team":"Nombre de su equipo","Team name":"Nombre del equipo","Go":"Listo","Back":"Atrás","Close":"Cerrar","Next":"Siguiente","Done":"Listo","Cancel":"Cancelar","Save":"Guardar","Share":"Compartir","Share it":"Compartirlo",
 "Sign in":"Iniciar sesión","Username":"Usuario","Password":"Contraseña","Got a username and password from your leader?":"¿Su líder le dio un usuario y contraseña?",
-"Got an invite link?":"¿Tiene un enlace de invitación?","Tap the link in your text, or paste it here.":"Toque el enlace en su mensaje o péguelo aquí.","Open link":"Abrir enlace",
+"Got an invite link?":"¿Tiene un enlace de invitación?","Invite link":"Enlace de invitación","Start a team":"Crear un equipo","Send the app":"Enviar la app","Inside the app":"Dentro de la app","Tap the link in your text, or paste it here.":"Toque el enlace en su mensaje o péguelo aquí.","Open link":"Abrir enlace",
 "Get the app":"Obtener la app","iPhone app":"App para iPhone","Web app":"App web","Send the app to someone":"Enviar la app a alguien",
 /* Home */
 "Good morning":"Buenos días","Good afternoon":"Buenas tardes","Good evening":"Buenas noches","Add your people":"Agregue a su gente","Your team is empty. Pick the easiest way:":"Su equipo está vacío. Elija la forma más fácil:",
@@ -6644,8 +6648,8 @@ document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="acInv
 new MutationObserver(()=>{if(view==="invite")try{inviteBox()}catch(e){}}).observe(document.getElementById("main")||document.body,{childList:true});
 
 /* ---------- Welcome: "I'm joining" gets a Sign in option ---------- */
-new MutationObserver(()=>{const w=$("#v11Welcome");if(!w||w.hidden)return;const slot=w.querySelector(".sgw-slot");if(!slot)return;
-  const join=w.querySelector('[data-sgback="1"]');if(join&&!w.querySelector("[data-acwelcome]"))join.insertAdjacentHTML("beforebegin",`<div class="panel" style="margin:0"><b>Got sent a team by email or text?</b><p class="note" style="margin:2px 0 8px">Sign in with that email or number and it's waiting for you.</p><button class="btn alt" data-acwelcome="1">Sign in to my account</button></div>`)}).observe(document.body,{childList:true,subtree:true});
+new MutationObserver(()=>{const w=$("#v11Welcome");if(!w||w.hidden)return;const pane=w.querySelector('.sgw-pane[data-pane="signin"]');if(!pane)return;
+  if(!w.querySelector("[data-acwelcome]"))pane.insertAdjacentHTML("beforeend",`<div class="panel sgw-acct" style="margin:0"><b>Got sent a team by email or text?</b><p class="note" style="margin:2px 0 8px">Sign in with that email or number and it's waiting for you.</p><button class="btn alt" data-acwelcome="1">Sign in to my account</button></div>`)}).observe(document.body,{childList:true,subtree:true});
 
 /* ---------- Tools tile, help, system check ---------- */
 if(typeof HELP==="object")HELP.acct=["Account","Optional. Sign in so your teams follow you to any phone, and so leaders can send teams straight to you.",["Sign in with your email or mobile number. We send a 6-digit code.","Your teams: each team's recovery code is saved in your account. On a new phone, sign in and tap Open here.","Sent to you: when a leader sends a team to your email or number, it waits here and on Home.","Leaders: Invite → make a link → Send to their account. You see when they open it.","Delete my account removes your sign-in and saved list. Your teams stay on your phones."]];

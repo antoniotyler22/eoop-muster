@@ -48,9 +48,12 @@ test("joining shows sign-in and link; members get My status, Word of Mouth, Cale
     await sleep(600); // the first-open welcome shows itself at ~380 ms
     a.w.eval(`S.mode=null;S.welcomed=0;showWelcome()`);
     await sleep(50);
-    assert.ok(a.$("#lgSU").closest(".panel").hidden, "sign-in waits for a choice");
+    assert.ok(!a.$("#lgSU").closest(".sgw-pane").hidden, "sign-in is the first tab");
+    a.$("[data-sglink]").click(); await sleep(20);
+    assert.ok(a.$("#lgSU").closest(".sgw-pane").hidden, "Invite link tab hides sign-in");
+    assert.ok(!a.$("#v11WLink").closest(".sgw-pane").hidden);
     a.$("[data-sgjoin]").click(); await sleep(20);
-    assert.ok(!a.$("#lgSU").closest(".panel").hidden);
+    assert.ok(!a.$("#lgSU").closest(".sgw-pane").hidden);
     a.w.eval(`const m=S.roster[0];const D=mpDigest(m);S.feeds=[{id:"feedabcdef12",mk:"m".repeat(30),ek:"x",unit:"TEAM",me:"A",mid:m.id,sec:m.sec,posts:[],seen:0,mine:{},hub:1}];
       S.me={pk:"p".repeat(24),unit:"TEAM",d:D,t:Date.now()};S.onb=true;S.welcomed=1;S.mode="civilian";view="today";render()`);
     const tabs = a.$$("#tabbar [data-tab]").map((b) => b.dataset.tab);

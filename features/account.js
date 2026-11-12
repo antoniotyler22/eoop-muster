@@ -192,8 +192,8 @@ document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="acInv
 new MutationObserver(()=>{if(view==="invite")try{inviteBox()}catch(e){}}).observe(document.getElementById("main")||document.body,{childList:true});
 
 /* ---------- Welcome: "I'm joining" gets a Sign in option ---------- */
-new MutationObserver(()=>{const w=$("#v11Welcome");if(!w||w.hidden)return;const slot=w.querySelector(".sgw-slot");if(!slot)return;
-  const join=w.querySelector('[data-sgback="1"]');if(join&&!w.querySelector("[data-acwelcome]"))join.insertAdjacentHTML("beforebegin",`<div class="panel" style="margin:0"><b>Got sent a team by email or text?</b><p class="note" style="margin:2px 0 8px">Sign in with that email or number and it's waiting for you.</p><button class="btn alt" data-acwelcome="1">Sign in to my account</button></div>`)}).observe(document.body,{childList:true,subtree:true});
+new MutationObserver(()=>{const w=$("#v11Welcome");if(!w||w.hidden)return;const pane=w.querySelector('.sgw-pane[data-pane="signin"]');if(!pane)return;
+  if(!w.querySelector("[data-acwelcome]"))pane.insertAdjacentHTML("beforeend",`<div class="panel sgw-acct" style="margin:0"><b>Got sent a team by email or text?</b><p class="note" style="margin:2px 0 8px">Sign in with that email or number and it's waiting for you.</p><button class="btn alt" data-acwelcome="1">Sign in to my account</button></div>`)}).observe(document.body,{childList:true,subtree:true});
 
 /* ---------- Tools tile, help, system check ---------- */
 if(typeof HELP==="object")HELP.acct=["Account","Optional. Sign in so your teams follow you to any phone, and so leaders can send teams straight to you.",["Sign in with your email or mobile number. We send a 6-digit code.","Your teams: each team's recovery code is saved in your account. On a new phone, sign in and tap Open here.","Sent to you: when a leader sends a team to your email or number, it waits here and on Home.","Leaders: Invite → make a link → Send to their account. You see when they open it.","Delete my account removes your sign-in and saved list. Your teams stay on your phones."]];

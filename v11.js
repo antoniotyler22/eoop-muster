@@ -317,16 +317,24 @@ document.addEventListener("click",e=>{const t=e.target;const b=t.closest("[data-
 const APP_LINKS=()=>({ios:(typeof STORE_URL==="object"&&STORE_URL.ios)||"https://apps.apple.com/app/id6826541947",web:PUB()});
 const shareAppText=()=>"Accounted For: team headcount, muster and check-in.\niPhone app: "+APP_LINKS().ios+"\nOr use it on the web: "+APP_LINKS().web;
 function welcomeHTML(){const L=APP_LINKS();
-  return `<div class="v11w-in" data-noxl><img src="icon-192.png" alt="" width="72" height="72" style="border-radius:18px">
-  <h1>Welcome to Accounted For</h1><p class="note" style="margin:0 0 6px">Know who's here, who's not, and who got the word.</p>
-  <div class="panel" style="margin:0"><b>Sign in</b><p class="note" style="margin:0">Got a username and password from your leader?</p>
-    <label for="lgSU">Username</label><input type="text" id="lgSU" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
-    <label for="lgSP">Password</label><input type="password" id="lgSP" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false">
-    ${termsOK()?"":tosLine()}<button class="btn" id="lgGo">Sign in</button><div class="note" id="lgSOut" role="status"></div></div>
-  <div class="panel" style="margin:0"><b>Got an invite link?</b><p class="note" style="margin:0">Tap the link in your text, or paste it here.</p>
-    <input type="url" id="v11WLink" placeholder="https://antoniotyler22.github.io/eoop-muster/#…" autocapitalize="none" autocorrect="off" spellcheck="false"><button class="btn alt" id="v11WOpen">Open link</button></div>
-  <div class="panel" style="margin:0"><b>Run your own team</b><p class="note" style="margin:0">Leaders, supervisors, coaches: set up your board. You can look around with sample people first.</p><button class="btn" id="v11WLead">Start my team</button></div>
-  <div class="panel" style="margin:0"><b>Get the app</b><div class="row2"><a class="btn alt" href="${esc(L.ios)}" target="_blank" rel="noopener">iPhone app</a><a class="btn alt" href="${esc(L.web)}" target="_blank" rel="noopener">Web app</a></div><button class="btn alt" id="v11WShare">Send the app to someone</button></div>
+  return `<div class="v11w-in sgw" data-noxl><img src="icon-192.png" alt="" width="72" height="72" style="border-radius:18px">
+  <h1>Accounted For</h1><p class="note" style="margin:0">Know who's here, who's not, and who got the word.</p>
+  <div class="sgw-card">
+    <div class="sgw-pick" role="group" aria-label="Sign in, use an invite link, or start a team">
+      <button type="button" class="sgw-tab" data-sgt="signin" data-sgjoin="1" aria-pressed="true">Sign in</button>
+      <button type="button" class="sgw-tab" data-sgt="link" data-sglink="1" aria-pressed="false">Invite link</button>
+      <button type="button" class="sgw-tab" data-sgt="start" data-sgstart="1" aria-pressed="false">Start a team</button>
+    </div>
+    <div class="sgw-pane" data-pane="signin"><div class="panel" style="margin:0"><b>Sign in</b><p class="note" style="margin:0">Got a username and password from your leader?</p>
+      <label for="lgSU">Username</label><input type="text" id="lgSU" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+      <label for="lgSP">Password</label><input type="password" id="lgSP" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false">
+      ${termsOK()?"":tosLine()}<button class="btn" id="lgGo">Sign in</button><div class="note" id="lgSOut" role="status"></div></div></div>
+    <div class="sgw-pane" data-pane="link" hidden><div class="panel" style="margin:0"><b>Got an invite link?</b><p class="note" style="margin:0">Tap the link in your text, or paste it here.</p>
+      <input type="url" id="v11WLink" placeholder="https://antoniotyler22.github.io/eoop-muster/#…" autocapitalize="none" autocorrect="off" spellcheck="false"><button class="btn" id="v11WOpen">Open link</button></div></div>
+    <div class="sgw-pane sgw-slot" data-pane="start" hidden></div>
+  </div>
+  <div class="sgw-more"><div class="sgw-apps"><a href="${esc(L.ios)}" target="_blank" rel="noopener">iPhone app</a><a href="${esc(L.web)}" target="_blank" rel="noopener">Web app</a><button type="button" id="v11WShare">Send the app</button></div></div>
+  <div class="sgw-peek"><div class="sgw-peek-l">Inside the app</div><div class="sgw-peek-img"><img src="welcome-peek.png" alt="Preview of the Accounted For board with on-hand and total strength counts" width="720" height="429" loading="lazy"></div></div>
   <p class="note" style="text-align:center">${esc(DISCLAIMER)} <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></p>
   ${S.mode?`<button class="btn alt" id="v11WClose">Close</button>`:""}</div>`}
 function showWelcome(){let w=$("#v11Welcome");if(!w){w=document.createElement("div");w.id="v11Welcome";w.setAttribute("role","dialog");w.setAttribute("aria-label","Welcome");document.body.appendChild(w)}
