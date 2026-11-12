@@ -1,15 +1,15 @@
 # Accounted For: security and data handling
 
 A plain-language description of how Accounted For protects data, for organizations evaluating it.
-Last updated for version 1.3 (October 2026).
+Last updated for version 4.91 (November 2026).
 
 ## Design in one paragraph
 The roster lives on the leader's phone, not on a server. Optional PIN lock encrypts it on the device (AES-256-GCM,
 key derived from the PIN with PBKDF2-SHA256, 310,000 iterations). Features that share data (section updates, Feed,
 messages, pages, My page, backups) encrypt on the sending phone with keys that travel only inside private links, so the
 server stores ciphertext it cannot read. Check-ins send one-way hashes of the name a person types, never the name.
-There are no user accounts, no analytics SDKs, no ads and no third-party trackers; all scripts and fonts are served
-from the app's own origin.
+Accounts are optional (see "Where the server can read data", item 5); nobody has to sign in. There are no analytics
+SDKs, no ads and no third-party trackers; all scripts and fonts are served from the app's own origin.
 
 ## Server
 - **Supabase (Postgres + Edge Functions).** Every table has row-level security on and all access revoked from the
@@ -32,6 +32,13 @@ Stated plainly so there are no surprises:
    check-in link (to Twilio) pass through without being stored.
 4. **Crash reports (default on, can be turned off).** Error text and code location; quoted text is removed on the
    phone and phone numbers/emails are removed on the server.
+5. **Optional accounts.** Signing in (email code, text code, or Sign in with Apple on the web) uses Supabase Auth, which
+   holds the email address or phone number. The account keeps a list of the person's teams, including each team's
+   recovery code, and a leader can send a team to someone's email or number. Those saved codes and sent team links are
+   stored readable by the server, not encrypted on the phone, so whoever operates the server could open the teams in
+   them. Nothing is stored this way unless the person signs in or is sent a team. Delete my account (Tools → Data and
+   settings → Security) removes the sign-in and saved list. Sealing the saved list with a key only the phone holds is
+   not built yet.
 
 ## Payments
 Apple (App Store) and Stripe (web) handle all payment data. The server verifies Apple's signed transactions itself

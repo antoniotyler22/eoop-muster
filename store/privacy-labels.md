@@ -1,6 +1,6 @@
 # Privacy answers for the stores
 
-These match how the app works as of version 1.3. Re-check them whenever features change. The privacy policy
+These match how the app works as of version 4.91 (optional accounts added in 1.7). Re-check them whenever features change. The privacy policy
 (privacy.html) explains each item in plain words.
 
 ## Apple App Store: App Privacy ("nutrition label")
@@ -14,6 +14,12 @@ user's identity and **not used for tracking**:
 | Purchases → **Purchase History** | App Functionality | The server keeps the Pro subscription's ID, product and end date so Ask, the Server hub and server texting work. |
 | User Content → **Other User Content** | App Functionality | Ask: questions go to Anthropic to write an answer (not stored). Server hub: the server can open the board while it's on. |
 | Contact Info → **Name** and **Phone Number** | App Functionality | Only when the Server hub is turned on (the server can open the backup, which holds the roster). |
+
+| Contact Info → **Email Address** and **Phone Number** | App Functionality | Only if the person signs in to an optional account (email code, text code, Sign in with Apple). **Linked** to the user's identity. |
+| Identifiers → **User ID** | App Functionality | The account's sign-in ID. **Linked** to the user's identity. |
+| User Content → **Other User Content** (accounts) | App Functionality | The account's saved team list (recovery codes) and teams sent to the person. Stored readable by the server. **Linked** to the user's identity. |
+
+The three account rows above are **linked** to identity (every other row stays not linked). All are **not used for tracking**.
 
 **Tracking:** No.
 
@@ -31,6 +37,8 @@ Collected (not shared, processed for **App functionality**, not optional unless 
 - **Financial info → Purchase history.** Only if the person buys Pro on the web (Stripe). (The Android app doesn't sell Pro yet.)
 - **Messages → Other in-app messages.** Optional: Ask questions (processed ephemerally by Anthropic).
 - **Personal info → Name; Phone number.** Optional: only when the Server hub is turned on.
+- **Personal info → Email address; Phone number. App activity → Other user-generated content (saved team list).** Optional: only if the person signs in to an account (1.7).
+- **Device or other IDs → User ID.** Optional: account sign-in ID.
 - **Audio → Voice or sound recordings.** Optional: Talk (push-to-talk). Recorded only while the button is held, encrypted on the phone before sending, deleted from the server after 3 days.
 - **Contacts**: the optional "Add from contacts" picker reads contacts on the phone only to let you tick people for your roster; nothing is uploaded unless you add them and sync.
 
