@@ -87,7 +87,7 @@ const V=window.VAULT={key:null,cfg:getCfg(),ok:!!(window.crypto&&crypto.subtle),
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.hidden){hiddenAt=Date.now();return}
   const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
-window.AV="4.92.0";
+window.AV="4.93.0";
 /* self-update: an installed web app resumes without reloading, so check the live version on open, on every return, and every 10 min */
 (()=>{const NAT=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());if(NAT||!/^https?:$/.test(location.protocol))return;
   let busy=false,last=0;const typing=()=>{const a=document.activeElement;return a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)};
@@ -178,6 +178,10 @@ function ciPage(q){const esc=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<"
     const body="CHECK-IN: "+word+" - "+n+(eta?" ("+eta+")":"")+"\n#EOOP-CI|"+rid+"|"+c+"|"+n+"|"+eta;
     const sms=()=>{location.href="sms:"+(to?"+1"+to:"")+"?&body="+encodeURIComponent(body)};
     const msg=document.getElementById("ciMsg");
+    if(navigator.onLine===false){const pk="#EOOP-RLY|"+rid+"|"+c+"|"+n+"|"+eta+"|"+Date.now()+"|0|"+(live?1:0);
+      try{const q=JSON.parse(localStorage.getItem("afRelayQ")||"[]");q.push(pk);localStorage.setItem("afRelayQ",JSON.stringify(q.slice(-50)))}catch(err){}
+      msg.innerHTML="<b>Saved. No signal.</b> Hand this to a nearby phone (AirDrop or Nearby Share) or text it, and the first phone with signal sends it in.<br><button class='btn alt' id='ciRl' type='button' style='margin-top:8px'>Pass it on</button>";
+      document.getElementById("ciRl").onclick=()=>{const tx="Check-in relay. Open Accounted For, Check-ins, and paste this.\n"+pk.replace(/\|0\|(\d)$/,"|1|$1");try{navigator.share?navigator.share({text:tx}):navigator.clipboard.writeText(tx)}catch(err){}};return}
     if(live&&navigator.onLine!==false&&crypto.subtle){m.querySelectorAll("[data-c]").forEach(x=>x.disabled=true);msg.textContent="Sending…";
       Promise.all(SB.words(n).map(w=>SB.h(rid,w))).then(hs=>SB.rpc("checkin",{p_recall:rid,p_words:hs,p_code:c,p_note:eta}))
         .then(()=>{SB.notify(rid);msg.innerHTML="<b style='color:var(--s-onhand)'>✓ Checked in: "+word+".</b> Your leader sees it now. You can close this page.";m.querySelectorAll("[data-c]").forEach(x=>x.disabled=false)})

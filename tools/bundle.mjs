@@ -65,6 +65,7 @@ export const SOURCES = [
   "features/greet.js",
   "features/text-link.js",
   "features/buddy.js",
+  "features/relay.js",
   "features/feed-photos.js",
   "features/me-page.js",
   "features/header.js",
