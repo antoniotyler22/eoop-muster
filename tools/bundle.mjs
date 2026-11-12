@@ -108,7 +108,7 @@ export const SOURCES = [
   "features/field-mode.js",
   "features/feed-drift.js",
   "features/blue-ramp.js",
-  "features/profile-photo.js","features/home-donut.js","features/scroll-keep.js","features/today-week.js","features/sync-state.js","features/feed-everyone.js","features/auto-seen.js","features/wom-extras.js","features/reply-thread.js","features/inbox-everywhere.js","features/tap-targets.js",
+  "features/profile-photo.js","features/home-donut.js","features/scroll-keep.js","features/today-week.js","features/sync-state.js","features/feed-everyone.js","features/auto-seen.js","features/wom-extras.js","features/reply-thread.js","features/inbox-everywhere.js","features/tap-targets.js","features/tiers.js",
 ];
 
 export function build() {

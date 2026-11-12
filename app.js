@@ -346,7 +346,7 @@ function proPageHTML(){const N=window.MBN||{};let h=`<div class="panel pro-wall"
   else if(!proProducts.length)h+=`<p class="note">Pro isn't available yet. Try again later.</p>`;
   else{const ps=PRO_IDS.map(id=>proProducts.find(p=>p.id===id)).filter(Boolean);
     for(const p of ps){const yr=p.period==="year";const mo=ps.find(x=>x.period==="month");const save=yr&&mo&&p.amount&&mo.amount?Math.round((1-p.amount/(mo.amount*12))*100):0;
-      h+=`<button class="btn${yr?"":" alt"} pro-plan" data-pro-buy="${esc(p.id)}"${proBusy?" disabled":""}><span>${p.trial&&p.introDays?`${p.introDays} days free, then `:""}${esc(p.price)} / ${esc(proPer(p))}</span>${save>0?`<small> · save ${save}%</small>`:""}</button>`}}
+      h+=`<button class="btn${yr?"":" alt"} pro-plan" data-pro-buy="${esc(p.id)}"${proBusy?" disabled":""}><span>${/\.org\./.test(p.id)?"Org · ":"Pro · "}${p.trial&&p.introDays?`${p.introDays} days free, then `:""}${esc(p.price)} / ${esc(proPer(p))}</span>${save>0?`<small> · save ${save}%</small>`:""}</button>`}}
   if(proMsg)h+=`<p class="note" style="color:var(--warn)">${esc(proMsg)}</p>`;
   h+=`<button class="btn alt" data-pro-restore="1"${proBusy?" disabled":""}>Restore purchases</button>`;
   h+=`<p class="note pro-legal">Payment is charged to your Apple ID. The subscription renews automatically unless canceled at least 24 hours before the end of the current period; your account is charged for renewal within 24 hours before the period ends. Manage or cancel any time in Settings → your name → Subscriptions. <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank">Terms of Use</a> · <a href="privacy.html" target="_blank">Privacy Policy</a></p></div>`;
