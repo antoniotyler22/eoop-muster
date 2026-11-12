@@ -6308,7 +6308,7 @@ const ES={
 "Youth team":"Equipo juvenil","Players, coaches, pickups":"Jugadores, entrenadores, recogidas","Office fire drill":"Simulacro de incendio","Floors, wardens, assembly point":"Pisos, brigadistas, punto de reunión",
 "Name your team":"Nombre de su equipo","Team name":"Nombre del equipo","Go":"Listo","Back":"Atrás","Close":"Cerrar","Next":"Siguiente","Done":"Listo","Cancel":"Cancelar","Save":"Guardar","Share":"Compartir","Share it":"Compartirlo",
 "Sign in":"Iniciar sesión","Username":"Usuario","Password":"Contraseña","Got a username and password from your leader?":"¿Su líder le dio un usuario y contraseña?",
-"Got an invite link?":"¿Tiene un enlace de invitación?","Invite link":"Enlace de invitación","Start a team":"Crear un equipo","Send the app":"Enviar la app","Inside the app":"Dentro de la app","No signal? Relay it":"¿Sin señal? Retransmítalo","Pass to a nearby phone":"Pasar a un teléfono cercano","Add packets":"Agregar paquetes","Packets I received":"Paquetes que recibí","Buddy check":"Verificación por compañeros","Seen ✓":"Visto ✓","No app? Send this link":"¿Sin la app? Envíe este enlace","Copy the link":"Copiar el enlace","Text it to someone":"Enviarlo por mensaje","Share…":"Compartir…","Copied":"Copiado","Tap the link in your text, or paste it here.":"Toque el enlace en su mensaje o péguelo aquí.","Open link":"Abrir enlace",
+"Got an invite link?":"¿Tiene un enlace de invitación?","Invite link":"Enlace de invitación","Start a team":"Crear un equipo","Send the app":"Enviar la app","Inside the app":"Dentro de la app","Satellite-ready text":"Texto listo para satélite","Pass it on":"Pasarlo","No signal? Relay it":"¿Sin señal? Retransmítalo","Pass to a nearby phone":"Pasar a un teléfono cercano","Add packets":"Agregar paquetes","Packets I received":"Paquetes que recibí","Buddy check":"Verificación por compañeros","Seen ✓":"Visto ✓","No app? Send this link":"¿Sin la app? Envíe este enlace","Copy the link":"Copiar el enlace","Text it to someone":"Enviarlo por mensaje","Share…":"Compartir…","Copied":"Copiado","Tap the link in your text, or paste it here.":"Toque el enlace en su mensaje o péguelo aquí.","Open link":"Abrir enlace",
 "Get the app":"Obtener la app","iPhone app":"App para iPhone","Web app":"App web","Send the app to someone":"Enviar la app a alguien",
 /* Home */
 "Good morning":"Buenos días","Good afternoon":"Buenas tardes","Good evening":"Buenas noches","Add your people":"Agregue a su gente","Your team is empty. Pick the easiest way:":"Su equipo está vacío. Elija la forma más fácil:",
@@ -9651,7 +9651,7 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-bdseen]");
 })();
 
 /* ===== features/relay.js ===== */
-// 4.93: No-signal relay. A check-in becomes a small packet ("#EOOP-RLY|...") any phone can carry and pass on
+// 4.93: No-signal relay. (4.94: also decodes the short satellite line "AF1 <code> <1-3> <NAME>".) A check-in becomes a small packet ("#EOOP-RLY|...") any phone can carry and pass on
 // (AirDrop, Nearby Share, Messages, or a Bluetooth transport plugged into window.AFRelayTransport). Phones dedupe
 // by id, count hops, and the first one with signal uploads live check-ins. The leader's phone can mark them too.
 (()=>{
@@ -9676,7 +9676,8 @@ async function upload(){if(typeof SB==="undefined"||navigator.onLine===false||!(
   if(n){save();if(view==="recall")render()}return n}
 function importQueue(){try{const q=JSON.parse(localStorage.getItem("afRelayQ")||"[]");if(q.length){const n=add(parse(q.join("\n")));localStorage.removeItem("afRelayQ");if(n)toast(n+" check-in"+(n===1?"":"s")+" saved to relay")}}catch(e){}}
 const _a=applyCheckins;
-applyCheckins=function(text){return _a.call(this,String(text).split(/\r?\n/).map(l=>{const p=parse(l)[0];return l.includes("#EOOP-RLY|")&&p?"#EOOP-CI|"+p.rid+"|"+p.c+"|"+p.name+"|"+p.eta:l}).join("\n"))};
+applyCheckins=function(text){const rid=ciRid();return _a.call(this,String(text).split(/\r?\n/).map(l=>{const p=parse(l)[0];if(l.includes("#EOOP-RLY|")&&p)return "#EOOP-CI|"+p.rid+"|"+p.c+"|"+p.name+"|"+p.eta;
+  const g=l.match(/\bAF1\s+([A-Z0-9]{4})\s+([123])\s+(.{1,24})\s*$/i);if(g&&g[1].toLowerCase()===rid.slice(-4).toLowerCase())return "#EOOP-CI|"+rid+"|"+g[2]+"|"+clean(g[3])+"|";return l}).join("\n"))};
 function html(){const b=box();const m=mine();const up=b.filter(p=>p.up).length;
   return `<div class="panel" id="rlBox" data-noxl><b>No signal? Relay it</b>
     <p class="note" style="margin:2px 0 8px">Check-ins made with no service are saved as small packets. Pass them to a nearby phone by AirDrop, Nearby Share or text. The first phone with signal uploads them.</p>

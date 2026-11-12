@@ -1,4 +1,4 @@
-// 4.93: No-signal relay. A check-in becomes a small packet ("#EOOP-RLY|...") any phone can carry and pass on
+// 4.93: No-signal relay. (4.94: also decodes the short satellite line "AF1 <code> <1-3> <NAME>".) A check-in becomes a small packet ("#EOOP-RLY|...") any phone can carry and pass on
 // (AirDrop, Nearby Share, Messages, or a Bluetooth transport plugged into window.AFRelayTransport). Phones dedupe
 // by id, count hops, and the first one with signal uploads live check-ins. The leader's phone can mark them too.
 (()=>{
@@ -23,7 +23,8 @@ async function upload(){if(typeof SB==="undefined"||navigator.onLine===false||!(
   if(n){save();if(view==="recall")render()}return n}
 function importQueue(){try{const q=JSON.parse(localStorage.getItem("afRelayQ")||"[]");if(q.length){const n=add(parse(q.join("\n")));localStorage.removeItem("afRelayQ");if(n)toast(n+" check-in"+(n===1?"":"s")+" saved to relay")}}catch(e){}}
 const _a=applyCheckins;
-applyCheckins=function(text){return _a.call(this,String(text).split(/\r?\n/).map(l=>{const p=parse(l)[0];return l.includes("#EOOP-RLY|")&&p?"#EOOP-CI|"+p.rid+"|"+p.c+"|"+p.name+"|"+p.eta:l}).join("\n"))};
+applyCheckins=function(text){const rid=ciRid();return _a.call(this,String(text).split(/\r?\n/).map(l=>{const p=parse(l)[0];if(l.includes("#EOOP-RLY|")&&p)return "#EOOP-CI|"+p.rid+"|"+p.c+"|"+p.name+"|"+p.eta;
+  const g=l.match(/\bAF1\s+([A-Z0-9]{4})\s+([123])\s+(.{1,24})\s*$/i);if(g&&g[1].toLowerCase()===rid.slice(-4).toLowerCase())return "#EOOP-CI|"+rid+"|"+g[2]+"|"+clean(g[3])+"|";return l}).join("\n"))};
 function html(){const b=box();const m=mine();const up=b.filter(p=>p.up).length;
   return `<div class="panel" id="rlBox" data-noxl><b>No signal? Relay it</b>
     <p class="note" style="margin:2px 0 8px">Check-ins made with no service are saved as small packets. Pass them to a nearby phone by AirDrop, Nearby Share or text. The first phone with signal uploads them.</p>

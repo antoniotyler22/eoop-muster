@@ -87,7 +87,7 @@ const V=window.VAULT={key:null,cfg:getCfg(),ok:!!(window.crypto&&crypto.subtle),
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.hidden){hiddenAt=Date.now();return}
   const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
-window.AV="4.93.0";
+window.AV="4.94.0";
 /* self-update: an installed web app resumes without reloading, so check the live version on open, on every return, and every 10 min */
 (()=>{const NAT=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());if(NAT||!/^https?:$/.test(location.protocol))return;
   let busy=false,last=0;const typing=()=>{const a=document.activeElement;return a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)};
@@ -171,6 +171,16 @@ function ciPage(q){const esc=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<"
         const at=d<=g[2]+Math.min(p.coords.accuracy||0,100);const t=at?"AT RP":(d<1000?Math.round(d/10)*10+" M":(d/1000).toFixed(1)+" KM")+" FROM RP";
         const e=document.getElementById("ciE");e.value=(t+(e.value&&!/RP$/.test(e.value)?" "+e.value:"")).slice(0,40);b.textContent=at?"✓ You're at the rally point":"📍 "+t+": not at the rally point yet";b.disabled=false},
         ()=>{b.disabled=false;b.textContent="Location is off. Tap Good when you're there."},{enableHighAccuracy:true,timeout:15000,maximumAge:20000})})}}
+  /* last gasp: while this page stays open, tell the leader once if the battery is about to die (needs the Battery API) */
+  let lastC=1,gaspOn=false,gaspSent=false;
+  function gaspOffer(n){if(gaspOn||!live||!navigator.getBattery||document.getElementById("ciGasp"))return;
+    const l=document.createElement("label");l.style.cssText="display:flex;gap:10px;align-items:flex-start;margin-top:10px;font-size:14px";
+    l.innerHTML="<input type='checkbox' id='ciGasp' style='width:22px;height:22px;flex:none'><span>Tell my leader if my battery is about to die. Keep this page open.</span>";
+    document.getElementById("ciMsg").after(l);
+    l.querySelector("input").addEventListener("change",e=>{if(!e.target.checked){gaspOn=false;return}gaspOn=true;
+      navigator.getBattery().then(b=>{const chk=()=>{if(!gaspOn||gaspSent||b.charging||b.level>0.05)return;gaspSent=true;
+        Promise.all(SB.words(n).map(w=>SB.h(rid,w))).then(hs=>SB.rpc("checkin",{p_recall:rid,p_words:hs,p_code:lastC,p_note:"PHONE DYING"})).then(()=>SB.notify(rid)).catch(()=>{gaspSent=false})};
+        b.addEventListener("levelchange",chk);b.addEventListener("chargingchange",chk);chk()}).catch(()=>{})})}
   m.addEventListener("click",e=>{const b=e.target.closest("[data-c]");if(!b)return;const n=document.getElementById("ciN").value.toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim();
     if(!n){document.getElementById("ciMsg").textContent="Enter your rank and last name first.";document.getElementById("ciN").focus();return}
     try{localStorage.setItem(KM,n)}catch(err){}const c=+b.dataset.c;const eta=document.getElementById("ciE").value.replace(/[|#]/g," ").replace(/\s+/g," ").trim();
@@ -181,10 +191,12 @@ function ciPage(q){const esc=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<"
     if(navigator.onLine===false){const pk="#EOOP-RLY|"+rid+"|"+c+"|"+n+"|"+eta+"|"+Date.now()+"|0|"+(live?1:0);
       try{const q=JSON.parse(localStorage.getItem("afRelayQ")||"[]");q.push(pk);localStorage.setItem("afRelayQ",JSON.stringify(q.slice(-50)))}catch(err){}
       msg.innerHTML="<b>Saved. No signal.</b> Hand this to a nearby phone (AirDrop or Nearby Share) or text it, and the first phone with signal sends it in.<br><button class='btn alt' id='ciRl' type='button' style='margin-top:8px'>Pass it on</button>";
+      const sn=n.replace(/[^A-Z0-9 ]/g,"").slice(0,20).trim(),sl="AF1 "+rid.slice(-4).toUpperCase()+" "+c+" "+sn;
+      msg.innerHTML=msg.innerHTML+"<a class='btn' id='ciSat' style='margin-top:8px' href='sms:"+(to?"+1"+to:"")+"?&body="+encodeURIComponent(sl)+"'>Satellite-ready text</a><span class='note' style='display:block'>Only "+sl.length+" characters, short enough for an iPhone satellite message: "+esc(sl)+"</span>";
       document.getElementById("ciRl").onclick=()=>{const tx="Check-in relay. Open Accounted For, Check-ins, and paste this.\n"+pk.replace(/\|0\|(\d)$/,"|1|$1");try{navigator.share?navigator.share({text:tx}):navigator.clipboard.writeText(tx)}catch(err){}};return}
     if(live&&navigator.onLine!==false&&crypto.subtle){m.querySelectorAll("[data-c]").forEach(x=>x.disabled=true);msg.textContent="Sending…";
       Promise.all(SB.words(n).map(w=>SB.h(rid,w))).then(hs=>SB.rpc("checkin",{p_recall:rid,p_words:hs,p_code:c,p_note:eta}))
-        .then(()=>{SB.notify(rid);msg.innerHTML="<b style='color:var(--s-onhand)'>✓ Checked in: "+word+".</b> Your leader sees it now. You can close this page.";m.querySelectorAll("[data-c]").forEach(x=>x.disabled=false)})
+        .then(()=>{SB.notify(rid);lastC=c;msg.innerHTML="<b style='color:var(--s-onhand)'>✓ Checked in: "+word+".</b> Your leader sees it now. You can close this page.";m.querySelectorAll("[data-c]").forEach(x=>x.disabled=false);gaspOffer(n)})
         .catch(()=>{msg.textContent="Couldn't reach the server. Opening a text instead…";m.querySelectorAll("[data-c]").forEach(x=>x.disabled=false);setTimeout(sms,700)});return}
     sms()});}
 /* broadcast page: shows the leader's message; one tap says "Got it". Message rides in the link, never on the server. */
