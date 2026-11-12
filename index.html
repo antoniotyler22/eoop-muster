@@ -87,7 +87,7 @@ const V=window.VAULT={key:null,cfg:getCfg(),ok:!!(window.crypto&&crypto.subtle),
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.hidden){hiddenAt=Date.now();return}
   const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
-window.AV="4.90.0";
+window.AV="4.91.0";
 /* self-update: an installed web app resumes without reloading, so check the live version on open, on every return, and every 10 min */
 (()=>{const NAT=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());if(NAT||!/^https?:$/.test(location.protocol))return;
   let busy=false,last=0;const typing=()=>{const a=document.activeElement;return a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)};
@@ -158,7 +158,7 @@ function ciPage(q){const esc=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<"
     <label for="ciE">Delayed or need help? Add ETA or a short note</label><input type="text" id="ciE" maxlength="40" placeholder="ETA 1400">
     <button class="btn alt" data-c="2" style="min-height:52px">Good, but delayed</button>
     <button class="btn warn" data-c="3" style="min-height:52px">I need help</button>
-    <p class="note" id="ciMsg">${live?"Tap once. Your leader sees it right away.":to?"Opens a text to your leader. Hit Send.":"Opens a text. Pick your leader as the recipient and hit Send."}</p>
+    <p class="note" id="ciMsg">${live?"Tap once. Your leader sees it right away.":to?"No app needed. Opens a text to your leader. Hit Send.":"No app needed. Opens a text. Pick your leader as the recipient and hit Send."}</p>
     <p class="note">${live?"Your name is scrambled before it leaves this phone; the server never stores it. No signal? It opens a text instead.":"Nothing is sent until you hit Send in Messages."} Your name is remembered on this phone only.</p></div>`;
   document.body.appendChild(m);document.querySelectorAll(".top,#helpBtn").forEach(x=>x.hidden=true);
   /* rally point (#g=lat,lon,radius): adds "AT RP" or the distance to the note. The location itself never leaves this phone. */

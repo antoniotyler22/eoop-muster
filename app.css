@@ -541,3 +541,4 @@ body.v12noai [data-go="ask"],body.v12noai [data-tab="ask"]{display:none!importan
 .sgw-peek-img{position:relative;border:1px solid var(--line);border-bottom:0;border-radius:20px 20px 0 0;overflow:hidden;max-height:130px;background:var(--surface-2)}
 .sgw-peek-img img{display:block;width:100%;height:auto}
 .sgw-peek-img::after{content:"";position:absolute;left:0;right:0;bottom:0;height:70px;background:linear-gradient(to bottom,transparent,var(--bg))}
+#nlOut:empty{display:none}
