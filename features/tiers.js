@@ -26,7 +26,7 @@ function meter(){const c=cap();if(!isFinite(c))return `<p class="note">${used()}
 
 proList=function(){return meter()
   +card("free","$0",["Live board and headcount ring","Check-in link for everyone","Emergency muster","Word of Mouth and Calendar","Offline mode","Up to 10 people"],false)
-  +card("pro","$9.99/mo",["Everything in Free","Up to 50 people","Company roll-up","Recall drills and QR muster","Trends, PDF / Excel / 6W reports","Member logins","Ask (AI)"],true)
+  +card("pro","$9.99/mo",["Everything in Free","Up to 50 people","Company roll-up","Recall drills and QR muster","Trends and Excel export","6W incident reports","Member logins","Ask (AI)"],true)
   +card("org","$29.99/mo",["Everything in Pro","Unlimited people","Texting (credits)","Priority support"],false)};
 
 /* ---- the "team is full" screen ---- */

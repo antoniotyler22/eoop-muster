@@ -1,46 +1,50 @@
 # Store listing (copy and paste)
 
-**App name:** Accounted For: Team Roster & Muster
-**Subtitle (App Store, 30 chars):** Numbers, muster and the word
-**Short description (Google Play, 80 chars):** Accountability, muster, recall and the word for military units, crews and teams.
+Prices below must match App Store Connect: Pro $9.99/month or $74.99/year, Org $29.99/month or $249.99/year, 7-day free trial on Pro.
+
+**App name (30 chars):** Accounted For – Team Check-In
+**Subtitle (30 chars):** Headcount, muster, the word
+**Short description (Google Play, 80 chars):** Know who's here in seconds: emergency headcount and check-ins for any team.
 
 ## Full description
 
 Know who's here, who's not, and who got the word, in seconds, from your phone.
 
-Accounted For is fast emergency headcount and daily accountability for any team: schools, job-site crews, event staff, small businesses, police and fire crews, volunteer groups and military units. Built by a leader who ran 103 people and needed the numbers at his fingertips.
+Accounted For is fast emergency headcount and daily accountability for any team: schools and field trips, job-site crews, event staff, youth sports, offices, police and fire crews, and military units. Pick a template, add your people, and you're running in a minute. Members check in from a link: no app, no account.
 
-EMERGENCY HEADCOUNT
-• Emergency muster: one tap starts a live check-in; people answer Good, Delayed or Need help from a link, no app needed
-• Missed check-in alerts: set a deadline and get one alert with how many haven't checked in, even with the app closed
-• Rally point: people can confirm they made it to the rally point; only their distance is sent
-• QR formation check-in, recall drills and live results by section
-• PDF headcount report to share or print: totals, who's out and where, and the recall
+EMERGENCY HEADCOUNT (FREE)
+• One tap starts a live check-in. People answer Good, Delayed or Need help
+• Watch the headcount ring fill to 100% and share the result as a card
+• Missed check-in alerts: one alert with how many haven't checked in, even with the app closed
+• Rally point check-in, QR formation check-in and recall drills
+• Visitors and contractors count in the headcount
 
-ACCOUNTABILITY
-• Live board: on hand, present and strength by section, updated with a tap
-• Section leaders update your board from their own phones, live
-• Text the numbers up the chain in one tap, or post them to Slack, Teams or Discord
-• Roll teams up to a company or site view; dashboard with everything on one screen
-• Import any roster from Excel or CSV
+DAILY ACCOUNTABILITY (FREE)
+• Live board by section, updated with a tap
+• Section leaders update from their own phones, live
+• People check themselves in from My page, with a status, dates and location
+• Everyone who hasn't checked in for 24 hours shows up in one list
+• Import any roster from Excel or CSV, or add people from your Contacts
 
-THE WORD
-• Feed: pass the word inside the app and see who confirmed and who didn't
-• Messages between the leader and each person; invite-only team pages
-• Requests: leave and appointments, approved with one tap
-• Report, hide and block on every post, with a leader review queue
+WORD OF MOUTH (FREE)
+• Post the word to the whole team and see who has seen it
+• Polls, replies, and an inbox for private messages between leaders and members
+• Talk: push-to-talk to everyone or a group
+• Calendar with appointments, leave, events and go / no-go lists, export to Google, Outlook or Apple Calendar
 
-SCHEDULE AND READINESS
-• Calendar for appointments, leave, travel, duty and due-outs; export to Google, Outlook or Apple Calendar
-• Due-outs with red and yellow alerts, a fair duty roster, PT and event attendance
-• Each person gets My page with their status, duty and calendar, and can set their own password
-• 6W incident reports you can edit, email or text
+BUILT FOR YOUR TEAM
+Templates for field trips, 5K runs, job sites, event staff, youth teams, office fire drills, military and custom groups. Rename the statuses, sections and header to fit. English and Spanish.
 
-WORKS FOR ANY TEAM
-Pick a version on first open (Military, Police, Jobs, HR, Civilian or Custom) and rename statuses, sections and the app header to fit your group. Anything new shows a green dot until you open it.
+FREE FOR SMALL TEAMS
+Free for up to 10 people, with emergency headcount, the live board, Word of Mouth and the calendar. No ads and no sign-up.
 
 ACCOUNTED FOR PRO
-Company roll-up, member logins, recall drills, QR muster, Excel export, trends, 6W reports and Ask, an optional AI helper that answers from public official sources. 7-day free trial, then $4.99 a month or $39.99 a year.
+For the person running the team. Up to 50 people, plus company roll-up, member logins, recall drills with live results, QR muster, trends, Excel export, 6W incident reports and Ask, an optional AI helper that answers from public official sources. 7-day free trial, then $9.99 a month or $74.99 a year.
+
+ACCOUNTED FOR ORG
+For schools, companies and large units. Everything in Pro with unlimited people. $29.99 a month or $249.99 a year.
+
+Members and section leaders always use the app free. Payment is charged to your Apple ID and renews automatically unless canceled at least 24 hours before the end of the period. Manage or cancel any time in Settings.
 
 PRIVATE BY DESIGN
 • Your roster stays on your phone, with optional PIN lock and encryption
@@ -51,9 +55,9 @@ PRIVATE BY DESIGN
 
 Independent app. Not an official system of, or endorsed by, the DoD, any military service, police agency or government.
 
-**Promotional text (App Store, 170 chars):** New in 1.3: missed check-in alerts, PDF headcount reports, rally point check-in, Slack/Teams posting, and green dots on everything new.
+**Promotional text (170 chars):** Know who's here in seconds. Free for teams of 10. Start a headcount, watch the ring fill to 100%, share it. New: Word of Mouth, Talk and a weekly team report.
 
-**Keywords (App Store, 100 chars):** accountability,muster,roster,military,recall,formation,crew,headcount,duty roster,readiness,team
+**Keywords (100 chars):** headcount,roll call,muster,check-in,attendance,roster,field trip,drill,crew,safety,team,tally
 **Category:** Productivity (secondary: Business)
 **Age rating:** 4+ / Everyone
 **Support URL:** https://antoniotyler22.github.io/eoop-muster/support.html
