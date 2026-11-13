@@ -68,6 +68,7 @@ export const SOURCES = [
   "features/relay.js",
   "features/translate.js",
   "features/assist.js",
+  "features/settings-ios.js",
   "features/feed-photos.js",
   "features/me-page.js",
   "features/header.js",

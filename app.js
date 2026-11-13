@@ -1389,7 +1389,7 @@ document.addEventListener("click",e=>{const t=e.target.closest("[data-tab]");if(
   if(e.target.closest("#hSearch")){view=memberMode()?"today":"people";armed=null;render();window.scrollTo(0,0);setTimeout(()=>{const q=$("#gq");if(q)q.focus()},60);return}
   if(e.target.closest("#hRef")){refreshAll();return}
   if(e.target.closest("#hHelp")){const hb=$("#helpBtn");if(hb)hb.click();return}
-  if(e.target.closest("#hSet")){secDraft=null;view="data";armed=null;render();window.scrollTo(0,0);return}},true);
+  if(e.target.closest("#hSet")){if(window.AFSettings){AFSettings.open();return}secDraft=null;view="data";armed=null;render();window.scrollTo(0,0);return}},true);
 function needsYou(){const out=[];const al=alerts();
   const rq=reqPending();if(rq.length)out.push({n:rq.length,tone:"a",t:"Request"+(rq.length>1?"s":"")+" waiting",s:rq.slice(0,2).map(r=>r.ty+" · "+r.who).join(", "),go:"feed"});
   const cf=upcomingConflicts(14);if(cf.length)out.push({n:cf.length,tone:"r",t:"Conflict"+(cf.length>1?"s":"")+" next 14 days",s:cf[0].m.rank+" "+lastOf(cf[0].m)+": "+cf[0].cf[0].s+" vs "+cf[0].what,go:"alerts"});
