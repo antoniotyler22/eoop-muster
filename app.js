@@ -404,7 +404,7 @@ function banner0(){
   {const sb=staleBanner();if(sb)return sb}
   const LK=S.link;if(LK&&LK.rk2){if(!LK.pulled)return `<div class="banner"><span>${LK.perr?esc(LK.perr):`Loading <b>${esc(LK.sec)}</b> from ${esc(LK.unit)}'s board…`}</span>${LK.perr?`<button id="lkRetry">Retry</button>`:""}</div>`;
     }
-  if(S.source==="sample"&&!memberMode()) return `<div class="banner"><span>Showing <b>sample Marines</b>. Load your MOL detail list to start.</span><button data-go="data">Load roster</button></div>`;
+  if(S.source==="sample"&&!memberMode()) return `<div class="banner"><span>Showing <b>sample Marines</b>. Drop your roster to start.</span><button data-addm="">Drop a roster</button></div>`;
   if(!storageOK) return `<div class="banner"><span>This browser isn't saving changes${storageErr?" ("+esc(storageErr.n)+(storageErr.kb?" · "+storageErr.kb+" KB":"")+(storageErr.m?" · "+esc(storageErr.m):"")+")":""}. Export a backup from DATA before closing.</span></div>`;
   return "";
 }

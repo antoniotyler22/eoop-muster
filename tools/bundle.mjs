@@ -54,6 +54,7 @@ export const SOURCES = [
   "features/drills.js",
   "features/family.js",
   "features/roster-import.js",
+  "features/add-people.js",
   "features/whoami.js",
   "features/news.js",
   "features/owner.js",
