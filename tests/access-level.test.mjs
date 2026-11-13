@@ -25,7 +25,7 @@ test("OIC can step down to Co-leader view: owner tools close, keys stay, code st
     a.w.eval(`view="data";render()`);
     a.w.eval(`document.querySelector("#alCode").value="abcd-efgh-jkmn";document.querySelector("#alUp").click()`);
     assert.equal(a.w.eval(`isOwner()`), true);
-    assert.ok(a.w.eval(`tabsList().some(x=>x[0]==="inbox")`), "Inbox is back");
+    assert.ok(a.w.eval(`chatSeg("chat").includes("data-seg=\\"inbox\\"")`), "Inbox is back (under Chat)");
     assert.equal(a.w.eval(`S.dmInbox`), "i".repeat(32), "same inbox key restored");
   } finally { await a.close(); }
 });

@@ -208,7 +208,7 @@ function restoreFrom(k){const keepBy={};S.roster.forEach(m=>keepBy[fullK(m)]=m);
   else if(k==="snap"){let i=0;list=Object.entries(S.snap.st).map(([name,v])=>({id:"r"+(++i),rank:v.r||"",name,sec:v.sec||"HQ",status:STATUSES.includes(fixStatus(v.s))?fixStatus(v.s):"On Hand",duty:v.d||"Full Duty",detail:"",loc:"",start:"",end:""}))}
   else if(k==="co"){const pl=($("#rsPl")||{}).value;let i=0;list=S.ws.co.roster.filter(m=>m.sec===pl).map(m=>Object.assign({},m,{id:"r"+(++i),sec:/^[A-Z0-9]{1,6}$/.test(m.sub||"")?m.sub:"HQ",sub:undefined}))}
   if(!list.length)return toast("Nothing to restore from that.");
-  for(const m of list){const o=keepBy[fullK(m)];if(!o)continue;for(const f of ["phone","phone2","pk","pkSig","pkAt","notes","cal","due","wpn","edd","eas","uid"])if(o[f]!=null&&m[f]==null)m[f]=o[f];if(k!=="pre"&&o.id)m.id=o.id}
+  for(const m of list){const o=keepBy[fullK(m)];if(!o)continue;for(const f of ["phone","phone2","pk","pkSig","pkAt","notes","note","role","email","ec","cal","due","wpn","edd","eas","uid"])if(o[f]!=null&&m[f]==null)m[f]=o[f];if(k!=="pre"&&o.id)m.id=o.id}
   S.roster=list;S.source="mol";S.level="plt";delete S.newCo;
   const nw=Array.isArray(S.secs)&&S.secs.length&&k==="pre"?S.secs:(Array.isArray(S.secsPlt)&&S.secsPlt.length?S.secsPlt:null);
   if(nw){S.secs=nw}else{const codes=[...new Set(list.map(m=>m.sec).filter(c=>c!=="ATT"))];const nm={};MIL_SECS.forEach(x=>nm[x[0]]=x[1]);S.secs=codes.slice(0,10).map(c=>[c,nm[c]||c])}

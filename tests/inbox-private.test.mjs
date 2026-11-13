@@ -16,7 +16,7 @@ test("Inbox keys never ride along in the synced board", async () => {
     assert.equal(a.w.eval(`syncObj().roster.some(m=>m.dm)`), false);
     assert.ok(a.w.eval(`S.roster[0].dm&&S.dmInbox`), "the owner keeps their own keys locally");
     assert.equal(a.w.eval(`inboxOwner()`), true);
-    assert.ok(a.w.eval(`tabsList().some(x=>x[0]==="inbox")`), "owner sees the Inbox tab");
+    assert.ok(a.w.eval(`chatSeg("chat").includes("data-seg=\\"inbox\\"")`), "owner sees Inbox under Chat");
   } finally { await a.close(); }
 });
 

@@ -87,20 +87,20 @@ test("members see the latest Word of Mouth posts on their Today page", async () 
   } finally { await a.close(); }
 });
 
-test("a leader has an Inbox next to Word of Mouth and Send, and on every My page strip", async () => {
+test("a leader has an Inbox under Chat, next to Feed, and on every My page strip", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     await a.w.eval(`const m=S.roster[0];m.pk="p".repeat(24);m.dm={id:"t1",k:"k".repeat(32),ek:"x",ok:1};S.dmMsgs={t1:[{id:1,t:Date.now()-5000,txt:"Reporting at 0700",by:"M",n:"CPL"},{id:2,t:Date.now()-2000,txt:"Copy",by:"L",n:""}]};S.dmSeen={};
       S.onb=true;S.welcomed=1;S.leaderMode=true;view="feed";render()`);
     await sleep(200);
     const tabs = a.w.eval(`[...document.querySelectorAll("#tabbar [data-tab]")].map(b=>b.dataset.tab).join(",")`);
-    assert.match(tabs, /tools,inbox/, "Inbox tab sits right beside Tools");
-    assert.equal(a.$("#tabbar [data-tab='inbox'] .bd").textContent.trim(), "1", "unread shown in red on the tab");
-    assert.ok(!a.$("#tabbar [data-tab='feed'] .bd"), "not counted on Word of Mouth");
-    a.$("#tabbar [data-tab='inbox']").click(); await sleep(200);
+    assert.equal(tabs, "home,talk,people,plan,tools", "Inbox lives under Chat now: five tabs");
+    assert.equal(a.$("#tabbar [data-tab='talk'] .bd").textContent.trim(), "1", "unread shown in red on the Chat tab");
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(200);
+    a.$(".ch-seg [data-seg='inbox']").click(); await sleep(250);
     assert.equal(a.w.eval("view"), "dms");
     assert.match(a.$("#main").textContent, /Reporting at 0700|Copy/);
-    assert.equal(a.$("#tabbar [data-tab='inbox']").getAttribute("aria-current"), "page");
+    assert.equal(a.$("#tabbar [data-tab='talk']").getAttribute("aria-current"), "page");
     a.w.eval(`view="today";render()`); await sleep(100);
     assert.ok(a.$("#dmAsInbox"), "Inbox button on the strip");
     assert.deepEqual(a.errors, []);

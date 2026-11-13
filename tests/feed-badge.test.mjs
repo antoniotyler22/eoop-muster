@@ -10,7 +10,7 @@ test("leader phone: starts at zero, counts a new post, clears when Word of Mouth
     assert.equal(a.w.eval("fdUnread()"), 0, "no 9+ on first run");
     a.w.eval(`S.feeds[0].posts.unshift({id:2,t:Date.now(),txt:"new"});renderTabs()`);
     assert.equal(a.w.eval("fdUnread()"), 1);
-    assert.match(a.$('#tabbar [data-tab="feed"] .bd').textContent, /1/);
+    assert.match(a.$('#tabbar [data-tab="talk"] .bd').textContent, /1/, "Feed's unread count rolls up on the Chat tab");
     a.w.eval(`view="feed";render()`);
     assert.equal(a.w.eval("fdUnread()"), 0, "opening Word of Mouth clears it");
   } finally { await a.close(); }
