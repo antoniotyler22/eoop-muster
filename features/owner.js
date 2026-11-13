@@ -9,6 +9,7 @@ const LS="af-owner";
 const tok=()=>{try{const o=JSON.parse(localStorage.getItem(LS)||"null");return o&&o.exp>Date.now()?o.tok:""}catch(e){return ""}};
 const setTok=o=>{try{o?localStorage.setItem(LS,JSON.stringify(o)):localStorage.removeItem(LS)}catch(e){}};
 window.ownerOn=()=>!!tok();
+window.ownerCall=(b)=>call(b);
 async function call(body){const r=await fetch(SB.url+"/functions/v1/owner",{method:"POST",headers:{apikey:SB.key,"Content-Type":"application/json"},body:JSON.stringify(Object.assign({tok:tok()},body))});
   let o={};try{o=await r.json()}catch(e){}if(r.status===404)throw new Error("The owner function isn't on the server yet.");if(r.status===401&&body.op!=="login"){setTok(null);throw new Error("Signed out. Sign in again.")}if(!r.ok)throw new Error(o.error||("HTTP "+r.status));return o}
 

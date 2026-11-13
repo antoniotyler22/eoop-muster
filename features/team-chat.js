@@ -1,4 +1,4 @@
-/* Accounted For 4.98.0 — Team chat: a WhatsApp-style group conversation for your team, with the headcount on top.
+/* Accounted For 4.98.0 (4.99.0: phone alerts for new messages, "New messages" divider) — Team chat: a WhatsApp-style group conversation for your team, with the headcount on top.
    - The Talk tab is now "Chat". It opens the team conversation; a Chat | Voice switch at the top goes to Talk (push-to-talk).
    - The bar on top shows "21 of 24 accounted for" from the roster; tap it to open the board.
    - "I'm accounted for" checks you in as On Hand (same as the I'm safe button) and drops a line in the chat.
@@ -12,7 +12,8 @@ const ready=f=>!!(f&&f.mk&&f.ek&&f.id);
 const seenMap=()=>{if(!S.chatSeen||typeof S.chatSeen!=="object")S.chatSeen={};return S.chatSeen};
 const ST={};
 const st=f=>ST[f.id]=ST[f.id]||{after:0,msgs:new Map(),busy:false,init:false,err:""};
-const ui={draft:"",stick:true};
+const ui={draft:"",stick:true,base:undefined};
+const enter=()=>{const f=feed();ui.base=f&&seenMap()[f.id]!==undefined?seenMap()[f.id]:undefined};
 if(typeof SYNC_SKIP!=="undefined"&&Array.isArray(SYNC_SKIP)&&!SYNC_SKIP.includes("chatSeen"))SYNC_SKIP.push("chatSeen");
 
 /* ---------- server ---------- */
@@ -47,10 +48,12 @@ function counts2(){try{if(S.source==="sample"||!Array.isArray(S.roster)||!S.rost
 const sub=f=>{const s=st(f);const n=new Set(list(f).map(m=>m.by)).size;return (s.init?(n?`${n} in the conversation`:"No messages yet"):"Connecting…")+" · private to this team"};
 function bar(){const c=counts2();if(!c)return "";const p=Math.round(100*c.ok/c.n);const all=c.ok>=c.n;
   return `<button type="button" class="ch-bar${all?" done":""}" id="chBar" aria-label="${c.ok} of ${c.n} accounted for. Open the board"><span class="ch-bt"><b>${c.ok} of ${c.n}</b> accounted for</span><span class="ch-bw" aria-hidden="true"><i style="width:${p}%"></i></span></button>`}
-function seg(active){return `<div class="ch-seg" role="tablist" aria-label="Chat or voice"><button type="button" role="tab" data-seg="chat" aria-selected="${active==="chat"}">Chat</button><button type="button" role="tab" data-seg="voice" aria-selected="${active==="voice"}">Voice</button></div>`}
+function seg(active){const n=typeof window.officialUnread==="function"?window.officialUnread():0;return `<div class="ch-seg" role="tablist" aria-label="Chat, official updates or voice"><button type="button" role="tab" data-seg="chat" aria-selected="${active==="chat"}">Chat</button><button type="button" role="tab" data-seg="official" aria-selected="${active==="official"}">Official${n&&active!=="official"?`<i class="of-dot" aria-label="${n} new"></i>`:""}</button><button type="button" role="tab" data-seg="voice" aria-selected="${active==="voice"}">Voice</button></div>`}
+window.chatSeg=seg;
 function bubbles(f){const L=list(f),nm=me(f);if(!L.length)return `<div class="ch-empty"><b>${st(f).init?"No messages yet":"Loading the conversation…"}</b>${st(f).init?"<span>Say something to your team. Messages are private to this team and stay for 30 days.</span>":""}</div>`;
-  let out="",day="",prev=null;
-  for(const m of L){const dk=dayKey(m.t);if(dk!==day){day=dk;prev=null;out+=`<div class="ch-day"><span>${dayLabel(m.t)}</span></div>`}
+  let out="",day="",prev=null,div=false;
+  for(const m of L){if(!div&&ui.base!==undefined&&m.id>ui.base&&m.by!==nm&&m.k==="m"){div=true;out+=`<div class="ch-new" id="chNew"><span>New messages</span></div>`;prev=null}
+    const dk=dayKey(m.t);if(dk!==day){day=dk;prev=null;out+=`<div class="ch-day"><span>${dayLabel(m.t)}</span></div>`}
     if(m.k==="a"){out+=`<div class="ch-sys"><span>✓ ${esc2(m.by)} is accounted for · ${hm(m.t)}</span></div>`;prev=null;continue}
     const mine=m.by===nm,first=!prev||prev.by!==m.by||m.t-prev.t>5*60e3;prev=m;
     out+=`<div class="ch-row${mine?" me":""}${first?" first":""}">${!mine&&first?av(m.by,28):`<span class="ch-sp"></span>`}<div class="ch-b">${!mine&&first?`<small class="ch-n">${esc2(m.by)}</small>`:""}<div class="ch-t">${esc2(m.tx).replace(/\n/g,"<br>")}<time datetime="${new Date(m.t).toISOString()}">${hm(m.t)}</time></div></div></div>`}
@@ -81,21 +84,22 @@ function draw(keepFocus){if(view!=="chat")return;const main=document.getElementB
 {const _tl=tabsList;tabsList=function(){return _tl.apply(this,arguments).map(x=>x[0]==="talk"?["talk","Chat",x[2]]:x)}}
 if(typeof IC==="object"&&!IC.chat)IC.chat='<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/>';
 if(typeof IC==="object"&&IC.chat){const _tl2=tabsList;tabsList=function(){return _tl2.apply(this,arguments).map(x=>x[0]==="talk"?["talk","Chat","chat"]:x)}}
-{const _r=render;render=function(){if(view==="chat"){renderTabs();const m=document.getElementById("main");if(m){m.className=m.className.replace(/\bfchat\b/g,"").trim();m.innerHTML=html();const l=document.getElementById("chList");if(l)l.scrollTop=l.scrollHeight;grow();markSeen();renderTabs()}return}return _r.apply(this,arguments)}}
+{const _r=render;render=function(){if(view==="chat"){renderTabs();const m=document.getElementById("main");if(m){m.className=m.className.replace(/\bfchat\b/g,"").trim();m.innerHTML=html();const l=document.getElementById("chList"),nw=document.getElementById("chNew");if(l)l.scrollTop=nw?Math.max(0,nw.offsetTop-l.offsetTop-8):l.scrollHeight;grow();markSeen();renderTabs()}return}return _r.apply(this,arguments)}}
 /* the Talk tab opens Chat first. This listener is on window so it runs before Talk's own tab handler. */
 window.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest("#tabbar [data-tab='talk']");if(!t)return;e.stopImmediatePropagation();e.preventDefault();
-  view="chat";armed=null;query="";render();window.scrollTo(0,0);start()},true);
+  enter();view="chat";armed=null;query="";render();window.scrollTo(0,0);start()},true);
 /* Chat | Voice switch (also injected on the Talk screen, which draws itself) */
 document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("[data-seg]");if(!b)return;e.preventDefault();
   if(b.dataset.seg==="voice"&&view!=="talk"){view="talk";armed=null;render();window.scrollTo(0,0);const t=document.querySelector("#tabbar [data-tab='talk']");return}
-  if(b.dataset.seg==="chat"&&view!=="chat"){view="chat";armed=null;render();window.scrollTo(0,0);start()}},true);
+  if(b.dataset.seg==="official"&&view!=="official"){if(typeof window.officialEnter==="function")window.officialEnter();view="official";armed=null;render();window.scrollTo(0,0);if(window.officialPull)window.officialPull(true);return}
+  if(b.dataset.seg==="chat"&&view!=="chat"){enter();view="chat";armed=null;render();window.scrollTo(0,0);start()}},true);
 function injectSeg(){if(view!=="talk")return;const m=document.getElementById("main");if(!m||m.querySelector(".ch-seg"))return;const top=m.querySelector(".tk-top");
   if(top)top.insertAdjacentHTML("afterend",`<div style="display:flex;justify-content:center">${seg("voice")}</div>`);else if(m.querySelector(".tk"))m.querySelector(".tk").insertAdjacentHTML("afterbegin",seg("voice"))}
 new MutationObserver(()=>{try{injectSeg()}catch(e){}}).observe(document.documentElement,{childList:true,subtree:true});
 
 async function send(f,text){const tx=String(text||"").trim().slice(0,MAXTX);if(!tx||!ready(f))return false;const s=st(f);
   const o={k:"m",by:me(f),tx,t:Date.now()};
-  try{const id=await put(f,o);if(id&&!s.msgs.has(id)){s.msgs.set(id,{id,k:"m",by:o.by,tx,t:o.t,st:""});s.after=Math.max(s.after,id)}ui.stick=true;s.err="";return true}
+  try{const id=await put(f,o);if(id&&!s.msgs.has(id)){s.msgs.set(id,{id,k:"m",by:o.by,tx,t:o.t,st:""});s.after=Math.max(s.after,id)}ui.stick=true;s.err="";try{SB.notify(null,{talk:f.id,k:f.mk,chat:true,dev:window.dmDev?window.dmDev():undefined,ti:o.by,tx:tx.slice(0,90)})}catch(e){}return true}
   catch(e){s.err=String(e&&e.message||e).slice(0,80);paintErr(s.err);toast("Couldn't send. Check your connection and try again.");return false}}
 document.addEventListener("submit",async e=>{if(!e.target.closest||!e.target.closest("#chForm"))return;e.preventDefault();const f=feed(),t=document.getElementById("chIn");if(!f||!t)return;
   const v=t.value;if(!v.trim())return;t.value="";ui.draft="";grow();const ok=await send(f,v);if(!ok){t.value=v;ui.draft=v;grow()}draw(true)},true);
@@ -122,12 +126,13 @@ if(typeof HELP==="object"&&HELP.feed&&Array.isArray(HELP.feed[2]))HELP.feed[2].p
 
 {const c=document.createElement("style");c.textContent=`.ch{display:flex;flex-direction:column;gap:10px;height:calc(100dvh - 190px);min-height:380px}
 .ch-top{display:flex;align-items:center;justify-content:space-between;gap:10px}.ch-ti{display:flex;flex-direction:column;min-width:0}.ch-ti b{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ch-ti small{font-size:12.5px;color:var(--muted)}
-.ch-seg{display:inline-flex;background:var(--line);border-radius:999px;padding:3px;flex:none}.ch-seg button{all:unset;cursor:pointer;box-sizing:border-box;min-height:32px;padding:0 14px;border-radius:999px;font-size:13.5px;font-weight:700;color:var(--muted);display:inline-flex;align-items:center}
+.ch-seg{display:inline-flex;background:var(--line);border-radius:999px;padding:3px;flex:none}.ch-seg button{all:unset;cursor:pointer;box-sizing:border-box;min-height:32px;padding:0 11px;border-radius:999px;font-size:13.5px;font-weight:700;color:var(--muted);display:inline-flex;align-items:center}
 .ch-seg button[aria-selected="true"]{background:var(--brass);color:var(--on-brass,#fff)}.ch-seg button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .ch-bar{all:unset;cursor:pointer;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;padding:10px 14px;border-radius:16px;background:var(--brass-soft,#dde8ff);color:var(--ink)}.ch-bt{font-size:14px}.ch-bt b{font-weight:800}
 .ch-bw{height:6px;border-radius:999px;background:color-mix(in srgb,var(--brass) 22%,transparent);overflow:hidden}.ch-bw i{display:block;height:100%;border-radius:999px;background:var(--brass);transition:width .4s}.ch-bar.done .ch-bw i{background:var(--ok,#1f9d55)}.ch-bar:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 .ch-list{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding:8px 2px;border-radius:16px;overscroll-behavior:contain}
 .ch-day{display:flex;justify-content:center;margin:10px 0 6px}.ch-day span{font-size:12px;font-weight:700;color:var(--muted);background:var(--line);padding:3px 12px;border-radius:999px}
+.ch-new{display:flex;align-items:center;gap:10px;margin:12px 0 4px;color:var(--brass);font-size:12px;font-weight:800}.ch-new:before,.ch-new:after{content:"";flex:1;height:1px;background:var(--brass);opacity:.5}
 .ch-sys{display:flex;justify-content:center;margin:6px 0}.ch-sys span{font-size:12.5px;font-weight:700;color:var(--brass);background:var(--brass-soft,#dde8ff);padding:4px 12px;border-radius:999px}
 .ch-row{display:flex;align-items:flex-end;gap:8px;max-width:86%}.ch-row.first{margin-top:8px}.ch-row.me{align-self:flex-end;flex-direction:row-reverse}.ch-sp{width:28px;flex:none}.ch-row.me .ch-sp{display:none}
 .ch-b{min-width:0;display:flex;flex-direction:column}.ch-n{font-size:11.5px;font-weight:700;color:var(--muted);margin:0 0 2px 4px}

@@ -27,7 +27,7 @@ test("alerts show the sender and a preview (style A), for Inbox and Talk", () =>
   const n = readFileSync(new URL("../supabase/functions/notify/index.ts", import.meta.url), "utf8");
   assert.match(n, /body\.talk === "string"/);
   assert.match(n, /title: ti \? "💬 " \+ ti/);
-  assert.match(n, /title: ti \? "📻 " \+ ti/);
+  assert.match(n, /ti \? "📻 " \+ ti/);
   assert.match(n, /member_key_hash/);
   const t = readFileSync(new URL("../features/talk.js", import.meta.url), "utf8");
   assert.match(t, /SB\.notify\(null,\{talk:f\.id,k:f\.mk/);

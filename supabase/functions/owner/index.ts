@@ -9,7 +9,7 @@
 //    12-hour token, 5 wrong tries lock an address for 15 minutes. Every sign-in is logged and pushed to the owner's phone.
 //  every other op carries {tok}: stats | errors | cfg | setcfg {announce,announce_url,ask_off,news_off} |
 //  remove {kind,id} | comp {days,note} | comps | endcomp {id} | health | alerts | log | setpass {cur,next} | signoutall |
-//  totp_start | totp_on {code} | totp_off {code} | setsub {sub} | ping | subcount | broadcast {title, body, test}.   {op:"cron", key}: every 10 min from pg_cron.
+//  opost {body,url} | odel {id} | totp_start | totp_on {code} | totp_off {code} | setsub {sub} | ping | subcount | broadcast {title, body, test}.   {op:"cron", key}: every 10 min from pg_cron.
 //  alerts: asks the Notify function whether alerts are going out ({stalled:1}) and whether this owner's phone is set to be warned.
 //  The "alerts not going out" buzz itself is sent by Notify's minute job (4.32.0), so it works even if this function is down.
 import webpush from "npm:web-push@3.6.7";
@@ -147,6 +147,19 @@ async function setcfg(b: Record<string, unknown>) {
   await rest("app_cfg?id=eq.1", { method: "PATCH", body: JSON.stringify(patch), headers: { Prefer: "return=minimal" } });
   return cfg();
 }
+// Official channel (4.100.0, part 45): post to / take down from the "Accounted For" channel every phone shows in Chat.
+async function officialPost(b: Record<string, unknown>) {
+  const body = typeof b.body === "string" ? b.body.replace(/[<>]/g, "").trim().slice(0, 1000) : "";
+  if (!body) throw new Error("Type the update first.");
+  const url = typeof b.url === "string" && /^https?:\/\//.test(b.url) ? b.url.slice(0, 300) : "";
+  await rest("official_posts", { method: "POST", body: JSON.stringify({ body, url }), headers: { Prefer: "return=minimal" } });
+  return { ok: 1 };
+}
+async function officialDel(id: unknown) {
+  const n = Math.floor(Number(id)); if (!Number.isFinite(n) || n < 1) throw new Error("Bad id.");
+  await rest("official_posts?id=eq." + n, { method: "DELETE", headers: { Prefer: "return=minimal" } });
+  return { ok: 1 };
+}
 const KINDS: Record<string, RegExp> = { feed: /^[a-z0-9]{10,20}$/, board: /^[a-z0-9]{10,20}$/, recall: /^[a-z0-9]{8,16}$/, page: /^[a-z0-9]{12,24}$/, company: /^[a-z0-9]{10,20}$/, login: /^[0-9a-f]{64}$/, backup: /^[0-9a-f]{20}$/, dm: /^[a-z0-9]{16,32}$/ };
 async function remove(kind: unknown, id: unknown) {
   const k = KINDS[String(kind)]; if (!k) throw new Error("Pick what to remove."); const v = String(id ?? "").trim().toLowerCase(); if (!k.test(v)) throw new Error("That id doesn't look right for a " + kind + ".");
@@ -212,6 +225,8 @@ Deno.serve(async (req) => {
     }
     if (!(await valid(o, b.tok))) return json({ error: "Sign in again." }, 401);
     switch (b.op) {
+      case "opost": { const r = await officialPost(b); await log(ip, "opost", String(b.body ?? "").slice(0, 80)); return json(r); }
+      case "odel": { const r = await officialDel(b.id); await log(ip, "odel", String(b.id)); return json(r); }
       case "stats": return json(await stats());
       case "errors": return json({ rows: await errors() });
       case "cfg": return json({ cfg: await cfg() });

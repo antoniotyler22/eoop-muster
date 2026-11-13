@@ -15,6 +15,7 @@
 //  {stalled:1} and the minute job: if check-ins sit unalerted for 6 min or the database refuses us, the owner phone gets "Alerts not going out" (once an hour).
 //  {dm, k, by, dev}: (4.70.7, setup part 40) an Inbox message was sent. The thread key is checked, then every phone signed up on the other side
 //    of that thread ("L" leader / "M" person) gets "New message". No names or text in the alert.
+//  {talk, k, ti, tx, dev, chat?}: (4.99.0) chat:true makes it a Team chat alert ("💬 name" + preview, tapping opens Chat).
 //  {talk, k, ti, tx, dev}: (4.70.8) a Talk message was sent; only the phones of the people it was sent to (to = their names, matched to the name each phone signed up with) get "📻 name" + preview.
 //  4.70.8: Inbox and Talk alerts show the sender's name and a short preview (ti, tx), sent by the sending phone, passed through and never stored.
 //  {alert:"sos", feed, mk, ti, tx, sid, kd, la, ln, ac, dev}: (4.72.2) SOS: urgent alert to the OIC and (4.73.1) every phone on the team, with the sender's name, what is wrong and where. The details travel inside the alert and are never stored.
@@ -459,21 +460,21 @@ async function dmAlert(id: string, key: string, by: string, dev: string, ti = ""
 
 // Talk (push to talk) message: buzz every phone on the team's alert list except the sender's. Checks the member key.
 const talkAt = new Map<string, number>();
-async function talkAlert(id: string, key: string, dev: string, ti: string, tx: string, to: string[] | null) {
+async function talkAlert(id: string, key: string, dev: string, ti: string, tx: string, to: string[] | null, chat = false) {
   const { data: f, error: e1 } = await db.from("feeds").select("id,member_key_hash").eq("id", id).maybeSingle();
   if (e1) return dbErr(e1);
   if (!f) return out("no feed");
   const hash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key)))).map((x) => x.toString(16).padStart(2, "0")).join("");
   if (hash !== f.member_key_hash) return out("not allowed", 403);
-  const k = id + ":" + (dev || ti);
-  if (Date.now() - (talkAt.get(k) ?? 0) < 8000) return out("throttled");
+  const k = (chat ? "c:" : "") + id + ":" + (dev || ti);
+  if (Date.now() - (talkAt.get(k) ?? 0) < (chat ? 3000 : 8000)) return out("throttled");
   talkAt.set(k, Date.now());
   const { data: subs, error } = await db.from("feed_subs").select("id,sub").eq("feed_id", id).limit(500);
   if (error) return dbErr(error);
   // deno-lint-ignore no-explicit-any
   const want = to ? new Set(to) : null;
   const list = (subs ?? []).filter((s: any) => !(dev && s.sub?.dev === dev) && (!want || want.has(String(s.sub?.nm ?? ""))));
-  const n = await sendSubs(list, { title: ti ? "📻 " + ti : "📻 Talk", body: tx || "New Talk message.", help: false, open: "talk" }, true, 600);
+  const n = await sendSubs(list, { title: chat ? (ti ? "💬 " + ti : "💬 Team chat") : (ti ? "📻 " + ti : "📻 Talk"), body: tx || (chat ? "New chat message." : "New Talk message."), help: false, open: "talk" }, true, 600);
   return out("sent " + n);
 }
 
@@ -540,7 +541,7 @@ Deno.serve(async (req) => {
   }
   if (typeof body.talk === "string" && /^[a-z0-9]{10,20}$/.test(body.talk) && typeof body.k === "string" && /^[a-z0-9]{24,40}$/.test(body.k))
     return talkAlert(body.talk, body.k, typeof body.dev === "string" && /^[a-z0-9]{8,40}$/.test(body.dev) ? body.dev : "", cut(body.ti, 40), cut(body.tx, 100),
-      Array.isArray(body.to) ? body.to.filter((x): x is string => typeof x === "string").slice(0, 100).map((x) => x.slice(0, 30)) : null);
+      Array.isArray(body.to) ? body.to.filter((x): x is string => typeof x === "string").slice(0, 100).map((x) => x.slice(0, 30)) : null, body.chat === true);
   const skip = typeof body.skip === "string" ? body.skip.slice(0, 600) : "";
   const dev = typeof body.dev === "string" && /^[a-z0-9]{8,40}$/.test(body.dev) ? body.dev : "";
   if (typeof body.team === "string" && /^[a-z0-9]{10,20}$/.test(body.team) && typeof body.k === "string" && /^[a-z0-9]{24,40}$/.test(body.k))

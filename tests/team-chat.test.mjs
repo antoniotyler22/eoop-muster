@@ -109,3 +109,73 @@ test("setup: the SQL part, the system check and the bundle are in place", () => 
   const b = readFileSync(new URL("../tools/bundle.mjs", import.meta.url), "utf8");
   assert.match(b, /features\/team-chat\.js/);
 });
+
+test("4.99.0: sending a message alerts the team's phones as a chat alert", async () => {
+  const srv = server();
+  const a = await openApp({ rpc: srv.rpc, fn: () => ({ body: {} }) });
+  try {
+    await setup(a);
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(200);
+    a.$("#chIn").value = "Form up now";
+    a.$("#chForm").dispatchEvent(new a.w.Event("submit", { cancelable: true, bubbles: true })); await sleep(400);
+    const c = a.calls.find((x) => /functions\/v1\/notify/.test(x.url) && x.body && x.body.chat === true);
+    assert.ok(c, "notify called with chat:true");
+    assert.equal(c.body.talk, FEED.id);
+    assert.equal(c.body.tx, "Form up now");
+    const n = readFileSync(new URL("../supabase/functions/notify/index.ts", import.meta.url), "utf8");
+    assert.match(n, /💬/);
+  } finally { await a.close(); }
+});
+
+test("4.99.0: opening Chat shows a New messages divider above what you haven't read", async () => {
+  const srv = server();
+  const a = await openApp({ rpc: srv.rpc });
+  try {
+    await setup(a);
+    await a.w.eval(`(async()=>{const ek=S.feeds[0].ek;const mk=async(by,tx,id)=>({id,ct:await fdEnc(ek,{k:"m",by,tx,t:Date.now()}),created_at:new Date().toISOString()});
+      window.__r=[await mk("SGT JONES","old one",1),await mk("SGT JONES","new one",2)]})()`);
+    srv.rows.push(...a.w.eval("window.__r"));
+    a.w.eval(`S.chatSeen={"${FEED.id}":1}`);
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(500);
+    const d = a.$("#chNew");
+    assert.ok(d, "divider shown");
+    assert.match(d.textContent, /New messages/);
+    assert.match(d.nextElementSibling.textContent, /new one/);
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
+
+test("4.100.0: Official tab shows updates from Accounted For, read-only, with an unread dot until opened", async () => {
+  const posts = [
+    { id: 1, body: "Welcome to Accounted For.", url: "", created_at: new Date(Date.now() - 864e5).toISOString() },
+    { id: 2, body: "New: team chat is live.", url: "https://example.com/news", created_at: new Date().toISOString() },
+  ];
+  const a = await openApp({ rpc: (n, args) => (n === "official_get" ? posts.filter((p) => p.id > (args.p_after || 0)) : []) });
+  try {
+    await setup(a);
+    await a.w.eval(`window.officialPull(true)`); await sleep(300);
+    assert.equal(a.w.eval("officialUnread()"), 2);
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(200);
+    assert.ok(a.$("[data-seg='official'] .of-dot"), "dot on the Official segment");
+    a.$("[data-seg='official']").click(); await sleep(300);
+    assert.equal(a.w.eval("view"), "official");
+    assert.equal(a.$$(".of-row").length, 2);
+    assert.match(a.$(".of-row .of-n").textContent, /Accounted For/);
+    assert.match(a.$(".of-more").getAttribute("href"), /example\.com/);
+    assert.ok(!a.$("#ofForm") && !a.$("#chIn"), "no composer for regular users");
+    assert.match(a.$(".of-foot").textContent, /Only the Accounted For team can post/);
+    assert.equal(a.w.eval("officialUnread()"), 0, "read once opened");
+    assert.equal(a.$("#tabbar [data-tab='talk']").getAttribute("aria-current"), "page");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
+
+test("4.100.0: the owner function and SQL part for the official channel are in place", () => {
+  const sql = readFileSync(new URL("../supabase/setup/45_official_channel.sql", import.meta.url), "utf8");
+  assert.match(sql, /create table if not exists public\.official_posts/);
+  assert.match(sql, /grant execute on function public\.official_get/);
+  assert.doesNotMatch(sql, /grant (insert|update|delete)[^;]*to anon/);
+  const o = readFileSync(new URL("../supabase/functions/owner/index.ts", import.meta.url), "utf8");
+  assert.match(o, /case "opost"/);
+  assert.match(o, /case "odel"/);
+});
