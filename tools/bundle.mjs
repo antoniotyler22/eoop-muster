@@ -95,6 +95,7 @@ export const SOURCES = [
   "features/feed-badge.js",
   "features/signals.js",
   "features/talk.js",
+  "features/team-chat.js",
   "features/feed-react.js",
   "features/dm-as.js",
   "features/dm-push.js",

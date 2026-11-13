@@ -14,7 +14,7 @@ test("Talk tab opens the Talk screen with the switch off", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     await setup(a);
-    a.$("#tabbar [data-tab='talk']").click(); await sleep(150);
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(50); a.$("[data-seg='voice']").click(); await sleep(150);
     assert.equal(a.w.eval("view"), "talk");
     assert.ok(a.$("#tkSw"), "switch shown");
     assert.equal(a.$("#tkSw").getAttribute("aria-checked"), "false");
@@ -31,7 +31,7 @@ test("switching Talk on shows the radio icon by my name and tells the server", a
   const a = await openApp({ rpc: (fn, b) => { if (fn === "talk_send") { sent.push(b); return 1; } return []; } });
   try {
     await setup(a);
-    a.$("#tabbar [data-tab='talk']").click(); await sleep(100);
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(50); a.$("[data-seg='voice']").click(); await sleep(100);
     a.$("#tkSw").click(); await sleep(250);
     assert.equal(a.$("#tkSw").getAttribute("aria-checked"), "true");
     assert.ok(a.$(".tk-you .tk-ri"), "radio icon by my name");
@@ -47,7 +47,7 @@ test("a leader builds a group and everyone picked is in it", async () => {
   const a = await openApp({ rpc: (fn, b) => { if (fn === "talk_send") { sent.push(b); return sent.length; } return []; } });
   try {
     await setup(a);
-    a.$("#tabbar [data-tab='talk']").click(); await sleep(100);
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(50); a.$("[data-seg='voice']").click(); await sleep(100);
     a.$("#tkNewG").click(); await sleep(50);
     a.$("#tkGMake").click(); await sleep(50);
     assert.match(a.$("#tkGE").textContent, /Enter a group name first/);
@@ -66,7 +66,7 @@ test("send-to offers Everyone, My section and Pick people; anyone can build a gr
   const a = await openApp({ rpc: (fn) => (fn === "talk_send" ? 1 : []) });
   try {
     await setup(a, `S.feeds[0].lk=""`);
-    a.$("#tabbar [data-tab='talk']").click(); await sleep(150);
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(50); a.$("[data-seg='voice']").click(); await sleep(150);
     const t = a.$("#tkChips").textContent;
     assert.match(t, /Everyone/); assert.match(t, /My section \(1ST\)/); assert.match(t, /Pick people/);
     a.$("[data-tkg='sec:1ST']").click(); await sleep(50);
@@ -80,7 +80,7 @@ test("the group picker lists roster people who never turned Talk on, and a group
   const a = await openApp({ rpc: (fn, b) => { if (fn === "talk_send") { sent.push(b); return sent.length; } return []; } });
   try {
     await setup(a, `S.source="mol";S.roster=[{id:"r1",rank:"CPL",name:"Reyes, Jo",sec:"1ST"},{id:"r2",rank:"SGT",name:"Dunn, Al",sec:"2ND"}]`);
-    a.$("#tabbar [data-tab='talk']").click(); await sleep(400);
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(50); a.$("[data-seg='voice']").click(); await sleep(400);
     a.$("#tkNewG").click(); await sleep(400);
     const txt = a.$("#tkG").textContent;
     assert.match(txt, /CPL REYES/); assert.match(txt, /SGT DUNN/); assert.match(txt, /Talk off/);
@@ -97,7 +97,7 @@ test("a Talk message can be deleted with its Delete button and stays deleted", a
   const a = await openApp({ rpc: () => [] });
   try {
     await setup(a, `S.talkLog=[{f:"${FEED.id}",id:7,by:"CPL TEST",g:"all",t:Date.now(),d:3,tx:"hello there"},{f:"${FEED.id}",id:8,by:"CPL TEST",g:"all",t:Date.now(),d:2,tx:"second one"}]`);
-    a.$("#tabbar [data-tab='talk']").click(); await sleep(150);
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(50); a.$("[data-seg='voice']").click(); await sleep(150);
     assert.equal(a.$$ ? a.$$(".tk-sl").length : a.w.eval("document.querySelectorAll('.tk-sl').length"), 2, "both messages are swipe rows");
     assert.ok(a.$("[data-tksl='7'] .tk-del"), "Delete sits behind the message");
     a.$("[data-tksl='7'] .tk-del").click(); await sleep(400);
@@ -114,7 +114,7 @@ test("deleting my own message tells everyone; a leader or the sender's delete no
   const a = await openApp({ rpc: (fn, b) => { if (fn === "talk_send") { sent.push(b); return 50 + sent.length; } if (fn === "talk_get") return rows.filter(r => r.id > b.p_after); return []; } });
   try {
     await setup(a, `S.talkLog=[{f:"${FEED.id}",id:7,by:"CPL TEST",g:"all",t:Date.now(),d:3,tx:"mine"},{f:"${FEED.id}",id:8,by:"SGT OTHER",g:"all",t:Date.now(),d:2,tx:"theirs"}]`);
-    a.$("#tabbar [data-tab='talk']").click(); await sleep(150);
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(50); a.$("[data-seg='voice']").click(); await sleep(150);
     // 1) deleting my own message sends an encrypted delete note
     sent.length = 0;
     a.$("[data-tksl='7'] .tk-del").click(); await sleep(500);
@@ -145,7 +145,7 @@ test("Talk shows who has it on: names of everyone listening", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     await setup(a);
-    a.$("#tabbar [data-tab='talk']").click(); await sleep(150);
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(50); a.$("[data-seg='voice']").click(); await sleep(150);
     assert.ok(!a.$("#main .tk-lw"), "no strip when nobody is listening");
     a.$("#tkSw").click(); await sleep(250);
     const strip = a.$("#main .tk-lw");
@@ -165,7 +165,7 @@ test("a clip from someone else puts a red number on the Talk tab until you open 
     const bd = a.$("#tabbar [data-tab='talk'] .bd");
     assert.ok(bd, "red number appears");
     assert.equal(bd.textContent, "2", "two clips from other people (mine not counted)");
-    a.$("#tabbar [data-tab='talk']").click(); await sleep(200);
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(50); a.$("[data-seg='voice']").click(); await sleep(200);
     assert.ok(!a.$("#tabbar [data-tab='talk'] .bd"), "cleared once Talk is open");
     a.w.eval(`view="home";render()`); await sleep(60);
     assert.ok(!a.$("#tabbar [data-tab='talk'] .bd"), "stays cleared");
