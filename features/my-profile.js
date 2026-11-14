@@ -115,10 +115,25 @@ function feedTab(){const f=typeof fdCur==="function"?fdCur():null;
 
 const H=n=>{try{return typeof window[n]==="function"?window[n]():""}catch(e){return""}};
 function settings(){if(!setOpen)return "";return `<div id="mpSet"><div class="sech" style="margin-top:18px"><h2>Settings for my page</h2></div>${H("ppPanelHtml")}${H("qhPanelHtml")}${(S.role!=="view")?H("gfLeadHtml"):""}${memberM()?memGf:""}${H("acctHtml")}</div>`}
+/* Ask lives at the bottom of everyone's My Page (4.108.0): type a question, the newest answer shows right here.
+   "All questions" opens the full Ask screen (history and the OIC controls). */
+function askCard(){try{if(typeof akHidden!=="function"||typeof renderAsk!=="function")return "";
+  if(S.appCfg&&S.appCfg.ask_off)return "";if(akHidden()&&!(canEdit()&&!memberM()))return "";
+  const ex=(AK_EX[MODES[S.mode]?S.mode:"military"]||AK_EX.military)[0],x=S.ask&&S.ask[0];
+  return `<div class="panel" id="mpAsk" style="margin-top:14px"><b>💬 Ask</b><label for="akQ" class="note" style="display:block;margin:4px 0">Orders, admin, leave, pay, fitness, anything ${S.mode&&S.mode!=="military"?"for your team":"military"}</label>
+    <textarea id="akQ" maxlength="600" style="min-height:64px" placeholder="${esc(ex)}"${akBusy?" disabled":""}>${esc(akDraft)}</textarea>
+    <button class="btn" id="akGo"${akBusy?" disabled":""}>${akBusy?"Searching official sources…":"Ask"}</button>
+    ${akErr?`<div class="note" style="color:var(--warn);font-weight:700">${esc(akErr)}</div>`:""}
+    ${x?`<div class="note" style="margin-top:10px"><b>You</b> · ${esc(ago(x.t))}</div><div style="font-weight:700">${esc(x.q)}</div><div style="line-height:1.5">${akFmt(x.a)}</div>${x.src.length?`<div class="note"><b>Sources</b>${x.src.map(s2=>`<div>• <a href="${esc(s2.url)}" target="_blank" rel="noopener">${esc(s2.title||s2.url)}</a></div>`).join("")}</div>`:`<div class="note" style="color:var(--s-duty)">No official source was cited. Verify it.</div>`}`:""}
+    <p class="note">Answers can be wrong or out of date: check the order or your admin shop before acting. Don't type names, SSNs or anything sensitive.</p>
+    <button class="btn alt" data-go="ask" style="width:100%">All questions${canEdit()&&!memberM()?" and controls":""}</button></div>`}catch(e){return ""}}
+/* while a question runs, or after an error, redraw the page it was asked from instead of jumping to the Ask screen */
+{const _as=akSend;akSend=async function(){try{return await _as.apply(this,arguments)}finally{if(view==="mypg"||view==="me"){try{render()}catch(e){}}}}}
+{const _ra=renderAsk;renderAsk=function(){if(view==="mypg"||view==="me"){try{render()}catch(e){}return}return _ra.apply(this,arguments)}}
 function pageHTML(){const own=selfRow(),D=digest(own);
   const body=tab==="feed"?feedTab():tab==="cal"?calTab(D):planTab(D);
   let ban="";try{ban=!memberM()&&typeof banner==="function"?banner():""}catch(e){}
-  return ban+head(own,D,memberM())+ckBlock(own)+teamCard()+highlights(D)+tabs()+`<div class="mp-body" role="tabpanel">${body}</div>`+settings()+`<p class="note" id="afVer" style="text-align:center;margin:18px 0 6px">Version ${esc(window.AV||"")}</p>`}
+  return ban+head(own,D,memberM())+ckBlock(own)+teamCard()+highlights(D)+tabs()+`<div class="mp-body" role="tabpanel">${body}</div>`+settings()+askCard()+`<p class="note" id="afVer" style="text-align:center;margin:18px 0 6px">Version ${esc(window.AV||"")}</p>`}
 
 /* ---------- render ---------- */
 {const _r=render;render=function(){
