@@ -183,3 +183,18 @@ test("Post and push needs a second tap, then posts and sends one broadcast", asy
     assert.ok(calls.some(c => /Formation moved to 0700/.test(c)), JSON.stringify(calls));
   } finally { a.close(); }
 });
+
+test("owner sign-in still works when the member lookup says 'Too many tries'", async () => {
+  const a = await openApp({ rpc: (fn) => (fn === "login_get" ? [{ wait: 600 }] : null), fn: (name, body) => {
+    if (name !== "owner") return { status: 404, body: "x" };
+    if (body.op === "login") return body.user === "tonybeso" && body.pass === "pw" ? { status: 200, body: { tok: TOK, exp: Date.now() + 3600000 } } : { status: 401, body: { error: "wrong" } };
+    return { status: 200, body: { cfg: {} } }; } });
+  try {
+    a.w.eval(HOME); await settle(a); a.w.eval(`lgSignSheet();`);
+    a.$("#lgSU").value = "Tonybeso"; a.$("#lgSP").value = "pw";
+    await a.w.eval("lgSignIn(document.querySelector('#lgGo'))");
+    await until(() => a.w.eval("view") === "owner");
+    assert.equal(a.w.eval("view"), "owner");
+    assert.equal(a.w.eval("ownerOn()"), true);
+  } finally { a.close(); }
+});
