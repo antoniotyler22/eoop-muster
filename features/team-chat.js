@@ -12,7 +12,8 @@ const ready=f=>!!(f&&f.mk&&f.ek&&f.id);
 const seenMap=()=>{if(!S.chatSeen||typeof S.chatSeen!=="object")S.chatSeen={};return S.chatSeen};
 const ST={};
 const st=f=>ST[f.id]=ST[f.id]||{after:0,msgs:new Map(),busy:false,init:false,err:""};
-const ui={draft:"",stick:true,base:undefined};
+const ui={draft:"",stick:true,base:undefined,md:"",busy:0};
+const MD=()=>window.afMedia||null;
 const enter=()=>{const f=feed();ui.base=f&&seenMap()[f.id]!==undefined?seenMap()[f.id]:undefined};
 if(typeof SYNC_SKIP!=="undefined"&&Array.isArray(SYNC_SKIP)&&!SYNC_SKIP.includes("chatSeen"))SYNC_SKIP.push("chatSeen");
 
@@ -22,7 +23,7 @@ async function poll(f){const s=st(f);if(s.busy||!ready(f))return;s.busy=true;let
   try{for(;;){const rows=await SB.rpc("chat_get",{p_feed:f.id,p_key:f.mk,p_after:s.after});const L=[...(rows||[])].sort((a,b)=>a.id-b.id);
       for(const r of L){s.after=Math.max(s.after,+r.id);const o=await fdDec(f.ek,r.ct);if(!o||(o.k!=="m"&&o.k!=="a"))continue;const id=+r.id;if(s.msgs.has(id))continue;
         const t=Date.parse(r.created_at)||o.t||Date.now();
-        s.msgs.set(id,{id,k:o.k,by:String(o.by||"?").slice(0,30),tx:String(o.tx||"").slice(0,MAXTX),t:Math.min(Date.now(),t),st:String(o.st||"").slice(0,24)});fresh++}
+        s.msgs.set(id,{id,k:o.k,by:String(o.by||"?").slice(0,30),tx:String(o.tx||"").slice(0,MAXTX),md:MD()?MD().keep(o.md):"",t:Math.min(Date.now(),t),st:String(o.st||"").slice(0,24)});fresh++}
       if(L.length<100||++loops>8)break}
     s.err="";s.init=true;
     if(fresh){trim(s);if(view==="chat")draw(true);else{renderTabs()}}
@@ -58,7 +59,7 @@ function bubbles(f){const L=list(f),nm=me(f);if(!L.length)return `<div class="ch
     const dk=dayKey(m.t);if(dk!==day){day=dk;prev=null;out+=`<div class="ch-day"><span>${dayLabel(m.t)}</span></div>`}
     if(m.k==="a"){out+=`<div class="ch-sys"><span>✓ ${esc2(m.by)} is accounted for · ${hm(m.t)}</span></div>`;prev=null;continue}
     const mine=m.by===nm,first=!prev||prev.by!==m.by||m.t-prev.t>5*60e3;prev=m;
-    out+=`<div class="ch-row${mine?" me":""}${first?" first":""}">${!mine&&first?av(m.by,28):`<span class="ch-sp"></span>`}<div class="ch-b">${!mine&&first?`<small class="ch-n">${esc2(m.by)}</small>`:""}<div class="ch-t">${esc2(m.tx).replace(/\n/g,"<br>")}<time datetime="${new Date(m.t).toISOString()}">${hm(m.t)}</time></div></div></div>`}
+    out+=`<div class="ch-row${mine?" me":""}${first?" first":""}">${!mine&&first?av(m.by,28):`<span class="ch-sp"></span>`}<div class="ch-b">${!mine&&first?`<small class="ch-n">${esc2(m.by)}</small>`:""}<div class="ch-t">${m.md&&MD()?MD().tag(m.md,"ch-md"):""}${esc2(m.tx).replace(/\n/g,"<br>")}<time datetime="${new Date(m.t).toISOString()}">${hm(m.t)}</time></div></div></div>`}
   return out}
 function html(){const f=feed();
   if(!ready(f))return `<div class="ch">${seg("chat")}<div class="ch-empty"><b>Chat runs on your Word of Mouth</b><span>Start a Word of Mouth (or open the link your leader sent), then come back.</span><button class="btn" data-go="feed" style="margin-top:10px">Go to Word of Mouth</button></div></div>`;
@@ -69,7 +70,9 @@ function html(){const f=feed();
    <div class="ch-list" id="chList" role="log" aria-live="polite">${bubbles(f)}</div>
    <p class="ch-err" id="chErr" role="status">${esc2(s.err?"Couldn't reach the team. Messages will send when you're back online.":"")}</p>
    <div class="ch-send"><button type="button" class="ch-acc" id="chAcc"><span aria-hidden="true">✓</span> I'm accounted for</button>
-    <form class="ch-comp" id="chForm"><textarea id="chIn" rows="1" maxlength="${MAXTX}" placeholder="Message the team" aria-label="Message the team">${esc2(ui.draft)}</textarea><button type="submit" class="ch-go" id="chGo" aria-label="Send">➤</button></form></div></div>`}
+    <div id="chDraft">${draftHTML()}</div><form class="ch-comp" id="chForm"><button type="button" class="afm-att" id="chAtt" aria-label="Attach a photo, meme or video">📎</button><textarea id="chIn" rows="1" maxlength="${MAXTX}" placeholder="Message the team" aria-label="Message the team">${esc2(ui.draft)}</textarea><button type="submit" class="ch-go" id="chGo" aria-label="Send">➤</button></form></div></div>`}
+function draftHTML(){return ui.md&&MD()?`<div class="afm-draft">${MD().tag(ui.md,"")}<span>${MD().isVideo(ui.md)?"Video":"Photo"} ready. Tap send.</span><button type="button" class="btn alt" id="chAttX">Remove</button></div>`:""}
+function paintDraft(){const d=document.getElementById("chDraft");if(d)d.innerHTML=draftHTML()}
 function paintErr(t){const e=document.getElementById("chErr");if(e)e.textContent=t?"Couldn't reach the team. Messages will send when you're back online.":""}
 function grow(){const t=document.getElementById("chIn");if(t){t.style.height="auto";t.style.height=Math.min(120,t.scrollHeight)+"px"}}
 function draw(keepFocus){if(view!=="chat")return;const main=document.getElementById("main");if(!main)return;const f=feed();
@@ -101,15 +104,17 @@ function injectSeg(){if(view!=="talk")return;const m=document.getElementById("ma
   if(top)top.insertAdjacentHTML("afterend",`<div style="display:flex;justify-content:center">${seg("voice")}</div>`);else if(m.querySelector(".tk"))m.querySelector(".tk").insertAdjacentHTML("afterbegin",seg("voice"))}
 new MutationObserver(()=>{try{injectSeg()}catch(e){}}).observe(document.documentElement,{childList:true,subtree:true});
 
-async function send(f,text){const tx=String(text||"").trim().slice(0,MAXTX);if(!tx||!ready(f))return false;const s=st(f);
-  const o={k:"m",by:me(f),tx,t:Date.now()};
-  try{const id=await put(f,o);if(id&&!s.msgs.has(id)){s.msgs.set(id,{id,k:"m",by:o.by,tx,t:o.t,st:""});s.after=Math.max(s.after,id)}ui.stick=true;s.err="";try{SB.notify(null,{talk:f.id,k:f.mk,chat:true,dev:window.dmDev?window.dmDev():undefined,ti:o.by,tx:tx.slice(0,90)})}catch(e){}return true}
+async function send(f,text,md){const tx=String(text||"").trim().slice(0,MAXTX);md=md&&MD()&&MD().valid(md)?md:"";if((!tx&&!md)||!ready(f))return false;const s=st(f);
+  const o={k:"m",by:me(f),tx,t:Date.now()};if(md)o.md=md;
+  try{const id=await put(f,o);if(id&&!s.msgs.has(id)){s.msgs.set(id,{id,k:"m",by:o.by,tx,md:md&&MD()?MD().keep(md):"",t:o.t,st:""});s.after=Math.max(s.after,id)}ui.stick=true;s.err="";try{SB.notify(null,{talk:f.id,k:f.mk,chat:true,dev:window.dmDev?window.dmDev():undefined,ti:o.by,tx:(tx||(md&&MD().isVideo(md)?"🎬 Video":"📷 Photo")).slice(0,90)})}catch(e){}return true}
   catch(e){s.err=String(e&&e.message||e).slice(0,80);paintErr(s.err);toast("Couldn't send. Check your connection and try again.");return false}}
 document.addEventListener("submit",async e=>{if(!e.target.closest||!e.target.closest("#chForm"))return;e.preventDefault();const f=feed(),t=document.getElementById("chIn");if(!f||!t)return;
-  const v=t.value;if(!v.trim())return;t.value="";ui.draft="";grow();const ok=await send(f,v);if(!ok){t.value=v;ui.draft=v;grow()}draw(true)},true);
+  const v=t.value;const md=ui.md;if(!v.trim()&&!md)return;t.value="";ui.draft="";ui.md="";paintDraft();grow();const ok=await send(f,v,md);if(!ok){t.value=v;ui.draft=v;ui.md=md;paintDraft();grow()}draw(true)},true);
 document.addEventListener("keydown",e=>{const t=e.target;if(!t||t.id!=="chIn")return;if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){e.preventDefault();const fm=document.getElementById("chForm");if(fm){if(fm.requestSubmit)fm.requestSubmit();else fm.dispatchEvent(new Event("submit",{cancelable:true,bubbles:true}))}}});
 document.addEventListener("input",e=>{if(e.target&&e.target.id==="chIn"){ui.draft=e.target.value;grow()}},true);
 document.addEventListener("click",async e=>{if(view!=="chat")return;const t=e.target;if(!t.closest)return;
+  if(t.closest("#chAtt")){if(MD())MD().pick(d=>{ui.md=d;paintDraft()});else toast("Photos aren't available here.");return}
+  if(t.closest("#chAttX")){ui.md="";paintDraft();return}
   if(t.closest("#chBar")){if(typeof memberMode==="function"&&memberMode())return;view="board";armed=null;render();window.scrollTo(0,0);return}
   if(t.closest("#chAcc")){const f=feed();if(!f)return;const btn=t.closest("#chAcc");if(btn.dataset.busy)return;btn.dataset.busy="1";
     try{const r=typeof window.quickSafe==="function"?await window.quickSafe():"no";
