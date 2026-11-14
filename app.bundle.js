@@ -12189,9 +12189,9 @@ function counts2(){try{if(S.source==="sample"||!Array.isArray(S.roster)||!S.rost
 const sub=f=>{const s=st(f);const n=new Set(list(f).map(m=>m.by)).size;return (s.init?(n?`${n} in the conversation`:"No messages yet"):"Connecting…")+" · private to this team"};
 function bar(){const c=counts2();if(!c)return "";const p=Math.round(100*c.ok/c.n);const all=c.ok>=c.n;
   return `<button type="button" class="ch-bar${all?" done":""}" id="chBar" aria-label="${c.ok} of ${c.n} accounted for. Open the board"><span class="ch-bt"><b>${c.ok} of ${c.n}</b> accounted for</span><span class="ch-bw" aria-hidden="true"><i style="width:${p}%"></i></span></button>`}
-function seg(active){const ld=!(typeof memberMode==="function"&&memberMode());const dot=(k,n)=>n&&active!==k?`<i class="of-dot" aria-label="${n} new"></i>`:"";const tb=k=>{try{return typeof tabBadge==="function"?tabBadge(k):0}catch(e){return 0}};
+function seg(active){const ld=!(typeof memberMode==="function"&&memberMode());const dot=(k,n)=>n&&active!==k?`<i class="of-dot" aria-label="${n} new">${n>9?"9+":n}</i>`:"";const tb=k=>{try{return typeof tabBadge==="function"?tabBadge(k):0}catch(e){return 0}};
   const o=typeof window.officialUnread==="function"?window.officialUnread():0;const B=(k,l,n)=>`<button type="button" role="tab" data-seg="${k}" aria-selected="${active===k}">${l}${dot(k,n)}</button>`;
-  return `<div class="ch-seg" role="tablist" aria-label="Chat, feed, inbox, official updates or voice">${B("chat","Chat",0)}${ld?B("feed","Feed",tb("feed")):""}${ld?B("inbox","Inbox",tb("inbox")):""}${B("official","Official",o)}${B("voice","Voice",0)}</div>`}
+  return `<div class="ch-seg" role="tablist" aria-label="Chat, feed, inbox, official updates or voice">${B("chat","Chat",unread())}${ld?B("feed","Feed",tb("feed")):""}${ld?B("inbox","Inbox",tb("inbox")):""}${B("official","Official",o)}${B("voice","Voice",typeof window.talkUnread==="function"?window.talkUnread():0)}</div>`}
 window.chatSeg=seg;
 function bubbles(f){const L=list(f),nm=me(f);if(!L.length)return `<div class="ch-empty"><b>${st(f).init?"No messages yet":"Loading the conversation…"}</b>${st(f).init?"<span>Say something to your team. Messages are private to this team and stay for 30 days.</span>":""}</div>`;
   let out="",day="",prev=null,div=false;
@@ -12348,7 +12348,7 @@ function paint(){if(view!=="official")return;const l=document.getElementById("of
   const atBottom=l.scrollHeight-l.scrollTop-l.clientHeight<80;l.innerHTML=posts();if(atBottom)l.scrollTop=l.scrollHeight;mark();renderTabs()}
 function mark(){const X=O(),m=last();if(m>(X.seen||0)){X.seen=m;rawSave()}}
 function enter(){ui.base=O().seen||undefined;if(!O().seen)ui.base=undefined}
-function refreshSeg(){const b=document.querySelectorAll(".ch-seg [data-seg='official'] .of-dot");/* dot is drawn by chatSeg; redraw segs */const n=unread();document.querySelectorAll(".ch-seg [data-seg='official']").forEach(el=>{el.innerHTML="Official"+(n?`<i class="of-dot" aria-label="${n} new"></i>`:"")})}
+function refreshSeg(){const b=document.querySelectorAll(".ch-seg [data-seg='official'] .of-dot");/* dot is drawn by chatSeg; redraw segs */const n=unread();document.querySelectorAll(".ch-seg [data-seg='official']").forEach(el=>{el.innerHTML="Official"+(n?`<i class="of-dot" aria-label="${n} new">${n>9?"9+":n}</i>`:"")})}
 window.officialEnter=enter;window.officialPull=pull;
 if(window.afMedia)window.afMedia.remote=async id=>{if(!/^o\d+$/.test(id))return "";try{const r=await SB.rpc("official_media",{p_id:+id.slice(1)});const d=Array.isArray(r)?r[0]:r;const v=typeof d==="string"?d:d&&d.official_media;if(window.afMedia.valid(v)){window.afMedia.put(id,v);return v}}catch(e){}return ""};
 
@@ -12390,7 +12390,7 @@ if(typeof HELP==="object"&&HELP.feed&&Array.isArray(HELP.feed[2]))HELP.feed[2].p
 .of-foot{margin:0;text-align:center;font-size:12.5px;color:var(--muted);padding:8px 0 2px}
 .of-comp{display:flex;flex-direction:column;gap:8px}.of-comp textarea{height:76px;min-height:0;resize:none}.of-comp textarea,.of-comp input[type=url]{box-sizing:border-box;width:100%;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:var(--surface-2,var(--card,#fff));color:var(--ink);font:inherit;font-size:16px}
 .of-chk2{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600}.of-err{margin:0;min-height:16px;font-size:12.5px;color:var(--warn)}
-.of{height:calc(100dvh - 190px)}.of-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warn);margin-left:6px;vertical-align:1px}`;document.head.appendChild(c)}
+.of{height:calc(100dvh - 190px)}.of-dot{display:inline-block;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;background:var(--warn,#e5322d);color:#fff;font:800 11px/18px system-ui,sans-serif;font-style:normal;text-align:center;margin-left:6px;vertical-align:1px}`;document.head.appendChild(c)}
 })();
 
 /* ===== features/feed-react.js ===== */
@@ -14366,7 +14366,7 @@ function injectSeg(){if(!lead()||typeof window.chatSeg!=="function")return;const
 new MutationObserver(()=>{try{injectSeg()}catch(e){}}).observe(document.documentElement,{childList:true,subtree:true});
 
 /* ---------- Home cards: what's new, then backup ---------- */
-const NEWS=["Ask is now at the bottom of My Page. Type a question and the answer shows right there.","Word of Mouth takes memes (GIFs) and one short video per post, not just photos. Tap Photo, meme or video above Post.","Photos, memes and videos in chat. Tap the 📎 next to the message box in Team chat and in Messages and groups.","Videos can be about 10 seconds. A bigger clip is shrunk on your phone first. Memes (GIFs) keep moving.","The official Accounted For channel can now carry photos and videos too.","Everything you send in chat is still private to your team. Photos and videos are kept for 7 days."];
+const NEWS=["New messages show a red number: on the Chat tab, and on Chat, Feed, Inbox, Official and Voice inside it.","Ask is now at the bottom of My Page. Type a question and the answer shows right there.","Word of Mouth takes memes (GIFs) and one short video per post, not just photos. Tap Photo, meme or video above Post.","Photos, memes and videos in chat. Tap the 📎 next to the message box in Team chat and in Messages and groups.","Videos can be about 10 seconds. A bigger clip is shrunk on your phone first. Memes (GIFs) keep moving.","The official Accounted For channel can now carry photos and videos too.","Everything you send in chat is still private to your team. Photos and videos are kept for 7 days."];
 function cards(){if(!lead()||!S.onb||S.welcomed===0)return "";
   if(S.seenVer!==window.AV)return `<div class="panel ft-card" id="ftNew" style="margin:12px 0"><b>What's new in ${esc(window.AV)}</b><ul style="margin:6px 0 8px;padding-left:18px">${NEWS.map(x=>`<li style="margin:3px 0">${esc(x)}</li>`).join("")}</ul><button class="btn alt" id="ftNewOk" style="width:100%">Got it</button></div>`;
   const synced=!!(S.sync&&S.sync.on);const due=!S.bkAt||Date.now()-S.bkAt>14*864e5;
