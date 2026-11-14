@@ -20,7 +20,12 @@ test("My page: the person button opens a leader's My page with SOS, photo, quiet
     a.$("#v13Hdr").click();
     await sleep(80);
     assert.equal(a.w.eval("view"), "mypg");
-    for (const id of ["#sosHome", "#ppPanel", "#qhPanel", "#gfLead"]) assert.ok(a.$(id), id + " on My page");
+    assert.ok(a.$("#main .mp-head"), "the new My Page");
+    assert.ok(a.$("[data-go='sos']"), "SOS button on My Page");
+    a.$("[data-mpgo='edit']").click();
+    await sleep(100);
+    assert.equal(a.w.eval("view"), "mypgset");
+    for (const id of ["#sosHome", "#ppPanel", "#qhPanel", "#gfLead"]) assert.ok(a.$(id), id + " behind Edit my page");
   } finally { await a.close(); }
 });
 
@@ -33,6 +38,8 @@ test("My page: a leader with a roster entry gets the member-style page plus SOS,
     a.$("#v13Hdr").click();
     await sleep(100);
     assert.equal(a.w.eval("view"), "mypg");
+    a.$("[data-mpgo='edit']").click();
+    await sleep(100);
     assert.ok(a.$("#main .hero"), "member-style status card");
     assert.ok(!a.$("#meOff"), "no remove-link button");
     for (const id of ["#sosHome", "#ppPanel", "#qhPanel", "#gfLead"]) assert.ok(a.$(id), id);

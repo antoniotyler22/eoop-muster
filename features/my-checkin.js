@@ -87,7 +87,7 @@ document.addEventListener("click",e=>{const t=e.target;if(!t.closest||!t.closest
   const s=t.closest("[data-myst]");if(s){grab();c.st=s.dataset.myst;c.pick=false;redraw();try{buzz()}catch(e2){}return}
   if(t.closest("#myCkSend")){send();return}},true);
 document.addEventListener("change",e=>{if(e.target.id!=="myWho"||!e.target.value)return;pickWho(e.target.value)});
-window.myCkShow=show;
+window.myCkShow=show;window.myCkCard=cardHTML;
 })();
 
 /* Needs attention: a quiet section isn't a problem to fix. Its tile already says when it last updated, so the

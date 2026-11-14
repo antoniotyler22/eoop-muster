@@ -5,7 +5,7 @@ import { openApp, sleep } from "./harness.mjs";
 
 const setup = `S.source="mol";S.welcomed=1;S.onb=true;S.role="co";S.sync={on:true,code:"X"};S.feeds=[{id:"f",mk:"m",lk:"l",ek:"e",posts:[]}];
   const R=S.roster.filter(m=>m.sec!=="ATT");R.forEach(m=>{m.status="On Hand";delete m.start;delete m.end;m.ckAt=Date.now()-36e5;m.upd=null});
-  S.tl={};S.cks=[];`;
+  S.tl={};S.cks=[];window.mpNoLand=1;`;
 
 test("a status older than 24 hrs drops out of the numbers; check-in brings it back", async () => {
   const a = await openApp({ rpc: () => [] });
