@@ -55,7 +55,7 @@ function leaderLib(){return [
   {s:'#main [data-go="checkins"]',opt:1,t:"Check-ins",b:"Your people check in from their phone. You get an alert, tap <b>Confirm</b> and their line on the roster updates with dates and location. <b>Not right</b> sends a note back. Everything in <b>Activity</b> has Confirm too."},
   {s:'#main [data-go="access"]',opt:1,t:"People with access",b:"Everyone who can open your team, on your roster or not: My pages, logins, invites and open links. Cut anyone off from here."},
   {s:'#main [data-go="support"]',opt:1,t:"Help & support",b:"Ask any question about the app and get an answer right away, or email a person."},
-  {pre:tourPv,go:"mepv",s:"#main .card.hero",opt:1,t:"What your people see: My page",b:"This is an example My page, built from your roster. Each person gets a private link or login to their own page: their status, countdowns, duty, due-outs and calendar."},
+  {pre:tourPv,go:"mepv",s:"#main .mp-head",opt:1,t:"What your people see: My page",b:"This is an example My page, built from your roster. Each person gets a private link or login to their own page: their status, countdowns, duty, due-outs and calendar."},
   {pre:tourPv,go:"mepv",s:"#ckCard",opt:1,t:"Their Check in button",b:"They tap <b>Check in</b>, pick a status or <b>Other</b> and write it in. Anything but On Hand asks <b>From</b>, <b>To</b> and <b>Location</b>. It comes to you to confirm."},
   {pre:tourPv,go:"mepv",s:"#meUpd",opt:1,t:"Their updates",b:"When you change their status or answer a check-in, they get an alert here and tap <b>Confirm</b>."},
   {pre:tourPv,go:"mepv",s:'#main a[href="#start"]',opt:1,t:"Their own team",b:"Anyone can start their own team from here. Nothing connects back to you."},

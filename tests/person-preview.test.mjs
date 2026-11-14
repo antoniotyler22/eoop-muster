@@ -14,11 +14,10 @@ test("View their My page shows the new My Page for that person", async () => {
     assert.ok(a.$(".mp-tabs"), "new tabs");
     assert.match(a.$(".mp-name").textContent, /Mensah/i);
     assert.ok(!a.$("#dmAs"), "no Messaging as strip");
-    assert.ok(!a.$("#ckCard"), "no check-in controls for the leader");
+    assert.ok(a.$(".mp-ck") && a.$(".mp-ck").hasAttribute("inert"), "check-in card shown but inert");
+    assert.ok(a.$(".mp-hls"), "same circles as My Page");
     a.$("[data-mptab='cal']").click(); await sleep(150);
     assert.equal(a.w.eval(`view`), "mepv");
     assert.ok(a.$(".mp-week"), "calendar tab");
-    a.$("#v12PMsg").click(); await sleep(250);
-    assert.equal(a.w.eval(`view`), "dm");
   } finally { await a.close(); }
 });

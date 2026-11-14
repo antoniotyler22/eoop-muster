@@ -108,6 +108,7 @@ export const SOURCES = [
   "features/sos.js",
   "features/geofence.js","features/my-top.js",
   "features/member-feed.js",
+  "features/person-page.js",
   "features/swipe-tiles.js",
   "features/today-ticker.js",
   "features/duty-swap.js",

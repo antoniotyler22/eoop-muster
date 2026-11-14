@@ -12,7 +12,8 @@ const DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturda
 const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
 const plus=n=>{const d=new Date();d.setDate(d.getDate()+n);return iso(d)};
 const pd=s=>{const m=String(s||"").match(/^(\d{4})-(\d{2})-(\d{2})/);return m?new Date(+m[1],+m[2]-1,+m[3]):null};
-const memberM=()=>typeof memberMode==="function"&&memberMode();
+let pvOn=false;const pvRow=()=>(S.roster||[]).find(x=>x.id===window.mpPv)||null;
+const memberM=()=>pvOn||(typeof memberMode==="function"&&memberMode());
 /* the OIC's phone (and the incoming OIC) keeps Home as its front door; everyone below that lands on My Page */
 const picOwner=()=>!S.link&&!S.lite&&(!S.role||S.role==="oic"||S.role==="newoic");
 const lowLeader=()=>!memberM()&&!picOwner()&&S.level!=="co";
@@ -50,7 +51,7 @@ const initials=(own,D)=>{const raw=String((own&&own.name)||(D&&D.name)||S.myName
 const nameLine=(own,D)=>{try{const a=typeof addressName==="function"?addressName():"";if(a)return a}catch(e){}
   const raw=String((own&&own.name)||(D&&D.name)||"").split(",")[0].trim();const rk=(own&&own.rank)||(D&&D.rank)||"";
   return ((typeof fullRank==="function"?fullRank(rk):rk)+" "+raw.toLowerCase().replace(/(^|\s|-)\S/g,c=>c.toUpperCase())).trim()||"My Page"};
-const photoFor=()=>{try{return typeof afPhoto==="function"?afPhoto(S.who&&S.who.n||S.myName||""):""}catch(e){return ""}};
+const photoFor=()=>{if(pvOn)return "";try{return typeof afPhoto==="function"?afPhoto(S.who&&S.who.n||S.myName||""):""}catch(e){return ""}};
 function ckState(own){const t=(own&&own.ckAt)||(!own&&memberM()&&S.myCks&&S.myCks[0]&&S.myCks[0].t)||0;return {at:t||0,ok:!!t&&Date.now()-t<24*3600000}}
 function avatar(own,D){const p=photoFor(),ck=ckState(own);
   const face=p?`<img src="${esc(p)}" alt="" class="mp-face">`:`<span class="mp-face">${esc(initials(own,D))}</span>`;
@@ -73,7 +74,7 @@ function head(own,D,forMember){
 
 /* ---------- check-in (slide) ---------- */
 function ckBlock(own){
-  if(memberM()){const ck=ckState(null);
+  if(memberM()){const ck=ckState(pvOn?pvRow():null);
     return `<div class="mp-ck"><div class="mp-ckh"><span class="mp-eye" style="color:${ck.ok?"var(--s-onhand)":"var(--brass)"}">${ck.ok?"ACCOUNTED FOR":"NOT CHECKED IN TODAY"}</span><h2>${ck.ok?"You're accounted for":"Are you accounted for?"}</h2><p class="note" style="margin:2px 0 0">Pick your status, then slide to check in.</p></div><div id="mpCkSlot"></div></div>`}
   if(!real())return `<div class="card"><p class="note" style="margin:0">Your page fills in once you're on a team roster. Add your people in Tools, or open the link your leader sent.</p></div>`;
   if(typeof window.myCkShow!=="function"||!window.myCkShow()||typeof window.myCkCard!=="function")return "";
@@ -130,23 +131,10 @@ function askCard(){try{if(typeof akHidden!=="function"||typeof renderAsk!=="func
 /* while a question runs, or after an error, redraw the page it was asked from instead of jumping to the Ask screen */
 {const _as=akSend;akSend=async function(){try{return await _as.apply(this,arguments)}finally{if(view==="mypg"||view==="me"){try{render()}catch(e){}}}}}
 {const _ra=renderAsk;renderAsk=function(){if(view==="mypg"||view==="me"){try{render()}catch(e){}return}return _ra.apply(this,arguments)}}
-/* 4.110.0: a leader's "View their My page" shows the same new My Page, read-only, for the person they opened */
-window.mpPreviewHTML=function(m,D){const k=iso(new Date()),L=items(D);
-  if(tab==="feed")tab="plan";
-  const plan=within(L,k,plus(7)).length,ev=within(L,k,plus(14)).filter(x=>x.ty==="EVENT").length;
-  const nm=(typeof title==="function"&&typeof lastOf==="function")?title(m.rank)+" "+title(lastOf(m)):((m.rank?m.rank+" ":"")+String(m.name||"").split(",")[0]).toLowerCase().replace(/(^|\s|-)\S/g,c=>c.toUpperCase());
-  const c=(n,l)=>`<div><b>${n}</b><span>${l}</span></div>`;
-  const tb=`<div class="mp-tabs" role="tablist">${[["plan","Plan"],["cal","Calendar"]].map(([x,l])=>`<button type="button" role="tab" aria-selected="${tab===x}" data-mptab="${x}">${svg(x==="plan"?"log":"plan",20)}${l}</button>`).join("")}</div>`;
-  return `<div class="banner" style="margin-top:12px"><span>👁 <b>Leader view.</b> What ${esc(nm)} sees. Read only.${m.pk?"":" Their My page isn't on yet."}</span><button data-pcard="${esc(m.id)}">Back</button></div>
-  <section class="mp-head" aria-label="Their My Page"><div class="mp-top"><span class="mp-eye">THEIR MY PAGE</span></div>
-    <div class="mp-prof"><div class="mp-av"><div class="mp-ring"><span class="mp-face">${esc(initials(m,D))}</span></div></div><div class="mp-stats">${c(plan,"Plan")}${c(ev,"Events")}${c(D&&D.due?(D.due||[]).filter(x=>x.st==="over").length:0,"Overdue")}</div></div>
-    <div class="mp-name">${esc(nm)}</div><div class="mp-unit">${unitLine(m,D)}</div>${statusLine(D)}
-    <div class="mp-btns"><button type="button" class="mp-b" id="v12PMsg">Message</button><button type="button" class="mp-b" data-pcard="${esc(m.id)}">Their profile</button></div></section>
-  ${tb}<div class="mp-body" role="tabpanel">${tab==="cal"?calTab(D):planTab(D)}</div>`};
 function pageHTML(){const own=selfRow(),D=digest(own);
   const body=tab==="feed"?feedTab():tab==="cal"?calTab(D):planTab(D);
   let ban="";try{ban=!memberM()&&typeof banner==="function"?banner():""}catch(e){}
-  return ban+head(own,D,memberM())+ckBlock(own)+teamCard()+highlights(D)+tabs()+`<div class="mp-body" role="tabpanel">${body}</div>`+settings()+askCard()+`<p class="note" id="afVer" style="text-align:center;margin:18px 0 6px">Version ${esc(window.AV||"")}</p>`}
+  return ban+head(own,D,memberM())+ckBlock(own)+teamCard()+highlights(D)+tabs()+`<div class="mp-body" role="tabpanel">${body}</div>`+(pvOn?"":settings()+askCard())+`<p class="note" id="afVer" style="text-align:center;margin:18px 0 6px">Version ${esc(window.AV||"")}</p>`}
 
 /* ---------- render ---------- */
 {const _r=render;render=function(){
@@ -158,18 +146,23 @@ function pageHTML(){const own=selfRow(),D=digest(own);
 {const _tl=tabsList;tabsList=function(){const L=_tl.apply(this,arguments);if(!lowLeader())return L;const i=L.findIndex(x=>x[0]==="home");if(i<0)return L;const o=L.slice();o[i]=["mypg","My Page","mypg"];return o}}
 /* a member's page is the same My Page. The page they had is rebuilt into it: updates to confirm, emergency muster, the check-in
    card and the account/"start my own team" block are moved across so nothing is lost; the rest is replaced */
-{const _rm=renderMe;renderMe=function(){const r=_rm.apply(this,arguments);try{
-  if(view!=="me"||!S.me||String(S.me.pk)==="preview")return r;const m=$("#main");if(!m||m.querySelector(".mp-head"))return r;if(!S.me.d)return r;
+{const _rm=renderMe;renderMe=function(){const r=_rm.apply(this,arguments);const pv=view==="mepv";if(pv)pvOn=true;try{
+  if((view!=="me"&&!pv)||!S.me)return r;const m=$("#main");if(!m||m.querySelector(".mp-head"))return r;if(!S.me.d)return r;
   const q=x=>m.querySelector(x);const gf=q("#gfMe");memGf=gf?gf.outerHTML:"";
   const ck=q("#ckCard"),upd=q("#meUpd"),must=[...m.querySelectorAll(".me-muster")];
+  const extras=[...m.children].filter(x=>/^afMy/.test(x.id||""));
   const tail=[...m.children].filter(x=>(x.querySelector&&x.querySelector("#meOff"))||x.id==="meOff"||(x.classList.contains("panel")&&x.querySelector('a[href="#start"]'))||(x.tagName==="P"&&x.querySelector('[data-go="support"]')));
   m.innerHTML=pageHTML()+'<div class="me-built" style="display:none"></div>';
   const slot=q("#mpCkSlot");if(slot&&ck)slot.replaceWith(ck);else if(slot)slot.remove();
   const ver=q("#afVer");
   tail.forEach(x=>{if(ver)ver.insertAdjacentElement("beforebegin",x)});
+  extras.forEach(x=>{const v2=q("#afVer");if(v2)v2.insertAdjacentElement("beforebegin",x);else m.appendChild(x)});
   [upd,...must].reverse().forEach(x=>{if(x)m.insertAdjacentElement("afterbegin",x)});
-  try{if(typeof window.feedPicsFill==="function")window.feedPicsFill()}catch(e){}}catch(e){}return r}}
-{const _tl=tabsList;tabsList=function(){const L=_tl.apply(this,arguments);if(!memberM())return L;return L.map(x=>x[0]==="me"?["me","My Page","mypg"]:x)}}
+  if(pv){m.querySelectorAll(".mp-btns,.mp-ck,[data-mpgo='quiet'],[data-mpgo='set']").forEach(x=>{x.setAttribute("inert","");x.style.opacity=".85"})}
+  try{if(typeof window.feedPicsFill==="function")window.feedPicsFill()}catch(e){}}catch(e){}finally{pvOn=false}return r}}
+{const _tl=tabsList;tabsList=function(){const L=_tl.apply(this,arguments);if(!memberM())return L;return L.filter(x=>x[0]!=="mecal").map(x=>x[0]==="me"?["me","My Page","mypg"]:x)}}
+/* a member's Calendar is the Calendar tab of their My Page */
+{const _rc=render;render=function(){if(view==="mecal"&&memberM()&&S.me&&S.me.d){view="me";tab="cal"}return _rc.apply(this,arguments)}}
 
 /* ---------- taps ---------- */
 document.addEventListener("pointerdown",()=>{touched=true},true);document.addEventListener("keydown",()=>{touched=true},true);
