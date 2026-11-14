@@ -32,7 +32,7 @@ test("all setup parts run, and run again (safe to re-run)", { skip }, () => {
 });
 
 test("tables are closed to the public; only functions are reachable", { skip }, () => {
-  for (const t of ["recalls", "checkins", "logins", "pro_ents", "pro_feeds", "client_errors", "escalations"]) {
+  for (const t of ["recalls", "checkins", "logins", "pro_ents", "pro_feeds", "client_errors", "escalations", "addon_ents", "addon_codes"]) {
     assert.throws(() => anon(`select count(*) from public.${t}`), /permission denied/, t);
   }
 });
@@ -280,4 +280,27 @@ test("owner health and log (part 30): only the server reads health; the owner lo
   assert.equal(asServer(`select public.owner_remove('feed', 'ownerrm001')`), "0", "gone");
   assert.throws(() => asServer(`select public.owner_remove('table', 'x')`), /bad kind/);
   assert.match(pg.psql(`select cron_token from public.app_cfg where id = 1`), /^[0-9a-f]{64}$/);
+});
+
+test("Add-ons: a code works once for one team; credits are summed, can't go below zero, and other teams see nothing", { skip }, () => {
+  const tok = "k".repeat(48), other = "z".repeat(48);
+  const code = "AB12-CD34";
+  pg.psql(`insert into public.addon_codes(code_hash, sku, qty, days) values (${q(sha(code))}, 'site', 1, 30), (${q(sha("CREDITS-50"))}, 'credits', 50, null)`);
+  assert.throws(() => anon(`select public.addon_redeem(${q(tok)}, 'wrong')`), /not valid/);
+  assert.throws(() => anon(`select public.addon_redeem('short', ${q(code)})`), /not allowed/);
+  assert.equal(anon(`select public.addon_redeem(${q(tok)}, ${q(" ab12-cd34 ")})`), "site", "case and spaces don't matter");
+  assert.throws(() => anon(`select public.addon_redeem(${q(other)}, ${q(code)})`), /not valid|already used/, "second use fails");
+  assert.equal(anon(`select sku || ':' || qty from public.addon_list(${q(tok)})`), "site:1");
+  assert.equal(anon(`select count(*) from public.addon_list(${q(other)})`), "0", "another team sees nothing");
+  anon(`select public.addon_redeem(${q(tok)}, 'credits-50')`);
+  assert.equal(anon(`select public.addon_spend(${q(tok)}, 20, 'r1')`), "30");
+  assert.equal(anon(`select qty from public.addon_list(${q(tok)}) where sku = 'credits'`), "30");
+  assert.throws(() => anon(`select public.addon_spend(${q(tok)}, 31, 'r2')`), /Not enough/);
+  assert.throws(() => anon(`select public.addon_spend(${q(other)}, 1, 'r3')`), /Not enough/);
+  assert.throws(() => anon(`select public.addon_spend(${q(tok)}, 0, 'r4')`), /bad count/);
+  assert.equal(anon(`select public.addon_spend(${q(tok)}, 30, 'r5')`), "0");
+  pg.psql(`update public.addon_ents set expires_at = now() - interval '1 day' where sku = 'site'`);
+  assert.equal(anon(`select count(*) from public.addon_list(${q(tok)}) where sku = 'site'`), "0", "an ended license stops counting");
+  assert.throws(() => anon(`select * from public.addon_ents`), /permission denied/);
+  assert.throws(() => anon(`select public._addon_th('x')`), /permission denied/);
 });

@@ -11,10 +11,11 @@ const NAME={free:"Free",pro:"Pro",org:"Org"};
 const used=()=>S.source==="sample"?0:(S.roster||[]).length;
 
 function tier(){const N=window.MBN;
+  if(window.afSiteOn&&window.afSiteOn())return "org"; /* site license (addons.js) */
   if(!proOK())return "free";
   if(!N||!N.on||!(N.pro&&N.pro.active))return "org"; /* web / Android / member views: unlocked */
   return /\.org\./.test(String(N.pro.pid||""))?"org":"pro"}
-const cap=()=>CAP[tier()];
+const cap=()=>Math.max(CAP[tier()],window.afPassCap?window.afPassCap():0); /* an Event Pass (addons.js) lifts the limit while it lasts */
 const room=()=>Math.max(0,cap()-used());
 window.afTier=tier;window.afCap=cap;window.afRoom=room;
 

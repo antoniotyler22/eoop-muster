@@ -98,6 +98,31 @@ export function isProSub(sub: any, prices: string[]) {
   const items = (sub && sub.items && sub.items.data) || [];
   return items.some((it: any) => it && it.price && prices.includes(it.price.id));
 }
+/** One-time add-ons (SQL part 48). The app sends a catalog key; the price comes from a secret, never from the app.
+ *  Secrets: STRIPE_ADDON_<KEY in capitals>  e.g. STRIPE_ADDON_CREDITS_100 = price_...  (create each as a ONE-TIME price). */
+export const ADDONS: Record<string, { sku: string; qty: number; days: number | null }> = {
+  credits_100: { sku: "credits", qty: 100, days: null }, credits_500: { sku: "credits", qty: 500, days: null }, credits_2000: { sku: "credits", qty: 2000, days: null },
+  pass: { sku: "pass", qty: 1, days: 3 },
+  compliance: { sku: "compliance", qty: 1, days: 365 },
+  brand: { sku: "brand", qty: 1, days: 365 },
+  kit_school: { sku: "kit_school", qty: 1, days: null }, kit_work: { sku: "kit_work", qty: 1, days: null },
+  kit_youth: { sku: "kit_youth", qty: 1, days: null }, kit_event: { sku: "kit_event", qty: 1, days: null }, kits: { sku: "kits", qty: 1, days: null },
+  tip_2: { sku: "tip", qty: 1, days: null }, tip_5: { sku: "tip", qty: 1, days: null }, tip_10: { sku: "tip", qty: 1, days: null },
+};
+/** A paid Checkout Session -> the addon_ents row it unlocks (null when it isn't one of ours or isn't paid). */
+export function addonRow(s: any, now = Date.now()) {
+  const m = s && s.metadata;
+  if (!s || !m || !m.addon || !ADDONS[m.addon] || !/^[0-9a-f]{64}$/.test(String(m.th || ""))) return null;
+  if (s.status !== "complete" || s.payment_status !== "paid" || typeof s.id !== "string" || !/^cs_[A-Za-z0-9_]{10,200}$/.test(s.id)) return null;
+  const a = ADDONS[m.addon];
+  return { tok_hash: m.th, sku: a.sku, qty: a.qty, expires_at: a.days ? new Date(now + a.days * 864e5).toISOString() : null, source: "stripe", ref: s.id };
+}
+async function grantAddon(s: any) {
+  const row = addonRow(s);
+  if (!row) return null;
+  await rest("addon_ents?on_conflict=ref", { method: "POST", body: JSON.stringify(row), headers: { Prefer: "resolution=ignore-duplicates,return=minimal" } });
+  return row;
+}
 const proPrices = () => [env("STRIPE_PRICE_MONTHLY"), env("STRIPE_PRICE_YEARLY")].filter(Boolean);
 
 export async function handle(req: Request): Promise<Response> {
@@ -115,6 +140,9 @@ export async function handle(req: Request): Promise<Response> {
         // Events can arrive out of order: read the subscription as it is now instead of trusting the event.
         const sub = await stripe("subscriptions/" + id);
         if (isProSub(sub, proPrices())) { const row = stripeRow(sub); if (row) await save(row); }
+      }
+      if (ev.type === "checkout.session.completed" && typeof id === "string" && /^cs_[A-Za-z0-9_]{10,200}$/.test(id) && ev.data.object.metadata && ev.data.object.metadata.addon) {
+        await grantAddon(await stripe("checkout/sessions/" + id)); // read it fresh from Stripe, as for subscriptions
       }
       return json({ ok: 1 });
     }
@@ -146,6 +174,27 @@ export async function handle(req: Request): Promise<Response> {
       if (!row) return json({ error: "No subscription found." }, 404);
       return json(await save(row));
     }
+    if (b.op === "addon") {
+      const a = typeof b.key === "string" ? ADDONS[b.key] : undefined;
+      const price = a ? env("STRIPE_ADDON_" + b.key.toUpperCase()) : "";
+      if (!a || typeof b.tok !== "string" || b.tok.length < 32 || b.tok.length > 128) return json({ error: "bad request" }, 400);
+      if (!price) return json({ error: "That add-on isn't on sale yet." }, 503);
+      const back = backOK(b.back, allowed) ?? allowed[0];
+      const s = await stripe("checkout/sessions", {
+        mode: "payment", "line_items[0][price]": price, "line_items[0][quantity]": "1",
+        "metadata[addon]": b.key, "metadata[th]": await sha256hex(b.tok),
+        success_url: back + "#addon_ok={CHECKOUT_SESSION_ID}", cancel_url: back + "#tools",
+      });
+      return json({ url: s.url });
+    }
+    if (b.op === "addon_claim") {
+      if (typeof b.session !== "string" || !/^cs_[A-Za-z0-9_]{10,200}$/.test(b.session) || typeof b.tok !== "string") return json({ error: "bad request" }, 400);
+      const s = await stripe("checkout/sessions/" + b.session);
+      if (s.status !== "complete" || s.payment_status !== "paid") return json({ error: "Payment isn't complete yet." }, 409);
+      if (!s.metadata || s.metadata.th !== await sha256hex(b.tok)) return json({ error: "That purchase belongs to another team." }, 403);
+      const row = await grantAddon(s);
+      return row ? json({ ok: 1, sku: row.sku }) : json({ error: "No add-on found." }, 404);
+    }
     if (b.op === "portal") {
       // Managing billing shows the payer's email and card, so it goes through Stripe's own sign-in (an emailed code),
       // not the Pro code (which leaders share with other devices).
@@ -156,7 +205,7 @@ export async function handle(req: Request): Promise<Response> {
     return json({ error: "bad request" }, 400);
   } catch (e) {
     const t = String((e as Error).message || e);
-    if (/pro_ents|schema cache|does not exist/i.test(t)) return json({ error: "Pro isn't set up on the server yet. Run SQL part 20." }, 503);
+    if (/pro_ents|addon_ents|schema cache|does not exist/i.test(t)) return json({ error: "Pro isn't set up on the server yet. Run SQL part 20 (and 48 for add-ons)." }, 503);
     console.error("billing:", t);
     return json({ error: "Something went wrong on the server. Try again in a minute." }, 500);
   }

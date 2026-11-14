@@ -44,3 +44,20 @@ test("REVIEW FIX: only Pro prices count; index.html return links work", () => {
   assert.equal(isProSub({ items: { data: [{ price: { id: "price_y" } }] } }, ["price_m", "price_y"]), true);
   assert.equal(backOK("https://antoniotyler22.github.io/eoop-muster/index.html#x", ["https://antoniotyler22.github.io/eoop-muster/"]), "https://antoniotyler22.github.io/eoop-muster/");
 });
+
+import { addonRow, ADDONS } from "../supabase/functions/billing/index.ts";
+test("add-ons: only a paid Checkout Session we made becomes a purchase; the catalog fixes what each one unlocks", () => {
+  const th = "a".repeat(64);
+  const ok = { id: "cs_test_abc1234567", status: "complete", payment_status: "paid", metadata: { addon: "credits_500", th } };
+  const r = addonRow(ok, 1000);
+  assert.equal(r.sku, "credits"); assert.equal(r.qty, 500); assert.equal(r.expires_at, null); assert.equal(r.ref, ok.id); assert.equal(r.tok_hash, th);
+  const p = addonRow({ ...ok, metadata: { addon: "pass", th } }, 0);
+  assert.equal(p.sku, "pass"); assert.equal(Date.parse(p.expires_at), 3 * 864e5);
+  assert.equal(addonRow({ ...ok, payment_status: "unpaid" }), null, "unpaid");
+  assert.equal(addonRow({ ...ok, status: "open" }), null, "not complete");
+  assert.equal(addonRow({ ...ok, metadata: { addon: "credits_999999", th } }), null, "unknown key: the app can't invent a product");
+  assert.equal(addonRow({ ...ok, metadata: { addon: "pass", th: "nope" } }), null, "bad team hash");
+  assert.equal(addonRow({ ...ok, id: "../x" }), null, "bad session id");
+  assert.equal(addonRow({ id: "cs_test_abc1234567", status: "complete", payment_status: "paid", metadata: {} }), null, "someone else's session");
+  for (const k of Object.keys(ADDONS)) assert.match(ADDONS[k].sku, /^[a-z0-9_]{2,30}$/);
+});
