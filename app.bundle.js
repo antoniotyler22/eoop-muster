@@ -4062,7 +4062,11 @@ document.addEventListener("click",e=>{const t=e.target.closest("[data-tab]");if(
 document.addEventListener("click",e=>{const t=e.target;let b;
   /* sections */
   if(t.id==="v12PView"){pvId=pid;view="mepv";render();window.scrollTo(0,0);return}
-  if(t.id==="v12PMsg"){dmWith=pid;view="dm";render();window.scrollTo(0,0);return}
+  if(t.id==="v12PMsg"){dmWith=pid;const m=S.roster.find(x=>x.id===pid);
+    if(typeof window.inboxOwner==="function"&&!window.inboxOwner()&&!memberMode()){if(typeof window.inboxWhy==="function")window.inboxWhy();else toast("Messages open on the OIC's phone.");return}
+    const open=()=>{view="dm";render();window.scrollTo(0,0)};
+    if(m&&!m.pk&&typeof mpTurnOn==="function"){t.disabled=true;toast("Setting up private messages…");mpTurnOn(m).then(open,err=>{t.disabled=false;toast(String(err&&err.message||err).slice(0,90)+" Check signal and tap again.")});return}
+    open();return}
   if(t.id==="v12MvGo"){if(!mvSel.size||!mvTo)return;let n=0;S.roster.forEach(m=>{if(mvSel.has(m.id)&&m.sec!==mvTo){m.sec=mvTo;n++}});mvSel=new Set();afterRoster(n+" moved to "+mvTo);redraw(renderPeople);return}
   /* 6W */
   if((b=t.closest("[data-v12wc]"))){W2.f[b.dataset.v12wc]=W2.f[b.dataset.v12wc]===b.dataset.val?"":b.dataset.val;redraw(renderW6);return}
