@@ -101,6 +101,7 @@ function ckCardHTML(){const f=ckFeed();const last=(S.myCks||[])[0];
   h+=`<div class="row2"><button class="btn" id="ckSend"${!ck.st||ck.busy?" disabled":""}>${ck.busy?"Sending…":"Send check-in"}</button>${ck.auto?"":`<button class="btn alt" id="ckX">Cancel</button>`}</div>
     <p class="note" style="margin:0">Goes to ${esc((f?f.unit:P.d.unit)||"your leader")}, encrypted. Your leader confirms it and your page updates.</p></div>`;
   return h}
+window.ckCardHTML=ckCardHTML;
 function ckRedraw(){const el=document.getElementById("ckCard");if(el){el.outerHTML=ckCardHTML()}else{const y=window.scrollY;render();window.scrollTo(0,y)}}
 async function ckSend(){ckGrab();const f=ckFeed();const P=f?null:ckPage();if(!f&&!P)return;const v=ck.v;const st=ck.st;
   if(f&&!f.me){toast("Set your name in Word of Mouth first.");return}

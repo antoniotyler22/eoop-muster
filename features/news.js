@@ -35,7 +35,7 @@ function place(){const m=$("#main");if(!m||$("#nwCard"))return;const h=html();if
 /* My page (members): the same card, under "Today for me". The page is rebuilt after it renders, so place it a tick later. */
 function placeMe(){if(view!=="me")return;const m=$("#main");if(!m||$("#nwCard"))return;const h=html();if(!h)return;
   const hd=[...m.querySelectorAll(".sech")].find(x=>/^Today for me/i.test(x.textContent.trim()));const strip=hd?hd.nextElementSibling:null;
-  if(strip)strip.insertAdjacentHTML("afterend",h);else{const ck=$("#ckCard");if(ck)ck.insertAdjacentHTML("afterend",h);else m.insertAdjacentHTML("beforeend",h)}
+  if(strip)strip.insertAdjacentHTML("afterend",h);else{const ck0=$("#ckCard"),ck=ck0&&(ck0.closest(".mp-ck")||ck0);if(ck)ck.insertAdjacentHTML("afterend",h);else m.insertAdjacentHTML("beforeend",h)}
   if(!cards().length||Date.now()-(N().at||0)>10*60000)load(false)}
 {const _r=render;render=function(){const r=_r.apply(this,arguments);if(view==="me")setTimeout(()=>{try{placeMe()}catch(e){}},0);return r}}
 

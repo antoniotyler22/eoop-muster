@@ -26,7 +26,8 @@ test("member with place check-in on is checked in once, only when inside the rad
       S.feeds=[];S.me={pk:"${"p".repeat(28)}",unit:"UT",d:D,t:Date.now()};S.onb=true;S.welcomed=1;S.gfOn=true;delete S.gfDay;view="me";render()})()`;
     await a.w.eval(setup(21.50, -157.76)); // about 5.5 km away
     await sleep(80);
-    assert.ok(a.$("#gfMe"), "card on the member page");
+    a.$("[data-mpgo='set']").click(); await sleep(100);
+    assert.ok(a.$("#gfMe"), "card on the member page, under Settings");
     await a.w.eval("gfCheck(false)"); await sleep(150);
     assert.equal(sent.length, 0, "outside: nothing sent");
     await a.w.eval(geo(21.4505, -157.7601)); // ~ 15 m

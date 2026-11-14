@@ -8,7 +8,9 @@ test("My page: member page has SOS, Profile photo and Quiet hours", async () => 
     await a.w.eval(`(async()=>{const m=S.roster[0];const D=mpDigest(m);D.feed={id:"abcdefghij1234",mk:"m".repeat(30),ek:"e".repeat(40),unit:"UT",secs:[]};D.cofeed=null;D.cks=[];
       S.feeds=[];S.me={pk:"${"p".repeat(28)}",unit:"UT",d:D,t:Date.now()};S.onb=true;S.welcomed=1;view="me";render()})()`);
     await sleep(80);
-    for (const id of ["#sosHome", "#ppPanel", "#qhPanel"]) assert.ok(a.$(id), id + " on the member page");
+    assert.ok(a.$("[data-go='sos']"), "SOS button on the member page");
+    a.$("[data-mpgo='set']").click(); await sleep(100);
+    for (const id of ["#ppPanel", "#qhPanel"]) assert.ok(a.$(id), id + " under Settings");
   } finally { await a.close(); }
 });
 

@@ -69,9 +69,9 @@ test("SOS 4.73.1: a member page has the red SOS button, and a pushed SOS opens t
     await a.w.eval(`(async()=>{const m=S.roster[0];const D=mpDigest(m);D.feed={id:"abcdefghij1234",mk:"m".repeat(30),ek:"e".repeat(40),unit:"UT",secs:[]};D.cofeed=null;D.cks=[];
       S.feeds=[];S.me={pk:"${"p".repeat(28)}",unit:"UT",d:D,t:Date.now()};S.onb=true;S.welcomed=1;view="me";render()})()`);
     await sleep(80);
-    const b = a.$("#sosHome");
+    const b = a.$("[data-go='sos']");
     assert.ok(b, "SOS button on the member page");
-    assert.match(b.className, /warn/, "same red outline as Emergency muster");
+    assert.match(b.className, /mp-sos/, "red SOS button");
     a.w.eval(`sosRecv({id:"s1abc",w:"Cpl Smith",k:"Medical",la:21.45,ln:-157.76,ac:12,t:Date.now()})`);
     await sleep(60);
     assert.match(a.$("#sosOv").textContent, /Cpl Smith/);

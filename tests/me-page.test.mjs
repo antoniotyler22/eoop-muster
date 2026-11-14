@@ -21,20 +21,13 @@ test("my page: greeting with 24-hour clock, check-in on top, the word, today, co
   const a = await memberApp(() => []);
   try {
     const main = a.$("#main");
-    assert.ok(main.querySelector(".me-built"), "rebuilt");
-    assert.match(a.$("#meDay").textContent, /^(SUNDAY|MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY), [A-Z]{3} \d{1,2} · \d{4}/);
-    assert.match(main.querySelector(".me-built .hm-h").textContent, /^Good (morning|afternoon|evening), /);
+    assert.ok(main.querySelector(".mp-head"), "new My Page");
     const order = a.w.eval(`[...document.querySelectorAll('#main > *')].map(x=>x.id||x.className.split(' ')[0])`);
-    assert.ok(order.indexOf("ckCard") < order.indexOf("meWord"), order.join(","));
-    assert.ok(a.$("#meWord article"), "the word shows on My page");
-    assert.ok(!a.$("#meWord [data-fdack][data-c='1']"), "no Got it / Confirm button, seen is automatic");
-    assert.match(main.textContent, /Today for me/);
+    assert.ok(order.indexOf("mp-head") < order.indexOf("mp-ck"), order.join(","));
+    assert.ok(a.$("#ckCard"), "check-in on My Page");
+    for (const k of ["feed", "plan", "cal"]) assert.ok(a.$(`.mp-tabs [data-mptab='${k}']`), k);
     assert.match(main.textContent, /Duty NCO/);
-    assert.match(main.textContent, /Coming up · 7 days/);
-    assert.match(main.textContent, /Unit 5K/);
     assert.match(main.textContent, /Event · everyone/);
-    assert.ok(a.$(".me-bottom"));
-    assert.ok(main.querySelector('[data-go="mecal"]'));
   } finally { a.close(); }
 });
 
@@ -43,7 +36,7 @@ test("my page: an open emergency muster shows on top with a reply button", async
   try {
     a.w.eval(`S.feeds[0].posts.unshift({id:6,t:Date.now()-30000,txt:"Storm — account for everyone now.",urg:true,to:{k:"all"},by:"Lt Park",ci:"https://antoniotyler22.github.io/eoop-muster/#ci=abc&u=1ST"});save();render()`);
     const order = a.w.eval(`[...document.querySelectorAll('#main > *')].map(x=>x.className.split(' ')[0])`);
-    assert.ok(order.indexOf("card") >= 0 && a.$(".me-muster"), order.join(","));
+    assert.ok(a.$(".me-muster") && order.indexOf("me-muster") < order.indexOf("mp-head"), order.join(","));
     assert.ok(a.$('[data-meci="ci=abc&u=1ST"]'));
   } finally { a.close(); }
 });

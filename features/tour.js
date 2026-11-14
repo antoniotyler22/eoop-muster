@@ -68,7 +68,7 @@ function memberLib(){return [
   {t:"Welcome",b:"Here's a quick walk-through of your app. When a button lights up and says <b>Tap it</b>, tap it. When you finish, you're in."},
   {s:tab("today"),tap:1,opt:1,t:"Today",b:"Tap <b>Today</b>. It shows what's happening for you today."},
   {s:tab("me"),tap:1,opt:1,t:"My page",b:"Tap <b>My page</b>."},
-  {s:"#main .card.hero",opt:1,t:"Your status",b:"Your status as your leader has it. It updates by itself. Something wrong? Tell your section leader."},
+  {s:"#main .card.hero, #main .mp-head",opt:1,t:"Your status",b:"Your status as your leader has it. It updates by itself. Something wrong? Tell your section leader."},
   {s:"#meUpd",opt:1,t:"Updates",b:"When your leader changes your status or answers your check-in, it shows here. Tap <b>Confirm</b> so they know you saw it."},
   {s:"#ckCard",opt:1,t:"Check in",b:"Tap <b>Check in</b> to tell your leader where you are. Pick your status, or <b>Other</b> and write it in. Anything but On Hand asks <b>From</b>, <b>To</b> and <b>Location</b>. Your leader confirms it and you'll see <b>✓ Confirmed</b> here."},
   {s:"#sosHome",opt:1,t:"SOS",b:"In danger or need help? Press and hold <b>SOS</b> for 3 seconds. Your whole team gets an urgent alert with your name and location. Call 911 first if it's life-threatening."},
