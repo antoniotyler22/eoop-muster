@@ -172,3 +172,18 @@ test("a clip from someone else puts a red number on the Talk tab until you open 
     assert.deepEqual(a.errors.filter((e) => !/Not implemented/.test(e)), []);
   } finally { await a.close(); }
 });
+
+test("pick people to talk to without making a group", async () => {
+  const a = await openApp({ rpc: (fn) => (fn === "talk_send" ? 1 : []) });
+  try {
+    await setup(a);
+    a.$("#tabbar [data-tab='talk']").click(); await sleep(50); a.$("[data-seg='voice']").click(); await sleep(100);
+    a.$("#tkNewG").click(); await sleep(50);
+    a.$("#tkGUse").click(); await sleep(50);
+    assert.match(a.$("#tkGE").textContent, /Tap at least one person/);
+    a.$("[data-tkp]").click(); await sleep(50);
+    a.$("#tkGUse").click(); await sleep(150);
+    assert.ok(a.$("#tkChips [aria-pressed='true']") && /^p:/.test(a.$("#tkChips [aria-pressed='true']").dataset.tkg), "chip for the chosen people is active");
+    assert.match(a.$(".tk-ring button, #tkBtn").getAttribute("aria-label"), /Hold to talk to /);
+  } finally { await a.close(); }
+});

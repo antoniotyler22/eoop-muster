@@ -11742,7 +11742,8 @@ const people=f=>{const s=st(f),out=[],seen=new Set();
   return out.sort((a,b)=>a.n.localeCompare(b.n))};
 const secs=f=>[...new Set(people(f).map(e=>secOf(f,e)).filter(Boolean))].sort();
 const groupsOf=f=>[...st(f).groups.values()].filter(g=>!g.x&&(f.lk||g.m.some(e=>entryMe(f,e)))).sort((a,b)=>a.n.localeCompare(b.n));
-const targets=(f,g)=>{if(g==="all")return people(f);if(g.startsWith("sec:")){const c=g.slice(4);return people(f).filter(e=>secOf(f,e)===c)}const G=st(f).groups.get(g);return G&&!G.x?G.m.slice():people(f)};
+const adhoc=g=>String(g).startsWith("p:")?String(g).slice(2).split("|").filter(Boolean):null;
+const targets=(f,g)=>{if(g==="all")return people(f);if(adhoc(g)){const A=new Set(adhoc(g));return people(f).filter(e=>A.has(e.n))}if(g.startsWith("sec:")){const c=g.slice(4);return people(f).filter(e=>secOf(f,e)===c)}const G=st(f).groups.get(g);return G&&!G.x?G.m.slice():people(f)};
 const forMe=(f,m)=>m.g==="all"||(m.g.startsWith("sec:")?m.g.slice(4)===mySec(f)||targets(f,m.g).some(e=>entryMe(f,e)):targets(f,m.g).some(e=>entryMe(f,e)));
 /* roster -> people with name hashes (hashing is async, so it fills in a moment after the screen opens) */
 function rosterOf(f){const s=st(f);if(S.source==="sample"||!Array.isArray(S.roster)||!S.roster.length||!SB.words||!SB.h)return [];
@@ -11856,7 +11857,7 @@ AFS.onChange(()=>{if(view==="talk"&&!ui.rec)draw()});
 setTimeout(()=>{const f=feed();if(f&&sharing())watchPos(f);if(f)beat(f)},3500);
 
 /* ---------- screen ---------- */
-const gname=(f,g)=>g==="all"?"Everyone":g.startsWith("sec:")?(g.slice(4)===mySec(f)?"My section":g.slice(4)+" section"):((st(f).groups.get(g)||{}).n||"Group");
+const gname=(f,g)=>adhoc(g)?(adhoc(g).length<=2?adhoc(g).join(" and "):adhoc(g).length+" people"):g==="all"?"Everyone":g.startsWith("sec:")?(g.slice(4)===mySec(f)?"My section":g.slice(4)+" section"):((st(f).groups.get(g)||{}).n||"Group");
 const fmtT=t=>{const d=new Date(t);return d.toLocaleDateString([],{weekday:"short",day:"numeric",month:"short"})+" "+String(d.getHours()).padStart(2,"0")+String(d.getMinutes()).padStart(2,"0")};
 function initials(n){const w=String(n||"?").split(/\s+/).filter(Boolean);return (w.length>1?w[0][0]+w[w.length-1][0]:(w[0]||"?").slice(0,2)).toUpperCase()}
 function av(f,n,sz,on0){const on=on0===undefined?isOn(f,n):on0,ph=window.afPhoto?window.afPhoto(n):"";return `<span class="tk-av" style="--sz:${sz||44}px${ph?`;background:center/cover no-repeat url(${ph})`:""}">${ph?"":esc(initials(n))}${on?`<i class="tk-badge">${RADIO(11)}</i>`:""}</span>`}
@@ -11875,13 +11876,15 @@ function chips(f){const g=tk().sel,mine=mySec(f);
   if(mine)L.push(["sec:"+mine,"My section ("+mine+")",targets(f,"sec:"+mine).length]);
   if(f.lk)for(const c of secs(f))if(c!==mine)L.push(["sec:"+c,c+" section",targets(f,"sec:"+c).length]);
   groupsOf(f).forEach(x=>L.push([x.id,x.n,x.m.length]));
+  if(adhoc(g))L.push([g,gname(f,g),adhoc(g).length]);
   return L.map(([id,n,c])=>`<button type="button" class="tk-chip" data-tkg="${esc(id)}" aria-pressed="${g===id}">${esc(n)} <b>${c}</b></button>`).join("")+`<button type="button" class="tk-chip dash" id="tkNewG">+ Pick people</button>`}
 function newGroup(f){if(!ui.newg)return "";const ppl=people(f);
-  return `<div class="tk-card" id="tkG"><b>Pick people for a group</b><p class="tk-note">Anyone on your list, even if they haven't turned Talk on. Everyone you pick hears everyone else once their Talk is on.</p>
-    <input id="tkGN" maxlength="24" placeholder="Group name" value="${esc(ui.gname)}" aria-label="Group name">
+  return `<div class="tk-card" id="tkG"><b>Choose who to talk to</b><p class="tk-note">Tap one person or several, then talk to them. No group needed. Anyone on your list, even if they haven't turned Talk on.</p>
     <div class="tk-pick">${ppl.map(e=>{const on=entryOn(f,e),sc=secOf(f,e);return `<button type="button" data-tkp="${esc(e.n)}" aria-pressed="${ui.gpick.has(e.n)}">${av(f,e.n,32,on)}<span>${esc(e.n)}${sc?` <small>${esc(sc)}</small>`:""}${on?"":` <small class="off">Talk off</small>`}${online(f,e)?` <small class="ol">Online</small>`:(lastSeen(f,e)?` <small>last seen ${esc(hhmm(lastSeen(f,e)))}</small>`:"")}</span><i></i></button>`}).join("")}</div>
     <div class="tk-err" id="tkGE" role="alert"></div>
-    <div class="tk-row"><button class="btn" id="tkGMake">Create group</button><button class="btn alt" id="tkGNo">Cancel</button></div></div>`}
+    <button class="btn" id="tkGUse" style="width:100%">Talk to ${ui.gpick.size?ui.gpick.size+" selected":"selected"}</button>
+    <input id="tkGN" maxlength="24" placeholder="Want to keep this list? Name it (optional)" value="${esc(ui.gname)}" aria-label="Group name">
+    <div class="tk-row"><button class="btn alt" id="tkGMake">Save as group</button><button class="btn alt" id="tkGNo">Cancel</button></div></div>`}
 const TRASH=`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/></svg>`;
 /* a message row you can swipe left to reveal Delete (or swipe all the way to delete) */
 const slide=(f,id,inner)=>{const o=ui.open===hk(f,id);return `<div class="tk-sl${o?" open":""}" data-tksl="${id}"><button type="button" class="tk-del" data-tkdel="${id}" aria-label="Delete message"${o?"":' tabindex="-1"'}>${TRASH}<span>Delete</span></button>${inner}</div>`};
@@ -11900,7 +11903,7 @@ function delMsg(f,id){const s=st(f),m=s.msgs.get(+id)||logs().find(x=>x.f===f.id
   else toast("Removed from this phone only")}
 function msgCard(f,m){const mine=m.by===me(f),on=ui.playing===f.id+":"+m.id;
   return slide(f,m.id,`<article class="tk-msg" data-tkm="${m.id}" tabindex="0">
-    <div class="tk-mh">${av(f,m.by,40)}<div class="tk-who"><b>${esc(m.by)}${isOn(f,m.by)?` <span class="tk-ri" title="Talk is on">${RADIO(13)}</span>`:""}</b><small>${esc(fmtT(m.t))} · ${m.d}s · ${esc(gname(f,m.g))}${mine?" · you":""}</small></div></div>
+    <div class="tk-mh">${av(f,m.by,40)}<div class="tk-who"><b${m.by!==me(f)?` data-tkto="${esc(m.by)}" style="cursor:pointer"`:""}>${esc(m.by)}${isOn(f,m.by)?` <span class="tk-ri" title="Talk is on">${RADIO(13)}</span>`:""}</b><small>${esc(fmtT(m.t))} · ${m.d}s · ${esc(gname(f,m.g))}${mine?" · you":""}</small></div></div>
     <div class="tk-mp"><button type="button" class="tk-play" data-tkplay="${m.id}" aria-label="${on?"Playing":"Play message"}">${on?"❚❚":"▶"}</button><div class="tk-wave">${bars(m.id)}</div></div>
     ${m.tx?`<p class="tk-tx">${esc(m.tx)}</p>`:`<p class="tk-tx dim">Voice message</p>`}</article>`)}
 function logCard(f,x){return slide(f,x.id,`<article class="tk-msg old" data-tkm="${x.id}" tabindex="0"><div class="tk-mh">${av(f,x.by,40)}<div class="tk-who"><b>${esc(x.by)}</b><small>${esc(fmtT(x.t))} · ${x.d}s · ${esc(gname(f,x.g))} · saved</small></div></div>${x.tx?`<p class="tk-tx">${esc(x.tx)}</p>`:`<p class="tk-tx dim">Voice message (audio expired)</p>`}</article>`)}
@@ -11956,6 +11959,9 @@ document.addEventListener("click",e=>{const t=e.target;if(!t.closest||view!=="ta
   if(t.closest("#tkNewG")){ui.newg=true;ui.gname="";ui.gpick=new Map();draw();return}
   if(t.closest("#tkGNo")){ui.newg=false;draw();return}
   const p=t.closest("[data-tkp]");if(p){const n=p.dataset.tkp;const i=$("#tkGN");if(i)ui.gname=i.value;if(ui.gpick.has(n))ui.gpick.delete(n);else{const e=people(f).find(x=>x.n===n);if(e)ui.gpick.set(n,e)}draw();return}
+  if(t.closest("#tkGUse")){const er=$("#tkGE");if(ui.gpick.size<1){if(er)er.textContent="Tap at least one person";return}
+    const ns=[...ui.gpick.keys()].slice(0,40);tk().sel="p:"+ns.join("|");save();ui.newg=false;draw();return}
+  const to=t.closest("[data-tkto]");if(to){tk().sel="p:"+to.dataset.tkto;save();draw();window.scrollTo(0,0);toast("Talking to "+to.dataset.tkto);return}
   if(t.closest("#tkGMake")){const i=$("#tkGN"),name=((i&&i.value)||"").trim(),er=$("#tkGE");ui.gname=name;
     if(!name){if(er)er.textContent="Enter a group name first";return}
     if(ui.gpick.size<1){if(er)er.textContent="Pick at least one member";return}
@@ -14411,7 +14417,7 @@ function injectSeg(){if(!lead()||typeof window.chatSeg!=="function")return;const
 new MutationObserver(()=>{try{injectSeg()}catch(e){}}).observe(document.documentElement,{childList:true,subtree:true});
 
 /* ---------- Home cards: what's new, then backup ---------- */
-const NEWS=["A person's page (People → a name) has the My Page look: photo ring, stats, action circles and Plan, Details and More tabs.","New messages show a red number: on the Chat tab, and on Chat, Feed, Inbox, Official and Voice inside it.","Ask is now at the bottom of My Page. Type a question and the answer shows right there.","Word of Mouth takes memes (GIFs) and one short video per post, not just photos. Tap Photo, meme or video above Post.","Photos, memes and videos in chat. Tap the 📎 next to the message box in Team chat and in Messages and groups.","Videos can be about 10 seconds. A bigger clip is shrunk on your phone first. Memes (GIFs) keep moving.","The official Accounted For channel can now carry photos and videos too.","Everything you send in chat is still private to your team. Photos and videos are kept for 7 days."];
+const NEWS=["Voice: tap one name, or pick several people with no group needed, then talk. Saved groups still work.","A person's page (People → a name) has the My Page look: photo ring, stats, action circles and Plan, Details and More tabs.","New messages show a red number: on the Chat tab, and on Chat, Feed, Inbox, Official and Voice inside it.","Ask is now at the bottom of My Page. Type a question and the answer shows right there.","Word of Mouth takes memes (GIFs) and one short video per post, not just photos. Tap Photo, meme or video above Post.","Photos, memes and videos in chat. Tap the 📎 next to the message box in Team chat and in Messages and groups.","Videos can be about 10 seconds. A bigger clip is shrunk on your phone first. Memes (GIFs) keep moving.","The official Accounted For channel can now carry photos and videos too.","Everything you send in chat is still private to your team. Photos and videos are kept for 7 days."];
 function cards(){if(!lead()||!S.onb||S.welcomed===0)return "";
   if(S.seenVer!==window.AV)return `<div class="panel ft-card" id="ftNew" style="margin:12px 0"><b>What's new in ${esc(window.AV)}</b><ul style="margin:6px 0 8px;padding-left:18px">${NEWS.map(x=>`<li style="margin:3px 0">${esc(x)}</li>`).join("")}</ul><button class="btn alt" id="ftNewOk" style="width:100%">Got it</button></div>`;
   const synced=!!(S.sync&&S.sync.on);const due=!S.bkAt||Date.now()-S.bkAt>14*864e5;
