@@ -68,7 +68,7 @@ function head(own,D,forMember){
     <div class="mp-top"><span class="mp-eye">MY PAGE</span></div>
     <div class="mp-prof">${avatar(own,D)}<div class="mp-stats">${stats(D)}</div></div>
     <div class="mp-name">${esc(nameLine(own,D))}</div><div class="mp-unit">${unitLine(own,D)}</div>${statusLine(D)}
-    <div class="mp-btns"><button type="button" class="mp-b" data-mpgo="${forMember?"photo":"edit"}">Edit my page</button><button type="button" class="mp-b" data-mpgo="ck">Change status</button><button type="button" class="mp-b mp-sos" data-go="sos">SOS</button></div></section>`}
+    <div class="mp-btns"><button type="button" class="mp-b" data-mpgo="${forMember?"photo":"set"}">Edit my page</button><button type="button" class="mp-b" data-mpgo="ck">Change status</button><button type="button" class="mp-b mp-sos" data-go="sos">SOS</button></div></section>`}
 
 /* ---------- check-in (slide) ---------- */
 function ckBlock(own){
@@ -83,7 +83,7 @@ function teamCard(){if(!real()||typeof counts!=="function")return "";let T;try{T
 /* ---------- the three tabs ---------- */
 function highlights(D){const k=iso(new Date());const planN=within(items(D),k,plus(7)).length;let un=0;try{un=typeof fdUnread==="function"?fdUnread():0}catch(e){}
   const h=(ic,l,tabk,n)=>`<button type="button" class="mp-hl" data-mptab="${tabk}"><span class="mp-hc">${svg(ic,24)}${n?`<i class="mp-hn">${n>9?"9+":n}</i>`:""}</span><span>${l}</span></button>`;
-  return `<div class="mp-hls">${h("plan","Plan","plan",planN)}${h("cal","Calendar","cal",0)}${h("feed","Feed","feed",un)}<button type="button" class="mp-hl" data-mpgo="edit"><span class="mp-hc">${svg("today",24)}</span><span>Quiet</span></button></div>`}
+  return `<div class="mp-hls">${h("plan","Plan","plan",planN)}${h("cal","Calendar","cal",0)}${h("feed","Feed","feed",un)}<button type="button" class="mp-hl" data-mpgo="quiet"><span class="mp-hc">${svg("today",24)}</span><span>Quiet</span></button></div>`}
 function tabs(){return `<div class="mp-tabs" role="tablist">${[["feed","Feed"],["plan","Plan"],["cal","Calendar"]].map(([k,l])=>`<button type="button" role="tab" aria-selected="${tab===k}" data-mptab="${k}">${svg(k==="feed"?"feed":k==="plan"?"log":"plan",20)}${l}</button>`).join("")}</div>`}
 function planTab(D){let h="";
   if(!D)return `<div class="card"><p class="note" style="margin:0">Pick which one is you above and your plan shows up here.</p></div>`;
@@ -110,17 +110,18 @@ function feedTab(){const f=typeof fdCur==="function"?fdCur():null;
   const L=f.posts.filter(p=>!p.pod&&(typeof fdForMe!=="function"||fdForMe(f,p))).slice(0,6);if(!L.length)return empty;
   return `<div id="mpFeed">${L.map(p=>fdCard(f,p,false,false)).join("")}</div><button type="button" class="btn alt" data-go="feed" style="width:100%;margin-top:12px">Open Word of Mouth ▸</button>`}
 
+const H=n=>{try{return typeof window[n]==="function"?window[n]():""}catch(e){return""}};
+function settings(){return `<div id="mpSet"><div class="sech" style="margin-top:18px"><h2>My settings</h2></div>${H("ppPanelHtml")}${H("qhPanelHtml")}${(S.role!=="view")?H("gfLeadHtml"):""}${H("acctHtml")}</div>`}
 function pageHTML(){const own=selfRow(),D=digest(own);
   const body=tab==="feed"?feedTab():tab==="cal"?calTab(D):planTab(D);
   let ban="";try{ban=typeof banner==="function"?banner():""}catch(e){}
-  return ban+head(own,D,false)+ckBlock(own)+teamCard()+highlights(D)+tabs()+`<div class="mp-body" role="tabpanel">${body}</div><p class="note" id="afVer" style="text-align:center;margin:18px 0 6px">Version ${esc(window.AV||"")}</p>`}
+  return ban+head(own,D,false)+ckBlock(own)+teamCard()+highlights(D)+tabs()+`<div class="mp-body" role="tabpanel">${body}</div>`+settings()+`<p class="note" id="afVer" style="text-align:center;margin:18px 0 6px">Version ${esc(window.AV||"")}</p>`}
 
 /* ---------- render ---------- */
 {const _r=render;render=function(){
   /* open on My Page, once, while the person is still on Home and hasn't touched anything */
   if(!landed&&!touched&&!window.mpNoLand&&lowLeader()&&S.onb&&S.welcomed!==0&&(view==="board"||view==="today")&&real()){landed=true;view="mypg"}
   if(view==="mypg"){renderTabs();const m=$("#main");if(m){m.innerHTML=pageHTML();try{if(typeof window.feedPicsFill==="function")window.feedPicsFill()}catch(e){}if(typeof animateView==="function")animateView()}return}
-  if(view==="mypgset"){view="mypg";try{const r=_r.apply(this,arguments);const m=$("#main");if(m)m.insertAdjacentHTML("afterbegin",`<button type="button" class="chip" data-mpgo="back" style="cursor:pointer;margin-top:12px">◂ My Page</button>`);return r}finally{view="mypgset"}}
   return _r.apply(this,arguments)}}
 {const _t=tabOf;tabOf=function(v){if(lowLeader()&&(v==="mypg"||v==="mypgset"))return "mypg";return _t.apply(this,arguments)}}
 {const _tl=tabsList;tabsList=function(){const L=_tl.apply(this,arguments);if(!lowLeader())return L;const i=L.findIndex(x=>x[0]==="home");if(i<0)return L;const o=L.slice();o[i]=["mypg","My Page","mypg"];return o}}
@@ -138,7 +139,7 @@ document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest)return;
   const bar=t.closest('#tabbar [data-tab="mypg"]');if(bar){e.stopImmediatePropagation();view="mypg";armed=null;query="";render();window.scrollTo(0,0);return}
   const tb=t.closest("[data-mptab]");if(tb&&(view==="mypg")){tab=tb.dataset.mptab;keepY();return}
   const g=t.closest("[data-mpgo]");if(!g)return;const w=g.dataset.mpgo;
-  if(w==="edit"){view="mypgset";armed=null;render();window.scrollTo(0,0)}
+  if(w==="set"||w==="quiet"){const c=document.getElementById(w==="quiet"?"qhPanel":"mpSet");if(c)c.scrollIntoView({block:"start",behavior:"smooth"})}
   else if(w==="back"){view="mypg";armed=null;render();window.scrollTo(0,0)}
   else if(w==="ck"){const c=document.getElementById("myCk")||document.getElementById("ckCard");if(c){c.scrollIntoView({block:"center",behavior:"smooth"});c.classList.add("mp-flash");setTimeout(()=>c.classList.remove("mp-flash"),1400)}else toast("Check in appears once you're on a roster.")}
   else if(w==="photo"){const c=document.getElementById("ppPanel");if(c)c.scrollIntoView({block:"center",behavior:"smooth"})}},true);
