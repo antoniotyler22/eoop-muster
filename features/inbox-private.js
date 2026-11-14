@@ -35,6 +35,15 @@ try{wipe()}catch(e){}
 {const _r=render;render=function(){if(closed()&&(view==="dms"||view==="dm"||view==="grp")){view="board";armed=null}
   const r=_r.apply(this,arguments);if(closed()){try{document.querySelectorAll("#dmAsInbox").forEach(b=>b.remove())}catch(e){}}return r}}
 document.addEventListener("click",e=>{if(!closed())return;const t=e.target.closest&&e.target.closest("[data-tab='inbox'],[data-go='dms'],[data-go='dm'],[data-go='grp']");
-  if(!t)return;e.stopImmediatePropagation();e.preventDefault();try{toast("The Inbox is private to the OIC's phone.")}catch(x){}},true);
+  if(!t)return;e.stopImmediatePropagation();e.preventDefault();try{why()}catch(x){}},true);
+/* say WHY this phone has no Inbox, and take the owner to the fix */
+function why(){let m,go="";
+  if(S.lite||(S.roleFrom&&S.role!==S.roleFrom)){m="This phone is set to a lowered view, so the Inbox is hidden. Tap Step back up (Data page) with your recovery code to get it back.";go="data"}
+  else if(S.link){m="This phone is linked to someone else's board as a section leader. The Inbox lives on the OIC's own phone.";go=""}
+  else if(S.role&&S.role!=="oic"&&S.role!=="newoic"){m="This phone is signed in as "+S.role+". The Inbox belongs to the OIC's phone.";go=""}
+  else m="The Inbox is private to the OIC's phone.";
+  toast(m);clearTimeout(toast.t);toast.t=setTimeout(()=>{const el=document.getElementById("toast");if(el)el.hidden=true},6500);
+  if(go){try{view=go;render();window.scrollTo(0,0)}catch(e){}}}
+window.inboxWhy=why;
 window.inboxOwner=owner;window.inboxKeys=keyRole;
 })();

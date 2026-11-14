@@ -48,10 +48,9 @@ function counts2(){try{if(S.source==="sample"||!Array.isArray(S.roster)||!S.rost
 const sub=f=>{const s=st(f);const n=new Set(list(f).map(m=>m.by)).size;return (s.init?(n?`${n} in the conversation`:"No messages yet"):"Connecting…")+" · private to this team"};
 function bar(){const c=counts2();if(!c)return "";const p=Math.round(100*c.ok/c.n);const all=c.ok>=c.n;
   return `<button type="button" class="ch-bar${all?" done":""}" id="chBar" aria-label="${c.ok} of ${c.n} accounted for. Open the board"><span class="ch-bt"><b>${c.ok} of ${c.n}</b> accounted for</span><span class="ch-bw" aria-hidden="true"><i style="width:${p}%"></i></span></button>`}
-function inboxOk(){try{return typeof window.inboxOwner==="function"?!!window.inboxOwner():true}catch(e){return true}}
 function seg(active){const ld=!(typeof memberMode==="function"&&memberMode());const dot=(k,n)=>n&&active!==k?`<i class="of-dot" aria-label="${n} new"></i>`:"";const tb=k=>{try{return typeof tabBadge==="function"?tabBadge(k):0}catch(e){return 0}};
   const o=typeof window.officialUnread==="function"?window.officialUnread():0;const B=(k,l,n)=>`<button type="button" role="tab" data-seg="${k}" aria-selected="${active===k}">${l}${dot(k,n)}</button>`;
-  return `<div class="ch-seg" role="tablist" aria-label="Chat, feed, inbox, official updates or voice">${B("chat","Chat",0)}${ld?B("feed","Feed",tb("feed")):""}${ld&&inboxOk()?B("inbox","Inbox",tb("inbox")):""}${B("official","Official",o)}${B("voice","Voice",0)}</div>`}
+  return `<div class="ch-seg" role="tablist" aria-label="Chat, feed, inbox, official updates or voice">${B("chat","Chat",0)}${ld?B("feed","Feed",tb("feed")):""}${ld?B("inbox","Inbox",tb("inbox")):""}${B("official","Official",o)}${B("voice","Voice",0)}</div>`}
 window.chatSeg=seg;
 function bubbles(f){const L=list(f),nm=me(f);if(!L.length)return `<div class="ch-empty"><b>${st(f).init?"No messages yet":"Loading the conversation…"}</b>${st(f).init?"<span>Say something to your team. Messages are private to this team and stay for 30 days.</span>":""}</div>`;
   let out="",day="",prev=null,div=false;
@@ -93,6 +92,7 @@ window.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest("
   enter();view="chat";armed=null;query="";render();window.scrollTo(0,0);start()},true);
 /* Chat | Voice switch (also injected on the Talk screen, which draws itself) */
 document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("[data-seg]");if(!b)return;e.preventDefault();
+  if(b.dataset.seg==="inbox"&&typeof window.inboxOwner==="function"&&!window.inboxOwner()&&typeof window.inboxWhy==="function"){window.inboxWhy();return}
   if(b.dataset.seg==="feed"||b.dataset.seg==="inbox"){const x=document.createElement("button");x.dataset.tab=b.dataset.seg;x.hidden=true;document.body.appendChild(x);x.click();x.remove();return}
   if(b.dataset.seg==="voice"&&view!=="talk"){view="talk";armed=null;render();window.scrollTo(0,0);const t=document.querySelector("#tabbar [data-tab='talk']");return}
   if(b.dataset.seg==="official"&&view!=="official"){if(typeof window.officialEnter==="function")window.officialEnter();view="official";armed=null;render();window.scrollTo(0,0);if(window.officialPull)window.officialPull(true);return}

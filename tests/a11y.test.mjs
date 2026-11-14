@@ -8,13 +8,16 @@ const lead = async (a, extra = "") => {
   await sleep(200);
 };
 
-test("a phone that can't hold the Inbox does not show an Inbox button in the Chat switch", async () => {
+test("a lowered phone still has the Inbox button; tapping it explains why and opens the fix", async () => {
   const a = await openApp({});
   try {
-    await lead(a, `S.role="co"`);
-    const keys = [...a.w.document.querySelectorAll(".ch-seg [data-seg]")].map((b) => b.dataset.seg);
-    assert.ok(!keys.includes("inbox"), "co-leader phone has no dead Inbox button: " + keys);
-    assert.ok(keys.includes("feed") && keys.includes("official"));
+    await lead(a, `S.lite=1;S.roleFrom="oic";S.role="oic"`);
+    const btn = a.$(".ch-seg [data-seg='inbox']");
+    assert.ok(btn, "Inbox button is there");
+    btn.click(); await sleep(250);
+    assert.match(a.$("#toast").textContent, /lowered view/);
+    assert.equal(a.w.eval("view"), "data", "goes to the page with Step back up");
+    assert.ok(a.$("#alUp"), "Step back up button is on that page");
   } finally { await a.close(); }
 });
 
