@@ -85,3 +85,15 @@ test("the team board stays one tap away", async () => {
     assert.equal(a.w.eval("view"), "board");
   } finally { await a.close(); }
 });
+
+test("tapping the photo/initials circle opens Settings; tapping again closes it", async () => {
+  const a = await openApp({});
+  try {
+    await setup(a, `S.role="co"`);
+    assert.ok(!a.$("#mpSet"), "settings start hidden");
+    a.$(".mp-av").click(); await sleep(150);
+    assert.ok(a.$("#mpSet #ppPanel"), "photo and quiet hours open behind the circle");
+    a.$(".mp-av").click(); await sleep(150);
+    assert.ok(!a.$("#mpSet"), "second tap closes it");
+  } finally { await a.close(); }
+});

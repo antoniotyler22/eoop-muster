@@ -108,6 +108,7 @@ let pvId=null;window.setPv=id=>{pvId=id};window.getPv=()=>pvId;
 function renderMePv(){const m=S.roster.find(x=>x.id===pvId);if(!m){view="people";return render()}const saved=S.me;
   try{S.me={pk:m.pk||"preview",d:Object.assign(mpDigest(m),{at:Date.now()}),t:Date.now()};renderMe()}finally{S.me=saved}
   const main=$("#main");main.querySelectorAll("#meOff,#meRe,#tdLeader,#meIcs").forEach(x=>x.remove());
+  if(window.mpPv===m.id&&typeof window.mpPreviewHTML==="function"){try{main.innerHTML=window.mpPreviewHTML(m,Object.assign(mpDigest(m),{at:Date.now()}));return}catch(e){}}
   main.insertAdjacentHTML("afterbegin",`<div class="banner" style="margin-top:12px"><span>👁 <b>Leader view.</b> This is what ${esc(title(m.rank)+" "+title(lastOf(m)))} sees on their My page${m.pk?"":" (not turned on for them yet)"}.</span><button data-pcard="${m.id}">Back</button></div>`)}
 
 /* ================= 5. MESSAGES (leader <-> member) ================= */
@@ -313,9 +314,10 @@ function meTabs(cur){const un=dmUnreadMine();return `<div class="evts v12tabs" s
 
 /* ================= events ================= */
 document.addEventListener("click",e=>{const t=e.target.closest("[data-tab]");if(t&&t.dataset.tab==="pages"){e.stopImmediatePropagation();view="pages";armed=null;render();window.scrollTo(0,0)}},true);
+document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest("[data-pvpick]"))window.mpPv=null},true);
 document.addEventListener("click",e=>{const t=e.target;let b;
   /* sections */
-  if(t.id==="v12PView"){pvId=pid;view="mepv";render();window.scrollTo(0,0);return}
+  if(t.id==="v12PView"){pvId=pid;window.mpPv=pid;view="mepv";render();window.scrollTo(0,0);return}
   if(t.id==="v12PMsg"){dmWith=pid;const m=S.roster.find(x=>x.id===pid);
     if(typeof window.inboxOwner==="function"&&!window.inboxOwner()&&!memberMode()){if(typeof window.inboxWhy==="function")window.inboxWhy();else toast("Messages open on the OIC's phone.");return}
     const open=()=>{view="dm";render();window.scrollTo(0,0)};

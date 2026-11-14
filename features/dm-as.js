@@ -3,7 +3,7 @@
    A member's name is their rank and last name (the same one Word of Mouth uses). A leader's is the "Posting as" name
    (like GYSGT TYLER or EOP OIC). Changing it here changes it everywhere. */
 (()=>{
-const VIEWS=["me","mecal","mepv","today","log"];
+const VIEWS=["me","mecal","today","log"];
 const isLeader=()=>typeof leader==="function"?leader():!(typeof memberMode==="function"&&memberMode());
 const asName=()=>String(isLeader()?(S.postAs||S.myName||(typeof unitName==="function"?unitName():"")||"Me"):(typeof myName==="function"?myName():(S.myName||"Me"))).slice(0,30);
 const clean=v=>String(v||"").toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim().slice(0,30);

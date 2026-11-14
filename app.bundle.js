@@ -3854,6 +3854,7 @@ let pvId=null;window.setPv=id=>{pvId=id};window.getPv=()=>pvId;
 function renderMePv(){const m=S.roster.find(x=>x.id===pvId);if(!m){view="people";return render()}const saved=S.me;
   try{S.me={pk:m.pk||"preview",d:Object.assign(mpDigest(m),{at:Date.now()}),t:Date.now()};renderMe()}finally{S.me=saved}
   const main=$("#main");main.querySelectorAll("#meOff,#meRe,#tdLeader,#meIcs").forEach(x=>x.remove());
+  if(window.mpPv===m.id&&typeof window.mpPreviewHTML==="function"){try{main.innerHTML=window.mpPreviewHTML(m,Object.assign(mpDigest(m),{at:Date.now()}));return}catch(e){}}
   main.insertAdjacentHTML("afterbegin",`<div class="banner" style="margin-top:12px"><span>👁 <b>Leader view.</b> This is what ${esc(title(m.rank)+" "+title(lastOf(m)))} sees on their My page${m.pk?"":" (not turned on for them yet)"}.</span><button data-pcard="${m.id}">Back</button></div>`)}
 
 /* ================= 5. MESSAGES (leader <-> member) ================= */
@@ -4059,9 +4060,10 @@ function meTabs(cur){const un=dmUnreadMine();return `<div class="evts v12tabs" s
 
 /* ================= events ================= */
 document.addEventListener("click",e=>{const t=e.target.closest("[data-tab]");if(t&&t.dataset.tab==="pages"){e.stopImmediatePropagation();view="pages";armed=null;render();window.scrollTo(0,0)}},true);
+document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest("[data-pvpick]"))window.mpPv=null},true);
 document.addEventListener("click",e=>{const t=e.target;let b;
   /* sections */
-  if(t.id==="v12PView"){pvId=pid;view="mepv";render();window.scrollTo(0,0);return}
+  if(t.id==="v12PView"){pvId=pid;window.mpPv=pid;view="mepv";render();window.scrollTo(0,0);return}
   if(t.id==="v12PMsg"){dmWith=pid;const m=S.roster.find(x=>x.id===pid);
     if(typeof window.inboxOwner==="function"&&!window.inboxOwner()&&!memberMode()){if(typeof window.inboxWhy==="function")window.inboxWhy();else toast("Messages open on the OIC's phone.");return}
     const open=()=>{view="dm";render();window.scrollTo(0,0)};
@@ -12491,7 +12493,7 @@ article.fc[data-wpid]{touch-action:pan-y pinch-zoom}
    A member's name is their rank and last name (the same one Word of Mouth uses). A leader's is the "Posting as" name
    (like GYSGT TYLER or EOP OIC). Changing it here changes it everywhere. */
 (()=>{
-const VIEWS=["me","mecal","mepv","today","log"];
+const VIEWS=["me","mecal","today","log"];
 const isLeader=()=>typeof leader==="function"?leader():!(typeof memberMode==="function"&&memberMode());
 const asName=()=>String(isLeader()?(S.postAs||S.myName||(typeof unitName==="function"?unitName():"")||"Me"):(typeof myName==="function"?myName():(S.myName||"Me"))).slice(0,30);
 const clean=v=>String(v||"").toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim().slice(0,30);
@@ -14437,7 +14439,7 @@ function ckState(own){const t=(own&&own.ckAt)||(!own&&memberM()&&S.myCks&&S.myCk
 function avatar(own,D){const p=photoFor(),ck=ckState(own);
   const face=p?`<img src="${esc(p)}" alt="" class="mp-face">`:`<span class="mp-face">${esc(initials(own,D))}</span>`;
   const bd=ck.ok?`<span class="mp-bd ok" title="Accounted for">${svg("check",15)}</span>`:(own||memberM())?`<span class="mp-bd no" title="Not checked in today">!</span>`:"";
-  return `<div class="mp-av"><div class="mp-ring">${face}</div>${bd}</div>`}
+  return `<div class="mp-av" data-mpgo="set" role="button" tabindex="0" aria-label="Open my settings: photo, quiet hours, account" style="cursor:pointer"><div class="mp-ring">${face}</div>${bd}</div>`}
 function stats(D){const k=iso(new Date()),L=items(D);
   const plan=within(L,k,plus(7)).length,ev=within(L,k,plus(14)).filter(x=>x.ty==="EVENT").length;
   let posts=0;try{const f=typeof fdCur==="function"?fdCur():null;if(f&&Array.isArray(f.posts))posts=f.posts.filter(p=>!p.pod&&(typeof fdForMe!=="function"||fdForMe(f,p))).length}catch(e){}
@@ -14512,6 +14514,19 @@ function askCard(){try{if(typeof akHidden!=="function"||typeof renderAsk!=="func
 /* while a question runs, or after an error, redraw the page it was asked from instead of jumping to the Ask screen */
 {const _as=akSend;akSend=async function(){try{return await _as.apply(this,arguments)}finally{if(view==="mypg"||view==="me"){try{render()}catch(e){}}}}}
 {const _ra=renderAsk;renderAsk=function(){if(view==="mypg"||view==="me"){try{render()}catch(e){}return}return _ra.apply(this,arguments)}}
+/* 4.110.0: a leader's "View their My page" shows the same new My Page, read-only, for the person they opened */
+window.mpPreviewHTML=function(m,D){const k=iso(new Date()),L=items(D);
+  if(tab==="feed")tab="plan";
+  const plan=within(L,k,plus(7)).length,ev=within(L,k,plus(14)).filter(x=>x.ty==="EVENT").length;
+  const nm=(typeof title==="function"&&typeof lastOf==="function")?title(m.rank)+" "+title(lastOf(m)):((m.rank?m.rank+" ":"")+String(m.name||"").split(",")[0]).toLowerCase().replace(/(^|\s|-)\S/g,c=>c.toUpperCase());
+  const c=(n,l)=>`<div><b>${n}</b><span>${l}</span></div>`;
+  const tb=`<div class="mp-tabs" role="tablist">${[["plan","Plan"],["cal","Calendar"]].map(([x,l])=>`<button type="button" role="tab" aria-selected="${tab===x}" data-mptab="${x}">${svg(x==="plan"?"log":"plan",20)}${l}</button>`).join("")}</div>`;
+  return `<div class="banner" style="margin-top:12px"><span>👁 <b>Leader view.</b> What ${esc(nm)} sees. Read only.${m.pk?"":" Their My page isn't on yet."}</span><button data-pcard="${esc(m.id)}">Back</button></div>
+  <section class="mp-head" aria-label="Their My Page"><div class="mp-top"><span class="mp-eye">THEIR MY PAGE</span></div>
+    <div class="mp-prof"><div class="mp-av"><div class="mp-ring"><span class="mp-face">${esc(initials(m,D))}</span></div></div><div class="mp-stats">${c(plan,"Plan")}${c(ev,"Events")}${c(D&&D.due?(D.due||[]).filter(x=>x.st==="over").length:0,"Overdue")}</div></div>
+    <div class="mp-name">${esc(nm)}</div><div class="mp-unit">${unitLine(m,D)}</div>${statusLine(D)}
+    <div class="mp-btns"><button type="button" class="mp-b" id="v12PMsg">Message</button><button type="button" class="mp-b" data-pcard="${esc(m.id)}">Their profile</button></div></section>
+  ${tb}<div class="mp-body" role="tabpanel">${tab==="cal"?calTab(D):planTab(D)}</div>`};
 function pageHTML(){const own=selfRow(),D=digest(own);
   const body=tab==="feed"?feedTab():tab==="cal"?calTab(D):planTab(D);
   let ban="";try{ban=!memberM()&&typeof banner==="function"?banner():""}catch(e){}
@@ -14545,9 +14560,10 @@ document.addEventListener("pointerdown",()=>{touched=true},true);document.addEve
 let hidAt=0;document.addEventListener("visibilitychange",()=>{if(document.hidden){hidAt=Date.now();return}
   if(hidAt&&Date.now()-hidAt>3*60000&&lowLeader()&&(view==="board"||view==="today")){touched=false;landed=false;try{render()}catch(e){}}});
 const keepY=()=>{const y=window.scrollY;render();window.scrollTo(0,y)};
+document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target&&e.target.classList&&e.target.classList.contains("mp-av")){e.preventDefault();e.target.click()}});
 document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest)return;
   const bar=t.closest('#tabbar [data-tab="mypg"]');if(bar){e.stopImmediatePropagation();view="mypg";armed=null;query="";render();window.scrollTo(0,0);return}
-  const tb=t.closest("[data-mptab]");if(tb&&(view==="mypg"||view==="me")){tab=tb.dataset.mptab;keepY();return}
+  const tb=t.closest("[data-mptab]");if(tb&&(view==="mypg"||view==="me"||view==="mepv")){tab=tb.dataset.mptab;keepY();return}
   const g=t.closest("[data-mpgo]");if(!g)return;const w=g.dataset.mpgo;
   if(w==="set"||w==="quiet"){const was=setOpen;setOpen=(w==="set"&&was)?false:true;if(setOpen!==was)keepY();
     if(setOpen){const c=document.getElementById(w==="quiet"?"qhPanel":"mpSet");if(c&&c.scrollIntoView)setTimeout(()=>c.scrollIntoView({block:"start",behavior:"smooth"}),30)}}
