@@ -5964,7 +5964,7 @@ const GROUPS=[
   {k:"lic",l:"Licensing",s:"Classes, seats, rosters, documents",ic:"events",keys:["lic"]},
   {k:"rollup",l:"Company & rollup",s:"Company view, add up the teams under you",ic:"rollup",keys:["co","rollup"]},
   {k:"home",l:"My day",s:"Dashboard, today, my log",ic:"today",keys:["dash","today","log"]},
-  {k:"help",l:"Help",s:"Ask a question, guide, short tour",ic:"help",keys:["utilities","support","guide","trStart","v11SignInTool","v11ShareApp","ask"]},
+  {k:"help",l:"Help",s:"Guide, short tour, support",ic:"help",keys:["utilities","support","guide","trStart","v11SignInTool","v11ShareApp"]},
   {k:"settings",l:"Settings",s:"Teams, data, version, connections",ic:"data",keys:["teams","data","sys","modeOpen","integ","owner","nwOn","alvl"]}];
 /* These already have a bottom tab (Word of Mouth: Word of Mouth/Send; Plan: Calendar/Duty/Readiness/Events; Inbox: Messages), so Tools does not repeat them.
    They stay searchable from the Tools search box. */
