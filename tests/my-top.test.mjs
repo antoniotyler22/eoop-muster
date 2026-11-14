@@ -22,7 +22,9 @@ test("My page: the person button opens a leader's My page with SOS, photo, quiet
     assert.equal(a.w.eval("view"), "mypg");
     assert.ok(a.$("#main .mp-head"), "the new My Page");
     assert.ok(a.$("[data-go='sos']"), "SOS button on My Page");
-    for (const id of ["#ppPanel", "#qhPanel", "#gfLead"]) assert.ok(a.$(id), id + " on My Page");
+    assert.ok(!a.$("#mpSet"), "settings closed until tapped");
+    a.$("[data-mpgo='set']").click(); await sleep(100);
+    for (const id of ["#ppPanel", "#qhPanel", "#gfLead"]) assert.ok(a.$(id), id + " under Settings");
     assert.ok(!a.$("#sosHome"), "no duplicate SOS card");
   } finally { await a.close(); }
 });
@@ -37,6 +39,7 @@ test("My page: a leader with a roster entry gets the member-style page plus SOS,
     await sleep(100);
     assert.equal(a.w.eval("view"), "mypg");
     assert.ok(!a.$("#meOff"), "no remove-link button");
+    a.$("[data-mpgo='set']").click(); await sleep(100);
     for (const id of ["#ppPanel", "#qhPanel", "#gfLead"]) assert.ok(a.$(id), id);
     assert.ok(a.$("[data-go='sos']"), "SOS button");
   } finally { await a.close(); }

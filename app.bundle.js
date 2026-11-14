@@ -14278,8 +14278,9 @@ const memberM=()=>typeof memberMode==="function"&&memberMode();
 const picOwner=()=>!S.link&&!S.lite&&(!S.role||S.role==="oic"||S.role==="newoic");
 const lowLeader=()=>!memberM()&&!picOwner()&&S.level!=="co";
 const real=()=>S.source!=="sample"&&Array.isArray(S.roster)&&S.roster.length>0;
-let tab="plan",landed=false,touched=false;
+let tab="plan",landed=false,touched=false,setOpen=false;
 
+if(typeof IC==="object")IC.mpset='<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>';
 if(typeof IC==="object")IC.mypg='<circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="9.5" r="3"/><path d="M6.5 18.5c1.2-2.4 3.2-3.5 5.5-3.5s4.3 1.1 5.5 3.5"/>';
 
 /* ---------- who am I, and my digest ---------- */
@@ -14344,7 +14345,7 @@ function teamCard(){if(!real()||typeof counts!=="function")return "";let T;try{T
 /* ---------- the three tabs ---------- */
 function highlights(D){const k=iso(new Date());const planN=within(items(D),k,plus(7)).length;let un=0;try{un=typeof fdUnread==="function"?fdUnread():0}catch(e){}
   const h=(ic,l,tabk,n)=>`<button type="button" class="mp-hl" data-mptab="${tabk}"><span class="mp-hc">${svg(ic,24)}${n?`<i class="mp-hn">${n>9?"9+":n}</i>`:""}</span><span>${l}</span></button>`;
-  return `<div class="mp-hls">${h("plan","Plan","plan",planN)}${h("cal","Calendar","cal",0)}${h("feed","Feed","feed",un)}<button type="button" class="mp-hl" data-mpgo="quiet"><span class="mp-hc">${svg("today",24)}</span><span>Quiet</span></button></div>`}
+  return `<div class="mp-hls">${h("plan","Plan","plan",planN)}${h("cal","Calendar","cal",0)}${h("feed","Feed","feed",un)}<button type="button" class="mp-hl" data-mpgo="quiet"><span class="mp-hc">${svg("today",24)}</span><span>Quiet</span></button><button type="button" class="mp-hl" data-mpgo="set"><span class="mp-hc">${svg("mpset",24)}</span><span>Settings</span></button></div>`}
 function tabs(){return `<div class="mp-tabs" role="tablist">${[["feed","Feed"],["plan","Plan"],["cal","Calendar"]].map(([k,l])=>`<button type="button" role="tab" aria-selected="${tab===k}" data-mptab="${k}">${svg(k==="feed"?"feed":k==="plan"?"log":"plan",20)}${l}</button>`).join("")}</div>`}
 function planTab(D){let h="";
   if(!D)return `<div class="card"><p class="note" style="margin:0">Pick which one is you above and your plan shows up here.</p></div>`;
@@ -14372,7 +14373,7 @@ function feedTab(){const f=typeof fdCur==="function"?fdCur():null;
   return `<div id="mpFeed">${L.map(p=>fdCard(f,p,false,false)).join("")}</div><button type="button" class="btn alt" data-go="feed" style="width:100%;margin-top:12px">Open Word of Mouth ▸</button>`}
 
 const H=n=>{try{return typeof window[n]==="function"?window[n]():""}catch(e){return""}};
-function settings(){return `<div id="mpSet"><div class="sech" style="margin-top:18px"><h2>My settings</h2></div>${H("ppPanelHtml")}${H("qhPanelHtml")}${(S.role!=="view")?H("gfLeadHtml"):""}${H("acctHtml")}</div>`}
+function settings(){if(!setOpen)return "";return `<div id="mpSet"><div class="sech" style="margin-top:18px"><h2>Settings for my page</h2></div>${H("ppPanelHtml")}${H("qhPanelHtml")}${(S.role!=="view")?H("gfLeadHtml"):""}${H("acctHtml")}</div>`}
 function pageHTML(){const own=selfRow(),D=digest(own);
   const body=tab==="feed"?feedTab():tab==="cal"?calTab(D):planTab(D);
   let ban="";try{ban=typeof banner==="function"?banner():""}catch(e){}
@@ -14400,7 +14401,8 @@ document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest)return;
   const bar=t.closest('#tabbar [data-tab="mypg"]');if(bar){e.stopImmediatePropagation();view="mypg";armed=null;query="";render();window.scrollTo(0,0);return}
   const tb=t.closest("[data-mptab]");if(tb&&(view==="mypg")){tab=tb.dataset.mptab;keepY();return}
   const g=t.closest("[data-mpgo]");if(!g)return;const w=g.dataset.mpgo;
-  if(w==="set"||w==="quiet"){const c=document.getElementById(w==="quiet"?"qhPanel":"mpSet");if(c)c.scrollIntoView({block:"start",behavior:"smooth"})}
+  if(w==="set"||w==="quiet"){const was=setOpen;setOpen=(w==="set"&&was)?false:true;if(setOpen!==was)keepY();
+    if(setOpen){const c=document.getElementById(w==="quiet"?"qhPanel":"mpSet");if(c&&c.scrollIntoView)setTimeout(()=>c.scrollIntoView({block:"start",behavior:"smooth"}),30)}}
   else if(w==="back"){view="mypg";armed=null;render();window.scrollTo(0,0)}
   else if(w==="ck"){const c=document.getElementById("myCk")||document.getElementById("ckCard");if(c){c.scrollIntoView({block:"center",behavior:"smooth"});c.classList.add("mp-flash");setTimeout(()=>c.classList.remove("mp-flash"),1400)}else toast("Check in appears once you're on a roster.")}
   else if(w==="photo"){const c=document.getElementById("ppPanel");if(c)c.scrollIntoView({block:"center",behavior:"smooth"})}},true);
@@ -14422,9 +14424,9 @@ document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest)return;
 @keyframes mpFlash{0%,100%{box-shadow:none}30%{box-shadow:0 0 0 4px var(--s-onhand)}}
 .mp-team{display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:12px;min-height:54px;padding:0 16px;border:1px solid var(--line);border-radius:16px;background:var(--surface-solid,var(--surface));color:var(--ink);font:inherit;cursor:pointer;text-align:left}
 .mp-team b{display:block;font-size:15px}.mp-team small{display:block;font-size:13px;color:var(--muted)}
-.mp-hls{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding:16px 2px 14px;margin:0 -2px}.mp-hls::-webkit-scrollbar{display:none}
-.mp-hl{flex:0 0 66px;display:flex;flex-direction:column;align-items:center;gap:6px;border:0;background:transparent;color:var(--ink);font:inherit;font-size:12px;font-weight:600;cursor:pointer}
-.mp-hc{position:relative;width:62px;height:62px;border-radius:50%;border:2.5px solid var(--s-onhand);display:grid;place-items:center;color:var(--s-onhand);background:var(--surface-2)}
+.mp-hls{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:16px 2px 14px;margin:0 -2px}.mp-hls::-webkit-scrollbar{display:none}
+.mp-hl{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px;border:0;background:transparent;color:var(--ink);font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.mp-hc{position:relative;width:58px;height:58px;border-radius:50%;border:2.5px solid var(--s-onhand);display:grid;place-items:center;color:var(--s-onhand);background:var(--surface-2)}
 .mp-hn{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:10px;padding:0 4px;box-sizing:border-box;background:var(--warn);color:#fff;border:2px solid var(--bg);font-style:normal;font-size:11px;font-weight:700;display:grid;place-items:center}
 .mp-tabs{display:flex;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 -2px}
 .mp-tabs button{flex:1;min-height:48px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--muted);font:inherit;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}

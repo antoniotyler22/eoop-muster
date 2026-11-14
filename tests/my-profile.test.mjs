@@ -56,6 +56,7 @@ test("Plan, Calendar and Feed tabs switch; Edit my page opens settings and back 
       a.$(`.mp-tabs [data-mptab='${k}']`).click(); await sleep(120);
       assert.equal(a.$(`.mp-tabs [data-mptab='${k}']`).getAttribute("aria-selected"), "true", k);
     }
+    a.$("[data-mpgo='set']").click(); await sleep(100);
     assert.ok(a.$("#mpSet #qhPanel"), "quiet hours toggle lives on My Page");
     assert.ok(a.$("#mpSet #ppPanel"), "photo lives on My Page");
     assert.ok(!a.$("#sosHome"), "no duplicate SOS card");
