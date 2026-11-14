@@ -14245,7 +14245,7 @@ function injectSeg(){if(!lead()||typeof window.chatSeg!=="function")return;const
 new MutationObserver(()=>{try{injectSeg()}catch(e){}}).observe(document.documentElement,{childList:true,subtree:true});
 
 /* ---------- Home cards: what's new, then backup ---------- */
-const NEWS=["My Page is your own page now: your status, a slide to check in, your plan, calendar and Word of Mouth in one place. Tap the person at the top to open it.","Co-leaders, editors and section leaders open the app on My Page, and it takes the first slot in the bar."];
+const NEWS=["New My Page: it's your own page. Your status, a slide to check in, your plan, calendar and Word of Mouth, all in one place.","Co-leaders, editors and section leaders now open the app on My Page.","Tap Settings on My Page for your photo, quiet hours and muster place. Tap Quiet to jump straight to quiet hours.","Tap the person at the top any time to get back to My Page."];
 function cards(){if(!lead()||!S.onb||S.welcomed===0)return "";
   if(S.seenVer!==window.AV)return `<div class="panel ft-card" id="ftNew" style="margin:12px 0"><b>What's new in ${esc(window.AV)}</b><ul style="margin:6px 0 8px;padding-left:18px">${NEWS.map(x=>`<li style="margin:3px 0">${esc(x)}</li>`).join("")}</ul><button class="btn alt" id="ftNewOk" style="width:100%">Got it</button></div>`;
   const synced=!!(S.sync&&S.sync.on);const due=!S.bkAt||Date.now()-S.bkAt>14*864e5;
