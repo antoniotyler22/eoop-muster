@@ -58,10 +58,10 @@ test("Word of Mouth photo pickers live outside the page so a Word of Mouth redra
     await a.w.eval(`S.onb=true;S.welcomed=1;S.leaderMode=true;S.feeds=[{id:"feedabcdef12",mk:"m".repeat(30),lk:"l".repeat(30),ek:"x",unit:"TEAM",me:"A",posts:[],seen:0,mine:{},hub:1,pk:1}];view="feed";render()`);
     await sleep(150);
     a.$("#fpPick").click(); await sleep(30);
-    const n = a.w.eval(`[...document.body.children].filter(e=>e.tagName==="INPUT"&&e.type==="file"&&e.accept==="image/*").length`);
+    const n = a.w.eval(`[...document.body.children].filter(e=>e.tagName==="INPUT"&&e.type==="file"&&e.accept.startsWith("image")).length`);
     assert.ok(n >= 1, "picker input sits on the body");
     a.w.eval(`render()`); await sleep(60);
-    assert.equal(a.w.eval(`[...document.body.children].filter(e=>e.tagName==="INPUT"&&e.type==="file"&&e.accept==="image/*").length`), n, "survives a redraw");
+    assert.equal(a.w.eval(`[...document.body.children].filter(e=>e.tagName==="INPUT"&&e.type==="file"&&e.accept.startsWith("image")).length`), n, "survives a redraw");
   } finally { await a.close(); }
 });
 

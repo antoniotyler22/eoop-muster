@@ -5,7 +5,7 @@
 
 -- Team chat: up to 1.5 MB per message, at most 6 media messages a minute per team, media kept 7 days
 alter table public.chat_msgs drop constraint if exists chat_msgs_ct_check;
-alter table public.chat_msgs add constraint chat_msgs_ct_check check (char_length(ct) <= 1500000);
+alter table public.chat_msgs add constraint chat_msgs_ct_check check (char_length(ct) <= 2000000);
 
 create or replace function public.chat_send(p_feed text, p_key text, p_ct text)
 returns bigint language plpgsql security definer set search_path = public as $$
@@ -26,7 +26,7 @@ end $$;
 
 -- Messages and groups: up to 1.6 MB per message, media kept 7 days
 alter table public.dm_msgs drop constraint if exists dm_msgs_ct_check;
-alter table public.dm_msgs add constraint dm_msgs_ct_check check (char_length(ct) <= 1600000);
+alter table public.dm_msgs add constraint dm_msgs_ct_check check (char_length(ct) <= 2000000);
 
 create or replace function public.dm_send(p_id text, p_key text, p_ct text)
 returns bigint language plpgsql security definer set search_path = public as $$
