@@ -97,3 +97,12 @@ test("tapping the photo/initials circle opens Settings; tapping again closes it"
     assert.ok(!a.$("#mpSet"), "second tap closes it");
   } finally { await a.close(); }
 });
+
+test("a view-only leader phone with no team feed is told how to get the check-in slider", async () => {
+  const a = await openApp({});
+  try {
+    await setup(a, `S.role="view";S.feeds=[]`);
+    assert.ok(a.$(".mp-ck"), "check-in area is there");
+    assert.match(a.$(".mp-ck").textContent, /view-only|invite link/i);
+  } finally { await a.close(); }
+});

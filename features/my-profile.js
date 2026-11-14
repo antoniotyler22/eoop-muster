@@ -77,7 +77,8 @@ function ckBlock(own){
   if(memberM()){const ck=ckState(pvOn?pvRow():null);
     return `<div class="mp-ck"><div class="mp-ckh"><span class="mp-eye" style="color:${ck.ok?"var(--s-onhand)":"var(--brass)"}">${ck.ok?"ACCOUNTED FOR":"NOT CHECKED IN TODAY"}</span><h2>${ck.ok?"You're accounted for":"Are you accounted for?"}</h2><p class="note" style="margin:2px 0 0">Pick your status, then slide to check in.</p></div><div id="mpCkSlot"></div></div>`}
   if(!real())return `<div class="card"><p class="note" style="margin:0">Your page fills in once you're on a team roster. Add your people in Tools, or open the link your leader sent.</p></div>`;
-  if(typeof window.myCkShow!=="function"||!window.myCkShow()||typeof window.myCkCard!=="function")return "";
+  if(typeof window.myCkShow!=="function"||typeof window.myCkCard!=="function")return "";
+  if(!window.myCkShow())return `<div class="mp-ck"><div class="mp-ckh"><span class="mp-eye" style="color:var(--brass)">CHECK IN</span><h2>Are you accounted for?</h2><p class="note" style="margin:2px 0 0">This phone is view-only and isn't linked to your team's Word of Mouth yet. Open the invite link your leader sent you, or ask for an Editor login, and the check-in slider shows up here.</p></div></div>`;
   const ck=ckState(own);
   const top=`<div class="mp-ckh"><span class="mp-eye" style="color:${ck.ok?"var(--s-onhand)":"var(--brass)"}">${ck.ok?"ACCOUNTED FOR":"NOT CHECKED IN TODAY"}</span><h2>${ck.ok?"You're accounted for":"Are you accounted for?"}</h2><p class="note" style="margin:2px 0 0">${ck.ok?"Checked in "+esc(ago(ck.at))+". Slide again any time your status changes.":"Pick your status, then slide to check in."}</p></div>`;
   return `<div class="mp-ck">${top}${window.myCkCard()}</div>`}
