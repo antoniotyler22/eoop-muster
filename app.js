@@ -1347,8 +1347,8 @@ async function akSend(q){akBusy=true;akErr="";renderAsk();
 function renderAsk(){const ex=AK_EX[MODES[S.mode]?S.mode:"military"]||AK_EX.military;akStatus();
   if(S.appCfg&&S.appCfg.ask_off){$("#main").innerHTML=`<h2>💬 Ask</h2><div class="panel"><p class="note">Ask is turned off by the app owner for now.</p></div>`;return}
   if(akHidden()&&!(canEdit()&&!memberMode())){$("#main").innerHTML=`<h2>💬 Ask</h2><div class="panel"><p class="note">${S.askSt&&S.askSt.setup===false?"Ask isn't set up for your unit.":"Ask is turned off by your leader."}</p></div>`;return}
-  let h=akCtlHTML()+`<h2>💬 Ask</h2><div class="panel"><label for="akQ">Ask about orders, admin, leave, pay, fitness, anything ${S.mode&&S.mode!=="military"?"for your team":"military"}</label>
-    <textarea id="akQ" maxlength="600" style="min-height:80px" placeholder="${esc(ex[0])}"${akBusy?" disabled":""}>${esc(akDraft)}</textarea>
+  let h=akCtlHTML()+`<div class="panel">${window.afTally?afTally.hero("h2"):"<h2>💬 Ask</h2>"}
+    <textarea id="akQ" aria-label="Ask Tally a question" maxlength="600" style="min-height:80px" placeholder="${esc(ex[0])}"${akBusy?" disabled":""}>${esc(akDraft)}</textarea>
     <button class="btn" id="akGo"${akBusy?" disabled":""}>${akBusy?"Searching official sources…":"Ask"}</button>
     ${akErr?`<div class="note" style="color:var(--warn);font-weight:700">${esc(akErr)}</div>`:""}
     <p class="note">Searches official sources (.mil and .gov) and shows them. <b>Answers can be wrong or out of date: check the order or your admin shop before acting.</b> Don't type names, SSNs, phone numbers or anything sensitive or classified. Not official guidance.</p></div>`;
@@ -1520,7 +1520,7 @@ function renderToday(){const D=S.me&&S.me.d;const mf=S.feeds.filter(f=>!f.lk);
   const lt=S.log.filter(x=>x.d===k);const st=logStreak();
   h+=`<h2>📝 My log ${st>1?`<span class="note" style="font-weight:700">🔥 ${st}-day streak</span>`:""}</h2><div class="panel">${lt.length?lt.map(x=>`<div>• ${esc(x.txt)}</div>`).join(""):`<div class="note">What did you get done today?</div>`}
     <div class="addph"><input type="text" id="tdLog" maxlength="500" placeholder="${lt.length?"Add another…":"Led PMCS on 3 dozers…"}"><button id="tdLogAdd">Add</button></div></div>`;
-  h+=`${akHidden()?"":`<button class="btn alt" data-go="ask" style="width:100%;margin-top:12px">💬 Ask a question (orders, leave, pay, PFT…)</button>`}<div class="row2" style="margin-top:8px">${mf.length?`<button class="btn alt" data-go="feed">Word of Mouth</button>`:"<span></span>"}${S.me?`<button class="btn alt" data-go="me">My page</button>`:`<button class="btn alt" data-go="log">My log</button>`}</div>
+  h+=`${akHidden()?"":`<button class="btn alt" data-go="ask" style="width:100%;margin-top:12px">Ask Tally</button>`}<div class="row2" style="margin-top:8px">${mf.length?`<button class="btn alt" data-go="feed">Word of Mouth</button>`:"<span></span>"}${S.me?`<button class="btn alt" data-go="me">My page</button>`:`<button class="btn alt" data-go="log">My log</button>`}</div>
     ${memberMode()?`<p class="note" style="text-align:center;margin-top:14px"><button class="chip" id="tdLeader" style="cursor:pointer">I'm a leader: show the main page</button></p>`:""}`;
   $("#main").innerHTML=h}
 
