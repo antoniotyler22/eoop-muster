@@ -1867,6 +1867,8 @@ async function openBlob(K,s){const a=b64d(s);let pl;try{pl=new Uint8Array(await 
   let b=pl.slice(1);if(pl[0]===1){if(!window.DecompressionStream)throw new Error("This browser can't open compressed backups. Update it and try again.");b=await gz(b,false)}return JSON.parse(new TextDecoder().decode(b))}
 function setBase(o){const Y=S.sync;Y.baseSig={};for(const k of Object.keys(o))if(k!=="roster")Y.baseSig[k]=sig(o[k]);Y.baseMem={};for(const m of o.roster||[])Y.baseMem[m.id]=sig(m)}
 function mergeRemote(R){const Y=S.sync;const bs=Y.baseSig||{},bm=Y.baseMem||{};
+  S.roster=Array.isArray(S.roster)?S.roster:[];for(const m of S.roster)if(m&&!m.id)m.id="a"+Date.now().toString(36)+rndId(3); /* a person with no id would collapse into one in the merge below */
+  if(Array.isArray(R.roster))R.roster=R.roster.filter(m=>m&&m.id);
   const keys=new Set(Object.keys(S).concat(Object.keys(R)));
   for(const k of keys){if(SYNC_SKIP.includes(k)||k==="roster")continue;const localChanged=(k in bs)?sig(S[k])!==bs[k]:(k in S);if(!localChanged){if(k in R)S[k]=R[k];else delete S[k]}}
   const L={},RR={};S.roster.forEach(m=>L[m.id]=m);(R.roster||[]).forEach(m=>RR[m.id]=m);const out=[];const seen=new Set();

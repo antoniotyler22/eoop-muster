@@ -19,7 +19,7 @@
 const KT="af-addon-tok";
 const NOW=()=>Date.now();
 const esc2=s=>typeof esc==="function"?esc(s):String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const B=()=>{S.biz=S.biz&&typeof S.biz==="object"?S.biz:{};const b=S.biz;b.ents=b.ents&&typeof b.ents==="object"?b.ents:{};b.brand=b.brand&&typeof b.brand==="object"?b.brand:{};b.notes=b.notes&&typeof b.notes==="object"?b.notes:{};return b};
+const B=()=>{S.biz=S.biz&&typeof S.biz==="object"?S.biz:{};const b=S.biz;b.ents=b.ents&&typeof b.ents==="object"?b.ents:{};b.brand=b.brand&&typeof b.brand==="object"?b.brand:{};b.notes=b.notes&&typeof b.notes==="object"?b.notes:{};b.plan=b.plan&&typeof b.plan==="object"?b.plan:{};b.plan.goal=Math.min(60,Math.max(1,+b.plan.goal||4));b.plan.sched=Array.isArray(b.plan.sched)?b.plan.sched:[];return b};
 if(typeof SYNC_SKIP!=="undefined"&&Array.isArray(SYNC_SKIP)&&!SYNC_SKIP.includes("biz"))SYNC_SKIP.push("biz");
 const isIOS=()=>!!(window.MBN&&MBN.on&&MBN.platform==="ios");
 const canBuy=()=>!isIOS()||!!(window.SB&&SB.addonIAP);
@@ -90,6 +90,28 @@ const ownedKits=()=>["basic",...["school","work","youth","event"].filter(kitOn)]
 function setNote(id,kit,f,by){if(!ownedKits().includes(kit))return false;const clean={};for(const k of KITS[kit].f)clean[k]=String(f&&f[k]||"").slice(0,200);
   B().notes[id]={kit,f:clean,by:String(by||"").slice(0,60),at:NOW()};
   const ids=drills().map(d=>d.id);for(const k of Object.keys(B().notes))if(!ids.includes(k))delete B().notes[k];save();return true}
+/* ---------- drill plan: yearly goal + scheduled drills (part of the Compliance pack) ---------- */
+const yearDone=()=>{const y=new Date().getFullYear();return drills().filter(d=>d.kind!=="real"&&new Date(d.t).getFullYear()===y).length};
+const schedDone=x=>drills().some(d=>d.kind!=="real"&&d.t>=x.t-432e5);
+const schedList=()=>B().plan.sched.filter(x=>x&&x.t>0).sort((a,b)=>a.t-b.t);
+const overdue=()=>schedList().filter(x=>x.t<NOW()&&!schedDone(x));
+const nextUp=()=>schedList().find(x=>x.t>=NOW()&&!schedDone(x))||null;
+function addSched(t,label){t=+t;if(!(t>0)){toast("Pick a date and time");return false}
+  const l=B().plan.sched;if(l.length>=40){toast("Too many scheduled drills. Remove old ones.");return false}
+  l.push({id:Math.random().toString(36).slice(2,9),t,label:String(label||"").trim().slice(0,40)||"Drill"});save();return true}
+function icsOf(x){const z=t=>new Date(t).toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"");const nm=((typeof unitName==="function"?unitName():"")||"Team")+": "+x.label;
+  return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Accounted For//Drill//EN","BEGIN:VEVENT","UID:"+x.id+"@accountedfor","DTSTAMP:"+z(NOW()),"DTSTART:"+z(x.t),"DTEND:"+z(x.t+18e5),"SUMMARY:"+nm.replace(/[,;\\\n]/g," "),"BEGIN:VALARM","TRIGGER:-PT15M","ACTION:DISPLAY","DESCRIPTION:Drill in 15 minutes","END:VALARM","END:VEVENT","END:VCALENDAR"].join("\r\n")}
+function planNote(){const o=overdue(),n=nextUp();return o.length?o.length+" drill"+(o.length>1?"s":"")+" overdue":n?"Next: "+fmtD(n.t):""}
+function planHTML(){const g=B().plan.goal,n=yearDone(),pct=Math.min(100,Math.round(100*n/g)),o=overdue();
+  const rows=schedList().slice(-12).map(x=>{const dn=schedDone(x),od=!dn&&x.t<NOW();return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line,rgba(128,128,128,.25))"><div><b>${esc2(x.label)}</b><div class="note">${esc2(fmtD(x.t))} · ${dn?'<b style="color:var(--s-onhand,#2a7)">Done</b>':od?'<b style="color:var(--warn,#c33)">Overdue</b>':"Upcoming"}</div></div><div style="display:flex;gap:6px"><button class="chip" data-aopen="ics:${esc2(x.id)}" style="cursor:pointer">Calendar</button><button class="chip" data-aopen="rm:${esc2(x.id)}" style="cursor:pointer" aria-label="Remove">✕</button></div></div>`}).join("");
+  return `<div class="panel" style="margin:12px 0"><h3 style="margin:0 0 4px">Drill plan</h3>
+  <p class="note"><b style="font-size:22px">${n} of ${g}</b> drills this year${n>=g?' · <b style="color:var(--s-onhand,#2a7)">goal met ✓</b>':""}</p>
+  <div role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" style="height:10px;border-radius:6px;background:rgba(128,128,128,.25);overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--s-onhand,#2a7)"></div></div>
+  <div style="display:flex;align-items:center;gap:8px;margin-top:8px"><span class="note">Yearly goal</span><button class="chip" data-aopen="goal-" style="cursor:pointer" aria-label="Lower goal">−</button><b>${g}</b><button class="chip" data-aopen="goal+" style="cursor:pointer" aria-label="Raise goal">+</button></div>
+  ${o.length?`<p class="note" style="color:var(--warn,#c33)"><b>${o.length} scheduled drill${o.length>1?"s":""} overdue.</b> Run one and it counts.</p>`:""}
+  <div class="row2" style="margin-top:8px"><input type="text" id="apLabel" placeholder="Fire drill" maxlength="40" value="${esc2(ui.pl||"")}"><input type="datetime-local" id="apWhen" value="${esc2(ui.pw||"")}"></div>
+  <button class="btn" data-aopen="sched" style="margin-top:8px">Schedule a drill</button>${rows}</div>`}
+
 const csvc=v=>{v=String(v==null?"":v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
 function logCSV(){const rows=[["Date","Time","Type","Unit","Expected","Accounted for","Time to everyone","Late","Need help","Visitors","Still missing","Kit","Details","Signed by"]];
   for(const d of drills()){const n=noteOf(d.id),dt=new Date(d.t);
@@ -100,7 +122,7 @@ function logHTML(){const br=B().brand,name=(brandOn()&&br.name)||(typeof unitNam
   const logo=brandOn()&&br.logo?`<img src="${esc2(br.logo)}" style="height:46px;float:right" alt="">`:"";
   const rows=drills().map(d=>{const n=noteOf(d.id);return `<tr><td>${esc2(fmtD(d.t,1))}</td><td>${d.kind==="real"?"Real event":"Drill"}</td><td>${d.ok} of ${d.n}</td><td>${esc2(mm(d.all)||"not everyone")}</td><td>${esc2((d.miss||[]).join(", "))}</td><td>${n?"<b>"+esc2(KITS[n.kit].n)+"</b><br>"+Object.entries(n.f).filter(([,v])=>v).map(([k,v])=>esc2(k)+": "+esc2(v)).join("<br>"):""}</td><td>${n?esc2(n.by):""}<div class="sig"></div></td></tr>`}).join("");
   return `<!doctype html><meta charset="utf-8"><title>${esc2(name)} drill log</title><style>body{font:13px -apple-system,Helvetica,Arial,sans-serif;margin:28px;color:#111}h1{margin:0 0 4px;color:${esc2(c)}}table{border-collapse:collapse;width:100%;margin-top:14px}th,td{border:1px solid #bbb;padding:6px 8px;vertical-align:top;text-align:left}th{background:#f1f3f6}.sig{border-bottom:1px solid #555;height:22px;margin-top:10px}small{color:#555}</style>${logo}<h1>${esc2(name)}</h1><div>Emergency and safety drill log${brandOn()&&has("verified")?" · Verified organization ✓":""}</div><small>Printed ${esc2(new Date().toLocaleDateString())} from Accounted For. ${drills().length} records.</small><table><tr><th>When</th><th>Type</th><th>Accounted for</th><th>Time to everyone</th><th>Still missing</th><th>Details</th><th>Signed</th></tr>${rows||'<tr><td colspan="7">No drills recorded yet.</td></tr>'}</table>`}
-window.afBiz={state:B,tok,has,bal,siteOn,compOn,brandOn,kitOn,passLeft,refresh,redeem,buy,claim,setNote,logCSV,logHTML,KITS,ownedKits,recips};
+window.afBiz={plan:{yearDone,overdue,nextUp,addSched,note:planNote,schedDone},state:B,tok,has,bal,siteOn,compOn,brandOn,kitOn,passLeft,refresh,redeem,buy,claim,setNote,logCSV,logHTML,KITS,ownedKits,recips};
 
 /* ---------- 5. branding ---------- */
 function applyBrand(){try{const r=document.documentElement.style,c=B().brand.color;
@@ -123,7 +145,7 @@ function passCard(){const L=passLeft();
     :`<p class="note">A 5K, a field trip, a job site, a conference. 72 hours with up to 200 people, no subscription.</p>${price("pass","Start an Event Pass","$9.99")}`)}
 function compCard(){const n=drills().length;
   return card("Compliance pack"+(compOn()?" ✓":""),`<p class="note">${compOn()?`${n} drill${n===1?"":"s"} on this phone. Sign each one, then export a spreadsheet or a printable log.`:"Audit-ready drill log: fill in the lines a school, employer or insurer asks for, sign it, and export it with your team's name and logo."}</p>
-    ${compOn()?`<button class="btn" data-aopen="comp">Open the drill log</button>`:price("compliance","Unlock for a year","$49")}`)}
+    ${compOn()&&planNote()?`<p class="note"><b>${esc2(planNote())}</b></p>`:""}${compOn()?`<button class="btn" data-aopen="comp">Open the drill log</button>`:price("compliance","Unlock for a year","$49")}`)}
 function kitsCard(){const rows=["school","work","youth","event"].map(k=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line,rgba(128,128,128,.25))"><div><b>${KITS[k].n}</b><div class="note">${KITS[k].d}</div></div>${kitOn(k)?'<b style="color:var(--s-onhand,#2a7)">✓ Yours</b>':price("kit_"+(k==="work"?"work":k),"Add",KITS[k].p)}</div>`).join("");
   return card("Template kits",`<p class="note">Each kit is the set of lines a drill record needs for that setting. They show up in the drill log.</p>${rows}${["school","work","youth","event"].every(kitOn)?"":price("kits","All four kits","$24.99")}`)}
 function brandCard(){const b=B().brand;
@@ -144,6 +166,7 @@ function storeHTML(){
 function compHTML(){const L=drills().slice(0,25),k=ui.open?drills().find(d=>d.id===ui.open):null;
   const rows=L.map(d=>{const n=noteOf(d.id);const op=d.id===ui.open;return `<div style="padding:10px 0;border-top:1px solid var(--line,rgba(128,128,128,.25))"><button class="chip" data-adr="${esc2(d.id)}" style="cursor:pointer;width:100%;text-align:left;display:block"><b>${esc2(fmtD(d.t))}</b> · ${d.kind==="real"?"Real event":"Drill"} · ${d.ok}/${d.n} accounted${d.all?" in "+esc2(mm(d.all)):""}<br><span class="note">${n?"✓ "+esc2(KITS[n.kit].n)+" · signed "+esc2(n.by||"—"):"Not signed yet"}</span></button>${op?editor(d):""}</div>`}).join("");
   return `<button class="chip" data-aopen="store" style="cursor:pointer;margin-top:12px">◂ Plans & add-ons</button><h2>Drill log</h2>
+  ${planHTML()}
   <div class="row2" style="margin-bottom:8px"><button class="btn" data-aopen="csv">Export spreadsheet</button><button class="btn alt" data-aopen="html">Printable log</button></div>
   <div class="panel">${rows||'<p class="note">No drills yet. Run a recall or check-in drill and it lands here.</p>'}${drills().length>25?`<p class="note">Showing 25 of ${drills().length}. The export has all of them.</p>`:""}</div>`}
 function editor(d){const n=noteOf(d.id);const kit=ui.kit&&KITS[ui.kit]?ui.kit:"basic";const f=Object.keys(ui.f).length?ui.f:(n&&n.kit===kit?n.f:{});
@@ -156,12 +179,12 @@ function html(){return ui.sub==="comp"?compHTML():storeHTML()}
 {const _r=render;render=function(){if(view==="store"){try{renderTabs()}catch(e){}$("#main").innerHTML=html();if(typeof animateView==="function")animateView();return}return _r.apply(this,arguments)}}
 {const _rt=renderTools;renderTools=function(){const r=_rt.apply(this,arguments);
   try{const m=$("#main");if(m&&!m.querySelector('[data-go="store"]')){const g=[...m.querySelectorAll(".tgrid")].pop();
-    if(g)g.insertAdjacentHTML("beforeend",`<button data-go="store"><span class="ic">${svg("text")}</span><span><b>Plans & add-ons</b><small>${passLeft()?"Event Pass on":compOn()?"Compliance pack on":"Text credits, Event Pass, drill log"}</small></span></button>`)}}catch(e){}return r}}
+    if(g)g.insertAdjacentHTML("beforeend",`<button data-go="store"><span class="ic">${svg("text")}</span><span><b>Plans & add-ons</b><small>${passLeft()?"Event Pass on":compOn()?(planNote()||"Compliance pack on"):"Text credits, Event Pass, drill log"}</small></span></button>`)}}catch(e){}return r}}
 
 /* ---------- clicks ---------- */
 document.addEventListener("input",e=>{if(view!=="store")return;const t=e.target;
   if(t.matches&&t.matches("[data-af]")){ui.f[t.getAttribute("data-af")]=t.value}
-  else if(t.id==="adBy")ui.by=t.value;else if(t.id==="abCode")ui.code=t.value;
+  else if(t.id==="adBy")ui.by=t.value;else if(t.id==="apLabel")ui.pl=t.value;else if(t.id==="apWhen")ui.pw=t.value;else if(t.id==="abCode")ui.code=t.value;
   else if(t.id==="abName"){B().brand.name=t.value.slice(0,40);save()}
   else if(t.id==="abColor"){B().brand.color=t.value;save();applyBrand()}});
 document.addEventListener("change",e=>{if(view==="store"&&e.target.id==="abLogo")pickLogo(e.target.files&&e.target.files[0])});
@@ -173,6 +196,10 @@ document.addEventListener("click",async e=>{if(view!=="store")return;const t=e.t
     if(!(ui.by||(d&&d.by)||"").trim()){toast("Add who signed it");return}
     if(setNote(t.dataset.asave,kit,f,ui.by||(d&&d.by))){ui.open="";ui.f={};toast("Signed and saved");render()}return}
   const a=t.dataset.aopen;
+  if(a==="goal+"||a==="goal-"){B().plan.goal=Math.min(60,Math.max(1,B().plan.goal+(a==="goal+"?1:-1)));save();return render()}
+  if(a==="sched"){const w=Date.parse(($("#apWhen")||{}).value||ui.pw||"");if(addSched(w,($("#apLabel")||{}).value||ui.pl)){ui.pl="";ui.pw="";toast("Drill scheduled");render()}return}
+  if(a&&a.startsWith("rm:")){B().plan.sched=B().plan.sched.filter(x=>x.id!==a.slice(3));save();return render()}
+  if(a&&a.startsWith("ics:")){const x=B().plan.sched.find(q=>q.id===a.slice(4));if(x)shareFile(icsOf(x),"drill.ics","text/calendar");return}
   if(a==="comp"){ui.sub="comp";return render()}
   if(a==="store"){ui.sub="";return render()}
   if(a==="csv")return shareFile(logCSV(),((B().brand.name||"drill log")+" "+new Date().toISOString().slice(0,10)).replace(/[^\w -]+/g,"")+".csv","text/csv");

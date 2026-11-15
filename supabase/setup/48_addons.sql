@@ -75,7 +75,7 @@ begin
   select coalesce(sum(qty), 0) into bal from public.addon_ents where tok_hash = th and sku = 'credits';
   if bal < p_n then raise exception 'Not enough text credits.'; end if;
   insert into public.addon_ents(tok_hash, sku, qty, source, ref)
-    values (th, 'credits', -p_n, 'spend', case when p_ref is null then null else 'spend:' || th || ':' || left(p_ref, 60) end);
+    values (th, 'credits', -p_n, 'spend', 'spend:' || gen_random_uuid()::text);   -- every send is its own row (p_ref is only for the caller's records)
   return bal - p_n;
 end $$;
 

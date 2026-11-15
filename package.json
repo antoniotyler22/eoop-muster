@@ -27,6 +27,7 @@
     "@capacitor/cli": "^8.5.3",
     "acorn": "^8.19.0",
     "acorn-walk": "^8.3.5",
+    "esbuild": "^0.28.2",
     "jsdom": "^26.1.0"
   }
 }

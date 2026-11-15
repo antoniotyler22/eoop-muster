@@ -147,3 +147,23 @@ test("add-on state stays on the phone (not synced to the team) and the key is ne
     assert.ok(!JSON.stringify(a.w.eval(`syncObj()`)).includes(a.w.eval(`afBiz.tok()`)));
   } finally { await a.close(); }
 });
+
+test("drill plan: yearly goal counts drills (not real events), scheduled drills go overdue, then done when one is run", async () => {
+  const a = await boot();
+  try {
+    grant(a, { compliance: { q: 1, exp: Date.now() + 864e5 } });
+    const now = Date.now(), yr = new Date().getFullYear();
+    a.w.eval(`S.drills=[{id:"a",t:new Date(${yr},0,2).getTime(),kind:"drill",n:2,ok:2},{id:"b",t:new Date(${yr},0,3).getTime(),kind:"real",n:2,ok:2},{id:"c",t:new Date(${yr - 1},5,3).getTime(),kind:"drill",n:2,ok:2}];afBiz.state().plan.goal=3;1`);
+    assert.equal(a.w.eval(`afBiz.plan.yearDone()`), 1, "only this year's drills, not real events");
+    a.w.eval(`afBiz.plan.addSched(${now - 5 * 864e5},"Fire drill");afBiz.plan.addSched(${now + 5 * 864e5},"Lockdown")`);
+    assert.equal(a.w.eval(`afBiz.plan.overdue().length`), 1);
+    assert.equal(a.w.eval(`afBiz.plan.nextUp().label`), "Lockdown");
+    a.w.eval(`view="store";afBiz.state();render();document.querySelector('[data-aopen="comp"]').click()`);
+    const t = a.$("#main").textContent;
+    assert.match(t, /1 of 3/); assert.match(t, /Overdue/); assert.match(t, /Lockdown/);
+    a.w.eval(`S.drills.push({id:"d",t:Date.now()-1000,kind:"drill",n:2,ok:2})`);
+    assert.equal(a.w.eval(`afBiz.plan.overdue().length`), 0, "running a drill clears the overdue one");
+    assert.equal(a.w.eval(`afBiz.plan.addSched(0,"x")`), false);
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
