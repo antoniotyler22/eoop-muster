@@ -29,7 +29,7 @@ test("It is gone when the owner turns Ask off", async () => {
   } finally { await a.close(); }
 });
 
-test("4.117.1: Tally's floating button is on every page, opens Ask, and hides on Ask, while typing, and when Ask is off", async () => {
+test("4.118.0: Tally's floating button is on every page, opens Ask, and hides on Ask, while typing, and when Ask is off", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     await a.w.eval(`S.onb=true;S.welcomed=1;S.leaderMode=true;S.role="oic";S.askSt={on:true,who:"all",setup:true,t:Date.now()};S.ask=[]`);

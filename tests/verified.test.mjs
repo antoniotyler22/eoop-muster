@@ -1,4 +1,4 @@
-// 4.117.1: free "Verified leader" levels (SQL part 49): Get verified screen, badge binding on a recall, badge on the member check-in page.
+// 4.118.0: free "Verified leader" levels (SQL part 49): Get verified screen, badge binding on a recall, badge on the member check-in page.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { openApp, sleep } from "./harness.mjs";
