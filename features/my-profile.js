@@ -112,7 +112,7 @@ function calTab(D){const L=items(D),now=new Date(),mon=new Date(now);mon.setDate
 function feedTab(){const f=typeof fdCur==="function"?fdCur():null;
   const empty=`<div class="card"><p class="note" style="margin:0">Nothing new from your team yet.</p></div>`;
   if(!f||!Array.isArray(f.posts))return empty;
-  const L=f.posts.filter(p=>!p.pod&&(typeof fdForMe!=="function"||fdForMe(f,p))).slice(0,6);if(!L.length)return empty;
+  const L=f.posts.filter(p=>!p.pod&&(typeof fdForMe!=="function"||fdForMe(f,p))&&!(f.mine||{})[p.id]).slice(0,6);if(!L.length)return empty;
   return `<div id="mpFeed">${L.map(p=>fdCard(f,p,false,false)).join("")}</div><button type="button" class="btn alt" data-go="feed" style="width:100%;margin-top:12px">Open Word of Mouth ▸</button>`}
 
 const H=n=>{try{return typeof window[n]==="function"?window[n]():""}catch(e){return""}};

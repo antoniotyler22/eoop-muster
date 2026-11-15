@@ -5,8 +5,8 @@
 const N=4;
 const mine=()=>(typeof memberMode==="function"&&memberMode())&&["today","me"].includes(view);
 function html(){const fs=(S.feeds||[]).filter(f=>!f.lk&&f.mk);if(!fs.length)return "";
-  const items=fs.flatMap(f=>(typeof fdVisible==="function"?fdVisible(f):f.posts||[]).filter(p=>p&&!p.pod&&p.txt).map(p=>({f,p}))).sort((a,b)=>b.p.t-a.p.t).slice(0,N);
-  if(!items.length)return `<div class="mf" id="mfFeed"><div class="mf-h"><b>Word of Mouth</b></div><p class="mf-e">No posts yet. Word from your leaders shows up here.</p></div>`;
+  const items=fs.flatMap(f=>(typeof fdVisible==="function"?fdVisible(f):f.posts||[]).filter(p=>p&&!p.pod&&p.txt&&!(((f.mine||{})[p.id]||{}).c===1||((f.mine||{})[p.id]||{}).c===2)).map(p=>({f,p}))).sort((a,b)=>b.p.t-a.p.t).slice(0,N);
+  if(!items.length)return `<div class="mf" id="mfFeed"><div class="mf-h"><b>Word of Mouth</b></div><p class="mf-e">Nothing new. Word from your leaders shows up here.</p></div>`;
   return `<div class="mf" id="mfFeed"><div class="mf-h"><b>Word of Mouth</b><button type="button" class="mf-all" data-tab="feed">Open Word of Mouth</button></div>`
     +items.map(({f,p})=>{const by=p.by||f.unit,m=(f.mine||{})[p.id],todo=!(m&&(m.c===1||m.c===2));const t=String(p.txt).replace(/\s+/g," ").trim();
       return `<button type="button" class="mf-p${p.urg?" urg":""}" data-tab="feed" data-mfpost="${p.id}"><span class="mf-av">${esc(String(by).split(/\s+/).filter(Boolean).map(x=>x[0]).slice(0,2).join("").toUpperCase()||"?")}</span><span class="mf-b"><span class="mf-n"><b>${esc(by)}</b> <small>· ${esc(typeof ago==="function"?ago(p.t):"")}</small>${p.urg?` <i class="mf-u">URGENT</i>`:""}${todo?` <i class="mf-g">Got it needed</i>`:""}</span><span class="mf-t">${esc(t.length>200?t.slice(0,200)+"…":t)}</span></span></button>`}).join("")+`</div>`}

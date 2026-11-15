@@ -105,3 +105,14 @@ test("feed: two tabs — Word of Mouth shows posts and hides the compose box; Po
     assert.equal(a.w.eval("[...document.querySelectorAll('article.fc')].filter(x=>!x.hidden).length"), 2);
   } finally { a.close(); }
 });
+
+test("a post you tapped Got it on leaves My page", async () => {
+  const a = await memberApp(() => []);
+  try {
+    a.w.eval(`tab="feed";render()`); await sleep(120);
+    assert.match(a.$("#main").textContent, /Formation 0630/, "new post shows");
+    a.w.eval(`S.feeds[0].mine={5:{c:1,t:Date.now()}};render()`); await sleep(120);
+    assert.doesNotMatch(a.$("#main").textContent, /Formation 0630/, "gone after Got it");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});

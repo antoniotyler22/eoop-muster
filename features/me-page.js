@@ -28,7 +28,7 @@ function comingHTML(D){const k=iso(new Date()),k7=plus(7);const L=items(D).filte
   return `<div class="sech"><h2>Coming up · 7 days</h2><button class="chip" id="meIcs2" style="cursor:pointer">Add to phone calendar</button></div>`+(L.length?`<div class="card ny">${L.slice(0,8).map(x=>{const d=pd(x.d);return row(dn(x.d),(x.tm?esc(x.tm.replace(":",""))+" · ":"")+esc(x.t),(d?DAYS[d.getDay()].slice(0,3)+" · ":"")+esc(x.s))}).join("")}</div>`:`<div class="card"><p class="note" style="margin:0">Nothing in the next 7 days.</p></div>`)}
 /* the word: the latest posts for this person, each with Got it */
 function wordHTML(){const f=typeof fdCur==="function"?fdCur():null;if(!f||!Array.isArray(f.posts))return "";
-  const forMe=p=>typeof fdForMe!=="function"||fdForMe(f,p);const L=f.posts.filter(p=>!p.pod&&!(p.ci&&Date.now()-p.t<12*3600000)&&forMe(p)).slice(0,3);if(!L.length)return "";
+  const forMe=p=>typeof fdForMe!=="function"||fdForMe(f,p);const L=f.posts.filter(p=>!p.pod&&!(p.ci&&Date.now()-p.t<12*3600000)&&forMe(p)&&!(f.mine||{})[p.id]).slice(0,3);if(!L.length)return "";
   const open=L.filter(p=>!(f.mine||{})[p.id]).length;
   return `<div class="sech"><h2>The word</h2><span style="display:flex;gap:6px;align-items:center">${open?`<span class="chip" style="background:var(--brass);color:#fff;border:0">${open} new</span>`:""}<button class="chip" data-go="feed" style="cursor:pointer">Word of Mouth ▸</button></span></div><div id="meWord">${L.map(p=>fdCard(f,p,false,false)).join("")}</div>`}
 /* an open emergency muster: the newest post with a check-in link, less than 12 hours old */
