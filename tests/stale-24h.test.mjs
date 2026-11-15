@@ -72,3 +72,19 @@ test("Home donut counts Off Hand with every other not-on-hand status", async () 
     assert.match(a.$(".hdl").textContent, /Off Hand/);
   } finally { await a.close(); }
 });
+
+test("an undated Appointment expires to Off Hand; a dated one holds; a leftover TAD note is dropped", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    a.w.eval(`${setup}
+      R[0].status="Appointment";R[0].ckAt=Date.now()-30*36e5;S.tl[R[0].id]=[[Date.now()-30*36e5,"Appointment","Full Duty"]];
+      R[1].status="Appointment";R[1].start=dkey();R[1].end=dkey(new Date(Date.now()+864e5));R[1].ckAt=Date.now()-30*36e5;S.tl[R[1].id]=[[Date.now()-30*36e5,"Appointment","Full Duty"]];
+      R[2].status="Appointment";R[2].detail="TAD(30 days)";R[3].status="TAD";R[3].detail="TAD(30 days)";
+      save();view="board";render()`);
+    assert.equal(a.w.eval(`ckStale(S.roster.filter(m=>m.sec!=="ATT")[0])`), true, "undated appointment expires");
+    assert.equal(a.w.eval(`ckStale(S.roster.filter(m=>m.sec!=="ATT")[1])`), false, "dated appointment holds");
+    assert.equal(a.w.eval(`S.roster.filter(m=>m.sec!=="ATT")[2].detail||""`), "", "old TAD note removed after status changed");
+    assert.equal(a.w.eval(`S.roster.filter(m=>m.sec!=="ATT")[3].detail`), "TAD(30 days)", "TAD status keeps its note");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
