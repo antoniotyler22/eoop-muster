@@ -32,7 +32,7 @@ test("all setup parts run, and run again (safe to re-run)", { skip }, () => {
 });
 
 test("tables are closed to the public; only functions are reachable", { skip }, () => {
-  for (const t of ["recalls", "checkins", "logins", "pro_ents", "pro_feeds", "client_errors", "escalations", "addon_ents", "addon_codes"]) {
+  for (const t of ["recalls", "checkins", "logins", "pro_ents", "pro_feeds", "client_errors", "escalations", "addon_ents", "addon_codes", "org_verify", "recall_badges"]) {
     assert.throws(() => anon(`select count(*) from public.${t}`), /permission denied/, t);
   }
 });
@@ -303,4 +303,35 @@ test("Add-ons: a code works once for one team; credits are summed, can't go belo
   assert.equal(anon(`select count(*) from public.addon_list(${q(tok)}) where sku = 'site'`), "0", "an ended license stops counting");
   assert.throws(() => anon(`select * from public.addon_ents`), /permission denied/);
   assert.throws(() => anon(`select public._addon_th('x')`), /permission denied/);
+});
+
+test("Verified leader (part 49): contact needs a sign-in, org needs the owner, a recall shows the level, nothing leaks", { skip }, () => {
+  const u = "44444444-4444-4444-4444-444444444444", tok = "v".repeat(48), other = "w".repeat(48);
+  pg.psql(`insert into auth.users(id, email) values (${q(u)}, 'lead@example.com') on conflict do nothing`);
+  const as = (sql, claims = { email: "Lead@Example.com" }) => pg.psql(`set role authenticated; set "request.jwt.claims" to ${q(JSON.stringify(Object.assign({ sub: u, role: "authenticated" }, claims)))}; ${sql}`);
+  assert.throws(() => anon(`select public.verify_contact(${q(tok)})`), /permission denied/, "anon can't confirm a contact");
+  assert.throws(() => as(`select public.verify_contact(${q(tok)})`, { email: "", phone: "" }), /email or phone/, "needs a confirmed email or phone in the sign-in");
+  assert.throws(() => as(`select public.verify_org(${q(tok)}, 'Maple Elementary', 'https://maple.example', 'Principal')`), /Confirm your contact first/);
+  assert.equal(anon(`select count(*) from public.verify_status(${q(tok)})`), "0");
+  assert.equal(as(`select public.verify_contact(${q(tok)})`), "1");
+  assert.equal(anon(`select level || '|' || contact from public.verify_status(${q(tok)})`), "1|l***@example.com", "contact is masked");
+  assert.throws(() => as(`select public.verify_org(${q(tok)}, 'M', 'x', 'P')`), /organization name|website/);
+  assert.equal(as(`select public.verify_org(${q(tok)}, 'Maple Elementary', 'https://maple.example', 'Principal')`), "pending");
+  assert.equal(anon(`select level from public.verify_status(${q(tok)})`), "1", "pending is still level 1");
+  // a recall started by this leader
+  const key = "k".repeat(30);
+  pg.psql(`select public.create_recall('vrecall0001', ${q(key)})`);
+  assert.throws(() => anon(`select public.recall_badge_set('vrecall0001', 'wrong-key-wrong-key-wrong-key', ${q(tok)})`), /recall closed/, "needs the recall's read key");
+  assert.equal(anon(`select public.recall_badge_set('vrecall0001', ${q(key)}, ${q(other)})`), "0", "an unverified key gets no badge");
+  assert.equal(anon(`select count(*) from public.recall_badge_get('vrecall0001')`), "0");
+  assert.equal(anon(`select public.recall_badge_set('vrecall0001', ${q(key)}, ${q(tok)})`), "1");
+  assert.equal(anon(`select level || '|' || coalesce(org, 'none') from public.recall_badge_get('vrecall0001')`), "1|none", "level 1 shows no organization name");
+  pg.psql(`update public.org_verify set status = 'approved', reviewed_at = now()`);
+  assert.equal(anon(`select level || '|' || org from public.recall_badge_get('vrecall0001')`), "2|Maple Elementary");
+  assert.equal(as(`select public.verify_org(${q(tok)}, 'Other Name', 'https://maple.example', 'Principal')`), "pending", "changing the name needs a new review");
+  assert.equal(anon(`select level from public.recall_badge_get('vrecall0001')`), "1", "and the badge drops back until then");
+  assert.equal(anon(`select count(*) from public.recall_badge_get('nosuchrecall')`), "0");
+  assert.throws(() => anon(`select * from public.org_verify`), /permission denied/);
+  assert.throws(() => anon(`select * from public.recall_badges`), /permission denied/);
+  assert.throws(() => anon(`select public._vf_level('x')`), /permission denied/);
 });

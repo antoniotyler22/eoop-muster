@@ -87,7 +87,7 @@ const V=window.VAULT={key:null,cfg:getCfg(),ok:!!(window.crypto&&crypto.subtle),
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.hidden){hiddenAt=Date.now();return}
   const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
-window.AV="4.116.0";
+window.AV="4.117.0";
 /* self-update: an installed web app resumes without reloading, so check the live version on open, on every return, and every 10 min */
 (()=>{const NAT=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());if(NAT||!/^https?:$/.test(location.protocol))return;
   let busy=false,last=0;const typing=()=>{const a=document.activeElement;return a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)};
@@ -161,6 +161,11 @@ function ciPage(q){const esc=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<"
     <p class="note" id="ciMsg">${live?"Tap once. Your leader sees it right away.":to?"No app needed. Opens a text to your leader. Hit Send.":"No app needed. Opens a text. Pick your leader as the recipient and hit Send."}</p>
     <p class="note">${live?"Your name is scrambled before it leaves this phone; the server never stores it. No signal? It opens a text instead.":"Nothing is sent until you hit Send in Messages."} Your name is remembered on this phone only.</p></div>`;
   document.body.appendChild(m);document.querySelectorAll(".top,#helpBtn").forEach(x=>x.hidden=true);
+  /* free leader badge (SQL part 49): shown only when the leader confirmed their contact (and organization) */
+  if(live){try{SB.rpc("recall_badge_get",{p_recall:rid}).then(r=>{const x=r&&r[0];if(!x)return;const d=document.createElement("div");d.id="ciBadge";d.style.cssText="margin:8px 0 2px";
+    const pl=t=>`<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#e1f5ee;color:#085041;font-size:13px;font-weight:600;margin:0 6px 6px 0">${t}</span>`;
+    d.innerHTML=pl("✓ Contact confirmed")+(+x.level>=2?pl("✓ Organization confirmed"+(x.org?": "+esc(x.org):"")):"")+'<div class="note" style="margin:0">This leader confirmed their email or phone with Accounted For.</div>';
+    const first=m.querySelector(".panel div");if(first)first.after(d)}).catch(()=>{})}catch(e){}}
   /* rally point (#g=lat,lon,radius): adds "AT RP" or the distance to the note. The location itself never leaves this phone. */
   {const g=(q.get("g")||"").split(",").map(Number);if(g.length===3&&g.every(Number.isFinite)&&Math.abs(g[0])<=90&&Math.abs(g[1])<=180&&g[2]>0&&navigator.geolocation){
     const b=document.createElement("button");b.className="btn alt";b.type="button";b.textContent="📍 I'm at the rally point (check my location)";b.style.minHeight="48px";
