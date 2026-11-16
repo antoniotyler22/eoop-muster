@@ -14,7 +14,7 @@ test("leader saves a muster place and it rides on the My page digest", async () 
     assert.equal(a.w.eval("S.gz.name"), "Motor pool");
     assert.equal(a.w.eval("S.gz.r"), 250);
     const d = JSON.parse(a.w.eval(`JSON.stringify(window.__v12.mpDigest(S.roster[0]).gz)`));
-    assert.equal(d.name, "Motor pool"); assert.equal(d.lat, 21.45);
+    assert.equal(d.name, "Motor pool"); assert.equal(d.lat, 21.45); assert.equal(d.m, "ask", "asks to confirm unless the leader picks Count right away");
   } finally { await a.close(); }
 });
 
@@ -22,7 +22,7 @@ test("member with place check-in on is checked in once, only when inside the rad
   const sent = [];
   const a = await openApp({ rpc: (n, args) => { if (n === "feed_req") { sent.push(args); return 3; } return []; } });
   try {
-    const setup = (lat, lng) => `${geo(lat, lng)};(async()=>{const m=S.roster[0];const D=mpDigest(m);D.feed={id:"abcdefghij1234",mk:"m".repeat(30),ek:"e".repeat(43),unit:"UT",secs:[]};D.cofeed=null;D.cks=[];D.gz={name:"Motor pool",lat:21.45,lng:-157.76,r:250};
+    const setup = (lat, lng) => `${geo(lat, lng)};(async()=>{const m=S.roster[0];const D=mpDigest(m);D.feed={id:"abcdefghij1234",mk:"m".repeat(30),ek:"e".repeat(43),unit:"UT",secs:[]};D.cofeed=null;D.cks=[];D.gz={name:"Motor pool",lat:21.45,lng:-157.76,r:250,m:"auto"};
       S.feeds=[];S.me={pk:"${"p".repeat(28)}",unit:"UT",d:D,t:Date.now()};S.onb=true;S.welcomed=1;S.gfOn=true;delete S.gfDay;view="me";render()})()`;
     await a.w.eval(setup(21.50, -157.76)); // about 5.5 km away
     await sleep(80);
@@ -36,5 +36,58 @@ test("member with place check-in on is checked in once, only when inside the rad
     assert.equal(sent[0].p_feed, "abcdefghij1234");
     await a.w.eval("gfCheck(false)"); await sleep(150);
     assert.equal(sent.length, 1, "only once a day");
+  } finally { await a.close(); }
+});
+
+const memberSetup = (lat, lng, m) => `${geo(lat, lng)};(async()=>{const mm=S.roster[0];const D=mpDigest(mm);D.feed={id:"abcdefghij1234",mk:"m".repeat(30),ek:"e".repeat(43),unit:"UT",secs:[]};D.cofeed=null;D.cks=[];D.gz={name:"Motor pool",lat:21.45,lng:-157.76,r:250${m ? `,m:"${m}"` : ""}};
+  S.feeds=[];S.me={pk:"${"p".repeat(28)}",unit:"UT",d:D,t:Date.now()};S.onb=true;S.welcomed=1;S.gfOn=true;delete S.gfDay;view="me";render()})()`;
+
+test("ask mode: arriving shows a confirm button and counts only after the tap; the card shows the time", async () => {
+  const sent = [];
+  const a = await openApp({ rpc: (n, args) => { if (n === "feed_req") { sent.push(args); return 3; } return []; } });
+  try {
+    await a.w.eval(memberSetup(21.4505, -157.7601));
+    await sleep(80);
+    a.$("[data-mpgo='set']").click(); await sleep(100);
+    assert.ok(a.$("#gfMe svg"), "map with the zone");
+    await a.w.eval("gfCheck(false)"); await sleep(200);
+    assert.equal(sent.length, 0, "inside but not counted yet");
+    assert.ok(a.$("#gfConfirm"), "confirm button");
+    a.$("#gfConfirm").click();
+    await waitFor(() => sent.length === 1);
+    await waitFor(() => /Accounted for · \d{4}/.test(a.$("#gfMe").textContent));
+    assert.ok(a.$("#gfUndo"), "undo is offered");
+  } finally { await a.close(); }
+});
+
+test("undo sends Off Hand and stops more automatic counts that day", async () => {
+  const sent = [];
+  const a = await openApp({ rpc: (n, args) => { if (n === "feed_req") { sent.push(args); return 3; } return []; } });
+  try {
+    await a.w.eval(memberSetup(21.4505, -157.7601, "auto"));
+    await sleep(80);
+    a.$("[data-mpgo='set']").click(); await sleep(100);
+    await a.w.eval("gfCheck(false)");
+    await waitFor(() => sent.length === 1);
+    await waitFor(() => !!a.$("#gfUndo"));
+    a.$("#gfUndo").click();
+    await waitFor(() => sent.length === 2);
+    assert.match(a.w.eval("S.gfDay"), /\|undo$/);
+    await a.w.eval("gfCheck(false)"); await sleep(200);
+    assert.equal(sent.length, 2, "no automatic recount after undo");
+    assert.ok(a.$("#gfNow"), "can still check in by hand");
+  } finally { await a.close(); }
+});
+
+test("leader can switch arrival between Ask them to confirm and Count right away", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    await a.w.eval(`${geo(21.45, -157.76)};S.onb=true;S.welcomed=1;S.leaderMode=true;S.role="oic";S.roster[0].pk="p".repeat(24);S.gz={name:"Motor pool",lat:21.45,lng:-157.76,r:250};view="data";render()`);
+    await sleep(80);
+    assert.equal(a.$("[data-gfm='ask']").getAttribute("aria-pressed"), "true");
+    a.$("[data-gfm='auto']").click(); await sleep(50);
+    assert.equal(a.w.eval("S.gz.m"), "auto");
+    const d = JSON.parse(a.w.eval(`JSON.stringify(window.__v12.mpDigest(S.roster[0]).gz)`));
+    assert.equal(d.m, "auto");
   } finally { await a.close(); }
 });
