@@ -5,7 +5,7 @@
    Pings carry no data: only the kind of channel and a random sender id. If Realtime can't connect,
    the normal refresh keeps working, so nothing depends on it. */
 (()=>{
-const READ={get_checkins:"p_recall",get_board_updates:"p_board",get_cal:"p_board",get_roster:"p_board",
+const READ={get_checkins:"p_recall",get_board_updates:"p_board",get_cal:"p_board",get_roster:"p_board",get_status:"p_board",
   feed_get:"p_feed",feed_acks_get:"p_feed",feed_reqs_get:"p_feed",get_units:"p_company",
   page_get:"p_id",get_page:"p_id",dm_get:"p_id",backup_get:"p_id",backup_ver:"p_id"};
 const MAX_TOPICS=40;
@@ -46,7 +46,7 @@ function onPing(t,p){if(p.s&&p.s===SB.sid)return;const x=L.topics.get(t);const k
   clearTimeout(due[kind]);due[kind]=setTimeout(()=>run(kind),350);flash()}
 function run(kind){try{
   if(kind==="p_recall"){if(typeof livePoll==="function")livePoll();if(typeof bcPoll==="function")bcPoll();if(view==="muster"&&typeof qrDraw==="function")qrDraw();return}
-  if(kind==="p_board"){if(typeof livePollBoard==="function")livePollBoard();if(S.link&&typeof rosterPull==="function"&&S.link.rk2)rosterPull(true);return}
+  if(kind==="p_board"){if(typeof stTick==="function")stTick();if(typeof livePollBoard==="function")livePollBoard();if(S.link&&typeof rosterPull==="function"&&S.link.rk2)rosterPull(true);return}
   if(kind==="p_feed"){if(typeof fdPollAll==="function")fdPollAll(true);return}
   if(kind==="p_company"){if(typeof coPoll==="function")coPoll();return}
   if(kind==="p_id"){if(S.me&&typeof mpFetch==="function")mpFetch();if(typeof dmPollLeader==="function")dmPollLeader();if(typeof dmPollMember==="function")dmPollMember();
