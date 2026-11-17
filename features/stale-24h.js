@@ -23,6 +23,10 @@ window.ckStaleList=()=>{if(!on()||!real())return[];const p=pending();return S.ro
     for(const m of S.roster){if(!isStale(m,p))continue;const o=c[m.sec];if(!o)continue;
       if(o[m.status]>0)o[m.status]--;if(T[m.status]>0)T[m.status]--;if(typeof apptOff==="function"&&apptOff(m)){if(o.off>0)o.off--;if(T.off>0)T.off--}o.stale++;T.stale++;o["Off Hand"]++;T["Off Hand"]++}}catch(e){}
   return r}}
+/* 4.120.1: tapping the status someone already has (On Hand on a person showing Off Hand because 24 hrs passed) counts as an update.
+   Before, picking the same status changed nothing, so they stayed Off Hand and never came back into the On Hand count. */
+window.addEventListener("click",e=>{const so=e.target.closest&&e.target.closest("[data-sopt]");if(!so||!sheetCtx||sheetCtx.kind!=="s"||S.role==="view")return;
+  const m=S.roster.find(x=>x.id===sheetCtx.id);if(!m||so.dataset.sopt!==m.status)return;m.ckAt=Date.now();try{save()}catch(x){}},true);
 /* a note that names another status ("TAD(30 days)" on someone now Appt) is leftover from before the change: drop it */
 function oldNotes(){if(!real()||!Array.isArray(S.roster))return;let n=0;
   for(const m of S.roster){const d=String(m.detail||"").trim();if(!d||m.sec==="ATT")continue;

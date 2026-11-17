@@ -88,3 +88,18 @@ test("an undated Appointment expires to Off Hand; a dated one holds; a leftover 
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("tapping On Hand on someone who expired to Off Hand counts them again", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    a.w.eval(`${setup}
+      R[0].ckAt=Date.now()-25*36e5;S.tl[R[0].id]=[[Date.now()-26*36e5,"On Hand","Full Duty"]];save();view=R[0].sec;render()`);
+    await sleep(60);
+    assert.equal(a.w.eval(`ckStale(S.roster.filter(m=>m.sec!=="ATT")[0])`), true, "starts expired");
+    a.$(".st24 .pill").click(); await sleep(120);
+    a.$('[data-sopt="On Hand"]').click(); await sleep(200);
+    assert.equal(a.w.eval(`ckStale(S.roster.filter(m=>m.sec!=="ATT")[0])`), false, "counted again");
+    assert.equal(a.w.eval(`counts().T.stale`), 0);
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
