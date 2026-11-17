@@ -165,7 +165,7 @@ window.ckIn=function(f,o,r){S.cks=S.cks||[];const cid=String(o.cid||"").slice(0,
   const clean=(v,n)=>String(v||"").replace(/[<>]/g,"").slice(0,n);const date=v=>/^\d{4}-\d{2}-\d{2}$/.test(String(v||""))?String(v):"";
   const x={cid,feed:f.id,mid:m?m.id:"",who,sec:clean(o.sec,6),st,oth:clean(o.oth,80),from:date(o.from),to:date(o.to),loc:clean(o.loc,60),note:clean(o.note,120),t:Date.parse(r&&r.created_at)||+o.at||Date.now(),state:"new"};
   S.cks.unshift(x);S.cks=S.cks.slice(0,300);S.seen=S.seen||{};S.seen[x.mid||"n:"+who.toUpperCase()]={t:x.t,who,how:"check-in"};
-  if(S.ckAuto&&m&&st!==CK_OTHER&&canEdit()){ckApply(x,st,"auto");actAdd("📍",who+" checked in: "+ckLine(x)+" · put on the roster","checkins")}
+  if(S.ckAuto!==false&&m&&st!==CK_OTHER&&canEdit()){ckApply(x,st,"auto");actAdd("📍",who+" checked in: "+ckLine(x)+" · put on the roster","checkins")}
   else actAdd("📍",who+" checked in: "+ckLine(x)+(m?"":" · not matched to your roster"),"checkins");
   toast("📍 "+who+" checked in");try{navigator.vibrate&&navigator.vibrate([80,60,80])}catch(e){}
   localAlert("📍 "+who+" checked in",ckLine(x)+(canEdit()?". Open Check-ins to confirm.":". Open Check-ins to see it."),"checkins");
@@ -188,7 +188,7 @@ function ckApply(x,st,by){const m=S.roster.find(y=>y.id===x.mid);if(!m)return fa
   if(m.status==="On Hand"){delete m.start;delete m.end;delete m.loc;delete m.detail}
   else{if(x.from)m.start=x.from;if(x.to)m.end=x.to;else if(x.from)delete m.end;if(x.loc)m.loc=x.loc}
   const det=[x.oth,x.note].filter(Boolean).join(" · ");if(det)m.detail=det.slice(0,80);
-  m.ckAt=Date.now();S.secAt=S.secAt||{};S.secAt[m.sec]=m.ckAt;x.state="ok";x.dt=Date.now();x.by=by||"";save();return true}
+  m.ckAt=Date.now();m.by={w:"self",n:String(x.who||m.rank+" "+lastOf(m)).slice(0,30),t:m.ckAt,c:by==="auto"?"auto":String(by||"").slice(0,24)};S.secAt=S.secAt||{};S.secAt[m.sec]=m.ckAt;x.state="ok";x.dt=Date.now();x.by=by||"";save();return true}
 window.ckApply=ckApply;window.ckLine=ckLine;
 const ckOpen=()=>(S.cks||[]).filter(x=>x.state==="new");
 function ckRow(x){const m=x.mid&&S.roster.find(y=>y.id===x.mid);const open=x.state==="new";
@@ -203,13 +203,13 @@ function ckRow(x){const m=x.mid&&S.roster.find(y=>y.id===x.mid);const open=x.sta
 function renderCk(){let h=banner()+`<div class="sechead" style="margin-top:12px"><h2>Check-ins</h2><span class="note" style="margin:0">From My page and Word of Mouth</span></div>`;
   if(!leaderHere()){$("#main").innerHTML=h+`<div class="panel"><p class="note">Check in from your My page. Your leader sees it here.</p></div>`;return}
   const open=ckOpen(),done=(S.cks||[]).filter(x=>x.state!=="new").slice(0,30);
-  h+=`<div class="panel"><label class="tog"><input type="checkbox" id="ckAuto"${S.ckAuto?" checked":""}> Confirm check-ins from people on my roster by themselves</label><p class="note" style="margin:0">Off: you confirm each one before it changes the roster. Other always waits for you.</p></div>`;
+  h+=`<div class="panel"><label class="tog"><input type="checkbox" id="ckAuto"${S.ckAuto!==false?" checked":""}> Confirm check-ins from people on my roster by themselves</label><p class="note" style="margin:0">Off: you confirm each one before it changes the roster. Other always waits for you.</p></div>`;
   if(S.pgErr)h+=`<div class="panel" style="border-color:var(--warn)"><p class="note" style="margin:0">⚠️ ${esc(S.pgErr)} (DATA → System check → My page check-in)</p></div>`;
   if(!(S.feeds||[]).some(f=>f.lk)&&!S.roster.some(m=>m.pk))h+=`<div class="panel"><p class="note">Check-ins come in from My pages and Word of Mouth. Send people their My page link (Tools → Invite) and the Check in button is on their page.</p><button class="btn alt" data-go="invite">Invite</button></div>`;
   h+=open.length?`<div class="sech"><h2>To confirm · ${open.length}</h2>${open.length>1?`<button class="chip" id="ckAll" style="cursor:pointer">Confirm all matched</button>`:""}</div><div class="alist">${open.map(ckRow).join("")}</div>`:`<div class="panel"><p class="note">Nothing to confirm. New check-ins show up here and in Activity.</p></div>`;
   if(done.length)h+=`<details class="panel"><summary class="note">Confirmed and not confirmed (${done.length})</summary><div class="alist">${done.map(ckRow).join("")}</div></details>`;
   $("#main").innerHTML=h}
-document.addEventListener("change",e=>{if(e.target.id==="ckAuto"){S.ckAuto=e.target.checked;save();toast(S.ckAuto?"Check-ins from your roster confirm by themselves":"You confirm each check-in");return}
+document.addEventListener("change",e=>{if(e.target.id==="ckAuto"){S.ckAuto=e.target.checked;save();toast(S.ckAuto!==false?"Check-ins from your roster confirm by themselves":"You confirm each check-in");return}
   const w=e.target.closest("[data-ckwho]");if(w){const x=(S.cks||[]).find(c=>c.cid===w.dataset.ckwho);if(x){x.mid=w.value;save();const y=window.scrollY;renderCk();window.scrollTo(0,y)}}});
 document.addEventListener("click",e=>{const t=e.target;
   const ok=t.closest("[data-ckok]"),no=t.closest("[data-ckno]");
