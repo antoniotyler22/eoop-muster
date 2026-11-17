@@ -94,7 +94,7 @@ function homeBanner(){if(view!=="board"&&view!=="me"&&view!=="today")return;cons
 
 /* ---------- the Account screen ---------- */
 function redraw(){const y=window.scrollY;renderAcct();window.scrollTo(0,y)}
-function signInHTML(){const apple=SB.apple&&!window.NATIVE;
+function signInHTML(){const apple=SB.apple&&!window.NATIVE;const google=(SB.google||window.AF_GOOGLE)&&!window.NATIVE;
   let h=`<div class="panel"><b>Sign in (optional)</b><p class="note" style="margin:2px 0 8px">You don't need an account. Sign in to keep your teams on any phone, get teams your leader sends you, and send teams to your people.</p>`;
   if(ac.step==="code"){h+=`<p class="note" style="margin:0 0 6px">We sent a 6-digit code to <b>${esc(ac.to)}</b>.</p>
       <label for="acCode">Code</label><input id="acCode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="123456" style="font-size:22px;letter-spacing:.2em">
@@ -104,6 +104,7 @@ function signInHTML(){const apple=SB.apple&&!window.NATIVE;
       <label for="acTo">${ac.how==="email"?"Your email":"Your mobile number"}</label>
       <input id="acTo" type="text" inputmode="${ac.how==="email"?"email":"tel"}" autocomplete="${ac.how==="email"?"email":"tel"}" autocapitalize="none" spellcheck="false" value="${esc(ac.to)}" placeholder="${ac.how==="email"?"name@example.com":"(808) 555-0123"}">
       <button class="btn" id="acSend"${ac.busy?" disabled":""}>${ac.busy?"Sending…":"Send me a code"}</button>
+      ${google?`<button class="btn alt" id="acGoogle" style="margin-top:8px">Continue with Google (Gmail)</button>`:""}
       ${apple?`<button class="btn alt" id="acApple" style="margin-top:8px">Sign in with Apple</button>`:""}`}
   h+=`<div class="note" role="status" style="margin-top:6px">${esc(ac.msg)}</div></div>`;return h}
 function renderAcct(){let h=`<h2>Account</h2>`;
@@ -146,6 +147,7 @@ document.addEventListener("click",async e=>{if(!e.target.closest)return;const t=
   if(t.closest("#acVerify")){verify();return}
   if(t.closest("#acResend")){ac.step="how";sendCode();return}
   if(t.closest("#acBack")){ac.step="how";ac.msg="";redraw();return}
+  if(t.closest("#acGoogle")){location.href=SB.url+"/auth/v1/authorize?provider=google&redirect_to="+encodeURIComponent(PUB());return}
   if(t.closest("#acApple")){location.href=SB.url+"/auth/v1/authorize?provider=apple&redirect_to="+encodeURIComponent(PUB());return}
   if(t.closest("#acOut")){const tk=A.s&&A.s.access_token;A.keep(null);ac={step:"how",how:ac.how,to:"",busy:false,msg:"Signed out. Your teams stay on this phone.",teams:null,inv:null,sent:null,sentFor:"",armed:""};
     if(tk)fetch(SB.url+"/auth/v1/logout",{method:"POST",headers:{apikey:SB.key,Authorization:"Bearer "+tk}}).catch(()=>{});homeBanner();redraw();return}
