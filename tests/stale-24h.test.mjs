@@ -103,3 +103,38 @@ test("tapping On Hand on someone who expired to Off Hand counts them again", asy
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("4.123.1: tapping the same status stamps an update, not a check-in", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    a.w.eval(`${setup}
+      R[0].ckAt=Date.now()-25*36e5;S.tl[R[0].id]=[[Date.now()-26*36e5,"On Hand","Full Duty"]];save();view=R[0].sec;render()`);
+    await sleep(60);
+    const ck0 = a.w.eval(`S.roster.filter(m=>m.sec!=="ATT")[0].ckAt`);
+    a.$(".st24 .pill").click(); await sleep(120);
+    a.$('[data-sopt="On Hand"]').click(); await sleep(200);
+    assert.equal(a.w.eval(`S.roster.filter(m=>m.sec!=="ATT")[0].ckAt`), ck0, "check-in time untouched");
+    assert.ok(a.w.eval(`+S.roster.filter(m=>m.sec!=="ATT")[0].upd.t`) > Date.now() - 5000, "stamped as an update");
+    assert.equal(a.w.eval(`counts().T.stale`), 0);
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
+
+test("4.123.1: the last-update time (ut) rides the roster, and a fresh ut keeps someone off the Off Hand list on a leader's phone", async () => {
+  const puts = [];
+  const a = await openApp({ rpc: (fn, b) => { if (fn === "put_roster") puts.push(b); return []; } });
+  try {
+    await a.w.eval(`(async()=>{const k=b64url(crypto.getRandomValues(new Uint8Array(32)));window.__k=k;S.mode="military";S.source="mol";S.leaderMode=true;S.onb=true;S.welcomed=1;S.role="co";
+      S.board={id:"b1",rk:"r".repeat(30),wk:"w".repeat(30),sk:{UT:k},rsig:{},rat:{}};
+      S.roster=[{id:"u1",rank:"LCPL",name:"MUNIZ, LUIS",sec:"UT",status:"On Hand",ckAt:Date.now()-36e5}];S.tl={};S.cks=[];save()})()`);
+    await a.w.eval("rpPublish(true)"); await sleep(80);
+    const body = await a.w.eval(`fdDec(window.__k,${JSON.stringify(puts[0].p_ct)})`);
+    assert.ok(+body.ms[0].ut > Date.now() - 36e5 - 5000 && +body.ms[0].ut <= Date.now(), "ut published");
+    // a leader's phone: old local history, but the roster says they were updated an hour ago
+    a.w.eval(`S.roster[0].ckAt=0;S.roster[0].ut=String(Date.now()-36e5);S.tl[S.roster[0].id]=[[Date.now()-30*36e5,"On Hand","Full Duty"]]`);
+    assert.equal(a.w.eval(`ckStale(S.roster[0])`), false, "fresh ut counts");
+    a.w.eval(`S.roster[0].ut=String(Date.now()-30*36e5)`);
+    assert.equal(a.w.eval(`ckStale(S.roster[0])`), true, "old ut is expired");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
