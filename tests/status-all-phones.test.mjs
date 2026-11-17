@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { openApp, sleep } from "./harness.mjs";
 
 function server() {
-  const D = { updates: [], uid: 0, roster: {}, cal: {}, backups: {} };
+  const D = { updates: [], uid: 0, roster: {}, cal: {}, backups: {}, status: {}, seq: 0 };
   const rpc = (fn, b) => {
     switch (fn) {
       case "create_board": return null;
@@ -23,6 +23,8 @@ function server() {
         if (b.p_base !== c.ver) throw new Error("conflict");
         c.ct = b.p_ct; c.ver++; c.updated_at = new Date().toISOString(); return c.ver;
       }
+      case "put_status": for (const x of b.p_items) { const c = D.status[x.p]; if (!c || x.t >= c.t) D.status[x.p] = { pid: x.p, sec: x.s, ct: x.c, t: x.t, seq: ++D.seq }; } return b.p_items.length;
+      case "get_status": return Object.values(D.status).filter((r) => r.seq > (b.p_after || 0)).sort((a, b) => a.seq - b.seq);
       default: return [];
     }
   };
@@ -146,4 +148,49 @@ test("two people change different Marines at the same time: both changes survive
     assert.equal(await st(edit, "u1"), "SIQ");
     assert.equal(await st(edit, "h1"), "Leave", "editor got the OIC's change");
   } finally { for (const p of [oic, a, edit]) await p.close(); }
+});
+
+// 4.124: live status through the server, with the OIC's phone never polling or publishing
+test("live status: a change reaches every phone through the server alone, OIC phone idle", async () => {
+  const { srv, oic, lead, access, skUT, skHQ } = await setup();
+  const ut = await lead("UT", skUT), ut2 = await lead("UT", skUT), hq = await lead("HQ", skHQ), edit = await access("sncoic"), view = await access("view");
+  const tick = async (...ps) => { for (const p of ps) { await p.w.eval("stTick()"); await sleep(120); } };
+  try {
+    await oic.w.eval("rpPublish(true)"); await sleep(150); await pull(ut); await pull(ut2); await pull(hq);
+    await tick(oic, ut, ut2, hq, edit, view); // everyone seeds and settles
+    await ut.w.eval(`S.roster.find(m=>m.id==="u1").status="TAD";save()`);
+    await tick(ut); // the leader's change goes to the server
+    await tick(hq, edit, view); // the OIC phone does nothing at all
+    assert.equal(await st(hq, "u1"), undefined, "an HQ leader's phone never gets UT's people (leaders only hold their own section)");
+    assert.equal(await st(edit, "u1"), "TAD");
+    assert.equal(await st(view, "u1"), "TAD", "view-only phone sees it");
+    await tick(ut2);
+    assert.equal(await st(ut2, "u1"), "TAD", "a second phone on the UT link sees it");
+    await tick(oic);
+    assert.equal(await st(oic, "u1"), "TAD", "the OIC's phone gets it when it opens");
+    // an access phone changes someone: leaders see it with the OIC still idle
+    await edit.w.eval(`S.roster.find(m=>m.id==="h1").status="Leave";save()`);
+    await tick(edit, hq);
+    assert.equal(await st(hq, "h1"), "Leave", "the HQ leader sees their own section's change");
+    // an older write never beats a newer one
+    const before = JSON.stringify(Object.values(srv.D.status).map((r) => r.t).sort());
+    await ut.w.eval(`S.roster.find(m=>m.id==="u1").status="On Hand";save()`);
+    await tick(ut, ut2);
+    assert.equal(await st(ut2, "u1"), "On Hand", "changing back works too");
+    assert.notEqual(JSON.stringify(Object.values(srv.D.status).map((r) => r.t).sort()), before);
+    for (const p of [oic, ut, ut2, hq, edit, view]) assert.deepEqual(p.errors, []);
+  } finally { for (const p of [oic, ut, ut2, hq, edit, view]) await p.close(); }
+});
+
+test("live status: server without part 51 stays quiet and the old relay keeps working", async () => {
+  const srv = server();
+  const rpc = (fn, b) => { if (fn === "put_status" || fn === "get_status") throw new Error("Could not find the function public." + fn + " in the schema cache"); return srv.rpc(fn, b); };
+  const a = await openApp({ rpc });
+  try {
+    await a.w.eval(`S.mode="military";S.source="mol";S.welcomed=1;S.onb=true;S.role="oic";S.roster=${PEOPLE};S.board={id:"board1234567",rk:"r".repeat(30),wk:"w".repeat(30),ek:b64url(crypto.getRandomValues(new Uint8Array(32))),sk:{},rsig:{},rat:{},after:0,last:{}};save()`);
+    await a.w.eval("stTick()"); await sleep(150);
+    await a.w.eval(`S.roster[0].status="Leave";save()`); await a.w.eval("stTick()"); await sleep(150);
+    assert.equal(await st(a, "u1"), "Leave", "local change untouched");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
 });
