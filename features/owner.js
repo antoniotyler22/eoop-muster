@@ -20,10 +20,11 @@ let pend=null;
   if(C&&pend){const code=C.value.trim();if(!code){o.textContent="Enter the 6-digit code from your authenticator app, or a recovery code.";return}o.textContent="Checking…";
     try{const r=await tryOwner(pend.u,pend.p,code);if(r===true){pend=null;closeSheet();open();toast("Signed in as the app owner")}else o.textContent="That code isn't right."}catch(e){o.textContent=String(e.message||e)}return}
   const r=await _si.apply(this,arguments);
-  try{if(u&&p&&o&&/wrong|too many/i.test(o.textContent)){o.textContent="Checking…";let got=false;try{got=await tryOwner(u,p)}catch(e){got=false}
+  /* Try the owner login whenever the normal sign-in did not succeed (the sheet is still open), whatever language the error is in; skip only the "Agree to the Terms" prompt. */
+  try{const t0=String(o&&o.textContent||"");const wrongish=/wrong|too many/i.test(t0);if(u&&p&&o&&o.isConnected&&t0&&!/^(Checking|Opening|Agree to the Terms)/i.test(t0)&&(wrongish||!/ended|damaged|is for /i.test(t0))){o.textContent="Checking…";let got=false;try{got=await tryOwner(u,p)}catch(e){got=false}
     if(got==="code"){pend={u,p};P.value="";o.textContent="";const box=P.closest(".panel")||R;box.insertAdjacentHTML("afterbegin",`<div class="panel" style="margin:0 0 8px;border-color:var(--brass)" data-noxl><b>2-step sign-in</b><p class="note">Enter the 6-digit code from your authenticator app, or one of your recovery codes.</p><input type="text" id="lgCode" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" autocapitalize="none" autocorrect="off" spellcheck="false"></div>`);const i=q("#lgCode");if(i)i.focus();if(q("#lgGo"))q("#lgGo").textContent="Continue"}
     else if(got===true){P.value="";o.textContent="";closeSheet();open();toast("Signed in as the app owner")}
-    else o.textContent="Username or password is wrong. Check with whoever gave it to you."}}catch(e){}return r}}
+    else o.textContent=wrongish?"Username or password is wrong. Check with whoever gave it to you.":t0}}catch(e){}return r}}
 document.addEventListener("click",e=>{if(e.target.closest("[data-sclose],#lgGo"))return;if(pend&&!document.querySelector("#lgCode"))pend=null},true);
 
 /* ---- the console ---- */
