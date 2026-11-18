@@ -149,8 +149,8 @@ export function build() {
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname)) {
   const out = build();
   const file = path.join(root, "app.bundle.js");
-  // version.json tells installed web apps a newer version is live (index.html checks it on open and on return)
-  const av = (fs.readFileSync(path.join(root, "index.html"), "utf8").match(/window\.AV="([^"]+)"/) || [])[1];
+  // version.json tells installed web apps a newer version is live (app.html checks it on open and on return)
+  const av = (fs.readFileSync(path.join(root, "app.html"), "utf8").match(/window\.AV="([^"]+)"/) || [])[1];
   const vfile = path.join(root, "version.json"), vjson = JSON.stringify({ v: av }) + "\n";
   if (process.argv.includes("--check")) {
     if (!av || (fs.existsSync(vfile) ? fs.readFileSync(vfile, "utf8") : "") !== vjson) { console.error("version.json is out of date. Run: npm run bundle"); process.exit(1); }
