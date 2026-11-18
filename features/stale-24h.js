@@ -13,10 +13,12 @@ function away(m){if(!AWAY.includes(m.status))return false;const s=isoOf(m.start)
   /* an Appointment with no date at all isn't scheduled: it expires to Off Hand after 24 hrs like anyone who hasn't updated */
   if(m.status==="Appointment"&&!s&&!e)return false;
   return (!s||s<=d)&&(!e||e>=d)}
-function touched(m){let t=+m.ckAt||0;if(m.upd&&+m.upd.t>t)t=+m.upd.t;const L=(S.tl||{})[m.id];if(L&&L.length){const x=+L[L.length-1][0]||0;if(x>t)t=x}return t}
+function touched(m){let t=+m.ckAt||0;if(+m.ut>t)t=+m.ut;if(m.upd&&+m.upd.t>t)t=+m.upd.t;const L=(S.tl||{})[m.id];if(L&&L.length){const x=+L[L.length-1][0]||0;if(x>t)t=x}return t}
 function pending(){const p=new Set();for(const x of S.cks||[])if(x&&x.mid&&Date.now()-(+x.t||0)<DAY)p.add(x.mid);return p}
 function isStale(m,pend){if(!on()||!real()||!m||m.sec==="ATT"||away(m))return false;const p=pend||pending();if(p.has(m.id)||(m.uid&&p.has(m.uid)))return false;const t=touched(m);return !!t&&Date.now()-t>=DAY}
 window.ckStale=m=>isStale(m);
+/* 4.120.2: the last-update time travels with the roster (ut) so every phone with a link agrees on who is Off Hand */
+window.ckTouched=touched;
 window.ckStaleList=()=>{if(!on()||!real())return[];const p=pending();return S.roster.filter(m=>isStale(m,p))};
 {const _c=counts;counts=function(){const r=_c.apply(this,arguments);
   try{if(!on()||!real())return r;const {c,T}=r;const p=pending();T.stale=0;T["Off Hand"]=0;for(const k of Object.keys(c))if(c[k]){c[k].stale=0;c[k]["Off Hand"]=0}
@@ -24,9 +26,9 @@ window.ckStaleList=()=>{if(!on()||!real())return[];const p=pending();return S.ro
       if(o[m.status]>0)o[m.status]--;if(T[m.status]>0)T[m.status]--;if(typeof apptOff==="function"&&apptOff(m)){if(o.off>0)o.off--;if(T.off>0)T.off--}o.stale++;T.stale++;o["Off Hand"]++;T["Off Hand"]++}}catch(e){}
   return r}}
 /* 4.120.1: tapping the status someone already has (On Hand on a person showing Off Hand because 24 hrs passed) counts as an update.
-   Before, picking the same status changed nothing, so they stayed Off Hand and never came back into the On Hand count. */
+   4.120.2: stamped as an update (m.upd), not a check-in (m.ckAt), so a leader's tap doesn't mark them as checked in. */
 window.addEventListener("click",e=>{const so=e.target.closest&&e.target.closest("[data-sopt]");if(!so||!sheetCtx||sheetCtx.kind!=="s"||S.role==="view")return;
-  const m=S.roster.find(x=>x.id===sheetCtx.id);if(!m||so.dataset.sopt!==m.status)return;m.ckAt=Date.now();try{save()}catch(x){}},true);
+  const m=S.roster.find(x=>x.id===sheetCtx.id);if(!m||so.dataset.sopt!==m.status)return;m.upd={t:Date.now(),sec:m.sec};try{save()}catch(x){}},true);
 /* a note that names another status ("TAD(30 days)" on someone now Appt) is leftover from before the change: drop it */
 function oldNotes(){if(!real()||!Array.isArray(S.roster))return;let n=0;
   for(const m of S.roster){const d=String(m.detail||"").trim();if(!d||m.sec==="ATT")continue;

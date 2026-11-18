@@ -40,7 +40,7 @@ const _al=alerts;
 alerts=function(){const r=_al.apply(this,arguments);const H=AH();
   return {over:r.over.filter(a=>!H[alKey(a.m,"over")]),ret:r.ret.filter(a=>!H[alKey(a.m,"ret")]),dep:r.dep.filter(a=>!H[alKey(a.m,"dep")])}};
 function backNow(m){const today=dkey();const was=m.status;
-  BL().unshift({id:m.id,t:Date.now(),status:m.status,start:m.start||"",end:m.end||"",cal:JSON.parse(JSON.stringify(m.cal||[]))});S.backLog=BL().slice(0,20);m.status="On Hand";delete m.start;delete m.end;delete m.loc;delete m.detail;
+  BL().unshift({id:m.id,t:Date.now(),status:m.status,start:m.start||"",end:m.end||"",cal:JSON.parse(JSON.stringify(m.cal||[]))});S.backLog=BL().slice(0,20);m.status="On Hand";m.ut=Date.now();delete m.start;delete m.end;delete m.loc;delete m.detail;
   // the rest of any leave/TAD on their calendar comes off
   for(const e of m.cal||[]){if(!["LEAVE","TAD"].includes(e.ty))continue;const end=e.end&&e.end>e.d?e.end:e.d;if(end<today)continue;
     if(e.d>=today)e.done=1;else{const y=new Date(today0());y.setDate(y.getDate()-1);e.end=dkey(y)}}
@@ -139,7 +139,7 @@ document.addEventListener("click",ev=>{const t=ev.target;if(!t.closest)return;le
   if((x=t.closest("[data-hdel]"))){const [w,...r]=x.dataset.hdel.split(":");const k=r.join(":");if(armed!=="hd"+k){armed="hd"+k;keep(render);return}armed=null;
     if(w==="al"){const [id,knd]=k.split("|");const m=byId(id);if(m){if(knd==="dep")delete m.edd;else{delete m.start;delete m.end}}delete AH()[k];save();toast(knd==="dep"?"EDD deleted":"Dates deleted")}
     else{const msg=delAuto(partsOf(k));delete CH()[k];save();toast(msg||"Deleted")}redo();return}
-  if((x=t.closest("[data-unback]"))){const b=BL()[+x.dataset.unback];const m=b&&byId(b.id);if(m){m.status=b.status;if(b.start)m.start=b.start;if(b.end)m.end=b.end;m.cal=b.cal;if(b.end)m.noAuto=b.end;delete m.autoBack;S.backLog=BL().filter(y=>y!==b);save();try{if(S.board)rpPublish(true)}catch(e){}toast(who(m)+" set back to "+(SHORT[b.status]||b.status))}redo();return}
+  if((x=t.closest("[data-unback]"))){const b=BL()[+x.dataset.unback];const m=b&&byId(b.id);if(m){m.status=b.status;m.ut=Date.now();if(b.start)m.start=b.start;if(b.end)m.end=b.end;m.cal=b.cal;if(b.end)m.noAuto=b.end;delete m.autoBack;S.backLog=BL().filter(y=>y!==b);save();try{if(S.board)rpPublish(true)}catch(e){}toast(who(m)+" set back to "+(SHORT[b.status]||b.status))}redo();return}
   if((x=t.closest("[data-unack]"))){const m=byId(x.dataset.unack);const r=m&&(m.due||{})[x.dataset.rdn];if(r){delete r.ack;save();toast("Unhidden")}redo();return}
   if((x=t.closest("[data-undone]"))){const [mid,cid]=x.dataset.undone.split(":");const c=((byId(mid)||{}).cal||[]).find(y=>y.id===cid);if(c){delete c.done;save();toast("Back on the calendar")}redo();return}
   if((x=t.closest("[data-cdel2]"))){const [mid,cid]=x.dataset.cdel2.split(":");if(armed!=="cd2"+cid){armed="cd2"+cid;keep(render);return}armed=null;const m=byId(mid);if(m){m.cal=(m.cal||[]).filter(y=>y.id!==cid);save();toast("Deleted")}redo();return}

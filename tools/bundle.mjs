@@ -88,6 +88,7 @@ export const SOURCES = [
   "features/ck-missing.js",
   "features/stale-24h.js",
   "features/status-by.js",
+  "features/live-status.js",
   "features/ask-roster.js",
   "features/feed-reply.js",
   "features/one-feed.js",

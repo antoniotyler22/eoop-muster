@@ -841,7 +841,7 @@ async function linkPush(force){const L=S.link;if(!L||lkBusy)return;if(L.rk2&&!L.
     if(force||st!==L.sig){const me=await Promise.all(SB.words(L.me).map(w=>SB.h(L.board,w)));
       await SB.rpc("push_update",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_sender:me,p_strength:ms.length,p_items:items});
       L.sig=st;L.sent=Date.now();L.lsig=lsigOf(ms);L.err="";save();SB.notify(null,{board:L.board})}
-    if(L.ek){const cal=ms.flatMap(m=>(m.cal||[]).filter(e=>(e.end||e.d)>=dkey(new Date(Date.now()-30*86400000))).map(e=>({nk:fullK(m),d:e.d,tm:e.tm||"",end:e.end||"",ty:e.ty,ti:e.ti,no:e.no||""})));const dt=ms.map(m=>({nk:fullK(m),id:m.uid||m.id,sb:L.whole&&m.sec!=="ATT"?m.sec:undefined,st:m.status,s:m.start||"",e:m.end||"",l:m.loc||"",x:m.detail||"",du:m.due||{}}));const wx=typeof whoCalExtra==="function"?whoCalExtra():{};const ko=typeof ckOut==="function"?ckOut():[];const cs=sigF([cal,dt,wx,ko]);
+    if(L.ek){const cal=ms.flatMap(m=>(m.cal||[]).filter(e=>(e.end||e.d)>=dkey(new Date(Date.now()-30*86400000))).map(e=>({nk:fullK(m),d:e.d,tm:e.tm||"",end:e.end||"",ty:e.ty,ti:e.ti,no:e.no||""})));const dt=ms.map(m=>({nk:fullK(m),id:m.uid||m.id,sb:L.whole&&m.sec!=="ATT"?m.sec:undefined,st:m.status,s:m.start||"",e:m.end||"",l:m.loc||"",x:m.detail||"",du:m.due||{},ut:(window.ckTouched&&window.ckTouched(m))||undefined}));const wx=typeof whoCalExtra==="function"?whoCalExtra():{};const ko=typeof ckOut==="function"?ckOut():[];const cs=sigF([cal,dt,wx,ko]);
       if(force||cs!==L.calSig){const ct=await fdEnc(L.ek,Object.assign({e:cal,d:dt},wx,ko.length?{k:ko}:{}));await SB.rpc("push_cal",{p_board:L.board,p_write_key:L.wk,p_sec:L.sec,p_ct:ct});L.calSig=cs;L.err="";rawSave()}}}
   catch(e){const t=String(e.message||e);L.err=/link not valid/i.test(t)?"This link was replaced by your OIC. Ask them for the new one.":t.slice(0,80);save();clearTimeout(lkTimer);if(!/replaced/.test(L.err))lkTimer=setTimeout(linkPush,60000)}
   finally{lkBusy=false;if(view==="live"||view===(L.mysec||"").toLowerCase()){const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"){const y=window.scrollY;render();window.scrollTo(0,y)}}}}
@@ -868,7 +868,7 @@ function ckFromLeader(sec,list){if(!S.board||!Array.isArray(list))return false;c
 async function livePollCal(){const B=S.board;if(!B||!B.ek)return;try{const rows=await SB.rpc("get_cal",{p_board:B.id,p_read_key:B.rk});let ch=false;
   for(const r of rows||[]){const t=Date.parse(r.updated_at)||0;if(S.secCal[r.sec]&&S.secCal[r.sec].t>=t)continue;const o=await fdDec(B.ek,r.ct);if(!o||!Array.isArray(o.e))continue;try{if(Array.isArray(o.k)&&ckFromLeader(r.sec,o.k))ch=true}catch(e){}try{if(whoCalApply(r.sec,o))ch=true}catch(e){}const calCh=!S.secCal[r.sec]||sigF(S.secCal[r.sec].e)!==sigF(o.e.slice(0,2000));if(S.secCal[r.sec]&&calCh)actAdd("🗓",r.sec+" section calendar updated","cal");S.secCal[r.sec]={t,e:o.e.slice(0,2000)};ch=true;
     if(Array.isArray(o.d)){const ms=S.roster.filter(m=>m.sec===r.sec);const by={};ms.forEach(m=>(by[fullK(m)]=by[fullK(m)]||[]).push(m));const who=[];
-      const dueWho=[];for(const x of o.d.slice(0,600)){const byId=x.id?ms.find(m=>m.id===String(x.id)):null;const hit=byId?[byId]:by[String(x.nk)];if(!hit||hit.length!==1)continue;const m=hit[0];let c=false;if(x.sb&&/^[A-Z0-9]{1,6}$/.test(x.sb)&&m.sub!==x.sb){m.sub=x.sb;c=true}
+      const dueWho=[];for(const x of o.d.slice(0,600)){const byId=x.id?ms.find(m=>m.id===String(x.id)):null;const hit=byId?[byId]:by[String(x.nk)];if(!hit||hit.length!==1)continue;const m=hit[0];let c=false;try{const u=Math.min(+x.ut||0,Date.now());if(u&&window.ckTouched&&u>window.ckTouched(m))m.upd={t:u,sec:r.sec}}catch(e){}if(x.sb&&/^[A-Z0-9]{1,6}$/.test(x.sb)&&m.sub!==x.sb){m.sub=x.sb;c=true}
         if(x.du&&typeof x.du==="object"){const nd=sanDue(x.du);if(JSON.stringify(nd)!==JSON.stringify(sanDue(m.due||{}))){const chg=Object.keys(nd).filter(k=>JSON.stringify(nd[k])!==JSON.stringify((m.due||{})[k]));m.due=nd;dueWho.push(m.rank+" "+lastOf(m)+(chg.length?" ("+chg.slice(0,2).join(", ")+")":""))}}
         for(const [k,v] of [["start",x.s],["end",x.e],["loc",x.l],["detail",x.x]]){const nv=String(v||"").slice(0,120);if((m[k]||"")!==nv){if(nv)m[k]=nv;else delete m[k];c=true}}if(c)who.push(m.rank+" "+lastOf(m)+(x.e?" thru "+String(x.e).slice(0,10):""))}
       if(dueWho.length)actAdd("✅",r.sec+" leader updated due-outs: "+dueWho.slice(0,6).join(", ")+(dueWho.length>6?" +"+(dueWho.length-6)+" more":""),"ready");
@@ -903,7 +903,10 @@ async function livePollBoard(){const B=S.board;if(!B||lvBusy)return;livePollCal(
           const st={},du={};
           for(const it of r.items||[]){const [a,b,c]=it.split(":");const m=byI[a]?byI[a][0]:(byT[a]||[]).length===1?byT[a][0]:(!byT[a]&&(byL[b]||[]).length===1)?byL[b][0]:null;if(!m){res.miss++;continue}
             if(c==="LD")du[m.id]="Light Duty";else if(c==="LIM")du[m.id]="LIMDU";else if(SDEC[c])st[m.id]=okSt(SDEC[c])}
-          const chg=[];for(const m of ms){const ns=st[m.id]||"On Hand",nd=du[m.id]||"Full Duty";if(m.status!==ns||dutyOf(m)!==nd){chg.push(m.rank+" "+lastOf(m)+" → "+(m.status!==ns?(SHORT[ns]||ns):nd));m.status=ns;m.duty=nd;m.upd={t:res.t,sec};res.ch++}}res.chg=chg;
+          const chg=[];for(const m of ms){const ns=st[m.id]||"On Hand",nd=du[m.id]||"Full Duty";
+            /* a change made or seen here after this leader sent their update is newer: an older update can't put the person back On Hand */
+            try{const tt=Math.max(+m.ckAt||0,(m.upd&&+m.upd.t)||0,+m.ut||0);if(tt&&tt>res.t)continue}catch(e){}
+            if(m.status!==ns||dutyOf(m)!==nd){chg.push(m.rank+" "+lastOf(m)+" → "+(m.status!==ns?(SHORT[ns]||ns):nd));m.status=ns;m.duty=nd;m.upd={t:res.t,sec};res.ch++}}res.chg=chg;
           const set=new Set(r.sender||[]);if(set.size){const hit=[];for(const m of S.roster){const lw=SB.words(lastOf(m));if(!lw.length)continue;const hs=await Promise.all(lw.map(w=>SB.h(B.id,w)));if(hs.every(h=>set.has(h)))hit.push(m)}
             if(hit.length){const rk=await Promise.all(hit.map(m=>SB.h(B.id,String(m.rank).toUpperCase().replace(/[^A-Z0-9]/g,""))));const both=hit.filter((m,i)=>set.has(rk[i]));const pick=both.length===1?both[0]:hit.length===1?hit[0]:null;if(pick)res.by=pick.rank+" "+lastOf(pick)}}}
         else res.unknown=true;
@@ -1214,7 +1217,7 @@ every(8000,()=>{if(S.link&&S.link.rk2&&!S.link.pulled)rosterPull()},"roster-firs
 const mainFeed=()=>S.feeds.find(f=>f.lk&&f.main)||S.feeds.find(f=>f.lk)||null;
 function secKey(sec){const B=S.board;B.sk=B.sk||{};if(!B.sk[sec]){B.sk[sec]=b64url(crypto.getRandomValues(new Uint8Array(32)));B.rsig={};setTimeout(save,0)}return B.sk[sec]}
 const lsigOf=ms=>sigF(ms.map(m=>[m.id,m.status,dutyOf(m),m.start||"",m.end||"",m.loc||"",m.detail||"",m.due||{}]));
-const RPF=["id","rank","name","sec","status","duty","phone","detail","loc","start","end","parent","due","sub"];
+const RPF=["id","rank","name","sec","status","duty","phone","detail","loc","start","end","parent","due","sub","ut"];
 function sanDue(o){const r={};if(!o||typeof o!=="object")return r;for(const [k,v] of Object.entries(o).slice(0,40)){if(!v||typeof v!=="object")continue;r[String(k).slice(0,40)]={due:String(v.due||"").slice(0,10),done:String(v.done||"").slice(0,10)};if(v.ack)r[String(k).slice(0,40)].ack=String(v.ack).slice(0,10)}return r}
 function coFeedDown(){const L=S.link;if(!L||!L.whole)return null;const f=S.feeds.find(x=>x.hub&&!x.lk);return f?{id:f.id,mk:f.mk,ek:f.ek,unit:f.unit,sec:L.sec}:null}
 function joinCoFeed(C,me,mid){if(!C||!C.id||S.feeds.some(f=>f.id===C.id))return false;const nf={id:String(C.id).slice(0,20),mk:String(C.mk).slice(0,40),ek:String(C.ek).slice(0,60),unit:String(C.unit||"Company").slice(0,30),me:String(me||"").slice(0,30),sec:String(C.sec||"").slice(0,6),secsLink:[String(C.sec||"")],posts:[],seen:0,mine:{},hub2:1};if(mid)nf.mid=String(mid).slice(0,40);
@@ -1228,7 +1231,7 @@ function ckPack(sec){try{const now=Date.now(),L=Array.isArray(S.cks)?S.cks:[];co
   return out}catch(e){return []}}
 async function rpPublish(force){const B=S.board;if(!B||!B.sk||rpBusy||S.role==="view")return;rpBusy=true;
   try{const f=mainFeed();const feed=f&&f.pk?{id:f.id,mk:f.mk,ek:f.ek,pk:f.pk,unit:f.unit}:null;B.rsig=B.rsig||{};let n=0;
-    for(const [sec,k] of Object.entries(B.sk)){const ms=S.roster.filter(m=>m.sec===sec).map(m=>{const o={};for(const x of RPF)if(m[x]!=null&&m[x]!=="")o[x]=x==="duty"?dutyOf(m):m[x];o.duty=dutyOf(m);return o});
+    for(const [sec,k] of Object.entries(B.sk)){const ms=S.roster.filter(m=>m.sec===sec).map(m=>{const o={};for(const x of RPF)if(m[x]!=null&&m[x]!=="")o[x]=x==="duty"?dutyOf(m):m[x];o.duty=dutyOf(m);try{const u=window.ckTouched?window.ckTouched(m):0;if(u)o.ut=u}catch(e){}return o});
       const body0={v:1,lvl:S.level==="co"?"co":"plt",unit:unitName(),sec,secName:((SECTIONS.find(x=>x[0]===sec)||[])[1]||sec),secs:SECTIONS.map(x=>x[0]),sl:SECTIONS.map(x=>x.slice()),mode:S.mode||"military",ri:readyItems().map(it=>({n:it.n,mo:it.mo||0})),acks:secAcks(sec),cofeed:coFeedDown(),ms,feed,cks:ckPack(sec)};const sg=sigF(body0);B.rat=B.rat||{};
       if(!force&&B.rsig[sec]===sg&&Date.now()-(B.rat[sec]||0)<6*3600000)continue;const body=Object.assign({hb:Date.now()},body0);
       if(S.source==="sample")continue;
@@ -2707,7 +2710,7 @@ document.addEventListener("click",e=>{
   const pk=e.target.closest("[data-pick]");if(pk){e.stopImmediatePropagation();openSheet(pk.dataset.pick,pk.dataset.pid);return}
   if(e.target.closest("[data-sclose]")){e.stopImmediatePropagation();closeSheet();return}
   const so=e.target.closest("[data-sopt]");if(so&&sheetCtx){e.stopImmediatePropagation();const m=S.roster.find(x=>x.id===sheetCtx.id);
-    if(m){if(sheetCtx.kind==="s")m.status=so.dataset.sopt;else m.duty=so.dataset.sopt;save();buzz();const y=window.scrollY;closeSheet();if(!patchRow(m)){render();window.scrollTo(0,y)}}return}
+    if(m){if(sheetCtx.kind==="s")m.status=so.dataset.sopt;else m.duty=so.dataset.sopt;m.ut=Date.now();save();buzz();const y=window.scrollY;closeSheet();if(!patchRow(m)){render();window.scrollTo(0,y)}}return}
   if(e.target.closest(".mrow,[data-r],[data-ws],[data-evtog]"))buzz();
 },true);
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetCtx)closeSheet()});
@@ -3006,7 +3009,7 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("change",e=>{
   const sel=e.target.closest("select[data-id]");
-  if(sel){const m=S.roster.find(x=>x.id===sel.dataset.id);if(m){m.status=sel.value;save();renderTabs();
+  if(sel){const m=S.roster.find(x=>x.id===sel.dataset.id);if(m){m.status=sel.value;m.ut=Date.now();save();renderTabs();
     const card=sel.closest(".m");card.style.setProperty("--sc","var("+SVAR[m.status]+")");
     const {c}=counts();const o=c[m.sec];const r=document.querySelector(".ratio");if(r)r.innerHTML=o["On Hand"]+"/"+o.total+"<small>"+(m.sec==="ATT"?"on hand / attached":"on hand / strength")+"</small>";
     const ch=document.querySelector(".chips");if(ch)ch.innerHTML=STATUSES.filter(s=>o[s]).map(s=>`<span class="chip"><span class="dot" style="background:var(${SVAR[s]})"></span>${SHORT[s]} ${o[s]}</span>`).join("")}
