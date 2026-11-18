@@ -25,6 +25,8 @@ const FIELDS=["status","start","end","loc","detail","ckAt","by"];
   finally{try{for(const m of S.roster||[]){const b=before.get(m.id);if(!b||!b.by)continue;if(!m.by||(+b.by.t||0)>(+m.by.t||0)){for(const f of FIELDS){if(b[f]===undefined)delete m[f];else m[f]=b[f]}}}}catch(e){}
     mute--;try{take()}catch(e){}}}}
 take();
+/* run something that saves without stamping the changes as made here (changes that arrive from the server) */
+window.byQuiet=fn=>{mute++;try{return fn()}finally{mute--;try{take()}catch(e){}}};
 const hhmm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,"0")+String(d.getMinutes()).padStart(2,"0")};
 window.byLabel=m=>{const b=m&&m.by;if(!b||!b.t)return "";
   return b.w==="self"?"✓ Self check-in · "+hhmm(b.t)+(b.c&&b.c!=="auto"?" · confirmed by "+b.c:""):"Set by "+(b.n||"a leader")+" · "+hhmm(b.t)};
