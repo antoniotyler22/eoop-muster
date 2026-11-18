@@ -86,7 +86,7 @@ const keep=()=>{const g=id=>(document.getElementById(id)||{}).value;if(g("asCal"
 document.addEventListener("click",e=>{const t=e.target.closest("[data-asfind],[data-asadd],[data-asback],[data-ascopy],[data-assave]");if(!t||view!=="assist")return;keep();
   if(t.dataset.asfind){A.calOut=parseLines(A.cal);render();return}
   if(t.dataset.asadd){const all=SECTIONS.map(s=>s[0]);let n=0;A.calOut.out.filter(x=>x.on).forEach(x=>{S.events.push({id:"e"+Date.now()+n++,name:x.name,date:x.date,tm:x.tm,type:"",secs:all,att:false,done:{}})});save();A.calOut=null;A.cal="";render();toast(n+" event"+(n===1?"":"s")+" added");return}
-  if(t.dataset.asback){const m=S.roster.find(x=>x.id===t.dataset.asback);if(m){m.status="On Hand";m.start="";m.end="";save();render();toast(m.name+": On Hand")}return}
+  if(t.dataset.asback){const m=S.roster.find(x=>x.id===t.dataset.asback);if(m){m.status="On Hand";m.start="";m.end="";m.ut=Date.now();save();render();toast(m.name+": On Hand")}return}
   if(t.dataset.ascopy){try{navigator.clipboard.writeText(brief());toast("Copied")}catch(err){}return}
   if(t.dataset.assave){const m=S.roster.find(x=>x.id===t.dataset.assave);const p=A.phone.replace(/\D/g,"").slice(-10);if(m&&p.length===10){if(!m.phone)m.phone=p;else m.alt=p;save();toast("Saved to "+m.name)}return}});
 document.addEventListener("change",e=>{if(view!=="assist")return;const c=e.target.closest("[data-asev]");if(c&&A.calOut){A.calOut.out[+c.dataset.asev].on=c.checked;keep();render()}});
