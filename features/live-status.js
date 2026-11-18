@@ -6,8 +6,11 @@
    Until part 51 is run on the server this stays quiet and the older relay (leader -> OIC -> everyone) keeps working. */
 (()=>{
 /* what goes to the server (u = when they were last updated) and what counts as a change: the status, duty, dates, place, note, or a refresh tap */
-const FIELDS=m=>({st:m.status,du:dutyOf(m),s:m.start||"",e:m.end||"",l:m.loc||"",x:m.detail||"",u:(window.ckTouched&&window.ckTouched(m))||0});
+/* "refreshed" is the time of a real update: a check-in, a hand-picked status (ut) or an update received from the server.
+   The history log is left out on purpose: it also stamps "first seen on this phone", and a phone that just opened with an old copy
+   of the roster would then look like it had just changed everyone and put them back On Hand. */
 const refreshed=m=>Math.max(+m.ckAt||0,(m.upd&&+m.upd.t)||0,+m.ut||0);
+const FIELDS=m=>({st:m.status,du:dutyOf(m),s:m.start||"",e:m.end||"",l:m.loc||"",x:m.detail||"",u:refreshed(m)||0});
 const sigOf=m=>sigF([m.status,dutyOf(m),m.start||"",m.end||"",m.loc||"",m.detail||"",refreshed(m)]);
 let busy=false,pushT=null,pidCache={},off=false;
 function wire(){if(S.source==="sample"||!Array.isArray(S.roster))return null;
@@ -23,7 +26,7 @@ async function pull(){const w=wire();if(!w||off)return 0;let n=0;
     const K=known(),who=[],secs=new Set();let after=+S.stAfter||0;
     for(const r of rows){after=Math.max(after,+r.seq||0);const m=byPid[r.pid];if(!m)continue;
       const last=K[r.pid];if(last&&sigOf(m)!==last.sg)continue; /* this phone has a change not sent yet: it wins */
-      const localT=Math.max(+(last&&last.t)||0,window.ckTouched?window.ckTouched(m):0);if((+r.t||0)<=localT)continue;
+      const localT=Math.max(+(last&&last.t)||0,refreshed(m));if((+r.t||0)<=localT)continue;
       const o=await fdDec(w.ek,r.ct);if(!o||typeof o!=="object")continue;
       const st=okSt?okSt(o.st):o.st;if(!STATUSES.includes(st))continue;
       const before=m.status;const d=String(o.du||"Full Duty");
@@ -42,7 +45,7 @@ async function push(){const w=wire();if(!w||!w.write||off||busy)return;busy=true
   try{const K=known(),items=[];
     for(const m of S.roster){if(m.sec==="ATT"&&!w.mine(m))continue;if(!w.mine(m))continue;const p=await pidOf(w,m);if(!p)continue;
       const f=FIELDS(m),sg=sigOf(m),last=K[p];if(last&&last.sg===sg)continue;
-      const t=last?Date.now():Math.max(1,window.ckTouched?window.ckTouched(m):0)||1;
+      const t=last?Date.now():Math.max(1,refreshed(m))||1;
       items.push({p,s:w.sec||m.sec,c:await fdEnc(w.ek,f),t,_sg:sg})}
     if(!items.length)return;
     for(let i=0;i<items.length;i+=100){const part=items.slice(i,i+100);
