@@ -37,9 +37,11 @@ async function pull(){const w=wire();if(!w||off)return 0;let n=0;
       const ut=Math.min(Math.max(+o.u||0,+r.t||0),Date.now()+60000);m.upd={t:ut,sec:m.sec};
       const nb=byIn(o.b);if(nb)m.by=nb;else delete m.by; /* an older phone sent no name: show nothing rather than guess */
       K[r.pid]={sg:sigOf(m),t:+r.t||0};n++;secs.add(m.sec);
-      if(before!==st)who.push(m.rank+" "+lastOf(m)+" → "+(SHORT[st]||st))}
+      if(before!==st)who.push({id:m.id,txt:(m.rank?m.rank+" ":"")+lastOf(m)+": "+(SHORT[st]||st)+(m.by&&m.by.t?(m.by.w==="self"?" · self check-in":" · set by "+(m.by.n||"a leader")):"")})}
     S.stAfter=after;
-    if(n){if(who.length)try{actAdd("📋",who.slice(0,6).join(", ")+(who.length>6?" +"+(who.length-6)+" more":""),"board")}catch(e){}
+    /* one notification per person: it says who made the change, and tapping it opens that person's card */
+    if(n){for(const x of who.slice(0,6).reverse())try{actAdd("📋",x.txt,"board");const a=(S.act||[]).find(z=>z.txt===x.txt&&!z.mid);if(a)a.mid=x.id}catch(e){}
+      if(who.length>6)try{actAdd("📋","+"+(who.length-6)+" more status changes","board")}catch(e){}
       /* a change that came from the server keeps the stamp the other phone made; this phone must not restamp it as its own */
       if(window.byQuiet)window.byQuiet(()=>save());else save();
       try{renderTabs()}catch(e){}
