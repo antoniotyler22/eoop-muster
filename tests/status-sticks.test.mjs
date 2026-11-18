@@ -79,3 +79,24 @@ test("a phone that just opened with an old copy of the roster does not push ever
     assert.equal(await status(a, "lee"), "Leave", "the OIC's Leave is not overwritten");
   } finally { await a.close(); if (b) await b.close(); }
 });
+
+test("a status change shows who made it, in a tappable notification that opens the person", async () => {
+  const srv = server(), now = Date.now();
+  const a = await phone(srv, now - 3 * 3600000), b = await phone(srv, now - 3 * 3600000);
+  try {
+    await a.w.eval(`S.myName="GySgt Hale"`);
+    await pick(a, "lee", "Leave");
+    assert.equal(await a.w.eval(`S.roster.find(m=>m.id==="lee").ub`), "GySgt Hale", "the pick records who made it");
+    await a.w.eval("stPush()"); await sleep(300);
+    await b.w.eval("stPull()"); await sleep(400);
+    assert.equal(await b.w.eval(`S.roster.find(m=>m.id==="lee").ub`), "GySgt Hale", "other phones get who changed it");
+    const act = await b.w.eval(`(S.act||[]).find(x=>x.mid==="lee")`);
+    assert.ok(act, "a notification for Lee exists");
+    assert.match(act.txt, /LEE/i); assert.match(act.txt, /Leave/); assert.match(act.txt, /changed by GySgt Hale/);
+    await b.w.eval(`view="act";renderAct()`);
+    assert.equal(await b.w.eval(`!!document.querySelector('[data-amid="lee"]')`), true, "the row is tappable");
+    await b.w.eval(`document.querySelector('[data-amid="lee"]').click()`); await sleep(200);
+    assert.equal(await b.w.eval(`typeof pid!=="undefined"&&pid`), "lee", "tapping it opens Lee's card");
+    assert.equal(await b.w.eval(`!!document.querySelector("#stBy")&&document.querySelector("#stBy").textContent.includes("GySgt Hale")`), true, "the card shows Changed by");
+  } finally { await a.close(); await b.close(); }
+});

@@ -2710,7 +2710,7 @@ document.addEventListener("click",e=>{
   const pk=e.target.closest("[data-pick]");if(pk){e.stopImmediatePropagation();openSheet(pk.dataset.pick,pk.dataset.pid);return}
   if(e.target.closest("[data-sclose]")){e.stopImmediatePropagation();closeSheet();return}
   const so=e.target.closest("[data-sopt]");if(so&&sheetCtx){e.stopImmediatePropagation();const m=S.roster.find(x=>x.id===sheetCtx.id);
-    if(m){if(sheetCtx.kind==="s")m.status=so.dataset.sopt;else m.duty=so.dataset.sopt;m.ut=Date.now();save();buzz();const y=window.scrollY;closeSheet();if(!patchRow(m)){render();window.scrollTo(0,y)}}return}
+    if(m){if(sheetCtx.kind==="s")m.status=so.dataset.sopt;else m.duty=so.dataset.sopt;m.ut=Date.now();m.ub=window.stBy?stBy():"";save();buzz();const y=window.scrollY;closeSheet();if(!patchRow(m)){render();window.scrollTo(0,y)}}return}
   if(e.target.closest(".mrow,[data-r],[data-ws],[data-evtog]"))buzz();
 },true);
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheetCtx)closeSheet()});
@@ -3009,7 +3009,7 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("change",e=>{
   const sel=e.target.closest("select[data-id]");
-  if(sel){const m=S.roster.find(x=>x.id===sel.dataset.id);if(m){m.status=sel.value;m.ut=Date.now();save();renderTabs();
+  if(sel){const m=S.roster.find(x=>x.id===sel.dataset.id);if(m){m.status=sel.value;m.ut=Date.now();m.ub=window.stBy?stBy():"";save();renderTabs();
     const card=sel.closest(".m");card.style.setProperty("--sc","var("+SVAR[m.status]+")");
     const {c}=counts();const o=c[m.sec];const r=document.querySelector(".ratio");if(r)r.innerHTML=o["On Hand"]+"/"+o.total+"<small>"+(m.sec==="ATT"?"on hand / attached":"on hand / strength")+"</small>";
     const ch=document.querySelector(".chips");if(ch)ch.innerHTML=STATUSES.filter(s=>o[s]).map(s=>`<span class="chip"><span class="dot" style="background:var(${SVAR[s]})"></span>${SHORT[s]} ${o[s]}</span>`).join("")}

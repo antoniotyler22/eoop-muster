@@ -64,7 +64,7 @@ function cardHtml(m){const L=level(m),v=m.vf;let h=`<div class="pv-card" id="pvC
 
 /* person page: badge under the status line */
 {const _rp=renderPerson;renderPerson=function(){const r=_rp.apply(this,arguments);try{const m=find(pid),main=document.getElementById("main");
-  if(!m||!main||main.querySelector("#pvCard"))return r;const st=main.querySelector(".pg-head .mp-st");const h=cardHtml(m)+`<div style="margin:6px 0 0">${infoChip()}</div>`+(infoOpen?infoHtml():"");
+  if(!m||!main||main.querySelector("#pvCard"))return r;const st=main.querySelector(".pg-head .mp-st");const h=(window.stByLine?stByLine(m):"")+cardHtml(m)+`<div style="margin:6px 0 0">${infoChip()}</div>`+(infoOpen?infoHtml():"");
   if(st)st.insertAdjacentHTML("afterend",h);
   else{const sh=main.querySelector(".sechead");if(sh)sh.insertAdjacentHTML("afterend",h)}}catch(e){}return r}}
 

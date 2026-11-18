@@ -10,8 +10,10 @@
    The history log is left out on purpose: it also stamps "first seen on this phone", and a phone that just opened with an old copy
    of the roster would then look like it had just changed everyone and put them back On Hand. */
 const refreshed=m=>Math.max(+m.ckAt||0,(m.upd&&+m.upd.t)||0,+m.ut||0);
-const FIELDS=m=>({st:m.status,du:dutyOf(m),s:m.start||"",e:m.end||"",l:m.loc||"",x:m.detail||"",u:refreshed(m)||0});
-const sigOf=m=>sigF([m.status,dutyOf(m),m.start||"",m.end||"",m.loc||"",m.detail||"",refreshed(m)]);
+const FIELDS=m=>({st:m.status,du:dutyOf(m),s:m.start||"",e:m.end||"",l:m.loc||"",x:m.detail||"",u:refreshed(m)||0,b:String(m.ub||"").slice(0,30)});
+const sigOf=m=>sigF([m.status,dutyOf(m),m.start||"",m.end||"",m.loc||"",m.detail||"",refreshed(m),m.ub||""]);
+/* who is changing a status on this phone (shown as "changed by"); stamped next to ut wherever a status is picked by hand */
+window.stBy=()=>String(S.myName||S.postAs||((typeof unitName==="function"?unitName():"Unit")+" leader")).slice(0,30);
 let busy=false,pushT=null,pidCache={},off=false;
 function wire(){if(S.source==="sample"||!Array.isArray(S.roster))return null;
   try{if(typeof memberMode==="function"&&memberMode())return null}catch(e){}
@@ -32,10 +34,13 @@ async function pull(){const w=wire();if(!w||off)return 0;let n=0;
       const before=m.status;const d=String(o.du||"Full Duty");
       m.status=st;m.duty=d;for(const [k,v] of [["start",o.s],["end",o.e],["loc",o.l],["detail",o.x]]){const nv=String(v||"").slice(0,120);if(nv)m[k]=nv;else delete m[k]}
       const ut=Math.min(Math.max(+o.u||0,+r.t||0),Date.now()+60000);m.upd={t:ut,sec:m.sec};
+      if(o.b)m.ub=String(o.b).slice(0,30);else delete m.ub;
       K[r.pid]={sg:sigOf(m),t:+r.t||0};n++;secs.add(m.sec);
-      if(before!==st)who.push(m.rank+" "+lastOf(m)+" → "+(SHORT[st]||st))}
+      if(before!==st)who.push({id:m.id,txt:(m.rank?m.rank+" ":"")+lastOf(m)+": "+(SHORT[st]||st)+(m.ub?" · changed by "+m.ub:"")})}
     S.stAfter=after;
-    if(n){if(who.length)try{actAdd("📋",who.slice(0,6).join(", ")+(who.length>6?" +"+(who.length-6)+" more":""),"board")}catch(e){}
+    /* one notification per person, so tapping it opens that person's card */
+    if(n){for(const x of who.slice(0,6).reverse())try{actAdd("📋",x.txt,"board");const a=(S.act||[]).find(z=>z.txt===x.txt&&!z.mid);if(a)a.mid=x.id}catch(e){}
+      if(who.length>6)try{actAdd("📋","+"+(who.length-6)+" more status changes","board")}catch(e){}
       save();try{renderTabs()}catch(e){}
       const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"&&a!=="SELECT"){const y=window.scrollY;render();window.scrollTo(0,y)}}
     else rawSave()}
@@ -62,6 +67,10 @@ window.stReset=()=>{off=false;pidCache={}};
 if(typeof every==="function")every(10000,()=>{tick()},"live-status");
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)tick()});
 window.addEventListener("online",()=>{off=false;tick()});
+/* person page: "Changed by Name · 2h ago" under the status line */
+/* (person-verify.js calls this when it draws the person page, because it runs after the page is built) */
+window.stByLine=m=>{if(!m||!m.ub)return "";const t=+m.ut||(m.upd&&+m.upd.t)||0;
+  return `<div class="note" id="stBy" style="margin:6px 0 0">Changed by <b>${esc(m.ub)}</b>${t?" · "+esc(ago(t)):""}</div>`};
 /* these phones keep their own place in the server's list */
 try{SYNC_SKIP.push("stAfter","stLast")}catch(e){}
 })();
