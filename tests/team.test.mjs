@@ -56,7 +56,7 @@ test("leader gets the check-in through Word of Mouth, confirms it, roster update
   let rows = [];
   const a = await openApp({ rpc: (fn) => fn === "feed_reqs_get" ? rows : [] });
   try {
-    await a.w.eval(`(async()=>{const ek=b64url(crypto.getRandomValues(new Uint8Array(32)));window.__ek=ek;S.leaderMode=true;
+    await a.w.eval(`(async()=>{const ek=b64url(crypto.getRandomValues(new Uint8Array(32)));window.__ek=ek;S.leaderMode=true;S.ckAuto=false;
       S.feeds=[{id:"${FEED.id}",mk:"${FEED.mk}",lk:"${FEED.lk}",ek,unit:"1ST PLT",main:true,posts:[],acks:{},un:{},mine:{},seen:0}];save()})()`);
     const mid = a.w.eval("S.roster.find(m=>m.status==='On Hand').id");
     const ct = await a.w.eval(`fdEnc(window.__ek,{k:"ck",cid:"cabc1",me:"CPL TEST",mid:${JSON.stringify(mid)},st:"Leave",from:"2026-10-26",to:"2026-10-30",loc:"Maui",note:"Family"})`);

@@ -36,7 +36,7 @@ test("leader pulls page check-ins with one call and can confirm them", async () 
   let rows = []; const calls = [];
   const a = await openApp({ rpc: (fn, body) => { if (fn === "page_reqs_get") { calls.push(body); return rows; } return []; } });
   try {
-    await a.w.eval(`S.leaderMode=true;S.feeds=[];S.roster[0].pk="${PK}";S.roster[1].pk="q".repeat(28);save()`);
+    await a.w.eval(`S.leaderMode=true;S.ckAuto=false;S.feeds=[];S.roster[0].pk="${PK}";S.roster[1].pk="q".repeat(28);save()`);
     const mid = a.w.eval("S.roster[0].id");
     const K = await a.w.eval(`mpKeys("${PK}")`);
     const ct = await a.w.eval(`(async()=>sealObj(await mpKeys("${PK}"),{k:"ck",cid:"pg1",me:"LCPL MUNIZ",mid:${JSON.stringify(mid)},st:"Appointment",from:"2026-10-30",to:"2026-10-30",loc:"On base · clinic"}))()`);
