@@ -10,7 +10,10 @@
    The history log is left out on purpose: it also stamps "first seen on this phone", and a phone that just opened with an old copy
    of the roster would then look like it had just changed everyone and put them back On Hand. */
 const refreshed=m=>Math.max(+m.ckAt||0,(m.upd&&+m.upd.t)||0,+m.ut||0);
-const FIELDS=m=>({st:m.status,du:dutyOf(m),s:m.start||"",e:m.end||"",l:m.loc||"",x:m.detail||"",u:refreshed(m)||0});
+/* b = who set it (self or a leader's name and when), sealed inside the record so the server never sees it */
+const byOut=m=>{const b=m.by;return b&&b.t?{w:b.w==="self"?"self":"other",n:String(b.n||"").slice(0,30),t:+b.t||0,c:b.c?String(b.c).slice(0,30):undefined}:undefined};
+const byIn=b=>b&&typeof b==="object"&&+b.t>0?{w:b.w==="self"?"self":"other",n:String(b.n||"").slice(0,30),t:Math.min(+b.t,Date.now()+60000),...(b.c?{c:String(b.c).slice(0,30)}:{})}:null;
+const FIELDS=m=>({st:m.status,du:dutyOf(m),s:m.start||"",e:m.end||"",l:m.loc||"",x:m.detail||"",u:refreshed(m)||0,b:byOut(m)});
 const sigOf=m=>sigF([m.status,dutyOf(m),m.start||"",m.end||"",m.loc||"",m.detail||"",refreshed(m)]);
 let busy=false,pushT=null,pidCache={},off=false;
 function wire(){if(S.source==="sample"||!Array.isArray(S.roster))return null;
@@ -32,11 +35,14 @@ async function pull(){const w=wire();if(!w||off)return 0;let n=0;
       const before=m.status;const d=String(o.du||"Full Duty");
       m.status=st;m.duty=d;for(const [k,v] of [["start",o.s],["end",o.e],["loc",o.l],["detail",o.x]]){const nv=String(v||"").slice(0,120);if(nv)m[k]=nv;else delete m[k]}
       const ut=Math.min(Math.max(+o.u||0,+r.t||0),Date.now()+60000);m.upd={t:ut,sec:m.sec};
+      const nb=byIn(o.b);if(nb)m.by=nb;else delete m.by; /* an older phone sent no name: show nothing rather than guess */
       K[r.pid]={sg:sigOf(m),t:+r.t||0};n++;secs.add(m.sec);
       if(before!==st)who.push(m.rank+" "+lastOf(m)+" → "+(SHORT[st]||st))}
     S.stAfter=after;
     if(n){if(who.length)try{actAdd("📋",who.slice(0,6).join(", ")+(who.length>6?" +"+(who.length-6)+" more":""),"board")}catch(e){}
-      save();try{renderTabs()}catch(e){}
+      /* a change that came from the server keeps the stamp the other phone made; this phone must not restamp it as its own */
+      if(window.byQuiet)window.byQuiet(()=>save());else save();
+      try{renderTabs()}catch(e){}
       const a=document.activeElement&&document.activeElement.tagName;if(a!=="INPUT"&&a!=="TEXTAREA"&&a!=="SELECT"){const y=window.scrollY;render();window.scrollTo(0,y)}}
     else rawSave()}
   catch(e){const t=String(e.message||e);if(/could not find|schema cache|404|PGRST202/i.test(t))off=true}

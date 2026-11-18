@@ -194,3 +194,25 @@ test("live status: server without part 51 stays quiet and the old relay keeps wo
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("live status: the other phones see who changed a status and when, and never restamp it as their own", async () => {
+  const { oic, lead, access, skUT } = await setup();
+  const ut = await lead("UT", skUT), ut2 = await lead("UT", skUT), view = await access("view");
+  const tick = async (...ps) => { for (const p of ps) { await p.w.eval("stTick()"); await sleep(120); } };
+  const by = async (p, id) => JSON.parse(await p.w.eval(`JSON.stringify((S.roster.find(m=>m.id==="${id}")||{}).by||null)`));
+  try {
+    await oic.w.eval("rpPublish(true)"); await sleep(150); await pull(ut); await pull(ut2);
+    await tick(oic, ut, ut2, view);
+    await ut.w.eval(`S.who={id:"",n:"SSgt Smith"};S.roster.find(m=>m.id==="u1").status="TAD";save()`);
+    await tick(ut); await tick(ut2, view, oic);
+    for (const [name, p] of [["second leader phone", ut2], ["view-only phone", view], ["OIC phone", oic]]) {
+      const b = await by(p, "u1");
+      assert.ok(b && b.w === "other" && b.n === "SSgt Smith" && b.t > 0, name + " shows the leader who set it: " + JSON.stringify(b));
+      assert.match(await p.w.eval(`byLabel(S.roster.find(m=>m.id==="u1"))`), /^Set by SSgt Smith · \d{4}$/);
+    }
+    // receiving the change must not have made this phone push a restamp back to the server
+    const t0 = (await by(view, "u1")).t; await tick(view); await tick(ut);
+    assert.equal((await by(ut, "u1")).t, t0, "the stamp is still the one the leader made");
+    for (const p of [oic, ut, ut2, view]) assert.deepEqual(p.errors, []);
+  } finally { for (const p of [oic, ut, ut2, view]) await p.close(); }
+});
