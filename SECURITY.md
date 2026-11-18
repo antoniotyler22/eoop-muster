@@ -63,4 +63,4 @@ agency or government, and it is not accredited for classified or CUI data. Follo
 personal information on personal devices.
 
 ## Reporting a problem
-Email support@accountedforteam.com with "Security" in the subject. Please don't post details publicly until it's fixed.
+Email administration@accountedforteam.com with "Security" in the subject. Please don't post details publicly until it's fixed.
