@@ -1,7 +1,7 @@
 // Offline cache. The app opens from the phone instantly; a newer version is fetched in the background.
 // Everything the app uses is served from this site: no outside fonts, scripts or trackers.
-const CACHE = "eop-numbers-v209";
-const CORE = ["./", "./index.html", "./app.bundle.js", "./terms.html", "./app.css", "./native.js", "./privacy.html", "./support.html", "./help.html", "./manifest.webmanifest",
+const CACHE = "eop-numbers-v210";
+const CORE = ["./app.html", "./app.bundle.js", "./terms.html", "./app.css", "./native.js", "./privacy.html", "./support.html", "./help.html", "./manifest.webmanifest",
   "./icon-180.png", "./icon-192.png", "./icon-512.png", "./welcome-peek.png",
   "./fonts/pjs-400.woff2", "./fonts/pjs-500.woff2", "./fonts/pjs-600.woff2", "./fonts/pjs-700.woff2", "./fonts/pjs-800.woff2"];
 const LIBS = ["./lib/qrcode.js", "./lib/xlsx.full.min.js", "./lib/pdf.min.js", "./lib/pdf.worker.min.js", "./lib/mammoth.browser.min.js"];
@@ -18,11 +18,12 @@ self.addEventListener("fetch", e => {
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
   if (url.pathname.endsWith("/version.json")) return; // always straight from the network: it's how the app learns a new version is live
-  const isPage = url.pathname.endsWith("/") || url.pathname.endsWith("/index.html");
+  // The site root is the landing page (plain network-first below); the app itself is app.html.
+  const isPage = url.pathname.endsWith("/app.html");
   const isStatic = /\/(lib|fonts)\//.test(url.pathname) || /\.(png|woff2)$/.test(url.pathname);
   if (isPage) {
     e.respondWith(caches.open(CACHE).then(async c => {
-      const key = "./index.html";
+      const key = "./app.html";
       const cached = await c.match(key);
       let servedCache = false;
       const net = fetch(key, { cache: "no-cache" }).then(async res => {
@@ -63,7 +64,7 @@ self.addEventListener("fetch", e => {
   }
   e.respondWith(
     fetch(req, { cache: "no-cache" }).then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res; })
-      .catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || caches.match("./index.html")))
+      .catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || caches.match("./app.html")))
   );
 });
 

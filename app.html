@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en"><head>
+<script src="native.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Accounted For">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#eef2f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b1016" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+<title>Accounted For</title>
+<link rel="stylesheet" href="app.css?v=4.82.2">
+<link rel="preload" as="script" href="app.bundle.js?v=4.82.2">
+</head><body>
+<header class="top"><div class="top-in">
+  <div class="brand">
+    <div><h1><button id="bMode" class="titlebtn" aria-haspopup="dialog" title="Change app version or rename" data-noxl>Accounted For<span class="caret">▾</span></button></h1><div class="dtg"><span id="dtg"></span><span id="wsBar"></span></div></div>
+    <div class="hic"><button id="hRef" aria-label="Refresh: get the latest updates"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button><button id="hHelp" aria-label="Help for this screen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"></path></svg></button><button id="hSearch" aria-label="Find anyone"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></button><button id="hSet" aria-label="Settings and data"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></button></div>
+    <div class="acts">
+      <button id="bToday" aria-pressed="false" hidden>TODAY</button>
+      <button id="bFeed" aria-pressed="false">Word of Mouth<span id="fdBadge" class="fdb" hidden></span></button>
+      <button id="b6W" aria-pressed="false">6W</button>
+      <button id="bPT" aria-pressed="false">PT</button>
+      <button id="bText" aria-pressed="false">TEXT</button>
+      <button id="bData" aria-pressed="false">DATA</button>
+    </div>
+  </div>
+  <nav aria-label="Sections"><div class="tabs" role="tablist" id="tabs"></div></nav>
+  <div id="subnav" role="navigation" aria-label="In this tab"></div>
+</div></header>
+
+<main class="wrap" id="main"></main>
+<div class="onb" id="onb" hidden></div>
+<nav id="tabbar" aria-label="Main"><div class="in"></div></nav>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<button id="fdPill" hidden></button>
+<button id="helpBtn" aria-label="Help for this screen" style="position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:40;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:800;font-size:18px;box-shadow:0 4px 14px rgba(0,0,0,.15)">?</button>
+<div class="sheet" id="sheet" hidden><div class="sheet-bg" data-sclose="1"></div><div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheetT"><div class="grab"></div><h3 id="sheetT"></h3><div class="sheet-opts" id="sheetOpts"></div></div></div>
+
+
+<div class="lock" id="lock" hidden role="dialog" aria-modal="true" aria-labelledby="lockT">
+  <div class="lock-in">
+    <div class="lock-ic" aria-hidden="true">🔒</div>
+    <h2 id="lockT">Accounted For</h2>
+    <p class="lock-sub" id="lockSub">Enter your PIN</p>
+    <div class="dots" id="lockDots" aria-hidden="true"></div>
+    <p class="lock-err" id="lockErr" role="alert"></p>
+    <div class="pad" id="lockPad"></div>
+    <button class="lock-forgot" id="lockForgot" type="button">Forgot PIN?</button>
+  </div>
+</div>
+<script>
+/* ---------- vault: PIN lock + encrypted storage (AES-GCM, key from PIN via PBKDF2) ---------- */
+(()=>{
+const K="eoop-muster-v1",KE=K+"-enc",KC=K+"-lock",ITER=310000;
+const te=new TextEncoder(),td=new TextDecoder();
+const b64=a=>btoa(String.fromCharCode(...new Uint8Array(a)));
+const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const getCfg=()=>{try{return JSON.parse(localStorage.getItem(KC)||"null")}catch(e){return null}};
+const putCfg=c=>{try{localStorage.setItem(KC,JSON.stringify(c))}catch(e){}};
+async function derive(pin,salt,iter){const base=await crypto.subtle.importKey("raw",te.encode(pin),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:iter,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"])}
+async function enc(key,text){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,te.encode(text));return JSON.stringify({v:1,iv:b64(iv),ct:b64(ct)})}
+async function dec(key,blob){const o=JSON.parse(blob);const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(o.iv)},key,unb64(o.ct));return td.decode(pt)}
+let pending=null,writing=false;
+async function flush(){if(writing)return;writing=true;while(pending!==null){const t=pending;pending=null;
+  try{localStorage.setItem(KE,await enc(V.key,t));localStorage.removeItem(K)}catch(e){}}writing=false}
+const V=window.VAULT={key:null,cfg:getCfg(),ok:!!(window.crypto&&crypto.subtle),
+  on(){return !!this.key},
+  write(text){pending=text;flush()},
+  async setPin(pin,text,opts){const salt=crypto.getRandomValues(new Uint8Array(16));const key=await derive(pin,salt,ITER);
+    const blob=await enc(key,text);localStorage.setItem(KE,blob);
+    this.cfg=Object.assign({auto:5,wipe:false},this.cfg||{},opts||{},{salt:b64(salt),iter:ITER,len:pin.length,fails:0});putCfg(this.cfg);
+    this.key=key;this._p=pin;localStorage.removeItem(K);if(this.cfg.face&&window.MBN&&MBN.on)MBN.Bio.save({pin}).catch(()=>{})},
+  async check(pin){const c=this.cfg;if(!c)return false;try{const k=await derive(pin,unb64(c.salt),c.iter);await dec(k,localStorage.getItem(KE));return true}catch(e){return false}},
+  off(text){try{if(window.MBN&&MBN.on)MBN.Bio.remove()}catch(e){}this._p=null;try{localStorage.setItem(K,text)}catch(e){}localStorage.removeItem(KE);localStorage.removeItem(KC);this.key=null;this.cfg=null},
+  set(p){this.cfg=Object.assign(this.cfg||{},p);putCfg(this.cfg)},
+  lockNow(){location.reload()},
+  eraseAll(){try{if(window.MBN&&MBN.on)MBN.Bio.remove()}catch(e){}try{[K,KE,KC].forEach(x=>localStorage.removeItem(x));Object.keys(localStorage).filter(x=>x.startsWith(K)).forEach(x=>localStorage.removeItem(x))}catch(e){}
+    try{if(window.caches)caches.keys().then(ks=>Promise.all(ks.map(k=>caches.delete(k)))).finally(()=>location.replace(location.pathname))}catch(e){location.replace(location.pathname)}}
+};
+let hiddenAt=0;
+document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.hidden){hiddenAt=Date.now();return}
+  const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
+window.AV="4.125.1";
+/* self-update: an installed web app resumes without reloading, so check the live version on open, on every return, and every 10 min */
+(()=>{const NAT=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());if(NAT||!/^https?:$/.test(location.protocol))return;
+  let busy=false,last=0;const typing=()=>{const a=document.activeElement;return a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)};
+  async function check(){if(busy||Date.now()-last<20000)return;busy=true;last=Date.now();
+    try{const r=await fetch("version.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)return;const v=String((await r.json()).v||"");if(!v||v===window.AV)return;
+      let tried="";try{tried=sessionStorage.getItem("eop-upd")||""}catch(e){}if(tried===v)return;try{sessionStorage.setItem("eop-upd",v)}catch(e){}
+      if(typing()){busy=false;last=0;setTimeout(check,15000);return}
+      try{const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}catch(e){}
+      try{const g=await navigator.serviceWorker.getRegistration();if(g)await g.update()}catch(e){}
+      location.reload()}catch(e){}finally{busy=false}}
+  window.afCheckUpdate=check;setTimeout(check,1500);setInterval(check,10*60000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)check()});window.addEventListener("pageshow",e=>{if(e.persisted)check()});window.addEventListener("online",check)})();
+/* 4.82.2: if the browser's own copy of the state is older than the IndexedDB copy kept when saving failed, open the newer one */
+function mirrorRead(){return new Promise(res=>{try{if(!window.indexedDB)return res(null);const r=indexedDB.open("af-state",1);r.onupgradeneeded=()=>r.result.createObjectStore("s");r.onerror=()=>res(null);r.onblocked=()=>res(null);
+  r.onsuccess=()=>{try{const g=r.result.transaction("s").objectStore("s").get("main");g.onsuccess=()=>{const v=g.result||null;try{r.result.close()}catch(e){}res(v)};g.onerror=()=>res(null)}catch(e){res(null)}}}catch(e){res(null)}})}
+async function startApp(){try{if(window.__RAW===undefined&&!window.VAULT.cfg){const m=await Promise.race([mirrorRead(),new Promise(r=>setTimeout(()=>r(null),1500))]);
+  if(m&&typeof m.raw==="string"){let cur=null,mv=null;try{cur=JSON.parse(localStorage.getItem("eoop-muster-v1")||"null")}catch(e){}try{mv=JSON.parse(m.raw)}catch(e){}
+    if(mv&&Array.isArray(mv.roster)&&(!cur||!Array.isArray(cur.roster)||(+mv.savedAt||0)>(+cur.savedAt||0)))window.__RAW=m.raw}}}catch(e){}
+  const s=document.createElement("script");s.src="app.bundle.js?v="+window.AV;s.onerror=()=>{document.body.insertAdjacentHTML("beforeend",'<p style="padding:24px;font:16px system-ui">Couldn\'t load the app. Connect once, then reopen.</p>')};document.body.appendChild(s)}
+/* live check-ins: Supabase relay. Stores no names: only salted hashes of the words a person types, a code and a short note. */
+const NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+const PUB=()=>!NATIVE&&/^https?:$/.test(location.protocol)?location.origin+location.pathname:"https://antoniotyler22.github.io/eoop-muster/";
+/* Android: push alerts need Firebase (google-services.json + FCM in the notify function); until then the Android app skips push. */
+const NP=n=>{try{if(n==="PushNotifications"&&NATIVE&&window.Capacitor.getPlatform&&window.Capacitor.getPlatform()==="android"&&!window.AF_ANDROID_PUSH)return null;return NATIVE&&window.Capacitor.registerPlugin?window.Capacitor.registerPlugin(n):null}catch(e){return null}};
+if(NATIVE){const shim={permission:(()=>{try{return localStorage.getItem("eop-nperm")||"default"}catch(e){return"default"}})(),requestPermission:async()=>nativePushPerm(true)};try{Object.defineProperty(window,"Notification",{value:shim,configurable:true,writable:true})}catch(e){window.Notification=shim}}
+async function nativePushPerm(ask){const P=NP("PushNotifications");if(!P){window.__pushWhy="noplugin";return"denied"}let st=await P.checkPermissions();if(st.receive==="prompt"&&ask)st=await P.requestPermissions();const v=st.receive==="granted"?"granted":st.receive==="denied"?"denied":"default";window.__pushWhy=v==="granted"?"":v;window.Notification.permission=v;try{localStorage.setItem("eop-nperm",v)}catch(e){}return v}
+let apnsTok=null,apnsWait=[];
+async function nativeSub(ask){const P=NP("PushNotifications");if(!P)return null;const perm=await nativePushPerm(ask);if(perm!=="granted")return null;
+  if(!apnsTok){try{apnsTok=localStorage.getItem("eop-apns")}catch(e){}}
+  if(!apnsTok||ask){const t=new Promise(res=>{apnsWait.push(res);setTimeout(()=>res(null),15000)});await P.register();const tok=await t;if(tok)apnsTok=tok}
+  if(!apnsTok){window.__pushWhy="notoken";return null}window.__pushWhy="";const j={endpoint:"apns:"+apnsTok,apns:apnsTok,keys:{}};return {toJSON:()=>j,endpoint:j.endpoint}}
+if(NATIVE)setTimeout(()=>{const P=NP("PushNotifications"),A=NP("App");
+  if(P){P.addListener("registration",t=>{apnsTok=t.value;try{localStorage.setItem("eop-apns",t.value)}catch(e){}apnsWait.splice(0).forEach(f=>f(t.value))});P.addListener("registrationError",e=>{window.__pushErr=String((e&&(e.error||e.message))||"registration failed").slice(0,160);apnsWait.splice(0).forEach(f=>f(null))});
+    P.addListener("pushNotificationReceived",n=>{try{toast("🔔 "+(n.title||"Update")+(n.body?": "+n.body:""))}catch(e){}});
+    P.addListener("pushNotificationActionPerformed",a=>{const o=a&&a.notification&&a.notification.data&&a.notification.data.open;if(!o)return;if(typeof window.openFromAlert==="function")window.openFromAlert(o,a.notification.data.sos);else if(typeof render==="function"){view=o;render();window.scrollTo(0,0)}});
+    nativePushPerm(false).then(v=>{if(v==="granted")P.register().catch(()=>{})})}
+  if(A){const go=u=>{try{const h=new URL(u).hash;if(h&&h.length>2){location.hash=h;setTimeout(()=>location.reload(),50)}}catch(e){}};A.addListener("appUrlOpen",e=>go(e.url));A.getLaunchUrl().then(r=>{if(r&&r.url&&!sessionStorage.getItem("eop-launch")){sessionStorage.setItem("eop-launch","1");go(r.url)}}).catch(()=>{})}},300);
+Object.assign(window,{NATIVE,PUB,NP,nativeSub,nativePushPerm});
+const SB=window.SB={url:"https://vdhxhvklwbimjpoomnui.supabase.co",key:"sb_publishable_e1VOssMquS5UkOnwEWTrfA_fPwZqorM",
+  vapid:"BGWkOoK35r0UiMWL6bYX1uwz9L_8qXwQvp4Qc_4Bv_8Ddy3c-iKPpU_ynvIxt116eKBQvlFvtBobyHKB910S3q4",
+  nfn:"notify",afn:"ask",
+  /* Sign in with Apple: set to true once Apple is turned on in Supabase → Authentication → Sign In / Providers (web only for now). */
+  apple:false,
+  /* Web billing (Stripe): set to true once the "billing" Edge Function and its Stripe secrets are in place. Until then Pro features stay unlocked on the web. */
+  webBilling:false,credits:false,addonIAP:false,async findAsk(){for(const n of ["ask","Ask"]){try{const r=await fetch(this.url+"/functions/v1/"+n,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify({ping:1})});if(r.status!==404){this.afn=n;return n}}catch(e){}}return this.afn},async findNotify(){for(const n of ["notify","Notify"]){try{const r=await fetch(this.url+"/functions/v1/"+n,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:"{}"});if(r.status!==404){this.nfn=n;try{localStorage.setItem("eop-nfn",n)}catch(e){}return n}}catch(e){}}return this.nfn},
+  /* live updates: after a change, tell anyone watching that channel to look now (Realtime broadcast). Sends only a hashed channel name, never data. */
+  sid:Math.random().toString(36).slice(2,10),
+  PING:{checkin:"p_recall",close_recall:"p_recall",push_update:"p_board",push_cal:"p_board",put_roster:"p_board",put_status:"p_board",feed_post:"p_feed",feed_post_sl:"p_feed",feed_ack:"p_feed",feed_req:"p_feed",feed_delete_post:"p_feed",put_unit:"p_company",drop_unit:"p_company",page_post:"p_id",page_delete_post:"p_id",put_page:"p_id",dm_send:"p_id",backup_put:"p_id"},
+  async topic(k,id){const b=await crypto.subtle.digest("SHA-256",te.encode("af|"+k+"|"+id));return "af-"+[...new Uint8Array(b)].slice(0,12).map(x=>x.toString(16).padStart(2,"0")).join("")},
+  pingTopic(t,k){try{fetch(this.url+"/realtime/v1/api/broadcast",{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify({messages:[{topic:t,event:"ping",payload:{s:this.sid,k:k||""},private:false}]}),keepalive:true}).catch(()=>{})}catch(e){}},
+  ping(fn,args){const p=this.PING[fn];const id=p&&args&&args[p];if(!id)return;this.topic(p,id).then(t=>this.pingTopic(t,p)).catch(()=>{})},
+  notify(rid,body){try{fetch(this.url+"/functions/v1/"+this.nfn,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify(body||{recall:rid}),keepalive:true}).catch(()=>{})}catch(e){}},
+  async rpc(fn,args){const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),20000);
+    try{const r=await fetch(this.url+"/rest/v1/rpc/"+fn,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify(args),signal:ac.signal});
+      const t=await r.text();if(r.ok){SB.okAt=Date.now();SB.ping(fn,args)}else{SB.failAt=Date.now();SB.failMsg=t.slice(0,120)}if(!r.ok)throw new Error((()=>{try{return JSON.parse(t).message}catch(e){return t}})()||("HTTP "+r.status));return t?JSON.parse(t):null}catch(e){if(e&&(e.name==="AbortError"||/abort/i.test(String(e.message))))throw new Error("Connection timed out");throw e}finally{clearTimeout(tm)}},
+  words(n){return [...new Set(String(n||"").toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean))].slice(0,6)},
+  async h(rid,w){const b=await crypto.subtle.digest("SHA-256",te.encode(rid+":"+w));return [...new Uint8Array(b)].slice(0,8).map(x=>x.toString(16).padStart(2,"0")).join("")}};
+/* check-in page for the person receiving a recall link (#ci=...). Shows nothing from this phone's roster. */
+function ciPage(q){const esc=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const rid=(q.get("ci")||"").replace(/[^a-z0-9]/gi,"").slice(0,12),unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24),to=(q.get("to")||"").replace(/\D/g,"").slice(-10),live=q.get("l")==="1"&&/^[a-z0-9]{8,16}$/.test(rid);
+  const KM=K+"-ci-me";let me="";try{me=localStorage.getItem(KM)||""}catch(e){}
+  const t=parseInt(rid,36);const when=Number.isFinite(t)&&t>0?new Date(t).toLocaleString([],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}):"";
+  document.title="Check in";const m=document.createElement("main");m.className="wrap ci-page";
+  m.innerHTML=`<h2 style="margin-top:18px">Check in</h2><div class="panel">
+    <div><b>${esc(unit||"Your unit")}</b> recall${when?" · sent "+esc(when):""}</div>
+    <label for="ciN">Your rank and last name</label><input type="text" id="ciN" value="${esc(me)}" maxlength="30" placeholder="CPL SMITH" autocapitalize="characters" style="text-transform:uppercase">
+    <button class="btn" data-c="1" style="min-height:56px;font-size:18px">✓ I'm good</button>
+    <label for="ciE">Delayed or need help? Add ETA or a short note</label><input type="text" id="ciE" maxlength="40" placeholder="ETA 1400">
+    <button class="btn alt" data-c="2" style="min-height:52px">Good, but delayed</button>
+    <button class="btn warn" data-c="3" style="min-height:52px">I need help</button>
+    <p class="note" id="ciMsg">${live?"Tap once. Your leader sees it right away.":to?"No app needed. Opens a text to your leader. Hit Send.":"No app needed. Opens a text. Pick your leader as the recipient and hit Send."}</p>
+    <p class="note">${live?"Your name is scrambled before it leaves this phone; the server never stores it. No signal? It opens a text instead.":"Nothing is sent until you hit Send in Messages."} Your name is remembered on this phone only.</p></div>`;
+  document.body.appendChild(m);document.querySelectorAll(".top,#helpBtn").forEach(x=>x.hidden=true);
+  /* free leader badge (SQL part 49): shown only when the leader confirmed their contact (and organization) */
+  if(live){try{SB.rpc("recall_badge_get",{p_recall:rid}).then(r=>{const x=r&&r[0];if(!x)return;const d=document.createElement("div");d.id="ciBadge";d.style.cssText="margin:8px 0 2px";
+    const pl=t=>`<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#e1f5ee;color:#085041;font-size:13px;font-weight:600;margin:0 6px 6px 0">${t}</span>`;
+    d.innerHTML=pl("✓ Contact confirmed")+(+x.level>=2?pl("✓ Organization confirmed"+(x.org?": "+esc(x.org):"")):"")+'<div class="note" style="margin:0">This leader confirmed their email or phone with Accounted For.</div>';
+    const first=m.querySelector(".panel div");if(first)first.after(d)}).catch(()=>{})}catch(e){}}
+  /* rally point (#g=lat,lon,radius): adds "AT RP" or the distance to the note. The location itself never leaves this phone. */
+  {const g=(q.get("g")||"").split(",").map(Number);if(g.length===3&&g.every(Number.isFinite)&&Math.abs(g[0])<=90&&Math.abs(g[1])<=180&&g[2]>0&&navigator.geolocation){
+    const b=document.createElement("button");b.className="btn alt";b.type="button";b.textContent="📍 I'm at the rally point (check my location)";b.style.minHeight="48px";
+    document.getElementById("ciE").before(b);
+    b.addEventListener("click",()=>{b.disabled=true;b.textContent="Checking location…";
+      navigator.geolocation.getCurrentPosition(p=>{const R=6371000,r=x=>x*Math.PI/180,dl=r(p.coords.latitude-g[0]),dn=r(p.coords.longitude-g[1]);
+        const a=Math.sin(dl/2)**2+Math.cos(r(g[0]))*Math.cos(r(p.coords.latitude))*Math.sin(dn/2)**2;const d=2*R*Math.asin(Math.sqrt(a));
+        const at=d<=g[2]+Math.min(p.coords.accuracy||0,100);const t=at?"AT RP":(d<1000?Math.round(d/10)*10+" M":(d/1000).toFixed(1)+" KM")+" FROM RP";
+        const e=document.getElementById("ciE");e.value=(t+(e.value&&!/RP$/.test(e.value)?" "+e.value:"")).slice(0,40);b.textContent=at?"✓ You're at the rally point":"📍 "+t+": not at the rally point yet";b.disabled=false},
+        ()=>{b.disabled=false;b.textContent="Location is off. Tap Good when you're there."},{enableHighAccuracy:true,timeout:15000,maximumAge:20000})})}}
+  /* last gasp: while this page stays open, tell the leader once if the battery is about to die (needs the Battery API) */
+  let lastC=1,gaspOn=false,gaspSent=false;
+  function gaspOffer(n){if(gaspOn||!live||!navigator.getBattery||document.getElementById("ciGasp"))return;
+    const l=document.createElement("label");l.style.cssText="display:flex;gap:10px;align-items:flex-start;margin-top:10px;font-size:14px";
+    l.innerHTML="<input type='checkbox' id='ciGasp' style='width:22px;height:22px;flex:none'><span>Tell my leader if my battery is about to die. Keep this page open.</span>";
+    document.getElementById("ciMsg").after(l);
+    l.querySelector("input").addEventListener("change",e=>{if(!e.target.checked){gaspOn=false;return}gaspOn=true;
+      navigator.getBattery().then(b=>{const chk=()=>{if(!gaspOn||gaspSent||b.charging||b.level>0.05)return;gaspSent=true;
+        Promise.all(SB.words(n).map(w=>SB.h(rid,w))).then(hs=>SB.rpc("checkin",{p_recall:rid,p_words:hs,p_code:lastC,p_note:"PHONE DYING"})).then(()=>SB.notify(rid)).catch(()=>{gaspSent=false})};
+        b.addEventListener("levelchange",chk);b.addEventListener("chargingchange",chk);chk()}).catch(()=>{})})}
+  m.addEventListener("click",e=>{const b=e.target.closest("[data-c]");if(!b)return;const n=document.getElementById("ciN").value.toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim();
+    if(!n){document.getElementById("ciMsg").textContent="Enter your rank and last name first.";document.getElementById("ciN").focus();return}
+    try{localStorage.setItem(KM,n)}catch(err){}const c=+b.dataset.c;const eta=document.getElementById("ciE").value.replace(/[|#]/g," ").replace(/\s+/g," ").trim();
+    const word=c===1?"GOOD":c===2?"DELAYED":"NEED HELP";
+    const body="CHECK-IN: "+word+" - "+n+(eta?" ("+eta+")":"")+"\n#EOOP-CI|"+rid+"|"+c+"|"+n+"|"+eta;
+    const sms=()=>{location.href="sms:"+(to?"+1"+to:"")+"?&body="+encodeURIComponent(body)};
+    const msg=document.getElementById("ciMsg");
+    if(navigator.onLine===false){const pk="#EOOP-RLY|"+rid+"|"+c+"|"+n+"|"+eta+"|"+Date.now()+"|0|"+(live?1:0);
+      try{const q=JSON.parse(localStorage.getItem("afRelayQ")||"[]");q.push(pk);localStorage.setItem("afRelayQ",JSON.stringify(q.slice(-50)))}catch(err){}
+      msg.innerHTML="<b>Saved. No signal.</b> Hand this to a nearby phone (AirDrop or Nearby Share) or text it, and the first phone with signal sends it in.<br><button class='btn alt' id='ciRl' type='button' style='margin-top:8px'>Pass it on</button>";
+      const sn=n.replace(/[^A-Z0-9 ]/g,"").slice(0,20).trim(),sl="AF1 "+rid.slice(-4).toUpperCase()+" "+c+" "+sn;
+      msg.innerHTML=msg.innerHTML+"<a class='btn' id='ciSat' style='margin-top:8px' href='sms:"+(to?"+1"+to:"")+"?&body="+encodeURIComponent(sl)+"'>Satellite-ready text</a><span class='note' style='display:block'>Only "+sl.length+" characters, short enough for an iPhone satellite message: "+esc(sl)+"</span>";
+      document.getElementById("ciRl").onclick=()=>{const tx="Check-in relay. Open Accounted For, Check-ins, and paste this.\n"+pk.replace(/\|0\|(\d)$/,"|1|$1");try{navigator.share?navigator.share({text:tx}):navigator.clipboard.writeText(tx)}catch(err){}};return}
+    if(live&&navigator.onLine!==false&&crypto.subtle){m.querySelectorAll("[data-c]").forEach(x=>x.disabled=true);msg.textContent="Sending…";
+      Promise.all(SB.words(n).map(w=>SB.h(rid,w))).then(hs=>SB.rpc("checkin",{p_recall:rid,p_words:hs,p_code:c,p_note:eta}))
+        .then(()=>{SB.notify(rid);lastC=c;msg.innerHTML="<b style='color:var(--s-onhand)'>✓ Checked in: "+word+".</b> Your leader sees it now. You can close this page.";m.querySelectorAll("[data-c]").forEach(x=>x.disabled=false);gaspOffer(n)})
+        .catch(()=>{msg.textContent="Couldn't reach the server. Opening a text instead…";m.querySelectorAll("[data-c]").forEach(x=>x.disabled=false);setTimeout(sms,700)});return}
+    sms()});}
+/* broadcast page: shows the leader's message; one tap says "Got it". Message rides in the link, never on the server. */
+function bcPage(q){const esc=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const rid=(q.get("bc")||"").replace(/[^a-z0-9]/gi,"").slice(0,16),unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24),to=(q.get("to")||"").replace(/\D/g,"").slice(-10),msgT=(q.get("m")||"").slice(0,320);
+  const live=/^[a-z0-9]{8,16}$/.test(rid);const KM=K+"-ci-me";let me="";try{me=localStorage.getItem(KM)||""}catch(e){}
+  document.title="Message";const m=document.createElement("main");m.className="wrap ci-page";
+  m.innerHTML=`<h2 style="margin-top:18px">Message from ${esc(unit||"your leader")}</h2><div class="panel">
+    <div style="font-size:18px;line-height:1.45;white-space:pre-wrap;font-weight:600">${esc(msgT)||"(no message text)"}</div>
+    <label for="ciN">Your rank and last name</label><input type="text" id="ciN" value="${esc(me)}" maxlength="30" placeholder="CPL SMITH" autocapitalize="characters" style="text-transform:uppercase">
+    <button class="btn" data-c="1" style="min-height:56px;font-size:18px">✓ Got it</button>
+    <label for="ciE">Problem or question? Add a short note</label><input type="text" id="ciE" maxlength="40" placeholder="On duty till 0800">
+    <button class="btn alt" data-c="2" style="min-height:52px">Got it, but I have a problem</button>
+    <p class="note" id="ciMsg">Tap once. Your leader sees it right away.</p>
+    <p class="note">Your name is scrambled before it leaves this phone; the server never stores it or the message. Your name is remembered on this phone only.</p></div>`;
+  document.body.appendChild(m);document.querySelectorAll(".top,#helpBtn").forEach(x=>x.hidden=true);
+  m.addEventListener("click",e=>{const b=e.target.closest("[data-c]");if(!b)return;const n=document.getElementById("ciN").value.toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim();
+    const out=document.getElementById("ciMsg");if(!n){out.textContent="Enter your rank and last name first.";document.getElementById("ciN").focus();return}
+    try{localStorage.setItem(KM,n)}catch(err){}const c=+b.dataset.c;const note=document.getElementById("ciE").value.replace(/[|#]/g," ").replace(/\s+/g," ").trim();
+    const word=c===1?"GOT IT":"GOT IT, PROBLEM";const body=word+" - "+n+(note?" ("+note+")":"");
+    const sms=()=>{location.href="sms:"+(to?"+1"+to:"")+"?&body="+encodeURIComponent(body)};
+    if(!live||navigator.onLine===false||!crypto.subtle){sms();return}
+    m.querySelectorAll("[data-c]").forEach(x=>x.disabled=true);out.textContent="Sending…";
+    Promise.all(SB.words(n).map(w=>SB.h(rid,w))).then(hs=>SB.rpc("checkin",{p_recall:rid,p_words:hs,p_code:c,p_note:note}))
+      .then(()=>{out.innerHTML="<b style='color:var(--s-onhand)'>✓ Sent: "+word+".</b> You can close this page.";m.querySelectorAll("[data-c]").forEach(x=>x.disabled=false)})
+      .catch(err=>{const closed=/closed/i.test(String(err&&err.message));out.textContent=closed?"This message has been closed out. Text your leader if needed.":"Couldn't reach the server. Opening a text instead…";m.querySelectorAll("[data-c]").forEach(x=>x.disabled=false);if(!closed)setTimeout(sms,700)})});}
+/* QR formation check-in page: one tap "I'm here". The code in the link changes every 30 seconds; the leader's phone checks it. */
+function qrPage(q){const esc=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const rid=(q.get("qr")||"").replace(/[^a-z0-9]/gi,"").slice(0,16),st=(q.get("s")||"").replace(/\D/g,"").slice(0,12),mac=(q.get("m")||"").replace(/[^0-9a-f]/g,"").slice(0,16),unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24);
+  const KM=K+"-ci-me";let me="";try{me=localStorage.getItem(KM)||""}catch(e){}
+  document.title="Check in";const m=document.createElement("main");m.className="wrap ci-page";
+  m.innerHTML=`<h2 style="margin-top:18px">${esc(unit||"Formation")} check-in</h2><div class="panel">
+    <label for="ciN">Your rank and last name</label><input type="text" id="ciN" value="${esc(me)}" maxlength="30" placeholder="CPL SMITH" autocapitalize="characters" style="text-transform:uppercase">
+    <button class="btn" id="qrHere" style="min-height:64px;font-size:20px">✓ I'm here</button><p class="note" id="ciMsg">Tap once. You show as present on your leader's muster.</p>
+    <p class="note">Your name is scrambled before it leaves this phone. This code only works for about a minute.</p></div>`;
+  document.body.appendChild(m);document.querySelectorAll(".top,#helpBtn").forEach(x=>x.hidden=true);
+  document.getElementById("qrHere").addEventListener("click",e=>{const out=document.getElementById("ciMsg");const n=document.getElementById("ciN").value.toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim();
+    if(!n){out.textContent="Enter your rank and last name first.";return}try{localStorage.setItem(KM,n)}catch(err){}
+    if(!/^[a-z0-9]{8,16}$/.test(rid)||!crypto.subtle){out.textContent="This code didn't scan right. Scan again.";return}
+    e.target.disabled=true;out.textContent="Checking in…";
+    Promise.all(SB.words(n).map(w=>SB.h(rid,w))).then(hs=>SB.rpc("checkin",{p_recall:rid,p_words:hs,p_code:1,p_note:"Q:"+st+":"+mac}))
+      .then(()=>{out.innerHTML="<b style='color:var(--s-onhand);font-size:18px'>✓ You're checked in.</b>";e.target.textContent="✓ Done"})
+      .catch(err=>{e.target.disabled=false;out.textContent=/closed/i.test(String(err&&err.message))?"This muster is closed.":"No signal or server problem. Tell your leader you're here."})});}
+window.addEventListener("DOMContentLoaded",()=>{
+  {const q=new URLSearchParams((location.hash||"").slice(1));if(q.get("ci")){ciPage(q);return}if(q.get("bc")){bcPage(q);return}if(q.get("qr")){qrPage(q);return}}
+  if(!V.cfg||!localStorage.getItem(KE)){if(V.cfg&&!localStorage.getItem(KE)){try{localStorage.removeItem(KC)}catch(e){}V.cfg=null}startApp();return}
+  const L=document.getElementById("lock"),dots=document.getElementById("lockDots"),err=document.getElementById("lockErr"),pad=document.getElementById("lockPad");
+  const c=V.cfg;document.getElementById("lockT").textContent=c.title||"Accounted For";let pin="",busy=false,until=0;
+  const draw=()=>{dots.innerHTML=Array.from({length:c.len||6},(_,i)=>`<i class="${i<pin.length?"on":""}"></i>`).join("")};
+  pad.innerHTML=["1","2","3","4","5","6","7","8","9","","0","⌫"].map(k=>k?`<button type="button" data-k="${k}" aria-label="${k==="⌫"?"Delete":k}">${k}</button>`:"<span></span>").join("");
+  draw();L.hidden=false;document.body.classList.add("locked");
+  async function tryPin(){busy=true;document.getElementById("lockSub").textContent="Checking…";
+    const ok=await V.check(pin);
+    if(ok){const k=await derive(pin,unb64(c.salt),c.iter);window.__RAW=await dec(k,localStorage.getItem(KE));V.key=k;V._p=pin;V.set({fails:0});
+      L.hidden=true;document.body.classList.remove("locked");startApp();return}
+    const f=(c.fails||0)+1;V.set({fails:f});pin="";draw();busy=false;document.getElementById("lockSub").textContent="Enter your PIN";
+    if(c.wipe&&f>=10){err.textContent="Too many wrong PINs. Erasing data.";setTimeout(()=>V.eraseAll(),1200);busy=true;return}
+    if(f>=5){until=Date.now()+30000*Math.pow(2,Math.min(f-5,5));err.textContent="Wrong PIN ("+f+" tries). Wait "+Math.round((until-Date.now())/1000)+" seconds."+(c.wipe?" Data erases at 10.":"")}
+    else err.textContent="Wrong PIN."+(c.wipe?" "+(10-f)+" tries left before data is erased.":"");
+    if(navigator.vibrate)navigator.vibrate([40,60,40])}
+  pad.addEventListener("click",e=>{const b=e.target.closest("[data-k]");if(!b||busy)return;if(Date.now()<until){err.textContent="Wait "+Math.ceil((until-Date.now())/1000)+" seconds.";return}
+    const k=b.dataset.k;if(k==="⌫")pin=pin.slice(0,-1);else if(pin.length<8)pin+=k;draw();if(pin.length===(c.len||6))tryPin()});
+  document.addEventListener("keydown",e=>{if(L.hidden||busy)return;if(/^\d$/.test(e.key)){const b=pad.querySelector(`[data-k="${e.key}"]`);b&&b.click()}else if(e.key==="Backspace"){pad.querySelector('[data-k="⌫"]').click()}});
+  let fArm=false;document.getElementById("lockForgot").addEventListener("click",e=>{
+    if(!fArm){fArm=true;e.target.textContent="Tap again to ERASE all app data and start over";err.textContent="There is no PIN recovery. Your data is encrypted with your PIN.";return}
+    V.eraseAll()});
+  const f0=c.fails||0;if(f0>=5)until=Date.now()+30000;
+  /* Face ID (iPhone app only): reads the PIN from the Keychain after a face match */
+  const NB=window.MBN&&MBN.on&&c.face?MBN.Bio:null;
+  if(NB){const fb=document.createElement("button");fb.type="button";fb.className="btn alt";fb.id="lockFace";fb.textContent="Use Face ID";fb.style.marginTop="10px";pad.after(fb);
+    const go=()=>{if(busy||Date.now()<until)return;NB.load({reason:"Unlock "+(c.title||"Accounted For")}).then(r=>{if(r&&r.pin&&!busy){pin=String(r.pin);draw();tryPin()}}).catch(x=>{if(/changed|not set/i.test(String(x&&x.message)))err.textContent="Face ID changed. Enter your PIN, then turn Face ID on again in Security."})};
+    fb.addEventListener("click",go);setTimeout(go,350)}
+});
+})();
+</script>
+
+</body></html>

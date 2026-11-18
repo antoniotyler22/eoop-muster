@@ -1,4 +1,4 @@
-// Loads the real app (index.html + every script it pulls in) into a fake browser (jsdom).
+// Loads the real app (app.html + every script it pulls in) into a fake browser (jsdom).
 // The network is stubbed: Supabase calls get canned answers, so tests run offline and touch nothing live.
 import { JSDOM, ResourceLoader, VirtualConsole } from "jsdom";
 import fs from "node:fs";
@@ -12,7 +12,7 @@ class LocalFiles extends ResourceLoader {
   fetch(url, opts) {
     const u = new URL(url);
     if (u.href.startsWith(BASE)) {
-      const rel = decodeURIComponent(u.pathname.slice(new URL(BASE).pathname.length)) || "index.html";
+      const rel = decodeURIComponent(u.pathname.slice(new URL(BASE).pathname.length)) || "app.html";
       const file = path.join(ROOT, rel);
       if (fs.existsSync(file)) return Promise.resolve(fs.readFileSync(file));
     }
@@ -31,7 +31,7 @@ export async function openApp(opts = {}) {
   const vc = new VirtualConsole();
   vc.on("jsdomError", (e) => errors.push(String(e && (e.stack || e.message || e))));
   vc.on("error", (...a) => errors.push(a.map(String).join(" ")));
-  const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+  const html = fs.readFileSync(path.join(ROOT, "app.html"), "utf8");
   const calls = [];
   const dom = new JSDOM(html, {
     url: BASE + (opts.hash ? "#" + opts.hash : ""),
