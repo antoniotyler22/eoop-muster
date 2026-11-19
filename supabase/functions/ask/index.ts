@@ -92,12 +92,19 @@ Pro: free download; Pro is $4.99/month or $39.99/year with a 7-day free trial, f
 Privacy: names and posts are encrypted on the phone; the server stores scrambled data. Delete account and data from the account panel on My page or DATA.
 Push alerts: on iPhone web, Share → Add to Home Screen first, then allow alerts. In the app, allow notifications when asked.
 Common fixes: leader not seeing updates → pull to refresh, check signal, make sure the link is the newest one (old links stop after a reset); "not set up on the server" → leader runs DATA → System check and the parts it lists; check-in button missing → My page must be connected to the leader's Feed (ask for a new link).
-Help guide: the ? on any screen. A person reads every email at Antoniotyler22@gmail.com.`;
+Tally: the helper on every page (the small tally-gate button above the tab bar, or Ask on My page). Ask it how to do anything in the app.
+Sign in: three ways. 1) Username and password from your leader. 2) Continue with Google (Gmail) or Sign in with Apple, on the Sign in box and on Join a team. If your leader put your email on the roster, signing in finds your spot. If not, the app asks for the team code. 3) An invite link from your leader.
+Team code (join code): every team has a 6-character code. The owner sees it in Tools → Join code (Share, New code, Turn off) and it also shows on My page → Settings → Team code for the owner, co-leaders, section leaders and members, each with a Share button. To join with it: open the app, tap Join a team (or sign in with Google or Apple), type the code, then pick your name on the roster. If the leader turned it off or made a new one, an old code stops working.
+Ask to join: on Join a team, find the team by name and send a request. The owner approves it in Tools → Requests to join.
+Home status counts: tap Appointment, Leave, TAD, SIQ, At PT, Operation, Off Hand or duty on the Home counts to see just those people's names.
+My rank: on My page → Settings, military versions pick their own rank; civilian versions pick Mr, Ms, Mrs or Mx. A leader's roster updates when the change reaches them.
+Official channel: one-way updates from the app owner to everyone (what's new). Find it in Chat.
+Help guide: the ? on any screen. A person reads every email at administration@accountedforteam.com.`;
 
 function supportSystem(mode: string, leader: boolean) {
   return `You are the customer support assistant inside Accounted For, a team accountability app. You help ${leader ? "a team leader" : "a team member"} use the app (version: ${mode}).
 Only answer questions about using Accounted For, the account, Pro and troubleshooting. For anything else, say you can only help with the app and suggest the Ask feature for other questions.
-Use the guide below. If the guide doesn't cover it, say you're not sure and suggest emailing a person at Antoniotyler22@gmail.com. Never make up buttons, screens, prices or policies. Never ask for passwords, login codes or personal details. You can't see their data or make changes for them.
+Use the guide below. If the guide doesn't cover it, say you're not sure and suggest emailing a person at administration@accountedforteam.com. Never make up buttons, screens, prices or policies. Never ask for passwords, login codes or personal details. You can't see their data or make changes for them.
 Style: they're on a phone. Give the steps in order (Tools → Invite → …), short and plain. Plain text, at most light **bold**, under 150 words.
 GUIDE:
 ${APP_GUIDE}`;
@@ -105,7 +112,7 @@ ${APP_GUIDE}`;
 
 // deno-lint-ignore no-explicit-any
 async function support(body: any, req: Request, key: string): Promise<Response> {
-  if ((Deno.env.get("AI_SUPPORT") ?? "1") === "0") return json({ error: "Support chat is off. Email Antoniotyler22@gmail.com.", off: true }, 403);
+  if ((Deno.env.get("AI_SUPPORT") ?? "1") === "0") return json({ error: "Support chat is off. Email administration@accountedforteam.com.", off: true }, 403);
   if (!key) return json({ error: "Support chat isn't set up yet." }, 503);
   const q = typeof body.q === "string" ? body.q.trim().slice(0, 800) : "";
   if (q.length < 3) return json({ error: "Type a question." }, 400);
@@ -136,7 +143,7 @@ async function support(body: any, req: Request, key: string): Promise<Response> 
     if (!r.ok) return json({ error: r.status === 429 || r.status === 529 ? "Support chat is busy. Try again in a minute." : "Support chat had a problem. Email a person instead." }, 503);
     // deno-lint-ignore no-explicit-any
     const answer = (out.content ?? []).filter((b: any) => b.type === "text").map((b: any) => b.text).join("").trim();
-    return json({ answer: answer || "I'm not sure. Email a person at Antoniotyler22@gmail.com.", support: true });
+    return json({ answer: answer || "I'm not sure. Email a person at administration@accountedforteam.com.", support: true });
   } catch {
     return json({ error: "Couldn't reach support chat. Try again." }, 502);
   }

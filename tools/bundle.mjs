@@ -137,6 +137,8 @@ export const SOURCES = [
   "features/join-team.js",
   "features/my-contact.js",
   "features/my-rank.js",
+  "features/team-code.js",
+  "features/tally-howto.js",
   "features/people-screen.js",
   "features/status-filter.js",
   "features/messages.js",
