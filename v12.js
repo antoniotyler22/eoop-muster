@@ -100,7 +100,7 @@ const aiOn=()=>S.aiOn===true||(S.aiOn!==false&&proOK());
 function aiHTML(){return `<h2>AI</h2><div class="panel"><label class="tog"><input type="checkbox" id="v12Ai"${aiOn()?" checked":""}> <b>Ask</b>: an AI helper that answers questions from official sources (Pro)</label>
   <p class="note">On automatically with Pro. Turn it off here if you don't want it. Questions go to the AI service (Anthropic) through your Supabase server. Not official guidance.</p></div>`}
 function aiPaint(){document.body.classList.toggle("v12noai",!aiOn())}
-{const _tl=tabsList;tabsList=function(){let L=_tl.apply(this,arguments);if(!aiOn())L=L.filter(x=>x[0]!=="ask");if(typeof memberMode==="function"&&memberMode()&&!L.some(x=>x[0]==="pages")&&L.length<5)L.push(["pages","Pages","feed"]);return L}}
+{const _tl=tabsList;tabsList=function(){let L=_tl.apply(this,arguments);if(!aiOn())L=L.filter(x=>x[0]!=="ask");return L}}
 {const _to=tabOf;tabOf=function(v){if(["pages","pg"].includes(v))return memberMode()?"pages":"tools";if(v==="dm"||v==="dms")return memberMode()?"me":"tools";if(v==="mepv")return "people";if(v==="w6")return memberMode()?"today":"tools";return _to.apply(this,arguments)}}
 
 /* ================= 4. LEADER VIEW OF A MY PAGE ================= */
@@ -299,7 +299,7 @@ async function pgRefresh(p){if(pgBusy)return;pgBusy=true;try{await pgFetch(p)}ca
 every(60000,()=>{if(!document.hidden&&view==="pg"&&pgCur){const p=pgFind(pgCur);if(p)pgRefresh(p)}},"v12-pages");
 
 /* My page tabs for members */
-function meTabs(cur){const un=dmUnreadMine();return `<div class="evts v12tabs" style="margin-top:12px">${[["me","Important"],["dm","Messages"+(un?" ("+un+")":"")],["pages","Pages"]].map(([k,l])=>`<button data-go="${k}" aria-pressed="${cur===k}">${esc(l)}</button>`).join("")}</div>`}
+function meTabs(cur){const un=dmUnreadMine();return `<div class="evts v12tabs" style="margin-top:12px">${[["me","Important"],["dm","Messages"+(un?" ("+un+")":"")]].map(([k,l])=>`<button data-go="${k}" aria-pressed="${cur===k}">${esc(l)}</button>`).join("")}</div>`}
 {const _rm=renderMe;renderMe=function(){_rm.apply(this,arguments);if(view!=="me"||!S.me||String(S.me.pk)==="preview")return;$("#main").insertAdjacentHTML("afterbegin",meTabs("me"))}}
 
 /* ================= render hook ================= */
@@ -373,7 +373,7 @@ document.addEventListener("click",e=>{const t=e.target;let b;
   if((b=t.closest("[data-v12pdel]"))){const p=pgFind(pgCur);const id=+b.dataset.v12pdel;const x=p.posts.find(y=>y.id===id);if(!x)return;if(x.k===0&&armed!=="v12pdel"+id){armed="v12pdel"+id;redraw(renderPg);return}armed=null;
     SB.rpc("page_delete_post",{p_id:p.id,p_key:p.ok&&!x.mine?p.ok:p.author,p_post:id}).then(()=>pgFetch(p)).then(()=>{pgMenu=null;redraw(renderPg);toast("Removed")}).catch(()=>toast("Couldn't remove. Try again."));return}
   if((b=t.closest("[data-v12prep]"))){const p=pgFind(pgCur);const x=p.posts.find(y=>y.id===+b.dataset.v12prep);if(!x)return;p.hid=[...new Set((p.hid||[]).concat(x.id))];save();pgMenu=null;redraw(renderPg);
-    location.href="mailto:Antoniotyler22@gmail.com?subject="+encodeURIComponent("Report: post on "+p.name)+"&body="+encodeURIComponent("Page: "+p.name+" ("+p.id+")\nPost by: "+x.n+"\nWhen: "+new Date(x.t).toLocaleString()+"\nText: "+x.txt.slice(0,400)+"\n\nWhat's wrong:\n");toast("Post hidden. Finish the report email and send it; we act within 24 hours.");return}
+    location.href="mailto:administration@accountedforteam.com?subject="+encodeURIComponent("Report: post on "+p.name)+"&body="+encodeURIComponent("Page: "+p.name+" ("+p.id+")\nPost by: "+x.n+"\nWhen: "+new Date(x.t).toLocaleString()+"\nText: "+x.txt.slice(0,400)+"\n\nWhat's wrong:\n");toast("Post hidden. Finish the report email and send it; we act within 24 hours.");return}
   if((b=t.closest("[data-v12pblk]"))){const p=pgFind(pgCur);p.blk=[...new Set((p.blk||[]).concat(b.dataset.v12pblk))];save();pgMenu=null;redraw(renderPg);toast("Blocked. You won't see their posts or comments.");return}
   if(t.id==="v12PgCopy"){const p=pgFind(pgCur);try{navigator.clipboard.writeText(pgLink(p)).then(()=>toast("Invite link copied"),()=>toast(pgLink(p)))}catch(err){toast(pgLink(p))}return}
   if(t.id==="v12PgReset"){const p=pgFind(pgCur);if(armed!=="v12pgreset"){armed="v12pgreset";redraw(renderPg);return}armed=null;const nk=rndId(32);SB.rpc("page_set",{p_id:p.id,p_owner:p.ok,p_open:p.open,p_member:nk}).then(()=>{p.mk=nk;save();redraw(renderPg);toast("New invite link made. Old links no longer work.")}).catch(()=>toast("Couldn't change it. Try again."));return}

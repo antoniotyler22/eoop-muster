@@ -146,7 +146,7 @@ test("Help & support: AI answers app questions; falls back to the help guide; a 
   const a = await openApp({ fn: (name, body) => { asked.push({ name, body }); return reply; } });
   try {
     a.w.eval(`view="support";render()`);
-    assert.ok(a.$('a[href^="mailto:Antoniotyler22@gmail.com"]'), "email a person");
+    assert.ok(a.$('a[href^="mailto:administration@accountedforteam.com"]'), "email a person");
     setVal(a, "#supQ", "How do I invite someone?");
     click(a, "#supGo");
     await waitFor(() => /Tools → Invite/.test(a.$("#main").textContent));

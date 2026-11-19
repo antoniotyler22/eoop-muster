@@ -15,7 +15,6 @@ const leader=()=>!(typeof memberMode==="function"&&memberMode());
 /* ================= 1. TOOLS: 12 groups ================= */
 const GROUPS=[
   {k:"checkin",l:"Muster",s:"Check people in, visitors, confirm check-ins",ic:"muster",keys:["muster","checkins","alerts","visitors","field"]},
-  {k:"feed",l:"Pages",s:"Group pages",ic:"feed",keys:["pages"]},
   {k:"people",l:"People & access",s:"Invite, logins, accounts, who has access",ic:"people",keys:["invite","access","logins","live","pt","acct","toolsw"]},
   {k:"reports",l:"Reports",s:"Headcount, PDF, incident report, HARP, scan",ic:"text",keys:["text","pdfReport","w6","trends","harp","scan"]},
   {k:"recall",l:"Recall",s:"Call or text everyone",ic:"recall",keys:["recall"]},

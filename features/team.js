@@ -7,7 +7,7 @@
    5) Members get an alert when their page changes (status, a check-in confirmed), with Confirm.
    6) Help & support: AI customer service for the app (the ask function's support mode), with a person one tap away. */
 (()=>{
-const SUPPORT_EMAIL="Antoniotyler22@gmail.com";
+const SUPPORT_EMAIL="administration@accountedforteam.com";
 const CK_OTHER="Other";
 const fmtD=s=>{const d=parseD(s);return d?DOW[d.getDay()]+" "+short(d):String(s||"")};
 const hhmm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,"0")+String(d.getMinutes()).padStart(2,"0")};
