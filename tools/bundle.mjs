@@ -33,6 +33,7 @@ export const SOURCES = [
   "features/utilities.js",
   "features/roster-scan.js",
   "features/simple.js",
+  "features/tools-glass.js",
   "features/wow.js",
   "features/es.js",
   "features/live.js",
