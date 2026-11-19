@@ -28,7 +28,7 @@ function html(){const v=V(),L=level(),pend=v.status==="pending",rej=v.status==="
     signedIn()?`<button class="btn" data-vf="contact"${ui.busy?" disabled":""} style="margin-top:8px">Confirm my contact</button>`:`<button class="btn" data-vf="signin" style="margin-top:8px">Sign in</button>`);
   if(L>=2)c2=row(true,"","Organization confirmed",esc2(v.org||""));
   else if(L>=1&&pend)c2=row(false,"2","Waiting for review",esc2(v.org||"")+" · we check the name, website and role. Usually within a few days.");
-  else if(L>=1)c2=row(false,"2","Organization",(rej?"That one wasn't approved. Check the details and try again, or email Antoniotyler22@gmail.com. ":"Name, website and your role. We review it.")
+  else if(L>=1)c2=row(false,"2","Organization",(rej?"That one wasn't approved. Check the details and try again, or email administration@accountedforteam.com. ":"Name, website and your role. We review it.")
     ,`<input type="text" id="vfName" maxlength="60" placeholder="Organization name" value="${esc2(ui.name)}" style="margin-top:8px"><input type="text" inputmode="url" id="vfSite" maxlength="120" placeholder="https://yourschool.org" autocapitalize="none" value="${esc2(ui.site)}"><input type="text" id="vfRole" maxlength="60" placeholder="Your role (Principal, Coach, Manager…)" value="${esc2(ui.role)}"><button class="btn" data-vf="org"${ui.busy?" disabled":""} style="margin-top:8px">Send for review</button>`);
   else c2=row(false,"2","Organization","Confirm your contact first.");
   return `<button class="chip" data-go="tools" style="cursor:pointer;margin-top:12px">◂ Tools</button><h2>Get verified</h2>

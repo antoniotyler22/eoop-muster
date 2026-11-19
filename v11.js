@@ -95,7 +95,7 @@ async function delAccount(){const o=$("#v11DelOut");const say=t=>{if(o)o.textCon
     for(const m of S.roster.filter(m=>m.pk))await tryit("Deleting My pages",()=>mpKeys(m.pk).then(K=>SB.rpc("delete_page",{p_id:K.id,p_wk:K.wk})));
     if(S.sync&&S.sync.on&&S.sync.code)await tryit("Deleting server backup",()=>codeKeys(S.sync.code).then(K=>SB.rpc("backup_delete",{p_id:K.id,p_key:K.wk})))}
   for(const f of S.feeds.filter(f=>!f.lk&&f.push))await tryit("Turning off alerts",async()=>{const sub=await pushSub(false);if(sub)await SB.rpc("feed_unsub",{p_feed:f.id,p_member_key:f.mk,p_endpoint:sub.endpoint||sub.toJSON().endpoint||""})});
-  if(errs.length){say("Couldn't finish: "+[...new Set(errs)].join(", ")+". Get signal and tap again so nothing is left on the server, or email Antoniotyler22@gmail.com and we'll delete it.");armed=null;const b=$("#v11Del");if(b)b.textContent="Try again";return}
+  if(errs.length){say("Couldn't finish: "+[...new Set(errs)].join(", ")+". Get signal and tap again so nothing is left on the server, or email administration@accountedforteam.com and we'll delete it.");armed=null;const b=$("#v11Del");if(b)b.textContent="Try again";return}
   say("Done. Erasing this phone…");setTimeout(()=>{const V=window.VAULT;V?V.eraseAll():(localStorage.clear(),location.reload())},600)}
 {const _sh=secHTML;secHTML=function(){return _sh.apply(this,arguments)+delHTML()}}
 
