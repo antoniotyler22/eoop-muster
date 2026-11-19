@@ -74,7 +74,7 @@ async function pick(c,id){
   else{S.who={id:String(m.id),n,t:Date.now()};S.myName=n;hubMe(m.id,n);
     if(c.k==="link"){S.link.me=n;save();linkPush(true)}
     else{if(canEdit()){syncSeen(String(m.id),n,roleHow());save()}else{save();viaFeed({k:"who",mid:String(m.id),me:n,how:roleHow(),t:Date.now()})}}}
-  closeSheet();render();toast("Thanks, "+n+". Your changes now show your name.")}
+  closeSheet();render();toast("Thanks, "+n+". Everything you do now shows as "+(typeof actorTag==="function"?actorTag():n)+".")}
 async function viaFeed0(f,o){try{await SB.rpc("feed_req",{p_feed:f.id,p_member_key:f.mk,p_ct:await fdEnc(f.ek,o)})}catch(e){}}
 async function addMe(c){const out=$("#whoOut");const say=t=>{if(out)out.textContent=t};
   const last=up($("#whoLast").value).replace(/[^A-Z' .-]/g,"").trim(),first=up($("#whoFirst").value).replace(/[^A-Z' .-]/g,"").trim();
@@ -127,6 +127,7 @@ async function namesGet(f,force){if(!f||!f.mk||!f.ek)return;if(!force&&f.nAt&&Da
     const o=await fdDec(f.ek,r.ct);if(!o||!Array.isArray(o.ms))return;
     f.names=o.ms.slice(0,800).map(x=>({i:String(x.i||"").slice(0,40),r:String(x.r||"").toUpperCase().slice(0,8),n:String(x.n||"").toUpperCase().slice(0,60),s:String(x.s||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6)})).filter(x=>x.i&&x.n);
     if(f.pend){const hit=f.names.find(x=>fullK({name:x.n})===f.pend);if(hit){f.mid=hit.i;delete f.pend;fdMeHash(f)}}rawSave()}catch(e){f.nAt=Date.now()}}
+window.whoNamesGet=namesGet;
 every(60000,()=>{namesPub(false);const f=memberFeed()||(S.feeds||[]).find(x=>!x.lk&&x.pend);if(f)namesGet(f,false)},"who-names");
 
 /* ---------- the OIC's phone: people who picked or added themselves ---------- */

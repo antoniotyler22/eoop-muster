@@ -56,7 +56,7 @@ function runRing(el,real){const key=el.dataset.wring,n=+el.dataset.n,total=+el.d
   if(prev&&total&&n>=total&&prev.n<prev.total)celebrate(n,total,real)}
 
 /* ---------- Home: ring in the hero card ---------- */
-function rcCounts(){try{if(!(S.rc&&S.rc.open))return null;const pool=recallPool();const ok=pool.filter(m=>(S.rc.res||{})[m.id]==="ok"||(S.rc.ci||{})[m.id]).length;return {n:ok,t:pool.length}}catch(e){return null}}
+function rcCounts(){try{if(!(S.rc&&S.rc.open))return null;if(typeof rcTally==="function"){const r=rcTally();return {n:r.n,t:r.t}}const pool=recallPool();const ok=pool.filter(m=>(S.rc.res||{})[m.id]==="ok"||(S.rc.ci||{})[m.id]).length;return {n:ok,t:pool.length}}catch(e){return null}}
 function heroRing(){const hero=document.querySelector("#main .card.hero");if(!hero||hero.querySelector(".wring"))return;
   const big=hero.querySelector('[data-n="oh"]');if(!big)return;const row=big.parentElement;const bar=hero.querySelector(".hbar");
   const rc=rcCounts();let n,t,lab;

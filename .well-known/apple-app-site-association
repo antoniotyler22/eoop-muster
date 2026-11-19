@@ -1,0 +1,27 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "ADNA5MPBGC.com.antoniotyler.accountedfor"
+        ],
+        "components": [
+          {
+            "/": "/app.html",
+            "comment": "The web app: invite, check-in, sync, My page and every other app link"
+          },
+          {
+            "/": "/",
+            "#": "?*",
+            "comment": "Site root with a link fragment (the landing page forwards these to app.html)"
+          },
+          {
+            "/": "/index.html",
+            "#": "?*",
+            "comment": "Same, spelled out"
+          }
+        ]
+      }
+    ]
+  }
+}

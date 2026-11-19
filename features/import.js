@@ -13,6 +13,7 @@ const H={
   phone:/^(phone|cell|mobile|cell ?phone|mobile ?phone|phone ?number|telephone|tel|primary ?phone|contact ?number)$/i,
   phone2:/^(alt(ernate)? ?phone|phone ?2|second(ary)? ?phone|home ?phone|work ?phone|other ?phone)$/i,
   status:/^(status|duty ?status)$/i,
+  email:/^(e-?mail|e-?mail ?address|email ?addr|work ?e-?mail|personal ?e-?mail)$/i,
   fam:/^(parent|guardian|family|mom|dad|mother|father)( ?\/ ?(guardian|parent))?( ?[12])?( ?(phone|cell|mobile|number|contact( ?number)?))?$/i,
 };
 const norm=s=>String(s||"").replace(/[_*#:]+/g," ").replace(/\s+/g," ").trim();
@@ -21,7 +22,7 @@ const BAD=/edipi|dod ?id|ssn|social|dob|birth|sex|gender|race|religion|blood|nok
 /** Finds a roster in rows of cells. Returns {roster, newSecs} or throws with a plain-English reason. */
 function flexParse(rows){
   let hi=-1,col={};
-  for(let i=0;i<Math.min(rows.length,15);i++){const c={};rows[i].forEach((x,j)=>{const h=norm(x);if(!h||BAD.test(h))return;for(const k of Object.keys(H))if(c[k]===undefined&&H[k].test(h)){c[k]=j;break}});
+  for(let i=0;i<Math.min(rows.length,15);i++){const c={};rows[i].forEach((x,j)=>{const h=norm(x);if(!h)return;if(c.email===undefined&&H.email.test(h)){c.email=j;return}if(BAD.test(h))return;for(const k of Object.keys(H))if(c[k]===undefined&&H[k].test(h)){c[k]=j;break}});
     if(c.name!==undefined||(c.first!==undefined&&c.last!==undefined)||(c.last!==undefined)){hi=i;col=c;break}}
   if(hi<0)throw new Error("Couldn't find a header row with a Name column (or First and Last). Add one and try again.");
   const ranks=(MODE().ranks||[]).map(r=>r.toUpperCase());const rdef=(MODE().rankDef||ranks[ranks.length-1]||"").toUpperCase();
@@ -32,16 +33,18 @@ function flexParse(rows){
     if(!hit){let k=U.replace(/[^A-Z0-9]/g,"").slice(0,4)||"SEC";let i=2;const taken=c=>SECTIONS.some(s=>s[0]===c)||newSecs.some(s=>s[0]===c)||(typeof RESERVED!=="undefined"&&RESERVED.includes(c));
       while(taken(k))k=k.slice(0,3)+(i++);hit=[k,raw.slice(0,30)];newSecs.push(hit)}
     secOf.set(U,hit[0]);return hit[0]};
-  const out=[];let n=0;
+  const out=[];let n=0,badEm=0;
   for(const r of rows.slice(hi+1)){const g=k=>col[k]!==undefined?norm(r[col[k]]):"";
     let name=g("name");if(!name){const f=g("first"),l=g("last");name=l&&f?l+", "+f:(l||f)}
     if(!name||/^(total|count|sum)\b/i.test(name))continue;
     const st=g("status");
     out.push({id:"f"+(++n),rank:toRank(g("rank")),name:name.toUpperCase().slice(0,48),sec:findSec(g("sec")),
       status:st&&typeof mapStatus==="function"?mapStatus(st):"On Hand",detail:st&&!STATUSES.includes(st)?st.slice(0,40):"",loc:"",start:"",end:"",
-      phone:normPh(g("phone"))||undefined,phone2:normPh(g("phone2"))||normPh(g("fam"))||undefined})}
+      phone:normPh(g("phone"))||undefined,phone2:normPh(g("phone2"))||normPh(g("fam"))||undefined});
+    /* 4.127.0: Email column, checked; a bad address is left off that person and counted */
+    const em=g("email");if(em){const ok=typeof normEmail==="function"?normEmail(em):em.toLowerCase();if(ok)out[out.length-1].email=ok;else badEm++}}
   if(!out.length)throw new Error("Found the header row but no people under it.");
-  return {roster:out,own:false,newSecs,cols:Object.keys(col)};
+  return {roster:out,own:false,newSecs,cols:Object.keys(col),badEmails:badEm};
 }
 window.flexParse=flexParse;
 
@@ -56,6 +59,8 @@ importCSV=function(text){
     if(add.length){SECTIONS.push(...add.map(s=>s.slice()));S.secs=SECTIONS.map(x=>x.slice());if(typeof secFix==="function")secFix()}
     for(const m of P.roster)if(!SECTIONS.some(s=>s[0]===m.sec)&&!addK.has(m.sec))m.sec=SECTIONS[0][0];
     if(P.newSecs.length>add.length)setTimeout(()=>toast((P.newSecs.length-add.length)+" teams didn't fit (10 max); those people went to "+SECTIONS[0][1]),400);
+    if(P.badEmails)setTimeout(()=>toast(P.badEmails+" email"+(P.badEmails===1?" wasn't a valid address and was":"s weren't valid addresses and were")+" left off. Fix them on each person."),900);
+    window.lastImportBadEmails=P.badEmails||0;
     return {roster:P.roster,own:false}}};
 
 /* Accept Excel files in the main "Load roster" picker too (it used to take CSV only). */

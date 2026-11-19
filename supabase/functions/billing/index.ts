@@ -10,7 +10,7 @@
 //   PRO_SECRET               same value as the "pro" function (team tokens must match)
 //   STRIPE_PORTAL_LOGIN_URL  Stripe → Settings → Billing → Customer portal → "Login link" (https://billing.stripe.com/p/login/...)
 // Optional: STRIPE_TRIAL_DAYS (default 7), APP_URLS (comma list of pages allowed as return links;
-//           default https://antoniotyler22.github.io/eoop-muster/).
+//           default https://accountedforteam.com/app.html, https://accountedforteam.com/ and the old github.io address).
 // Then set webBilling:true in index.html.
 
 const D = (globalThis as any).Deno;
@@ -150,7 +150,7 @@ export async function handle(req: Request): Promise<Response> {
     try { b = raw ? JSON.parse(raw) : {}; } catch { return json({ error: "bad request" }, 400); }
     if (b.ping) return json({ ok: 1, billing: 1, key: !!env("STRIPE_SECRET_KEY"), prices: !!(env("STRIPE_PRICE_MONTHLY") && env("STRIPE_PRICE_YEARLY")), hook: !!env("STRIPE_WEBHOOK_SECRET") });
     if (!env("STRIPE_SECRET_KEY")) return json({ error: "Web billing isn't set up yet." }, 503);
-    const allowed = env("APP_URLS", "https://antoniotyler22.github.io/eoop-muster/").split(",").map((s) => s.trim()).filter(Boolean);
+    const allowed = env("APP_URLS", "https://accountedforteam.com/app.html,https://accountedforteam.com/,https://antoniotyler22.github.io/eoop-muster/").split(",").map((s) => s.trim()).filter(Boolean);
     if (b.op === "checkout") {
       const price = b.plan === "monthly" ? env("STRIPE_PRICE_MONTHLY") : env("STRIPE_PRICE_YEARLY");
       const back = backOK(b.back, allowed) ?? allowed[0];

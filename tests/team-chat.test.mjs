@@ -16,88 +16,39 @@ const server = () => { const rows = []; return { rows, rpc: (n, args) => {
   if (n === "chat_get") return rows.filter((r) => r.id > (args.p_after || 0));
   return []; } }; };
 
-test("the Chat tab opens the team chat; Voice switch goes to Talk and back", async () => {
+// 4.128.0: the big team chat is retired. The tab opens Feed, there's no Chat segment or composer, the old messages are kept
+// read-only under Feed ("Earlier team chat"), and the Official channel is untouched.
+test("4.128.0: team chat is retired: the tab opens Feed, no Chat segment, no composer", async () => {
   const srv = server();
   const a = await openApp({ rpc: srv.rpc });
   try {
     await setup(a);
-    assert.match(a.$("#tabbar [data-tab='talk']").textContent, /Chat/);
-    a.$("#tabbar [data-tab='talk']").click(); await sleep(200);
-    assert.equal(a.w.eval("view"), "chat");
-    assert.ok(a.$("#chIn") && a.$("#chAcc"), "composer and I'm accounted for button shown");
-    assert.equal(a.$("#tabbar [data-tab='talk']").getAttribute("aria-current"), "page");
-    a.$("[data-seg='voice']").click(); await sleep(150);
-    assert.equal(a.w.eval("view"), "talk");
-    assert.ok(a.$("#tkSw"), "Talk screen shown");
-    assert.ok(a.$("#main .ch-seg"), "Chat | Voice switch is on the Talk screen too");
-    a.$("[data-seg='chat']").click(); await sleep(150);
-    assert.equal(a.w.eval("view"), "chat");
-    assert.deepEqual(a.errors, []);
-  } finally { await a.close(); }
-});
-
-test("sending a message encrypts it and shows it as my bubble", async () => {
-  const srv = server();
-  const a = await openApp({ rpc: srv.rpc });
-  try {
-    await setup(a);
-    a.$("#tabbar [data-tab='talk']").click(); await sleep(200);
-    a.$("#chIn").value = "Headcount at 1600, form up by the vans";
-    a.$("#chForm").dispatchEvent(new a.w.Event("submit", { cancelable: true, bubbles: true })); await sleep(300);
-    assert.equal(srv.rows.length, 1);
-    assert.ok(!srv.rows[0].ct.includes("Headcount"), "the server only sees ciphertext");
-    const mine = a.$(".ch-row.me .ch-t");
-    assert.ok(mine, "my bubble is on the right");
-    assert.match(mine.textContent, /Headcount at 1600/);
-    assert.equal(a.$("#chIn").value, "", "composer clears");
-    assert.deepEqual(a.errors, []);
-  } finally { await a.close(); }
-});
-
-test("a message from someone else shows on the left with their name, and badges the tab until Chat is open", async () => {
-  const srv = server();
-  const a = await openApp({ rpc: srv.rpc });
-  try {
-    await setup(a);
-    a.$("#tabbar [data-tab='talk']").click(); await sleep(200);
-    a.$("[data-seg='voice']").click(); await sleep(100);
-    await a.w.eval(`(async()=>{const ct=await fdEnc(S.feeds[0].ek,{k:"m",by:"SGT JONES",tx:"On my way, 10 min out",t:Date.now()});
-      window.__rows=[{id:1,ct,created_at:new Date().toISOString()}]})()`);
-    srv.rows.push(...a.w.eval("window.__rows"));
-    await a.w.eval(`(async()=>{await new Promise(r=>setTimeout(r,10));})()`);
-    a.w.eval(`document.querySelector("[data-seg='chat']").click()`); await sleep(500);
-    const other = a.$(".ch-row:not(.me) .ch-t");
-    assert.ok(other, "their bubble is on the left");
-    assert.match(a.$(".ch-row:not(.me) .ch-n").textContent, /SGT JONES/);
-    assert.equal(a.w.eval("chatUnread()"), 0, "nothing unread once Chat is open");
-    assert.deepEqual(a.errors, []);
-  } finally { await a.close(); }
-});
-
-test("the bar shows how many are accounted for from the roster", async () => {
-  const srv = server();
-  const a = await openApp({ rpc: srv.rpc });
-  try {
-    await setup(a, `S.source="real";S.roster=S.roster.slice(0,4).map((m,i)=>({...m,status:i<3?"On Hand":"Leave"}))`);
     a.$("#tabbar [data-tab='talk']").click(); await sleep(250);
-    const b = a.$("#chBar");
-    assert.ok(b, "bar shown");
-    assert.match(b.textContent, /3 of 4 accounted for/);
-    assert.equal(a.$(".ch-bw i").style.width, "75%");
+    assert.ok(["feed", "send"].includes(a.w.eval("view")));
+    assert.ok(!a.$(".ch-seg [data-seg='chat']"), "no Chat segment");
+    a.w.eval(`view="chat";render()`); await sleep(100);
+    assert.equal(a.w.eval("view"), "feed", "the old chat screen lands on Feed");
+    assert.ok(!a.$("#chIn") && !a.$("#chForm"), "nowhere to type a team chat message");
+    assert.ok(!srv.rows.length, "nothing sent");
+    assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
 
-test("I'm accounted for checks in through My check-in and posts a line in the chat", async () => {
+test("4.128.0: old team chat messages are kept read-only under Feed", async () => {
   const srv = server();
   const a = await openApp({ rpc: srv.rpc });
   try {
-    await setup(a, `S.source="real";S.roster=S.roster.slice(0,3).map(m=>({...m,status:"Leave"}));S.who={id:S.roster[0].id,n:"CPL TEST"}`);
-    a.$("#tabbar [data-tab='talk']").click(); await sleep(250);
-    a.$("#chAcc").click(); await sleep(500);
-    assert.equal(a.w.eval("S.roster[0].status"), "On Hand");
-    assert.ok(a.$(".ch-sys"), "a system line appears");
-    assert.match(a.$(".ch-sys").textContent, /is accounted for/);
-    assert.deepEqual(a.errors, []);
+    await setup(a);
+    for (const [by, tx] of [["SGT RAY", "Formation at 0600"], ["CPL TEST", "Copy, see you there"]])
+      srv.rows.push({ id: srv.rows.length + 1, ct: await a.w.eval(`fdEnc(S.feeds[0].ek,{k:"m",by:${JSON.stringify(by)},tx:${JSON.stringify(tx)},t:Date.now()})`), created_at: new Date().toISOString() });
+    for (let i = 0; i < 60 && !a.w.eval(`(S.chatArc&&S.chatArc["${FEED.id}"]&&S.chatArc["${FEED.id}"].done)||0`); i++) await sleep(250);
+    assert.equal(a.w.eval(`chatArchive(S.feeds[0]).length`), 2, "copied to this phone");
+    a.w.eval(`view="feed";render()`); await sleep(150);
+    const arc = a.$("#chArc");
+    assert.ok(arc, "shown under Feed");
+    assert.match(arc.textContent, /Earlier team chat · 2 messages \(read-only\)/);
+    assert.match(arc.textContent, /SGT RAY/); assert.match(arc.textContent, /Formation at 0600/);
+    assert.ok(a.w.eval(`SYNC_SKIP.includes("chatArc")`));
   } finally { await a.close(); }
 });
 
@@ -108,41 +59,9 @@ test("setup: the SQL part, the system check and the bundle are in place", () => 
   assert.match(sql, /interval '30 days'/);
   const b = readFileSync(new URL("../tools/bundle.mjs", import.meta.url), "utf8");
   assert.match(b, /features\/team-chat\.js/);
-});
-
-test("4.99.0: sending a message alerts the team's phones as a chat alert", async () => {
-  const srv = server();
-  const a = await openApp({ rpc: srv.rpc, fn: () => ({ body: {} }) });
-  try {
-    await setup(a);
-    a.$("#tabbar [data-tab='talk']").click(); await sleep(200);
-    a.$("#chIn").value = "Form up now";
-    a.$("#chForm").dispatchEvent(new a.w.Event("submit", { cancelable: true, bubbles: true })); await sleep(400);
-    const c = a.calls.find((x) => /functions\/v1\/notify/.test(x.url) && x.body && x.body.chat === true);
-    assert.ok(c, "notify called with chat:true");
-    assert.equal(c.body.talk, FEED.id);
-    assert.equal(c.body.tx, "Form up now");
-    const n = readFileSync(new URL("../supabase/functions/notify/index.ts", import.meta.url), "utf8");
-    assert.match(n, /💬/);
-  } finally { await a.close(); }
-});
-
-test("4.99.0: opening Chat shows a New messages divider above what you haven't read", async () => {
-  const srv = server();
-  const a = await openApp({ rpc: srv.rpc });
-  try {
-    await setup(a);
-    await a.w.eval(`(async()=>{const ek=S.feeds[0].ek;const mk=async(by,tx,id)=>({id,ct:await fdEnc(ek,{k:"m",by,tx,t:Date.now()}),created_at:new Date().toISOString()});
-      window.__r=[await mk("SGT JONES","old one",1),await mk("SGT JONES","new one",2)]})()`);
-    srv.rows.push(...a.w.eval("window.__r"));
-    a.w.eval(`S.chatSeen={"${FEED.id}":1}`);
-    a.$("#tabbar [data-tab='talk']").click(); await sleep(500);
-    const d = a.$("#chNew");
-    assert.ok(d, "divider shown");
-    assert.match(d.textContent, /New messages/);
-    assert.match(d.nextElementSibling.textContent, /new one/);
-    assert.deepEqual(a.errors, []);
-  } finally { await a.close(); }
+  const p54 = readFileSync(new URL("../supabase/setup/54_messages.sql", import.meta.url), "utf8");
+  assert.match(p54, /create or replace function public\.chat_send[\s\S]*?raise exception 'team chat is retired/, "part 54 stops new team chat messages");
+  assert.doesNotMatch(p54, /(drop|delete|truncate|update)[^;]*official/i, "and leaves the Official channel alone");
 });
 
 test("4.100.0: Official tab shows updates from Accounted For, read-only, with an unread dot until opened", async () => {

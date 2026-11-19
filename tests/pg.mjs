@@ -80,3 +80,14 @@ export function setupFiles() {
   const d = path.join(ROOT, "supabase", "setup");
   return fs.readdirSync(d).filter((f) => f.endsWith(".sql")).sort().map((f) => path.join(d, f));
 }
+
+/** Runs every setup part in order, the way Supabase would (Supabase-only extensions are stubbed). */
+export function applySetup(pg) {
+  for (const f of setupFiles()) {
+    const sql = fs.readFileSync(f, "utf8").replace(/create extension if not exists (pg_cron|pg_net|pgmq)[^;]*;/gi, "");
+    const tmp = path.join(os.tmpdir(), "af-" + process.pid + "-" + path.basename(f));
+    fs.writeFileSync(tmp, sql);
+    try { pg.psql(null, { file: tmp }); } catch (e) { throw new Error(path.basename(f) + ": " + String(e.stderr || e.message)); }
+    finally { fs.rmSync(tmp, { force: true }); }
+  }
+}
