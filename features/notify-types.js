@@ -22,7 +22,7 @@ window.ntfMuted=muted;window.ntfChoices=cur;
 /* the sign-up carries the muted kinds (an empty list still says "this phone has chosen") */
 if(typeof pushSub==="function"){const _ps=pushSub;
   pushSub=async function(){const s=await _ps.apply(this,arguments);
-    try{if(s&&typeof s.toJSON==="function"&&!s.__nt){const o=s.toJSON.bind(s);s.toJSON=()=>Object.assign({},o(),{mute:muted()});s.__nt=1}}catch(e){}return s}}
+    try{if(s&&typeof s.toJSON==="function"&&!s.__nt){const o=s.toJSON.bind(s);s.toJSON=()=>Object.assign({},o(),{mute:(window.ntfMuted||muted)()});s.__nt=1}}catch(e){}return s}}
 function resign(){try{if(typeof window.taAttach==="function")window.taAttach(true)}catch(e){}
   try{S.dmSubs={};if(typeof window.dmPushAttach==="function")window.dmPushAttach()}catch(e){}}
 window.ntfResign=resign;

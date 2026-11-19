@@ -15,9 +15,9 @@ async function addPasted(text){const raw=String(text||"").trim();if(!raw)throw n
   let n=0,skip=0;for(const l of raw.split(/\n+/)){const o=addParse(l);if(!o)continue;if(addMarine(o,SECTIONS[0][0]))n++;else skip++}save();return {n,up:0,skip}}
 window.rosterPaste=addPasted;
 function template(){const fam=typeof famOn==="function"&&famOn();
-  const h=["Name","Title","Team","Phone",fam?"Parent phone":"Alt phone","Status"];
-  const ex=fam?[["Rivera, Ana","Student",SECTIONS[1]?SECTIONS[1][1]:SECTIONS[0][1],"","808-555-0101","Present"],["Lee, Max","Teacher",SECTIONS[1]?SECTIONS[1][1]:SECTIONS[0][1],"808-555-0102","",""]]
-    :[["Rivera, Ana","",SECTIONS[0][1],"808-555-0101","",""],["Lee, Max","",SECTIONS[1]?SECTIONS[1][1]:SECTIONS[0][1],"808-555-0102","",""]];
+  const h=["Name","Title","Team","Phone",fam?"Parent phone":"Alt phone","Status","Email"];
+  const ex=fam?[["Rivera, Ana","Student",SECTIONS[1]?SECTIONS[1][1]:SECTIONS[0][1],"","808-555-0101","Present",""],["Lee, Max","Teacher",SECTIONS[1]?SECTIONS[1][1]:SECTIONS[0][1],"808-555-0102","","","max.lee@example.com"]]
+    :[["Rivera, Ana","",SECTIONS[0][1],"808-555-0101","","","ana.rivera@example.com"],["Lee, Max","",SECTIONS[1]?SECTIONS[1][1]:SECTIONS[0][1],"808-555-0102","","",""]];
   return [h].concat(ex).map(r=>r.map(c=>/[",]/.test(c)?'"'+c+'"':c).join(",")).join("\r\n")+"\r\n"}
 window.rosterTemplate=template;
 function panelHTML(){return `<div class="panel" id="riPanel" style="margin-top:10px"><b>Paste from a spreadsheet</b>

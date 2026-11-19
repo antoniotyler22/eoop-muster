@@ -131,6 +131,9 @@ export const SOURCES = [
   "features/acting-as.js",
   "features/reconnect.js",
   "features/notify-types.js",
+  "features/roster-email.js",
+  "features/team-name.js",
+  "features/tool-switches.js",
   "features/a11y.js",
 ];
 

@@ -93,7 +93,8 @@ async function readPhoto(f){if(!SB.afn)throw new Error("Reading photos needs the
   save();return n}
 /* the main importer is built for military detail lists and can skip phone columns; read them with the flexible reader too */
 async function fillPhones(f){try{const P=flexParse(parseCSV(await fileToCSV(f)));let u=0;
-    for(const x of P.roster){if(!x.phone&&!x.phone2)continue;const m=S.roster.find(r=>fullK(r)===fullK(x));if(!m)continue;
+    for(const x of P.roster){if(!x.phone&&!x.phone2&&!x.email)continue;const m=S.roster.find(r=>fullK(r)===fullK(x));if(!m)continue;
+      if(x.email&&!m.email){m.email=x.email;u++}
       if(x.phone&&!m.phone){m.phone=x.phone;u++}if(x.phone2&&!m.phone2&&x.phone2!==m.phone){m.phone2=x.phone2;u++}}
     if(u)save();mergeFile.up=(mergeFile.up||0)}catch(e){}}
 async function readOne(f){const name=(f.name||"").toLowerCase();
@@ -117,9 +118,13 @@ async function ingest(files){const list=[...(files||[])];if(!list.length)return;
 /* ---------- manual ---------- */
 const v=id=>($("#"+id)||{}).value||"";
 function extras(rec,get){const ro=get("ro").trim(),em=get("em").trim(),nt=get("nt").trim(),en=get("en").trim(),er=get("er").trim(),ep=normPh(get("ep"));
-  ro?rec.role=ro.slice(0,40):delete rec.role;em?rec.email=em.slice(0,80):delete rec.email;nt?rec.note=nt.slice(0,160):delete rec.note;
+  const emn=typeof normEmail==="function"?normEmail(em):em.toLowerCase();ro?rec.role=ro.slice(0,40):delete rec.role;emn?rec.email=emn:delete rec.email;nt?rec.note=nt.slice(0,160):delete rec.note;
   (en||er||ep)?rec.ec={n:en.slice(0,60),r:er.slice(0,30),p:ep||""}:delete rec.ec}
+/* 4.127.0: an email must look like name@example.com; a bad one is refused with a message, nothing is saved */
+function badEmail(id){const raw=v(id).trim();if(!raw||typeof normEmail!=="function"||normEmail(raw)!==null)return false;
+  const o=$("#apdOut");if(o)o.innerHTML=`<span class="warnt">“${esc(raw.slice(0,60))}” isn't an email address. Use the form name@example.com, or leave it blank.</span>`;const i=$("#"+id);if(i){i.setAttribute("aria-invalid","true");i.focus()}return true}
 function saveManual(){const fn=v("apdM-fn").trim(),ln=v("apdM-ln").trim();if(!fn&&!ln){toast("Enter a name.");const i=$("#apdM-ln");if(i)i.focus();return}
+  if(badEmail("apdM-em"))return;
   const name=(ln&&fn)?ln+", "+fn:(ln||fn);const ph=normPh(v("apdM-ph"));
   const rec=addMarine({rank:v("apdM-rk"),name,sec:v("apdM-sc"),phone:ph||undefined});
   if(!rec){st.msg=`That name is already on the roster. Not added twice.`;draw();return}
@@ -138,7 +143,7 @@ document.addEventListener("click",e=>{const t=e.target;if(!t.closest||!t.closest
     Promise.resolve().then(()=>window.rosterPaste(txt)).then(()=>{const ids=newOnes(before);st.last=ids;st.added=ids.concat(st.added);st.msg=ids.length?`✓ <b>${ids.length}</b> added.`:"No new people found in that text.";st.paste=false;save();draw()}).catch(x=>{st.msg=`<span class="warnt">${esc(x.message||x)}</span>`;draw()});return}
   if(t.closest("#apdUndo")){const ids=new Set(st.last);S.roster=S.roster.filter(m=>!ids.has(m.id));st.added=st.added.filter(x=>!ids.has(x));st.msg=`Undid the import: ${ids.size} removed.`;st.last=[];save();if(S.board&&typeof rpPublish==="function")rpPublish(true);draw();return}
   const op=t.closest("[data-apd-open]");if(op){st.open=st.open===op.dataset.apdOpen?"":op.dataset.apdOpen;draw();return}
-  const sv=t.closest("[data-apd-save]");if(sv){const m=byId(sv.dataset.apdSave);if(!m)return;m.rank=v("apdE-rk")||m.rank;m.sec=v("apdE-sc")||m.sec;const ph=normPh(v("apdE-ph"));ph?m.phone=ph:delete m.phone;
+  const sv=t.closest("[data-apd-save]");if(sv){const m=byId(sv.dataset.apdSave);if(!m)return;if(badEmail("apdE-em"))return;m.rank=v("apdE-rk")||m.rank;m.sec=v("apdE-sc")||m.sec;const ph=normPh(v("apdE-ph"));ph?m.phone=ph:delete m.phone;
     extras(m,k=>v("apdE-"+k));st.open="";st.msg=`✓ Saved <b>${esc(m.rank+" "+m.name)}</b>.`;save();if(S.board&&typeof rpPublish==="function")rpPublish(true);draw();return}
   const rm=t.closest("[data-apd-rm]");if(rm){const id=rm.dataset.apdRm;if(rm.dataset.sure!=="1"){rm.dataset.sure="1";rm.textContent="Tap again to remove";return}
     S.roster=S.roster.filter(m=>m.id!==id);st.added=st.added.filter(x=>x!==id);st.last=st.last.filter(x=>x!==id);st.open="";st.msg="Removed.";save();draw();return}});

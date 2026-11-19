@@ -127,6 +127,7 @@ async function namesGet(f,force){if(!f||!f.mk||!f.ek)return;if(!force&&f.nAt&&Da
     const o=await fdDec(f.ek,r.ct);if(!o||!Array.isArray(o.ms))return;
     f.names=o.ms.slice(0,800).map(x=>({i:String(x.i||"").slice(0,40),r:String(x.r||"").toUpperCase().slice(0,8),n:String(x.n||"").toUpperCase().slice(0,60),s:String(x.s||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6)})).filter(x=>x.i&&x.n);
     if(f.pend){const hit=f.names.find(x=>fullK({name:x.n})===f.pend);if(hit){f.mid=hit.i;delete f.pend;fdMeHash(f)}}rawSave()}catch(e){f.nAt=Date.now()}}
+window.whoNamesGet=namesGet;
 every(60000,()=>{namesPub(false);const f=memberFeed()||(S.feeds||[]).find(x=>!x.lk&&x.pend);if(f)namesGet(f,false)},"who-names");
 
 /* ---------- the OIC's phone: people who picked or added themselves ---------- */
