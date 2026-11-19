@@ -79,8 +79,13 @@ async function apnsSend(token: string, p: Record<string, unknown>, urgent: boole
       body: JSON.stringify({ aps: apsFor(p, urgent, Deno.env.get("APNS_CRITICAL") === "1"), open: p.open, sos: p.sos }),
     });
     if (r.ok) return "ok";
-    return r.status === 410 || r.status === 400 ? "gone" : "fail";
-  } catch { return "fail"; }
+    // 4.131.0: only an answer that says the token itself is dead removes the phone. A 400 for any other reason (wrong topic,
+    // bad header) used to delete every iPhone's sign-up, and the app never signed up again.
+    let reason = ""; try { reason = String((await r.json())?.reason ?? ""); } catch { /* no body */ }
+    console.error("apns push failed:", r.status, reason);
+    const dead = r.status === 410 || ["BadDeviceToken", "Unregistered", "DeviceTokenNotForTopic"].includes(reason);
+    return dead ? "gone" : "fail";
+  } catch (e) { console.error("apns push error:", String((e as Error)?.message ?? e).slice(0, 120)); return "fail"; }
 }
 // Quiet hours: the phone's sign-up carries qh [fromMin, toMin] (local minutes) and tz (minutes east of UTC).
 // deno-lint-ignore no-explicit-any

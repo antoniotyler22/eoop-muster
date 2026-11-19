@@ -102,7 +102,11 @@ async function delAccount(){const o=$("#v11DelOut");const say=t=>{if(o)o.textCon
 /* remember who signed in (needed so they can delete their own login) */
 {const _si=lgSignIn;lgSignIn=async function(){if(!termsOK()){const c=$("#tosChk");if(c&&!c.checked){const o=$("#lgSOut");if(o)o.textContent="Agree to the Terms of Use first.";return}S.tos=TERMS_VER;save()}
   return _si.apply(this,arguments)}}
-{const _ss=lgSignSheet;lgSignSheet=function(){_ss.apply(this,arguments);if(!termsOK()){const g=$("#lgGo");if(g)g.insertAdjacentHTML("beforebegin",tosLine())}}}
+/* 4.132.0: Google and Apple on the username/password Sign in (same buttons as the Account screen; each shows only when that provider is on). */
+function provBtns(){const g=!!(typeof SB==="object"&&(SB.google||window.AF_GOOGLE)),a=!!(typeof SB==="object"&&SB.apple);if(!g&&!a)return "";
+  return `<div class="note" style="text-align:center;margin:10px 0 2px">or</div>${g?`<button class="btn alt" data-lgprov="google" style="margin-top:6px">Continue with Google (Gmail)</button>`:""}${a?`<button class="btn alt" data-lgprov="apple" style="margin-top:6px">Sign in with Apple</button>`:""}`}
+document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("[data-lgprov]");if(!b)return;e.preventDefault();e.stopImmediatePropagation();if(typeof window.afOauth==="function")window.afOauth(b.dataset.lgprov)},true);
+{const _ss=lgSignSheet;lgSignSheet=function(){_ss.apply(this,arguments);if(!termsOK()){const g=$("#lgGo");if(g)g.insertAdjacentHTML("beforebegin",tosLine())}const g2=$("#lgGo");if(g2&&!document.querySelector("#lgGo ~ [data-lgprov]"))g2.insertAdjacentHTML("afterend",provBtns())}}
 {const _jp=fdJoinPrompt;fdJoinPrompt=function(){_jp.apply(this,arguments);if(!termsOK()){const y=$("#fjYes");if(y)y.insertAdjacentHTML("beforebegin",tosLine())}}}
 
 /* ================= 3. EMERGENCY MUSTER + MISSED CHECK-IN ALERTS ================= */
@@ -334,7 +338,7 @@ function welcomeHTML(){const L=APP_LINKS();
     <div class="sgw-pane" data-pane="signin"><div class="panel" style="margin:0"><b>Sign in</b><p class="note" style="margin:0">Got a username and password from your leader?</p>
       <label for="lgSU">Username</label><input type="text" id="lgSU" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
       <label for="lgSP">Password</label><input type="password" id="lgSP" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false">
-      ${termsOK()?"":tosLine()}<button class="btn" id="lgGo">Sign in</button><div class="note" id="lgSOut" role="status"></div></div></div>
+      ${termsOK()?"":tosLine()}<button class="btn" id="lgGo">Sign in</button>${provBtns()}<div class="note" id="lgSOut" role="status"></div></div></div>
     <div class="sgw-pane" data-pane="link" hidden><div class="panel" style="margin:0"><b>Got an invite link?</b><p class="note" style="margin:0">Tap the link in your text, or paste it here.</p>
       <input type="url" id="v11WLink" placeholder="https://accountedforteam.com/app.html#…" autocapitalize="none" autocorrect="off" spellcheck="false"><button class="btn" id="v11WOpen">Open link</button>
       <p class="note" style="margin:10px 0 4px"><b>No link?</b> Type your team's join code, find your team by name and ask to join, or sign in.</p><button class="btn alt" id="v11WJoin">Join with a code or ask to join</button></div></div>

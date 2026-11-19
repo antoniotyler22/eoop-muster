@@ -100,7 +100,51 @@ details p{margin:0 0 16px;color:var(--mut)}
 .final{background:var(--navy);color:#fff;text-align:center;padding:64px 0}
 .final h2{color:#fff}.final p{color:#c9d4e6;font-size:19px;margin:0 0 24px}
 .contact{display:grid;gap:12px;margin-top:8px;grid-template-columns:minmax(0,1fr)}
-.contact a.big{display:block;font-size:clamp(16px,5vw,20px);overflow-wrap:anywhere;font-weight:800;text-decoration:none;color:var(--navy);padding:6px 0}
+.cbtns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.cbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:112px;padding:18px 10px;border-radius:18px;text-decoration:none;text-align:center;-webkit-tap-highlight-color:transparent}
+.cbtn i{font-style:normal;font-size:28px;line-height:1}
+.cbtn b{font-size:18px;font-weight:800}
+.cbtn span{font-size:13px;overflow-wrap:anywhere}
+.cbtn.call{background:var(--navy);color:#fff}.cbtn.call i{color:var(--blue)}.cbtn.call span{color:#b9c6dc}
+.cbtn.mail{border:2px solid var(--navy);color:var(--navy);background:#fff}.cbtn.mail span{color:var(--mut)}
+.cbtn:active{transform:scale(.98)}
+.caddr{display:block;text-align:center;color:var(--navy);font-weight:700;font-size:clamp(15px,4.4vw,18px);overflow-wrap:anywhere;text-decoration:underline;text-underline-offset:3px;padding:6px 0}
+/* live demo */
+.demo{background:var(--navy);color:#fff}
+.demo .wrap{display:grid;gap:34px;align-items:center}
+.demo h2{color:#fff}.demo .lead{color:#c9d4e6}
+.demo .steps2{margin:0 0 22px;padding:0;list-style:none;display:grid;gap:8px;color:#c9d4e6;font-size:17px}
+.demo .steps2 b{color:#fff}
+@media(min-width:860px){.demo .wrap{grid-template-columns:1fr 380px}}
+.dphone{justify-self:center;width:min(360px,100%);background:#f5f6f8;color:var(--ink);border:6px solid #1c2740;border-radius:34px;padding:18px 16px 16px;box-shadow:0 30px 70px rgba(0,0,0,.5)}
+.dtag{margin:0;text-align:center;font-size:12px;letter-spacing:.08em;font-weight:800;color:#5b6577;text-transform:uppercase}
+.dphone h3{margin:2px 0 0;text-align:center;font-size:20px;font-weight:800}
+.dsub{margin:2px 0 6px;text-align:center;font-size:13px;color:#5b6577}
+.ring{position:relative;width:190px;height:190px;margin:6px auto 0}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:20}
+.ring .bg{stroke:#dfe1e6}.ring .fg{stroke:var(--green);stroke-linecap:round;transition:stroke-dashoffset .35s ease}
+.ring .mid{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.ring .mid b{font-size:54px;line-height:1;font-weight:800}.ring .mid span{font-size:14px;font-weight:800;color:#5b6577}
+.dpct{text-align:center;margin-top:6px;font-size:12px;font-weight:800;letter-spacing:.08em;color:#5b6577}
+.dpct b{display:block;font-size:30px;color:var(--green);letter-spacing:0}
+.dpct span{display:block;font-size:13px;font-weight:600;letter-spacing:0;color:#5b6577}
+.dctl{display:flex;gap:8px;margin:12px 0 8px}
+.dctl button{flex:1;min-height:46px;border-radius:12px;font:inherit;font-weight:800;font-size:16px;cursor:pointer;border:1.5px solid var(--navy);background:#fff;color:var(--navy)}
+.dctl button.go{background:var(--navy);color:#fff}
+.dctl button:focus-visible,.dlist button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.dlist{list-style:none;margin:0;padding:0;max-height:190px;overflow-y:auto;display:grid;gap:6px}
+.dlist button{width:100%;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border:0;border-radius:10px;background:#fff;font:inherit;font-size:15px;text-align:left;cursor:pointer;color:var(--ink)}
+.dlist button b{font-weight:800}.dlist button small{color:#5b6577;font-size:13px}
+.dlist button .st{margin-left:auto;font-size:12px;color:#8a93a3}
+.dlist button.on .st{color:var(--green);font-weight:800}
+.dlist button .ck{width:18px;color:var(--green);font-weight:800}
+.ddone{display:none;margin-top:10px;text-align:center;border:2px solid var(--green);border-radius:14px;padding:12px;background:#fff}
+.ddone.show{display:block}
+.ddone b{display:block;font-size:19px}
+.ddone a{display:inline-flex;margin-top:8px;min-height:44px;align-items:center;padding:0 16px;border-radius:12px;background:var(--navy);color:#fff;font-weight:800;text-decoration:none}
+.dfoot{margin:10px 0 0;text-align:center;font-size:12px;color:#8a93a3}
+@media(prefers-reduced-motion:reduce){.ring .fg{transition:none}}
 footer{background:#070c16;color:#9fb0cb;padding:30px 0 40px;font-size:15px}
 footer a{color:#c9d4e6;text-decoration:none;display:inline-block;padding:8px 12px 8px 0}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
@@ -109,7 +153,7 @@ footer a{color:#c9d4e6;text-decoration:none;display:inline-block;padding:8px 12p
 <body>
 <header class="nav"><div class="wrap">
   <a class="brand" href="./"><img src="icon-192.png" alt="" width="32" height="32">Accounted For</a>
-  <nav><a class="lnk" href="#how">How it works</a><a class="lnk" href="#pricing">Pricing</a><a class="lnk" href="#faq">FAQ</a><a class="btn store" href="https://apps.apple.com/app/id6826541947">Get the app</a></nav>
+  <nav><a class="lnk" href="#how">How it works</a><a class="lnk" href="#demo">Try it</a><a class="lnk" href="#pricing">Pricing</a><a class="lnk" href="#faq">FAQ</a><a class="btn store" href="https://apps.apple.com/app/id6826541947">Get the app</a></nav>
 </div></header>
 
 <main>
@@ -144,6 +188,35 @@ footer a{color:#c9d4e6;text-decoration:none;display:inline-block;padding:8px 12p
     <div class="card"><h3>Event staff</h3><p>Gates, security and concessions. See who has checked in at a glance.</p></div>
     <div class="card"><h3>Construction &amp; field crews</h3><p>Job-site head counts and safety drills, even when signal is spotty.</p></div>
     <div class="card"><h3>Schools &amp; businesses</h3><p>Fire drills and assembly points with a record you can export.</p></div>
+  </div>
+</div></section>
+
+<section class="demo" id="demo"><div class="wrap">
+  <div>
+    <h2>Try it right here</h2>
+    <p class="lead">A working sample of the check-in screen with 24 made-up people. Nothing you tap here is sent anywhere.</p>
+    <ul class="steps2">
+      <li><b>Tap a name</b> to check that person in.</li>
+      <li><b>Or press Start drill</b> and watch the ring fill on its own.</li>
+      <li><b>At 100%</b> everyone is accounted for.</li>
+    </ul>
+    <div class="cta">
+      <a class="btn store" href="https://apps.apple.com/app/id6826541947">Download free on the App Store</a>
+    </div>
+  </div>
+  <div class="dphone" id="dphone">
+    <p class="dtag">Demo drill &middot; sample people</p>
+    <h3>Watch everyone check in</h3>
+    <p class="dsub">This is what you see during a real check-in.</p>
+    <div class="ring" role="img" aria-label="Check-in progress ring">
+      <svg viewBox="0 0 200 200" aria-hidden="true"><circle class="bg" cx="100" cy="100" r="80"/><circle class="fg" id="dfg" cx="100" cy="100" r="80" stroke-dasharray="502.65" stroke-dashoffset="502.65"/></svg>
+      <div class="mid"><b id="dn">0</b><span>of 24</span></div>
+    </div>
+    <div class="dpct">CHECKED IN<b id="dp">0%</b><span id="dleft">24 to go</span></div>
+    <div class="dctl"><button type="button" class="go" id="dgo">Start drill</button><button type="button" id="dreset">Reset</button></div>
+    <ul class="dlist" id="dlist"></ul>
+    <div class="ddone" id="ddone" role="status"><b>All 24 accounted for &#10003;</b><span>That's the whole check-in. Run one with your own team.</span><br><a href="https://apps.apple.com/app/id6826541947">Get the app</a></div>
+    <p class="dfoot">Sample people. Not real data.</p>
   </div>
 </div></section>
 
@@ -202,8 +275,11 @@ footer a{color:#c9d4e6;text-decoration:none;display:inline-block;padding:8px 12p
   <h2>Talk to us</h2>
   <p class="lead">Questions, schools and organizations, or help with the app.</p>
   <div class="contact">
-    <a class="big" href="mailto:administration@accountedforteam.com">administration@accountedforteam.com</a>
-    <a class="big" href="tel:+18885060639">1-888-506-0639</a>
+    <div class="cbtns">
+      <a class="cbtn call" href="tel:+18885060639"><i aria-hidden="true">&#9742;</i><b>Call</b><span>1-888-506-0639</span></a>
+      <a class="cbtn mail" href="mailto:administration@accountedforteam.com?subject=Accounted%20For"><i aria-hidden="true">&#9993;</i><b>Email</b><span>Send a message</span></a>
+    </div>
+    <a class="caddr" href="mailto:administration@accountedforteam.com?subject=Accounted%20For">administration@<wbr>accountedforteam.com</a>
     <p class="note" style="margin:0">An AI assistant answers the phone, records the call and takes a message for the team.</p>
   </div>
 </div></section>
@@ -213,4 +289,25 @@ footer a{color:#c9d4e6;text-decoration:none;display:inline-block;padding:8px 12p
   <a href="support.html">Support</a> <a href="privacy.html">Privacy</a> <a href="terms.html">Terms</a> <a href="help.html">Help</a> <a href="app.html">Web app</a>
   <div>&copy; 2026 Accounted For</div>
 </div></footer>
+<script>
+(function(){
+var P="Kai Ortiz|Red,Sara Clark|Blue,Eli Kim|Green,Lily Patel|Blue,Jack Lopez|Red,Noa Brown|Green,Maya Reed|Red,Leo Grant|Blue,Zoe Ward|Green,Owen Diaz|Red,Ava Chen|Blue,Finn Hall|Green,Ivy Moore|Red,Max Cole|Blue,Ruby Shah|Green,Theo Park|Red,Nina Ross|Blue,Cal Young|Green,Ella Price|Red,Sam Ruiz|Blue,Dani Fox|Green,Jude Bell|Red,Tara Webb|Blue,Rex Hill|Green".split(",").map(function(x){x=x.split("|");return{n:x[0],t:x[1]+" Team"}});
+var done=[],timer=null,C=502.65;
+var $=function(i){return document.getElementById(i)};
+var list=$("dlist"),fg=$("dfg"),go=$("dgo");
+var N=P.length;
+function reset(){stop();done=P.map(function(){return false});build();paint()}
+function build(){list.innerHTML="";P.forEach(function(p,i){var li=document.createElement("li"),b=document.createElement("button");b.type="button";b.dataset.i=i;li.appendChild(b);list.appendChild(li)});}
+function count(){return done.filter(Boolean).length}
+function paint(){var c=count();fg.style.strokeDashoffset=C*(1-c/N);$("dn").textContent=c;$("dp").textContent=Math.round(c/N*100)+"%";$("dleft").textContent=(N-c)+" to go";
+ list.querySelectorAll("button").forEach(function(b){var i=+b.dataset.i,p=P[i],on=done[i];b.className=on?"on":"";b.setAttribute("aria-pressed",on);b.innerHTML='<span class="ck">'+(on?"\u2713":"")+'</span><b>'+p.n+'</b><small>'+p.t+'</small><span class="st">'+(on?"just now":"Tap to check in")+'</span>'});
+ $("ddone").className="ddone"+(c===N?" show":"");if(c===N)stop();}
+function stop(){if(timer){clearInterval(timer);timer=null}go.textContent=count()===N?"Run again":"Start drill"}
+function step(){var left=[];done.forEach(function(d,i){if(!d)left.push(i)});if(!left.length){stop();return}done[left[Math.floor(Math.random()*left.length)]]=true;paint()}
+go.addEventListener("click",function(){if(timer){stop();return}if(count()===N){reset()}go.textContent="Pause";timer=setInterval(step,420);step()});
+$("dreset").addEventListener("click",reset);
+list.addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;var i=+b.dataset.i;done[i]=!done[i];paint();if(count()===N)go.textContent="Run again"});
+reset();
+})();
+</script>
 </body></html>

@@ -68,6 +68,9 @@ async function jcEnable(on){const f=feedOf();if(!f||!f.lk||!JC().code||jcBusy)re
   catch(e){jcMsg=why(e)}finally{jcBusy=false;redrawJ()}}
 /* the team name or sections changed: re-seal the same code */
 every(60000,()=>{try{const f=feedOf(),J=S.jc;if(!owner()||!f||!f.lk||!J||!J.code||!J.on||jcBusy)return;if(J.sig!==jcSig(f)){jcBusy=true;jcPublish(J.code).then(rawSave).catch(e=>{J.err=why(e);rawSave()}).finally(()=>{jcBusy=false})}}catch(e){}},"jc-reseal");
+/* 4.133.0: every team gets a join code. The owner's phone makes one by itself when the team has a Word of Mouth and no code yet
+   (the Join code button still makes a new one any time). Tries at most once every 10 minutes. */
+every(45000,()=>{try{const f=feedOf(),J=JC();if(!owner()||!f||!f.lk||J.code||jcBusy)return;if(Date.now()-(J.autoAt||0)<600000)return;J.autoAt=Date.now();rawSave();jcNew()}catch(e){}},"jc-auto");
 const fmtCode=c=>c?c.slice(0,3)+" "+c.slice(3):"";
 function jcHTML(){if(!owner())return `<p class="note">Only the team's owner can see and change the join code.</p>`;const f=feedOf(),J=JC();
   if(!f||!f.lk)return `<div class="panel" id="jcPanel"><b>Join code</b><p class="note">The join code opens your team's Word of Mouth, so start that first.</p><button class="btn" id="jcFeed"${jcBusy?" disabled":""}>Start our Word of Mouth</button><p class="note" role="status">${esc(jcMsg)}</p></div>`;
@@ -92,7 +95,7 @@ async function reqLoad(force){const f=feedOf(),A=ASK();if(!owner()||!f||!f.lk||!
     for(const r of rows){const o=await openSealed(A.priv,r.ct);if(!o)continue;out.push({id:+r.id,status:r.status,at:Date.parse(r.created_at)||0,dt:Date.parse(r.decided_at)||0,
       rank:String(o.rank||"").toUpperCase().slice(0,8),last:String(o.last||"").toUpperCase().slice(0,30),first:String(o.first||"").toUpperCase().slice(0,30),sec:String(o.sec||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6),
       phone:String(o.phone||"").replace(/\D/g,"").slice(-10),email:typeof normEmail==="function"?(normEmail(o.email)||""):"",note:String(o.note||"").slice(0,160),rpub:o.rpub,
-      kind:o.kind==="contact"?"contact":"join",mid:String(o.mid||"").slice(0,40)})}
+      kind:o.kind==="contact"?"contact":"join",rc:o.rankChange?1:0,mid:String(o.mid||"").slice(0,40)})}
     reqs=out;reqAt=Date.now();reqErr="";const n=out.filter(x=>x.status==="pending").length;if(n!==S.askWaiting){S.askWaiting=n;rawSave()}}
   catch(e){reqErr=why(e)}finally{reqBusy=false}if(view==="joinreqs")redrawR()}
 every(30000,()=>{if(!document.hidden&&ASK().on)reqLoad(false)},"join-reqs");setTimeout(()=>{if(ASK().on)reqLoad(true)},2500);
@@ -113,11 +116,12 @@ async function decide(id,ok){const r=reqs.find(x=>x.id===id),f=feedOf();if(!r||!
     const name=(r.last+(r.first?", "+r.first:"")).slice(0,60);const hit=matchOf(r);let m=hit?hit.m:null;if(m&&fillContact(m,r)){save();try{if(typeof window.afEmailsPub==="function")window.afEmailsPub(true)}catch(e){}}
     if(!m){const sec=SECTIONS.some(s=>s[0]===r.sec)?r.sec:SECTIONS[0][0];m=addMarine({rank:RANKS.includes(r.rank)?r.rank:(MODE().rankDef||"LCPL"),name,sec,phone:r.phone.length===10?r.phone:undefined},sec);
       if(!m)m=S.roster.find(x=>fullK(x)===fullK({name}));if(m){m.detail=m.detail||"Asked to join";if(r.email)m.email=r.email}}
+    if(m&&r.kind==="contact"&&r.rc&&RANKS.includes(r.rank)&&m.rank!==r.rank){m.rank=r.rank;save();try{if(S.board&&typeof rpPublish==="function")rpPublish(true)}catch(x){}}/* 4.131.0: a member's own rank change */
     if(!m)throw new Error("Couldn't add them to the roster.");
     const me=(m.rank+" "+lastOf(m)).trim();const reply=await sealTo(r.rpub,Object.assign(memberLink(f),{mid:m.id,me}));
     await SB.rpc("join_req_decide",{p_feed:f.id,p_leader_key:f.lk,p_id:id,p_status:"approved",p_reply_ct:reply});r.status="approved";save();
     try{if(typeof window.whoNamesPub==="function")window.whoNamesPub(true)}catch(e){}
-    reqMsg=r.kind==="contact"?"Matched: "+me+"'s email and phone are saved on your roster.":"Approved: "+me+" is on your roster and gets the team the next time they open the app.";redrawR()}
+    reqMsg=r.kind==="contact"?(r.rc?"Rank updated: "+me+".":"Matched: "+me+"'s email and phone are saved on your roster."):"Approved: "+me+" is on your roster and gets the team the next time they open the app.";redrawR()}
   catch(e){reqMsg="Couldn't "+(ok?"approve":"decline")+": "+why(e);redrawR()}}
 function reqsHTML(){if(!owner())return `<p class="note">Only the team's owner sees requests to join.</p>`;const A=ASK(),f=feedOf();
   const pend=reqs.filter(x=>x.status==="pending"),done=reqs.filter(x=>x.status!=="pending");
@@ -143,7 +147,7 @@ function askJoinHTML(){const pend=myReqs().filter(r=>r.status==="pending"),done=
   return `<div id="ajWrap"><div class="sechead" style="margin-top:12px"><h2>Join a team</h2></div>
     ${pend.map(r=>`<div class="banner" data-myreq="${r.id}"><span>⏳ <b>Waiting for ${esc(r.name)}</b> to approve your request. You'll see the answer here when you open the app.</span><button data-reqcheck="${r.id}">Check now</button></div>`).join("")}
     ${done.map(r=>`<div class="note" data-myreq="${r.id}">${r.status==="approved"?"✅ "+esc(r.name)+" approved your request.":"✖ "+esc(r.name)+" declined your request."}</div>`).join("")}
-    <div class="panel"><b>Have a join code?</b><p class="note" style="margin:2px 0 8px">6 letters and numbers from your leader.</p>
+    <div class="panel"><b>Enter your team's join code</b><p class="note" style="margin:2px 0 8px">6 letters and numbers from your leader. It links you to your spot on the roster.</p>
       <input id="ajCode" type="text" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="8" placeholder="ABC 234" style="text-transform:uppercase;font:700 22px ui-monospace,Menlo,monospace;letter-spacing:.12em;text-align:center">
       <button class="btn" id="ajJoin"${jBusy?" disabled":""}>Join with code</button></div>
     <div class="panel"><b>Find your team by name</b><input id="ajQ" type="search" placeholder="At least 3 letters" value="${esc(jq)}" autocomplete="off"><button class="btn alt" id="ajFind"${jBusy?" disabled":""}>Search</button><div id="ajRes">${res}</div></div>
@@ -191,7 +195,7 @@ async function sendReq(){const t=jPick;if(!t)return;const g=id=>String(($("#"+id
 async function sendContact(f,d){const rows=await SB.rpc("team_dir_get",{p_feed:f.id});const t=rows&&rows[0];if(!t)throw new Error("team not taking requests");
   const kp=await genKP();const tok=b64url(crypto.getRandomValues(new Uint8Array(24)));
   const me=String(f.me||S.myName||"").trim().toUpperCase(),w=me.split(/\s+/).filter(Boolean),rk=typeof RANKS!=="undefined"&&w.length>1&&RANKS.includes(w[0])?w.shift():"";
-  const ct=await sealTo(t.pub,{kind:"contact",mid:f.mid||"",rank:rk,last:(w.join(" ")||me).slice(0,30),first:"",sec:"",phone:d.phone||"",email:d.email||"",note:"",rpub:JSON.parse(kp.pub)});
+  const ct=await sealTo(t.pub,{kind:"contact",mid:f.mid||"",rank:d.rank||rk,rankChange:d.rankChange?1:0,last:(w.join(" ")||me).slice(0,30),first:"",sec:"",phone:d.phone||"",email:d.email||"",note:"",rpub:JSON.parse(kp.pub)});
   const id=await SB.rpc("join_req_send",{p_feed:f.id,p_ct:ct,p_tok_hash:await sha(tok)});
   myReqs().unshift({id:+id,tok,feed:f.id,name:t.name,priv:kp.priv,at:Date.now(),status:"pending",kind:"contact"});S.myReqs=myReqs().slice(0,10);save();
   if(typeof view!=="undefined"&&view==="askjoin")redrawA();return {id:+id,name:t.name}}
@@ -230,7 +234,7 @@ window.afClaim=claim;
 async function afterSignIn(){let wanted=false;try{wanted=sessionStorage.getItem("af-join-signin")==="1";sessionStorage.removeItem("af-join-signin")}catch(e){}
   if(!wanted)return;/* only Apple/Google sign-ins and sign-ins started from Join a team look for a roster spot */
   try{const r=await claim();if(r.n){view="feed";render();toast("Found you on "+(r.f&&r.f.unit||"your team")+"'s roster. You're in.");return}
-    view="askjoin";jMsg=r.email?"We didn't find "+r.email+" on a team's roster. Find your team and ask to join.":"Find your team and ask to join.";render()}
+    view="askjoin";jMsg=(r.email?"We didn't find "+r.email+" on a roster. ":"")+"Type the join code your leader gave you to link to your roster spot.";render();setTimeout(()=>{const c=$("#ajCode");if(c){try{c.scrollIntoView({block:"center"});c.focus()}catch(x){}}},150)}
   catch(e){view="askjoin";jMsg=NOFN.test(String(e.message||e))?"Signing in to join needs setup part 52 on the server.":"Find your team and ask to join.";render()}}
 window.addEventListener("af-signed-in",()=>{setTimeout(afterSignIn,300)});
 function oauth(p){try{sessionStorage.setItem("af-join-signin","1")}catch(e){}
