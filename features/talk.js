@@ -106,16 +106,18 @@ async function startRec(){const f=feed();if(!f||ui.rec||!tk().on)return;unlock()
     const mt=MIMES.find(m=>{try{return MediaRecorder.isTypeSupported(m)}catch(e){return false}})||"";
     r.mr=new MediaRecorder(r.stream,Object.assign({audioBitsPerSecond:24000},mt?{mimeType:mt}:{}));r.mt=r.mr.mimeType||mt||"audio/mp4";
     r.mr.ondataavailable=e=>{if(e.data&&e.data.size)r.chunks.push(e.data)};
-    r.mr.onstop=()=>done(r);r.mr.start();r.t0=Date.now();
-    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    r.mr.onstop=()=>done(r);r.mr.start(250);r.t0=Date.now();
+    const SR=window.MBN&&MBN.on&&MBN.platform==="ios"?null:(window.SpeechRecognition||window.webkitSpeechRecognition); /* 4.131.0: not on iPhone */
     if(SR){try{const sr=new SR();sr.continuous=true;sr.interimResults=false;sr.lang=navigator.language||"en-US";sr.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)r.tx+=e.results[i][0].transcript+" "};sr.onerror=()=>{};sr.start();r.sr=sr}catch(e){}}
     beat(f,"rec");r.cap=setTimeout(()=>stopRec(),MAXS*1e3);r.tick=setInterval(()=>tickUI(),200);paintRec(true);try{navigator.vibrate&&navigator.vibrate(15)}catch(e){}
-  }catch(e){ui.rec=null;paintRec(false);toast(/denied|NotAllowed/i.test(String(e&&e.name||e))?"Allow the microphone to use Talk.":"Couldn't open the microphone.")}}
-function stopRec(){const r=ui.rec;if(!r)return;r.stop=true;if(!r.mr||r.mr.state==="inactive")return;clearTimeout(r.cap);clearInterval(r.tick);try{r.sr&&r.sr.stop()}catch(e){}try{r.mr.stop()}catch(e){}r.stream&&r.stream.getTracks().forEach(t=>t.stop())}
+  }catch(e){ui.rec=null;paintRec(false);toast(/denied|NotAllowed/i.test(String(e&&e.name||e))?"Allow the microphone to use Talk: Settings → Accounted For → Microphone.":"Couldn't open the microphone ("+String(e&&e.name||e).slice(0,40)+"). Close other apps using it and try again.")}}
+function stopRec(){const r=ui.rec;if(!r)return;r.stop=true;if(!r.mr||r.mr.state==="inactive")return;clearTimeout(r.cap);clearInterval(r.tick);try{r.sr&&r.sr.stop()}catch(e){}try{r.mr.stop()}catch(e){}setTimeout(()=>{try{r.stream&&r.stream.getTracks().forEach(t=>t.stop())}catch(e){}},400)}
+/* 4.131.0: ask for the microphone once, on the tap that turns Talk on, so the phone's permission question never lands in the middle of a hold */
+function primeMic(){try{if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)return;navigator.mediaDevices.getUserMedia({audio:true}).then(s=>s.getTracks().forEach(t=>t.stop())).catch(()=>{})}catch(e){}}
 function toB64(blob){return new Promise((ok,no)=>{const fr=new FileReader();fr.onload=()=>ok(String(fr.result).split(",")[1]||"");fr.onerror=()=>no(fr.error);fr.readAsDataURL(blob)})}
 async function done(r){const ms=Date.now()-r.t0;ui.rec=null;paintRec(false);beat(r.f,"on");
   if(ms<MINMS){toast("Hold the button while you talk.");finish();return}
-  const f=r.f,s=st(f);try{const blob=new Blob(r.chunks,{type:r.mt});const a=await toB64(blob);
+  const f=r.f,s=st(f);try{const blob=new Blob(r.chunks,{type:r.mt});if(blob.size<800){toast("The microphone gave no sound. Hold the button, talk, then let go.");finish();return}const a=await toB64(blob);
     const o={k:"v",by:me(f),g:r.g,d:Math.max(1,Math.round(ms/1e3)),tx:r.tx.trim().slice(0,400),mt:r.mt,a,t:Date.now()};
     ui.note="Sending…";draw();
     const id=await put(f,o);try{SB.notify(null,{talk:f.id,k:f.mk,to:targets(f,o.g).filter(e=>!entryMe(f,e)).map(e=>e.n).slice(0,100),dev:window.dmDev?window.dmDev():undefined,ti:o.by,tx:(o.tx?o.tx.slice(0,90):"🎙 Voice message · "+o.d+"s")})}catch(e){}const m={id,by:o.by,g:o.g,t:o.t,d:o.d,tx:o.tx,mt:o.mt,a,seen:true,did:1};s.msgs.set(id,m);
@@ -258,7 +260,7 @@ window.talkUnread=unreadTalk;window.talkState=st;
 document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest("[data-tab='talk']");if(!t)return;e.stopImmediatePropagation();e.preventDefault();view="talk";armed=null;query="";render();window.scrollTo(0,0);start()},true);
 
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest||view!=="talk")return;const f=feed();if(!f)return;
-  if(t.closest("#tkSw")){unlock();const T=tk();T.on=!T.on;save();sendPres(f);if(T.on)beat(f);if(!T.on){if(audio)audio.pause();ui.playing="";ui.q=[]}draw();if(T.on)poll(f);return}
+  if(t.closest("#tkSw")){unlock();const T=tk();T.on=!T.on;save();sendPres(f);if(T.on){beat(f);primeMic()}if(!T.on){if(audio)audio.pause();ui.playing="";ui.q=[]}draw();if(T.on)poll(f);return}
   const dl=t.closest("[data-tkdel]");if(dl){const r=dl.closest(".tk-sl");if(r)fling(f,r);return}
   const g=t.closest("[data-tkg]");if(g){tk().sel=g.dataset.tkg;save();draw();return}
   if(t.closest("#tkNewG")){ui.newg=true;ui.gname="";ui.gpick=new Map();draw();return}

@@ -29,6 +29,8 @@ async function attachOnce(force){if(!S.pushOn)return 0;let n=0;lastErr="";
     /* v2: leader phones are marked "lead" so member check-ins, requests and problem reports reach them (co-leaders
        too), and the OIC's phone is also Word of Mouth's leader alert phone. Phones attached before re-attach once. */
     if(M.__v!==4){force=true;M.__v=4}M.__nm=M.__nm||{};
+    /* 4.131.0: re-send this phone's sign-up once a day, so one the server dropped comes back by itself */
+    if(!M.__t||Date.now()-M.__t>864e5){force=true;M.__t=Date.now()}
     for(const f of S.feeds||[]){if(!f.mk)continue;const nm=String(typeof fdBy==="function"?fdBy(f):(S.myName||"")).toUpperCase().slice(0,30);if(!force&&M[f.id]===j.endpoint&&M.__nm[f.id]===nm){f.push=true;continue}
       try{const jf=Object.assign({},j,nm?{nm}:{});await SB.rpc("feed_sub",{p_feed:f.id,p_member_key:f.mk,p_sub:f.lk?Object.assign({},jf,{lead:1}):jf});M[f.id]=j.endpoint;M.__nm[f.id]=nm;f.push=true;n++;
         if(f.lk&&(!S.role||S.role==="oic"||S.role==="newoic"))try{await SB.rpc("set_feed_leader_sub",{p_feed:f.id,p_leader_key:f.lk,p_sub:j})}catch(e2){}}
