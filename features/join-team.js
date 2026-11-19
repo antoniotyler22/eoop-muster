@@ -68,6 +68,9 @@ async function jcEnable(on){const f=feedOf();if(!f||!f.lk||!JC().code||jcBusy)re
   catch(e){jcMsg=why(e)}finally{jcBusy=false;redrawJ()}}
 /* the team name or sections changed: re-seal the same code */
 every(60000,()=>{try{const f=feedOf(),J=S.jc;if(!owner()||!f||!f.lk||!J||!J.code||!J.on||jcBusy)return;if(J.sig!==jcSig(f)){jcBusy=true;jcPublish(J.code).then(rawSave).catch(e=>{J.err=why(e);rawSave()}).finally(()=>{jcBusy=false})}}catch(e){}},"jc-reseal");
+/* 4.133.0: every team gets a join code. The owner's phone makes one by itself when the team has a Word of Mouth and no code yet
+   (the Join code button still makes a new one any time). Tries at most once every 10 minutes. */
+every(45000,()=>{try{const f=feedOf(),J=JC();if(!owner()||!f||!f.lk||J.code||jcBusy)return;if(Date.now()-(J.autoAt||0)<600000)return;J.autoAt=Date.now();rawSave();jcNew()}catch(e){}},"jc-auto");
 const fmtCode=c=>c?c.slice(0,3)+" "+c.slice(3):"";
 function jcHTML(){if(!owner())return `<p class="note">Only the team's owner can see and change the join code.</p>`;const f=feedOf(),J=JC();
   if(!f||!f.lk)return `<div class="panel" id="jcPanel"><b>Join code</b><p class="note">The join code opens your team's Word of Mouth, so start that first.</p><button class="btn" id="jcFeed"${jcBusy?" disabled":""}>Start our Word of Mouth</button><p class="note" role="status">${esc(jcMsg)}</p></div>`;
@@ -144,7 +147,7 @@ function askJoinHTML(){const pend=myReqs().filter(r=>r.status==="pending"),done=
   return `<div id="ajWrap"><div class="sechead" style="margin-top:12px"><h2>Join a team</h2></div>
     ${pend.map(r=>`<div class="banner" data-myreq="${r.id}"><span>⏳ <b>Waiting for ${esc(r.name)}</b> to approve your request. You'll see the answer here when you open the app.</span><button data-reqcheck="${r.id}">Check now</button></div>`).join("")}
     ${done.map(r=>`<div class="note" data-myreq="${r.id}">${r.status==="approved"?"✅ "+esc(r.name)+" approved your request.":"✖ "+esc(r.name)+" declined your request."}</div>`).join("")}
-    <div class="panel"><b>Have a join code?</b><p class="note" style="margin:2px 0 8px">6 letters and numbers from your leader.</p>
+    <div class="panel"><b>Enter your team's join code</b><p class="note" style="margin:2px 0 8px">6 letters and numbers from your leader. It links you to your spot on the roster.</p>
       <input id="ajCode" type="text" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="8" placeholder="ABC 234" style="text-transform:uppercase;font:700 22px ui-monospace,Menlo,monospace;letter-spacing:.12em;text-align:center">
       <button class="btn" id="ajJoin"${jBusy?" disabled":""}>Join with code</button></div>
     <div class="panel"><b>Find your team by name</b><input id="ajQ" type="search" placeholder="At least 3 letters" value="${esc(jq)}" autocomplete="off"><button class="btn alt" id="ajFind"${jBusy?" disabled":""}>Search</button><div id="ajRes">${res}</div></div>
@@ -231,7 +234,7 @@ window.afClaim=claim;
 async function afterSignIn(){let wanted=false;try{wanted=sessionStorage.getItem("af-join-signin")==="1";sessionStorage.removeItem("af-join-signin")}catch(e){}
   if(!wanted)return;/* only Apple/Google sign-ins and sign-ins started from Join a team look for a roster spot */
   try{const r=await claim();if(r.n){view="feed";render();toast("Found you on "+(r.f&&r.f.unit||"your team")+"'s roster. You're in.");return}
-    view="askjoin";jMsg=r.email?"We didn't find "+r.email+" on a team's roster. Find your team and ask to join.":"Find your team and ask to join.";render()}
+    view="askjoin";jMsg=(r.email?"We didn't find "+r.email+" on a roster. ":"")+"Type the join code your leader gave you to link to your roster spot.";render();setTimeout(()=>{const c=$("#ajCode");if(c){try{c.scrollIntoView({block:"center"});c.focus()}catch(x){}}},150)}
   catch(e){view="askjoin";jMsg=NOFN.test(String(e.message||e))?"Signing in to join needs setup part 52 on the server.":"Find your team and ask to join.";render()}}
 window.addEventListener("af-signed-in",()=>{setTimeout(afterSignIn,300)});
 function oauth(p){try{sessionStorage.setItem("af-join-signin","1")}catch(e){}
