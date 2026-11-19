@@ -66,7 +66,9 @@ async function teamsPush(force){if(!A.on())return;const L=localTeams();if(!L.len
   const next=[...m.values()].slice(-50);const sig=JSON.stringify(next.map(t=>[t.code,t.n,t.w,t.m]));if(!force&&sig===lastPut)return;
   try{await arpc("acct_put",{p_teams:next});ac.teams=next;lastPut=sig}catch(e){}}
 async function invPull(){if(!A.on())return;try{ac.inv=await arpc("inv_mine",{})||[];homeBanner()}catch(e){ac.inv=null}}
-async function afterSignIn(){S.welcomed=1;save();await teamsPull();await teamsPush();await invPull();watchMine();if(view==="acct")redraw()}
+/* web: back to this page; iPhone app: back through the app's own accountedfor://auth link (Supabase → Redirect URLs lists both) */
+function oauthGo(p){try{sessionStorage.setItem("af-join-signin","1")}catch(e){}const back=window.NATIVE?"accountedfor://auth":PUB();const u=SB.url+"/auth/v1/authorize?provider="+p+"&redirect_to="+encodeURIComponent(back);if(window.NATIVE)window.open(u);else location.href=u}
+async function afterSignIn(){S.welcomed=1;save();try{window.dispatchEvent(new Event("af-signed-in"))}catch(e){}await teamsPull();await teamsPush();await invPull();watchMine();if(view==="acct")redraw()}
 async function watchMine(){if(!A.on()||!window.LIVE)return;const u=A.user()||{};
   for(const v of [u.email&&u.email.toLowerCase(),u.phone&&String(u.phone).replace(/\D/g,"")].filter(Boolean)){
     const t=await SB.topic("to",v);LIVE.watchTopic(t,"to",()=>{invPull().then(()=>{const n=(ac.inv||[]).filter(x=>!x.opened_at).length;if(n)toast("📨 A team was sent to your account. Open it from Home.");if(view==="acct")redraw()})})}}
@@ -94,7 +96,7 @@ function homeBanner(){if(view!=="board"&&view!=="me"&&view!=="today")return;cons
 
 /* ---------- the Account screen ---------- */
 function redraw(){const y=window.scrollY;renderAcct();window.scrollTo(0,y)}
-function signInHTML(){const apple=SB.apple&&!window.NATIVE;const google=(SB.google||window.AF_GOOGLE)&&!window.NATIVE;
+function signInHTML(){const apple=!!SB.apple;const google=!!(SB.google||window.AF_GOOGLE);
   let h=`<div class="panel"><b>Sign in (optional)</b><p class="note" style="margin:2px 0 8px">You don't need an account. Sign in to keep your teams on any phone, get teams your leader sends you, and send teams to your people.</p>`;
   if(ac.step==="code"){h+=`<p class="note" style="margin:0 0 6px">We sent a 6-digit code to <b>${esc(ac.to)}</b>.</p>
       <label for="acCode">Code</label><input id="acCode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="123456" style="font-size:22px;letter-spacing:.2em">
@@ -147,8 +149,8 @@ document.addEventListener("click",async e=>{if(!e.target.closest)return;const t=
   if(t.closest("#acVerify")){verify();return}
   if(t.closest("#acResend")){ac.step="how";sendCode();return}
   if(t.closest("#acBack")){ac.step="how";ac.msg="";redraw();return}
-  if(t.closest("#acGoogle")){location.href=SB.url+"/auth/v1/authorize?provider=google&redirect_to="+encodeURIComponent(PUB());return}
-  if(t.closest("#acApple")){location.href=SB.url+"/auth/v1/authorize?provider=apple&redirect_to="+encodeURIComponent(PUB());return}
+  if(t.closest("#acGoogle")){oauthGo("google");return}
+  if(t.closest("#acApple")){oauthGo("apple");return}
   if(t.closest("#acOut")){const tk=A.s&&A.s.access_token;A.keep(null);ac={step:"how",how:ac.how,to:"",busy:false,msg:"Signed out. Your teams stay on this phone.",teams:null,inv:null,sent:null,sentFor:"",armed:""};
     if(tk)fetch(SB.url+"/auth/v1/logout",{method:"POST",headers:{apikey:SB.key,Authorization:"Bearer "+tk}}).catch(()=>{});homeBanner();redraw();return}
   const op=t.closest("[data-acopen]");if(op){e.stopImmediatePropagation();if(!ac.inv)await invPull();openInvite(op.dataset.acopen);return}

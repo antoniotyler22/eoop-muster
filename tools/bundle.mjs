@@ -134,6 +134,8 @@ export const SOURCES = [
   "features/roster-email.js",
   "features/team-name.js",
   "features/tool-switches.js",
+  "features/join-team.js",
+  "features/people-screen.js",
   "features/a11y.js",
 ];
 

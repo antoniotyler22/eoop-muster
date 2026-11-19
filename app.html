@@ -124,13 +124,13 @@ if(NATIVE)setTimeout(()=>{const P=NP("PushNotifications"),A=NP("App");
     P.addListener("pushNotificationReceived",n=>{try{toast("🔔 "+(n.title||"Update")+(n.body?": "+n.body:""))}catch(e){}});
     P.addListener("pushNotificationActionPerformed",a=>{const o=a&&a.notification&&a.notification.data&&a.notification.data.open;if(!o)return;if(typeof window.openFromAlert==="function")window.openFromAlert(o,a.notification.data.sos);else if(typeof render==="function"){view=o;render();window.scrollTo(0,0)}});
     nativePushPerm(false).then(v=>{if(v==="granted")P.register().catch(()=>{})})}
-  if(A){const go=u=>{try{const h=new URL(u).hash;if(h&&h.length>2){location.hash=h;setTimeout(()=>location.reload(),50)}}catch(e){}};A.addListener("appUrlOpen",e=>go(e.url));A.getLaunchUrl().then(r=>{if(r&&r.url&&!sessionStorage.getItem("eop-launch")){sessionStorage.setItem("eop-launch","1");go(r.url)}}).catch(()=>{})}},300);
+  if(A){const go=u=>{try{const h=new URL(u).hash;if(h&&h.length>2){location.hash=h;setTimeout(()=>location.reload(),50)}}catch(e){}};A.addListener("appUrlOpen",e=>{try{const B=NP("Browser");if(B&&/^accountedfor:\/\/auth/i.test(String(e&&e.url||"")))B.close().catch(()=>{})}catch(x){}go(e.url)});A.getLaunchUrl().then(r=>{if(r&&r.url&&!sessionStorage.getItem("eop-launch")){sessionStorage.setItem("eop-launch","1");go(r.url)}}).catch(()=>{})}},300);
 Object.assign(window,{NATIVE,PUB,NP,nativeSub,nativePushPerm});
 const SB=window.SB={url:"https://vdhxhvklwbimjpoomnui.supabase.co",key:"sb_publishable_e1VOssMquS5UkOnwEWTrfA_fPwZqorM",
   vapid:"BGWkOoK35r0UiMWL6bYX1uwz9L_8qXwQvp4Qc_4Bv_8Ddy3c-iKPpU_ynvIxt116eKBQvlFvtBobyHKB910S3q4",
   nfn:"notify",afn:"ask",
-  /* Sign in with Apple: set to true once Apple is turned on in Supabase → Authentication → Sign In / Providers (web only for now). */
-  apple:false,
+  /* Sign in with Apple and Google (4.127.0, web and iPhone app): turn both on in Supabase → Authentication → Sign In / Providers, and add accountedfor://auth and https://accountedforteam.com/app.html under Redirect URLs. Set to false to hide a button. */
+  apple:true,google:true,
   /* Web billing (Stripe): set to true once the "billing" Edge Function and its Stripe secrets are in place. Until then Pro features stay unlocked on the web. */
   webBilling:false,credits:false,addonIAP:false,async findAsk(){for(const n of ["ask","Ask"]){try{const r=await fetch(this.url+"/functions/v1/"+n,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:JSON.stringify({ping:1})});if(r.status!==404){this.afn=n;return n}}catch(e){}}return this.afn},async findNotify(){for(const n of ["notify","Notify"]){try{const r=await fetch(this.url+"/functions/v1/"+n,{method:"POST",headers:{apikey:this.key,"Content-Type":"application/json"},body:"{}"});if(r.status!==404){this.nfn=n;try{localStorage.setItem("eop-nfn",n)}catch(e){}return n}}catch(e){}}return this.nfn},
   /* live updates: after a change, tell anyone watching that channel to look now (Realtime broadcast). Sends only a hashed channel name, never data. */

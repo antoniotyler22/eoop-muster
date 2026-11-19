@@ -39,7 +39,7 @@ function moveHTML(){const q=mvQ.toLowerCase();const list=sorted(S.roster).filter
   return `<div class="panel" id="v12Move"><b>Move people between sections</b><input class="search" id="v12MvQ" type="search" placeholder="Find people" value="${esc(mvQ)}">
     <div class="alist" style="max-height:300px;overflow:auto">${list.slice(0,400).map(m=>`<label class="tog" style="padding:6px 2px;border-bottom:1px solid var(--line)"><input type="checkbox" data-v12mv="${m.id}"${mvSel.has(m.id)?" checked":""}> <span><b>${esc(m.rank)}</b> ${esc(m.name)} <span class="note">· ${esc(m.sec)}</span></span></label>`).join("")}</div>
     <div class="row2" style="align-items:end"><div><label for="v12MvTo">Move to</label><select id="v12MvTo" class="wsel"><option value="">Pick a section…</option>${secOpts(mvTo)}</select></div><button class="btn" id="v12MvGo"${mvSel.size&&mvTo?"":" disabled"}>Move ${mvSel.size||""}</button></div></div>`}
-{const _rpe=renderPeople;renderPeople=function(){_rpe.apply(this,arguments);if(!leader()||!canEdit())return;const s=[...document.querySelectorAll("#main .sech")].pop();
+{const _rpe=renderPeople;renderPeople=function(){_rpe.apply(this,arguments);if(!leader()||!canEdit()||typeof window.peopleScreen==="function")return;/* 4.127.0: the People screen has its own multi-select Move */const s=[...document.querySelectorAll("#main .sech")].pop();
   const b=`<details class="panel" id="v12MoveWrap"${mvSel.size||mvQ?" open":""}><summary><b>↔ Move people between sections</b></summary>${moveHTML()}</details>`;s?s.insertAdjacentHTML("beforebegin",b):$("#main").insertAdjacentHTML("beforeend",b)}}
 
 /* ================= 2. 6W — YOUR FORMAT ================= */

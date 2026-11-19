@@ -336,7 +336,8 @@ function welcomeHTML(){const L=APP_LINKS();
       <label for="lgSP">Password</label><input type="password" id="lgSP" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false">
       ${termsOK()?"":tosLine()}<button class="btn" id="lgGo">Sign in</button><div class="note" id="lgSOut" role="status"></div></div></div>
     <div class="sgw-pane" data-pane="link" hidden><div class="panel" style="margin:0"><b>Got an invite link?</b><p class="note" style="margin:0">Tap the link in your text, or paste it here.</p>
-      <input type="url" id="v11WLink" placeholder="https://antoniotyler22.github.io/eoop-muster/#…" autocapitalize="none" autocorrect="off" spellcheck="false"><button class="btn" id="v11WOpen">Open link</button></div></div>
+      <input type="url" id="v11WLink" placeholder="https://accountedforteam.com/app.html#…" autocapitalize="none" autocorrect="off" spellcheck="false"><button class="btn" id="v11WOpen">Open link</button>
+      <p class="note" style="margin:10px 0 4px"><b>No link?</b> Type your team's join code, find your team by name and ask to join, or sign in.</p><button class="btn alt" id="v11WJoin">Join with a code or ask to join</button></div></div>
     <div class="sgw-pane sgw-slot" data-pane="start" hidden></div>
   </div>
   <div class="sgw-more"><div class="sgw-apps"><a href="${esc(L.ios)}" target="_blank" rel="noopener">iPhone app</a><a href="${esc(L.web)}" target="_blank" rel="noopener">Web app</a><button type="button" id="v11WShare">Send the app</button></div></div>
