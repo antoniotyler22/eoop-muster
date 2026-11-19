@@ -88,7 +88,7 @@ Logins (Tools → Logins, Pro): username and password instead of a link, with a 
 People with access (Tools): everyone who can open the team, on the roster or not, plus open links; cut people off from there.
 Live sections: section leaders update their section from their own link; the OIC sees it live. Hub mode keeps one device as an always-on hub.
 Offline: changes and Got its made without signal are saved and send by themselves when back online.
-Pro: free download; Pro is $4.99/month or $39.99/year with a 7-day free trial, for the team leader. Restore purchases on the Pro screen. Cancel on iPhone: Settings → your name → Subscriptions. Deleting the account doesn't cancel an App Store subscription.
+Pro: free download; Pro is $9.99/month or $99.99/year with a 7-day free trial, for the team leader. Restore purchases on the Pro screen. Cancel on iPhone: Settings → your name → Subscriptions. Deleting the account doesn't cancel an App Store subscription.
 Privacy: names and posts are encrypted on the phone; the server stores scrambled data. Delete account and data from the account panel on My page or DATA.
 Push alerts: on iPhone web, Share → Add to Home Screen first, then allow alerts. In the app, allow notifications when asked.
 Common fixes: leader not seeing updates → pull to refresh, check signal, make sure the link is the newest one (old links stop after a reset); "not set up on the server" → leader runs DATA → System check and the parts it lists; check-in button missing → My page must be connected to the leader's Feed (ask for a new link).
