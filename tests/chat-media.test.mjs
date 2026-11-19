@@ -31,34 +31,15 @@ test("media rules: photos, GIFs and mp4/webm are valid; scripts and oversized ar
   } finally { await a.close(); }
 });
 
-test("team chat: attach a photo, send it encrypted, and it shows in my bubble; a video from someone else plays", async () => {
-  const srv = server();
-  const a = await openApp({ rpc: srv.rpc });
+test("4.128.0: team chat is retired; a photo message in its history is kept as a line in the read-only archive", async () => {
+  const rows = [];
+  const a = await openApp({ rpc: (n, args) => (n === "chat_get" ? rows.filter((r) => r.id > (args.p_after || 0)) : []) });
   try {
-    await setup(a);
-    a.$("#tabbar [data-tab='talk']").click(); await sleep(200);
-    assert.ok(a.$("#chAtt"), "attach button");
-    a.w.eval(`afMedia.pick=cb=>cb(${JSON.stringify(PNG)})`);
-    a.$("#chAtt").click(); await sleep(50);
-    assert.ok(a.$("#chDraft .afm-i"), "preview of the photo");
-    a.$("#chIn").value = "meme";
-    a.$("#chForm").dispatchEvent(new a.w.Event("submit", { cancelable: true, bubbles: true })); await sleep(300);
-    assert.equal(srv.rows.length, 1);
-    assert.ok(!srv.rows[0].ct.includes("iVBOR"), "the server only sees ciphertext");
-    assert.ok(a.$(".ch-row.me .ch-t img.afm-i"), "photo in my bubble");
-    assert.equal(a.$("#chDraft").innerHTML.trim(), "", "draft clears");
-    // photo only, no text
-    a.w.eval(`afMedia.pick=cb=>cb(${JSON.stringify(GIF)})`);
-    a.$("#chAtt").click(); await sleep(30);
-    a.$("#chForm").dispatchEvent(new a.w.Event("submit", { cancelable: true, bubbles: true })); await sleep(300);
-    assert.equal(srv.rows.length, 2, "media alone can be sent");
-    // someone else's video arrives
-    await a.w.eval(`(async()=>{const f=S.feeds[0];window.__ct=await fdEnc(f.ek,{k:"m",by:"SGT LEE",tx:"look",md:${JSON.stringify(VID)},t:Date.now()})})()`);
-    await sleep(50);
-    srv.rows.push({ id: 3, ct: a.w.eval("window.__ct"), created_at: new Date().toISOString() });
-    await sleep(3600);
-    assert.ok(a.$(".ch-row:not(.me) .ch-t video, .ch-row:not(.me) .ch-t .afm-ph"), "their video (or its loading box) is in their bubble");
-    assert.deepEqual(a.errors, []);
+    await a.w.eval(`(async()=>{const k=crypto.getRandomValues(new Uint8Array(32));const ek=b64e(k).replace(/\\+/g,"-").replace(/\\//g,"_").replace(/=+$/,"");
+      S.feeds=[{id:"feedmedia001",mk:"m".repeat(30),lk:"l".repeat(30),ek,unit:"1ST PLT",me:"CPL TEST",sec:"1ST",mine:{},seen:0,posts:[]}];S.myName="CPL TEST";S.onb=true;S.welcomed=1;fdSel="feedmedia001";render()})()`);
+    rows.push({ id: 1, ct: await a.w.eval(`fdEnc(S.feeds[0].ek,{k:"m",by:"SGT RAY",tx:"",md:"data:image/png;base64,iVBORw0KGgo=",t:Date.now()})`), created_at: new Date().toISOString() });
+    for (let i = 0; i < 60 && !a.w.eval(`(S.chatArc&&S.chatArc.feedmedia001&&S.chatArc.feedmedia001.done)||0`); i++) await sleep(250);
+    assert.match(a.w.eval(`chatArchive(S.feeds[0]).map(x=>x.by+": "+x.tx).join("|")`), /SGT RAY: 📷 Photo or video/);
   } finally { await a.close(); }
 });
 

@@ -4,7 +4,12 @@
    - "I'm accounted for" checks you in as On Hand (same as the I'm safe button) and drops a line in the chat.
    - Messages are encrypted on the phone with the Word of Mouth key before they leave it (the server stores ciphertext
      for 30 days). Needs supabase/setup/44_team_chat.sql. Works while the app is open; it is not a background service. */
+/* 4.128.0: the big team chat is retired. The Chat tab is now Feed (Feed | Inbox | Messages); Official channel and Voice
+   are cards on My page; "Message someone" (messages.js) is for 1:1 threads. The old messages are read once more and kept
+   on each phone as a read-only "Earlier team chat" archive under Feed (they expire on the server after 30 days;
+   setup part 54 stops new ones). Official channel posts are separate and untouched. */
 (()=>{
+const RETIRED=true;
 const MAXTX=1000,LOGMAX=200,POLL_FAST=3000,POLL_SLOW=20000;
 const feed=()=>{const l=(S.feeds||[]);return (typeof fdCur==="function"&&fdCur())||l.find(f=>f.mk&&f.ek)||l[0]||null};
 const me=f=>String(typeof fdBy==="function"?fdBy(f):(S.myName||"ME")).toUpperCase().slice(0,30);
@@ -51,7 +56,7 @@ function bar(){const c=counts2();if(!c)return "";const p=Math.round(100*c.ok/c.n
   return `<button type="button" class="ch-bar${all?" done":""}" id="chBar" aria-label="${c.ok} of ${c.n} accounted for. Open the board"><span class="ch-bt"><b>${c.ok} of ${c.n}</b> accounted for</span><span class="ch-bw" aria-hidden="true"><i style="width:${p}%"></i></span></button>`}
 function seg(active){const ld=!(typeof memberMode==="function"&&memberMode());const dot=(k,n)=>n&&active!==k?`<i class="of-dot" aria-label="${n} new">${n>9?"9+":n}</i>`:"";const tb=k=>{try{return typeof tabBadge==="function"?tabBadge(k):0}catch(e){return 0}};
   const o=typeof window.officialUnread==="function"?window.officialUnread():0;const B=(k,l,n)=>`<button type="button" role="tab" data-seg="${k}" aria-selected="${active===k}">${l}${dot(k,n)}</button>`;
-  return `<div class="ch-seg" role="tablist" aria-label="Chat, feed, inbox, official updates or voice">${B("chat","Chat",unread())}${ld?B("feed","Feed",tb("feed")):""}${ld?B("inbox","Inbox",tb("inbox")):""}${B("official","Official",o)}${B("voice","Voice",typeof window.talkUnread==="function"?window.talkUnread():0)}</div>`}
+  return `<div class="ch-seg" role="tablist" aria-label="Feed, inbox, messages, official updates or voice">${ld?B("feed","Feed",tb("feed")):""}${ld?B("inbox","Inbox",tb("inbox")):""}${B("pm","Messages",typeof window.pmUnread==="function"?window.pmUnread():0)}${B("official","Official",o)}${B("voice","Voice",typeof window.talkUnread==="function"?window.talkUnread():0)}</div>`}
 window.chatSeg=seg;
 function bubbles(f){const L=list(f),nm=me(f);if(!L.length)return `<div class="ch-empty"><b>${st(f).init?"No messages yet":"Loading the conversation…"}</b>${st(f).init?"<span>Say something to your team. Messages are private to this team and stay for 30 days.</span>":""}</div>`;
   let out="",day="",prev=null,div=false;
@@ -84,27 +89,30 @@ function draw(keepFocus){if(view!=="chat")return;const main=document.getElementB
   main.innerHTML=html();const l=document.getElementById("chList");if(l)l.scrollTop=l.scrollHeight;grow();markSeen();if(hadFocus){const t=document.getElementById("chIn");if(t)t.focus()}}
 
 /* ---------- wiring ---------- */
-{const _tb=tabBadge;tabBadge=function(k){const n=_tb.apply(this,arguments);return k==="talk"?n+(view==="chat"?0:unread()):n}}
+{const _tb=tabBadge;tabBadge=function(k){const n=_tb.apply(this,arguments);return k==="talk"?n+(view==="chat"||RETIRED?0:unread()):n}}
 {const _to=tabOf;tabOf=function(v){return v==="chat"?"talk":_to.apply(this,arguments)}}
-{const _tl=tabsList;tabsList=function(){return _tl.apply(this,arguments).map(x=>x[0]==="talk"?["talk","Chat",x[2]]:x)}}
+{const _tl=tabsList;tabsList=function(){return _tl.apply(this,arguments).map(x=>x[0]==="talk"?["talk","Feed",x[2]]:x)}}
 if(typeof IC==="object"&&!IC.chat)IC.chat='<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/>';
-if(typeof IC==="object"&&IC.chat){const _tl2=tabsList;tabsList=function(){return _tl2.apply(this,arguments).map(x=>x[0]==="talk"?["talk","Chat","chat"]:x)}}
-{const _r=render;render=function(){if(view==="chat"){renderTabs();const m=document.getElementById("main");if(m){m.className=m.className.replace(/\bfchat\b/g,"").trim();m.innerHTML=html();const l=document.getElementById("chList"),nw=document.getElementById("chNew");if(l)l.scrollTop=nw?Math.max(0,nw.offsetTop-l.offsetTop-8):l.scrollHeight;grow();markSeen();renderTabs()}return}return _r.apply(this,arguments)}}
+if(typeof IC==="object"&&IC.chat){const _tl2=tabsList;tabsList=function(){return _tl2.apply(this,arguments).map(x=>x[0]==="talk"?["talk","Feed","chat"]:x)}}
+{const _r0=render;render=function(){if(RETIRED&&view==="chat")view="feed";return _r0.apply(this,arguments)}}
+{const _r=render;render=function(){if(view==="chat"&&!RETIRED){renderTabs();const m=document.getElementById("main");if(m){m.className=m.className.replace(/\bfchat\b/g,"").trim();m.innerHTML=html();const l=document.getElementById("chList"),nw=document.getElementById("chNew");if(l)l.scrollTop=nw?Math.max(0,nw.offsetTop-l.offsetTop-8):l.scrollHeight;grow();markSeen();renderTabs()}return}return _r.apply(this,arguments)}}
 /* the Talk tab opens Chat first. This listener is on window so it runs before Talk's own tab handler. */
 window.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest("#tabbar [data-tab='talk']");if(!t)return;e.stopImmediatePropagation();e.preventDefault();
-  enter();view="chat";armed=null;query="";render();window.scrollTo(0,0);start()},true);
+  /* 4.128.0: the tab opens Feed */const x=document.createElement("button");x.dataset.tab="feed";x.hidden=true;document.body.appendChild(x);x.click();x.remove()},true);
 /* Chat | Voice switch (also injected on the Talk screen, which draws itself) */
 document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("[data-seg]");if(!b)return;e.preventDefault();
   if(b.dataset.seg==="inbox"&&typeof window.inboxOwner==="function"&&!window.inboxOwner()&&typeof window.inboxWhy==="function"){window.inboxWhy();return}
   if(b.dataset.seg==="feed"||b.dataset.seg==="inbox"){const x=document.createElement("button");x.dataset.tab=b.dataset.seg;x.hidden=true;document.body.appendChild(x);x.click();x.remove();return}
   if(b.dataset.seg==="voice"&&view!=="talk"){view="talk";armed=null;render();window.scrollTo(0,0);const t=document.querySelector("#tabbar [data-tab='talk']");return}
   if(b.dataset.seg==="official"&&view!=="official"){if(typeof window.officialEnter==="function")window.officialEnter();view="official";armed=null;render();window.scrollTo(0,0);if(window.officialPull)window.officialPull(true);return}
-  if(b.dataset.seg==="chat"&&view!=="chat"){enter();view="chat";armed=null;render();window.scrollTo(0,0);start()}},true);
-function injectSeg(){if(view!=="talk")return;const m=document.getElementById("main");if(!m||m.querySelector(".ch-seg"))return;const top=m.querySelector(".tk-top");
+  if(b.dataset.seg==="pm"&&view!=="pm"){view="pm";armed=null;render();window.scrollTo(0,0);return}
+  if(b.dataset.seg==="chat"&&view!=="chat"&&!RETIRED){enter();view="chat";armed=null;render();window.scrollTo(0,0);start()}},true);
+function injectSeg(){if(RETIRED&&["feed","send","dms"].includes(view)&&document.querySelector("#tabbar [data-tab='talk']")){const m=document.getElementById("main");if(m&&!m.querySelector(".ch-seg"))m.insertAdjacentHTML("afterbegin",`<div class="ft-seg" style="display:flex;justify-content:center;margin:2px 0 12px">${seg(view==="dms"?"inbox":"feed")}</div>`);return}
+  if(view!=="talk")return;const m=document.getElementById("main");if(!m||m.querySelector(".ch-seg"))return;const top=m.querySelector(".tk-top");
   if(top)top.insertAdjacentHTML("afterend",`<div style="display:flex;justify-content:center">${seg("voice")}</div>`);else if(m.querySelector(".tk"))m.querySelector(".tk").insertAdjacentHTML("afterbegin",seg("voice"))}
 new MutationObserver(()=>{try{injectSeg()}catch(e){}}).observe(document.documentElement,{childList:true,subtree:true});
 
-async function send(f,text,md){const tx=String(text||"").trim().slice(0,MAXTX);md=md&&MD()&&MD().valid(md)?md:"";if((!tx&&!md)||!ready(f))return false;const s=st(f);
+async function send(f,text,md){if(RETIRED){toast("Team chat is retired. Post in Feed, or use Message someone.");return false}const tx=String(text||"").trim().slice(0,MAXTX);md=md&&MD()&&MD().valid(md)?md:"";if((!tx&&!md)||!ready(f))return false;const s=st(f);
   const o={k:"m",by:me(f),tx,t:Date.now()};if(md)o.md=md;
   try{const id=await put(f,o);if(id&&!s.msgs.has(id)){s.msgs.set(id,{id,k:"m",by:o.by,tx,md:md&&MD()?MD().keep(md):"",t:o.t,st:""});s.after=Math.max(s.after,id)}ui.stick=true;s.err="";try{SB.notify(null,{talk:f.id,k:f.mk,chat:true,dev:window.dmDev?window.dmDev():undefined,ti:o.by,tx:(tx||(md&&MD().isVideo(md)?"🎬 Video":"📷 Photo")).slice(0,90)})}catch(e){}return true}
   catch(e){s.err=String(e&&e.message||e).slice(0,80);paintErr(s.err);toast("Couldn't send. Check your connection and try again.");return false}}
@@ -123,9 +131,17 @@ document.addEventListener("click",async e=>{if(view!=="chat")return;const t=e.ta
       else if(r==="no")toast("Use your My page check-in to check in.")}
     finally{delete btn.dataset.busy}return}},true);
 
+/* ---------- the archive (4.128.0) ---------- */
+const arc=()=>{S.chatArc=S.chatArc&&typeof S.chatArc==="object"?S.chatArc:{};return S.chatArc};
+if(typeof SYNC_SKIP!=="undefined"&&Array.isArray(SYNC_SKIP)&&!SYNC_SKIP.includes("chatArc"))SYNC_SKIP.push("chatArc");
+function keepArc(f){const s=ST[f.id];if(!s||!s.init)return false;const A=arc();const cur=A[f.id]||{done:0,m:[]};const have=new Set(cur.m.map(x=>x.id));let ch=!cur.done;
+  for(const m of [...s.msgs.values()].sort((a,b)=>a.id-b.id))if(!have.has(m.id)&&(m.tx||m.md||m.k==="a")){cur.m.push({id:m.id,by:m.by,tx:m.k==="a"?"✓ accounted for":(m.tx||"")+(m.md?(m.tx?" ":"")+"📷 Photo or video":""),t:m.t});ch=true}
+  cur.m=cur.m.slice(-500);cur.done=Date.now();A[f.id]=cur;if(ch)try{rawSave()}catch(e){}return true}
+window.chatArchive=f=>((arc()[f&&f.id]||{}).m||[]);
 /* ---------- keep it fresh ---------- */
 function start(){const f=feed();if(!ready(f))return;poll(f)}
 setInterval(()=>{if(document.hidden)return;const f=feed();if(!ready(f))return;const s=st(f);const now=Date.now();
+  if(RETIRED){if((arc()[f.id]||{}).done)return;if(s.init){keepArc(f);return}if(!s.last||now-s.last>=POLL_SLOW){s.last=now;poll(f)}return}
   if(view==="chat"){s.last=now;poll(f);return}
   if(!s.last||now-s.last>=POLL_SLOW){s.last=now;poll(f)}},POLL_FAST);
 setTimeout(()=>{try{start()}catch(e){}},3000);

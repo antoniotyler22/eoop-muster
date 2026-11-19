@@ -19,12 +19,11 @@ function injectSeg(){if(!lead()||typeof window.chatSeg!=="function")return;const
 new MutationObserver(()=>{try{injectSeg()}catch(e){}}).observe(document.documentElement,{childList:true,subtree:true});
 
 /* ---------- Home cards: what's new, then backup ---------- */
-const NEWS=["Links open the app: invite, check-in and team links on accountedforteam.com open straight in the iPhone app.",
-  "Reconnect to your roster: if your link stops working, every screen says so and shows how to get back in. Nothing on your phone is deleted.",
-  "One invite link (People → Live): pick view only, can edit or same as me, then share it, copy it or show a QR code.",
-  "Once you pick who you are, your posts, messages and status changes show your name and role.",
-  "Settings → Choose alerts: a switch for each kind of alert. Section updates and team changes start off and arrive silently; urgent alerts always come through.",
-  "The Dashboard shows the same numbers as Home, and a failed export now tells you why, with Try again."];
+const NEWS=["Join a team without a link: type the team's 6-character join code, find the team by name and ask to join, or sign in with Apple or Google.",
+  "Owners: Requests to join has one-tap Approve or Decline, and Settings → Tools → Join code shows, renews or turns off your code.",
+  "Message someone: a 1:1 conversation only the two of you can read. Official channel and Voice are cards on My page. Team chat is retired; its messages are kept under Feed.",
+  "Calendar: Everyone events reach every section; a section's events only reach that section.",
+  "One People screen with section chips and Move to…; Email on the roster; Settings → Tools turns each tool on or off."];
 function cards(){if(!lead()||!S.onb||S.welcomed===0)return "";
   if(S.seenVer!==window.AV)return `<div class="panel ft-card" id="ftNew" style="margin:12px 0"><b>What's new in ${esc(window.AV)}</b><ul style="margin:6px 0 8px;padding-left:18px">${NEWS.map(x=>`<li style="margin:3px 0">${esc(x)}</li>`).join("")}</ul><button class="btn alt" id="ftNewOk" style="width:100%">Got it</button></div>`;
   const synced=!!(S.sync&&S.sync.on);const due=!S.bkAt||Date.now()-S.bkAt>14*864e5;

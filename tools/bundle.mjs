@@ -136,6 +136,8 @@ export const SOURCES = [
   "features/tool-switches.js",
   "features/join-team.js",
   "features/people-screen.js",
+  "features/messages.js",
+  "features/cal-scope.js",
   "features/a11y.js",
 ];
 

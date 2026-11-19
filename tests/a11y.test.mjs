@@ -37,7 +37,7 @@ test("fields and icon buttons get spoken names; tab rows use arrow keys; chat ro
     tabs[0].focus();
     tabs[0].dispatchEvent(new a.w.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
     await sleep(250);
-    assert.equal(a.w.eval("view"), "feed", "arrow right moves to Feed");
+    assert.equal(a.w.eval("view"), "dms", "arrow right moves from Feed to Inbox (4.128.0: team chat is retired, Feed is first)");
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });

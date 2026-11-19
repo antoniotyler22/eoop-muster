@@ -8,15 +8,17 @@ const lead = async (a, extra = "") => {
   await sleep(150);
 };
 
-test("a leader's bar has five tabs; Feed and Inbox live under Chat", async () => {
+test("a leader's bar has five tabs; the old Chat tab is now Feed (Feed, Inbox, Messages, Official, Voice)", async () => {
   const a = await openApp({});
   try {
     await lead(a);
     const tabs = [...a.w.document.querySelectorAll("#tabbar [data-tab]")].map((b) => b.dataset.tab);
     assert.deepEqual(tabs, ["home", "talk", "people", "plan", "tools"]);
+    assert.match(a.$("#tabbar [data-tab='talk']").textContent, /Feed/, "4.128.0: the tab is called Feed");
     a.$("#tabbar [data-tab='talk']").click(); await sleep(200);
-    assert.equal(a.w.eval("view"), "chat");
-    for (const k of ["chat", "feed", "inbox", "official", "voice"]) assert.ok(a.$(`.ch-seg [data-seg='${k}']`), "switch has " + k);
+    assert.ok(["feed", "send"].includes(a.w.eval("view")), "4.128.0: the tab opens Feed (team chat is retired)");
+    for (const k of ["feed", "inbox", "pm", "official", "voice"]) assert.ok(a.$(`.ch-seg [data-seg='${k}']`), "switch has " + k);
+    assert.ok(!a.$(".ch-seg [data-seg='chat']"), "no team chat");
     a.$(".ch-seg [data-seg='feed']").click(); await sleep(250);
     assert.ok(["feed", "send"].includes(a.w.eval("view")));
     assert.equal(a.$("#tabbar [data-tab='talk']").getAttribute("aria-current"), "page", "Chat tab stays lit on Feed");

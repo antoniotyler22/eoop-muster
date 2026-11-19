@@ -43,12 +43,14 @@ const hasAlerts=()=>{const f=teamFeed();return !!(f&&S.pushOn&&subMap()[f.id])};
 let touchT=0;["click","change","input","submit","keydown"].forEach(t=>document.addEventListener(t,()=>{touchT=Date.now()},true));
 const snap=()=>{const R=S.roster||[];const per={status:{},cal:{},ready:{}};
   for(const m of R){per.status[m.id]=sig([m.status,m.duty||"",m.start||"",m.end||"",m.loc||""]);per.cal[m.id]=sig(m.cal||[]);per.ready[m.id]=sig(m.due||null)}
-  return {ids:R.map(m=>m.id),per,secCal:sig(S.secCal||null),duty:sig(S.duty||null),events:sig(S.events||null)}};
+  /* 4.128.0: the "calendar changed" alert goes to every phone on the team, so it only counts Everyone events
+     (a section's or one person's event would tell other sections it exists) */
+  return {ids:R.map(m=>m.id),per,calAll:sig(Array.isArray(S.calAll)?S.calAll:[]),duty:sig(S.duty||null),events:sig(S.events||null)}};
 /* what changed between two snapshots; per-person items only count for people on both sides */
 function diff(a,b){const out=[];const A=new Set(a.ids),B=new Set(b.ids);
   if(a.ids.length!==b.ids.length||b.ids.some(id=>!A.has(id)))out.push("roster");
-  for(const k of ["status","cal","ready"])if(b.ids.some(id=>A.has(id)&&a.per[k][id]!==b.per[k][id]))out.push(k);
-  if(a.secCal!==b.secCal&&!out.includes("cal"))out.push("cal");if(a.duty!==b.duty)out.push("duty");if(a.events!==b.events)out.push("events");return out}
+  for(const k of ["status","ready"])if(b.ids.some(id=>A.has(id)&&a.per[k][id]!==b.per[k][id]))out.push(k);
+  if(a.calAll!==b.calAll)out.push("cal");if(a.duty!==b.duty)out.push("duty");if(a.events!==b.events)out.push("events");return out}
 let base=null,pend=new Set(),sendT=null;
 const eligible=()=>S.source!=="sample"&&typeof canEdit==="function"&&canEdit()&&!!teamFeed();
 function watch(){if(!Array.isArray(S.roster))return;const now=snap();

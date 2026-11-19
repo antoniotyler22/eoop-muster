@@ -1232,7 +1232,7 @@ function ckPack(sec){try{const now=Date.now(),L=Array.isArray(S.cks)?S.cks:[];co
 async function rpPublish(force){const B=S.board;if(!B||!B.sk||rpBusy||S.role==="view")return;rpBusy=true;
   try{const f=mainFeed();const feed=f&&f.pk?{id:f.id,mk:f.mk,ek:f.ek,pk:f.pk,unit:f.unit}:null;B.rsig=B.rsig||{};let n=0;
     for(const [sec,k] of Object.entries(B.sk)){const ms=S.roster.filter(m=>m.sec===sec).map(m=>{const o={};for(const x of RPF)if(m[x]!=null&&m[x]!=="")o[x]=x==="duty"?dutyOf(m):m[x];o.duty=dutyOf(m);try{const u=window.ckTouched?window.ckTouched(m):0;if(u)o.ut=u}catch(e){}return o});
-      const body0={v:1,lvl:S.level==="co"?"co":"plt",unit:unitName(),sec,secName:((SECTIONS.find(x=>x[0]===sec)||[])[1]||sec),secs:SECTIONS.map(x=>x[0]),sl:SECTIONS.map(x=>x.slice()),mode:S.mode||"military",ri:readyItems().map(it=>({n:it.n,mo:it.mo||0})),acks:secAcks(sec),cofeed:coFeedDown(),ms,feed,cks:ckPack(sec)};const sg=sigF(body0);B.rat=B.rat||{};
+      const body0={v:1,lvl:S.level==="co"?"co":"plt",unit:unitName(),sec,secName:((SECTIONS.find(x=>x[0]===sec)||[])[1]||sec),secs:SECTIONS.map(x=>x[0]),sl:SECTIONS.map(x=>x.slice()),mode:S.mode||"military",ri:readyItems().map(it=>({n:it.n,mo:it.mo||0})),acks:secAcks(sec),cofeed:coFeedDown(),ms,feed,cks:ckPack(sec),ck:typeof calCk==="function"?calCk(sec):undefined};const sg=sigF(body0);B.rat=B.rat||{};
       if(!force&&B.rsig[sec]===sg&&Date.now()-(B.rat[sec]||0)<6*3600000)continue;const body=Object.assign({hb:Date.now()},body0);
       if(S.source==="sample")continue;
       await SB.rpc("put_roster",{p_board:B.id,p_read_key:B.rk,p_sec:sec,p_ct:await fdEnc(k,body)});B.rsig[sec]=sg;B.rat[sec]=Date.now();n++}
@@ -1285,7 +1285,7 @@ async function rosterPull(force){const L=S.link;if(!L||!L.rk2||rpullBusy)return;
     if(o.cofeed&&joinCoFeed(o.cofeed,L.me||S.myName,""))toast("You're in the "+o.cofeed.unit+" Word of Mouth too");
     if(!whole&&S.source==="link"&&Array.isArray(o.sl)&&o.sl.length&&o.sl.every(x=>Array.isArray(x)&&x[0])){const nw=o.sl.slice(0,10).map(x=>[String(x[0]).replace(/[^A-Z0-9]/g,"").slice(0,6),String(x[1]||x[0]).slice(0,30)]);if(JSON.stringify(nw)!==JSON.stringify(SECTIONS)){SECTIONS.splice(0,SECTIONS.length,...nw);S.secs=nw}}
     if(!own)S.roster=whole?next:S.roster.filter(m=>m.sec!==L.mysec).concat(next);
-    L.unit=String(o.unit||L.unit).slice(0,24);L.pt=t;try{if(Array.isArray(o.cks)&&typeof ckFromOIC==="function")ckFromOIC(o.cks,L.unit)}catch(e){}if(o.hb)L.hb=+o.hb||0;L.pulled=true;L.perr="";L.lsig=lsigOf(next);
+    L.unit=String(o.unit||L.unit).slice(0,24);L.pt=t;if(o.ck&&typeof o.ck==="object")L.ck=o.ck;try{if(Array.isArray(o.cks)&&typeof ckFromOIC==="function")ckFromOIC(o.cks,L.unit)}catch(e){}if(o.hb)L.hb=+o.hb||0;L.pulled=true;L.perr="";L.lsig=lsigOf(next);
     if(takeSt&&!own){try{const items=await itemsFor(L.board,next);L.sig=next.length+"|"+items.join(",")}catch(e){}}
     if(own)setTimeout(()=>linkPush(),1500);
     if(o.feed&&o.feed.id){const F=o.feed;const own=S.feeds.find(f=>f.id===F.id);
@@ -2851,6 +2851,7 @@ document.addEventListener("click",e=>{
   if(e.target.id==="caCancel"){calAdd=false;renderCal();return}
   if(e.target.id==="caSave"){const who=e.target.dataset.cafor||($("#caWho")||{}).value||"";const d=$("#caD").value,ti=($("#caTi").value||"").trim().slice(0,60);if(!who){toast("Pick who.");return}if(!d){toast("Pick a date.");return}if(!ti){toast("Say what it is.");return}
     const end=$("#caE").value;const e2={d,tm:$("#caT").value||"",end:end&&end>d?end:"",ty:$("#caTy").value,ti,no:($("#caNo").value||"").trim().slice(0,80)};
+    /* 4.128.0: an event for a whole section belongs to that section (only its people see it) */if(who.startsWith("SEC:")){e2.sc=who.slice(4);e2.g="s"+Date.now().toString(36)+rndId(3)}
     const ms=who.startsWith("SEC:")?S.roster.filter(m=>m.sec===who.slice(4)):S.roster.filter(m=>m.id===who);
     if(armed!=="caforce"){const hits=[];for(const m of ms)for(const k of daysIn(d,e2.end,31)){const cf=busyOn(m,k,{});if(cf.length)hits.push({m,k,cf})}
       if(hits.length){armed="caforce";const w=$("#caWarn");if(w)w.innerHTML=`<div class="panel" style="margin:6px 0;border-color:var(${hits.some(x=>x.cf.some(y=>y.hard))?"--warn":"--s-duty"})"><b>⚠ ${hits.length} conflict${hits.length>1?"s":""}</b>${hits.slice(0,8).map(x=>`<div class="ph">${ms.length>1?esc(x.m.rank+" "+lastOf(x.m))+" · ":""}${DOW[parseD(x.k).getDay()]} ${short(parseD(x.k))}: ${cfLine(x.cf)}</div>`).join("")}${hits.length>8?`<div class="ph">+${hits.length-8} more</div>`:""}</div>`;e.target.textContent="Add anyway";return}}
