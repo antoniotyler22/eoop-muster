@@ -91,26 +91,40 @@ async function reqLoad(force){const f=feedOf(),A=ASK();if(!owner()||!f||!f.lk||!
   try{const rows=await SB.rpc("join_req_list",{p_feed:f.id,p_leader_key:f.lk})||[];const out=[];
     for(const r of rows){const o=await openSealed(A.priv,r.ct);if(!o)continue;out.push({id:+r.id,status:r.status,at:Date.parse(r.created_at)||0,dt:Date.parse(r.decided_at)||0,
       rank:String(o.rank||"").toUpperCase().slice(0,8),last:String(o.last||"").toUpperCase().slice(0,30),first:String(o.first||"").toUpperCase().slice(0,30),sec:String(o.sec||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6),
-      phone:String(o.phone||"").replace(/\D/g,"").slice(-10),email:typeof normEmail==="function"?(normEmail(o.email)||""):"",note:String(o.note||"").slice(0,160),rpub:o.rpub})}
+      phone:String(o.phone||"").replace(/\D/g,"").slice(-10),email:typeof normEmail==="function"?(normEmail(o.email)||""):"",note:String(o.note||"").slice(0,160),rpub:o.rpub,
+      kind:o.kind==="contact"?"contact":"join",mid:String(o.mid||"").slice(0,40)})}
     reqs=out;reqAt=Date.now();reqErr="";const n=out.filter(x=>x.status==="pending").length;if(n!==S.askWaiting){S.askWaiting=n;rawSave()}}
   catch(e){reqErr=why(e)}finally{reqBusy=false}if(view==="joinreqs")redrawR()}
 every(30000,()=>{if(!document.hidden&&ASK().on)reqLoad(false)},"join-reqs");setTimeout(()=>{if(ASK().on)reqLoad(true)},2500);
+/* who on the roster is this request? Their roster spot (contact updates), the same email, the same phone, then the same name. */
+const ph10=v=>{const d=String(v||"").replace(/\D/g,"");return d.length>=10?d.slice(-10):""};
+function matchOf(r){const R=S.roster||[];let m=null,by="";
+  if(r.kind==="contact"&&r.mid){m=R.find(x=>x.id===r.mid);if(m)by="roster spot"}
+  if(!m&&r.email){m=R.find(x=>x.email&&x.email===r.email);if(m)by="email"}
+  if(!m&&r.phone){m=R.find(x=>r.phone===ph10(x.phone)||r.phone===ph10(x.phone2));if(m)by="phone"}
+  if(!m&&r.last){const nm=(r.last+(r.first?", "+r.first:"")).slice(0,60);m=R.find(x=>fullK(x)===fullK({name:nm}));if(m)by="name"}
+  return m?{m,by}:null}
+window.afMatchOf=matchOf;
+/* put a person's email and phone on their roster spot without overwriting what the owner already typed */
+function fillContact(m,r){let ch=0;if(r.email&&!m.email){m.email=r.email;ch=1}
+  if(r.phone.length===10){if(!m.phone){m.phone=r.phone;ch=1}else if(ph10(m.phone)!==r.phone&&!m.phone2){m.phone2=r.phone;ch=1}}return ch}
 async function decide(id,ok){const r=reqs.find(x=>x.id===id),f=feedOf();if(!r||!f||!f.lk)return;
   try{if(!ok){await SB.rpc("join_req_decide",{p_feed:f.id,p_leader_key:f.lk,p_id:id,p_status:"declined",p_reply_ct:null});r.status="declined";reqMsg="Declined. They'll see it the next time they open the app.";redrawR();return}
-    const name=(r.last+(r.first?", "+r.first:"")).slice(0,60);let m=S.roster.find(x=>(r.email&&x.email===r.email)||fullK(x)===fullK({name}));
+    const name=(r.last+(r.first?", "+r.first:"")).slice(0,60);const hit=matchOf(r);let m=hit?hit.m:null;if(m&&fillContact(m,r)){save();try{if(typeof window.afEmailsPub==="function")window.afEmailsPub(true)}catch(e){}}
     if(!m){const sec=SECTIONS.some(s=>s[0]===r.sec)?r.sec:SECTIONS[0][0];m=addMarine({rank:RANKS.includes(r.rank)?r.rank:(MODE().rankDef||"LCPL"),name,sec,phone:r.phone.length===10?r.phone:undefined},sec);
       if(!m)m=S.roster.find(x=>fullK(x)===fullK({name}));if(m){m.detail=m.detail||"Asked to join";if(r.email)m.email=r.email}}
     if(!m)throw new Error("Couldn't add them to the roster.");
     const me=(m.rank+" "+lastOf(m)).trim();const reply=await sealTo(r.rpub,Object.assign(memberLink(f),{mid:m.id,me}));
     await SB.rpc("join_req_decide",{p_feed:f.id,p_leader_key:f.lk,p_id:id,p_status:"approved",p_reply_ct:reply});r.status="approved";save();
     try{if(typeof window.whoNamesPub==="function")window.whoNamesPub(true)}catch(e){}
-    reqMsg="Approved: "+me+" is on your roster and gets the team the next time they open the app.";redrawR()}
+    reqMsg=r.kind==="contact"?"Matched: "+me+"'s email and phone are saved on your roster.":"Approved: "+me+" is on your roster and gets the team the next time they open the app.";redrawR()}
   catch(e){reqMsg="Couldn't "+(ok?"approve":"decline")+": "+why(e);redrawR()}}
 function reqsHTML(){if(!owner())return `<p class="note">Only the team's owner sees requests to join.</p>`;const A=ASK(),f=feedOf();
   const pend=reqs.filter(x=>x.status==="pending"),done=reqs.filter(x=>x.status!=="pending");
-  const row=r=>`<div class="rrow" data-req="${r.id}" style="--sc:var(${r.status==="pending"?"--brass":r.status==="approved"?"--s-onhand":"--line"})"><div class="who"><b>${esc((r.rank+" "+r.last+(r.first?", "+r.first:"")).trim())}</b>
-      <div class="ph">${esc([r.sec&&"Section "+r.sec,r.phone&&fmtPh(r.phone),r.email].filter(Boolean).join(" · ")||"No details")} · asked ${esc(ago(r.at))}</div>${r.note?`<div class="ph">“${esc(r.note)}”</div>`:""}</div>
-      ${r.status==="pending"?`<div class="row2"><button class="btn" data-reqok="${r.id}">Approve</button><button class="btn alt" data-reqno="${r.id}">Decline</button></div>`:`<span class="chip">${r.status==="approved"?"Approved":"Declined"}</span>`}</div>`;
+  const mtc=r=>{const h=matchOf(r);return h?`<div class="ph" data-reqmatch="${r.id}" style="color:var(--s-onhand);font-weight:700">✓ Matches ${esc((h.m.rank+" "+h.m.name).trim())} on your roster (same ${h.by})</div>`:`<div class="ph" data-reqmatch="${r.id}">No one on your roster matches. Approving adds them as new.</div>`};
+  const row=r=>`<div class="rrow" data-req="${r.id}" style="--sc:var(${r.status==="pending"?"--brass":r.status==="approved"?"--s-onhand":"--line"})"><div class="who"><b>${esc((r.rank+" "+r.last+(r.first?", "+r.first:"")).trim())}</b>${r.kind==="contact"?` <span class="chip">Contact update</span>`:""}
+      <div class="ph">${esc([r.sec&&"Section "+r.sec,r.phone&&fmtPh(r.phone),r.email].filter(Boolean).join(" · ")||"No details")} · asked ${esc(ago(r.at))}</div>${r.status==="pending"?mtc(r):""}${r.note?`<div class="ph">“${esc(r.note)}”</div>`:""}</div>
+      ${r.status==="pending"?`<div class="row2"><button class="btn" data-reqok="${r.id}">${r.kind==="contact"?"Match &amp; save":"Approve"}</button><button class="btn alt" data-reqno="${r.id}">Decline</button></div>`:`<span class="chip">${r.status==="approved"?"Approved":"Declined"}</span>`}</div>`;
   return `<div id="jrWrap"><div class="sechead" style="margin-top:12px"><h2>Requests to join</h2><span class="note" style="margin:0">${esc(unitName())}</span></div>
     <div class="panel"><label class="lrow" style="cursor:pointer"><input type="checkbox" id="askOn"${A.on?" checked":""}${f&&f.lk?"":" disabled"}><span style="flex:1"><span class="t" style="display:block">Let people find ${esc(unitName())} by name</span><span class="s" style="display:block">They search for your team in Join a team and ask. Only your phone can read who's asking.</span></span></label>
       ${f&&f.lk?"":`<p class="note">Start your team's Word of Mouth first.</p><button class="btn" id="jcFeed">Start our Word of Mouth</button>`}</div>
@@ -160,7 +174,7 @@ function askForm(t){jPick=t;sheetCtx={kind:"askform"};
     <label for="afRank">Rank or title</label><input id="afRank" maxlength="8" autocapitalize="characters" style="text-transform:uppercase" placeholder="SGT">
     <div class="row2"><input id="afLast" maxlength="30" placeholder="LAST NAME" autocapitalize="characters" style="text-transform:uppercase"><input id="afFirst" maxlength="30" placeholder="FIRST NAME" autocapitalize="characters" style="text-transform:uppercase"></div>
     <input id="afSec" maxlength="6" placeholder="Section (if you know it)" autocapitalize="characters" style="text-transform:uppercase">
-    <input id="afPhone" type="tel" inputmode="tel" placeholder="Phone (optional)"><input id="afEmail" type="text" inputmode="email" autocapitalize="none" placeholder="Email (optional)">
+    <input id="afPhone" type="tel" inputmode="tel" placeholder="Phone (optional)" value="${esc((S.mc&&S.mc.phone)||"")}"><input id="afEmail" type="text" inputmode="email" autocapitalize="none" placeholder="Email (optional)" value="${esc((S.mc&&S.mc.email)||"")}">
     <input id="afNote" maxlength="160" placeholder="Note for the owner (optional)">
     <button class="btn" id="afSend">Send request</button><button class="btn alt" data-sclose="1">Cancel</button><p class="note" id="afOut" role="status"></p></div>`;
   const sh=$("#sheet");sh.hidden=false;void sh.offsetWidth;sh.classList.add("open")}
@@ -173,12 +187,22 @@ async function sendReq(){const t=jPick;if(!t)return;const g=id=>String(($("#"+id
     myReqs().unshift({id:+id,tok,feed:t.feed_id,name:t.name,priv:kp.priv,at:Date.now(),status:"pending"});S.myReqs=myReqs().slice(0,10);S.onb=true;S.welcomed=1;save();
     closeSheet();jMsg="Request sent to "+t.name+".";redrawA();toast("Request sent. You'll see the answer here.")}
   catch(e){say("Couldn't send: "+why(e))}}
+/* an existing member sends their own email and phone to the owner to be matched to their roster spot (My page → Settings → My contact) */
+async function sendContact(f,d){const rows=await SB.rpc("team_dir_get",{p_feed:f.id});const t=rows&&rows[0];if(!t)throw new Error("team not taking requests");
+  const kp=await genKP();const tok=b64url(crypto.getRandomValues(new Uint8Array(24)));
+  const me=String(f.me||S.myName||"").trim().toUpperCase(),w=me.split(/\s+/).filter(Boolean),rk=typeof RANKS!=="undefined"&&w.length>1&&RANKS.includes(w[0])?w.shift():"";
+  const ct=await sealTo(t.pub,{kind:"contact",mid:f.mid||"",rank:rk,last:(w.join(" ")||me).slice(0,30),first:"",sec:"",phone:d.phone||"",email:d.email||"",note:"",rpub:JSON.parse(kp.pub)});
+  const id=await SB.rpc("join_req_send",{p_feed:f.id,p_ct:ct,p_tok_hash:await sha(tok)});
+  myReqs().unshift({id:+id,tok,feed:f.id,name:t.name,priv:kp.priv,at:Date.now(),status:"pending",kind:"contact"});S.myReqs=myReqs().slice(0,10);save();
+  if(typeof view!=="undefined"&&view==="askjoin")redrawA();return {id:+id,name:t.name}}
+window.afSendContact=sendContact;
+window.afContactPending=()=>myReqs().find(r=>r.kind==="contact"&&r.status==="pending")||null;
 /* the person's phone: check pending requests while the app is open */
 async function checkReqs(){for(const r of myReqs()){if(r.status!=="pending")continue;
   try{const rows=await SB.rpc("join_req_status",{p_id:r.id,p_tok:r.tok});const x=rows&&rows[0];if(!x||x.status==="pending")continue;
     r.status=x.status;r.dt=Date.now();
-    if(x.status==="approved"){const L=await openSealed(r.priv,x.reply_ct);if(L){const f=joinFeed(L,L.me,L.mid);toast("✅ "+r.name+" approved your request. You're in as "+(L.me||"yourself")+".");if(f&&!f.mid)pickName(f)}}
-    else toast("✖ "+r.name+" declined your request.");
+    if(x.status==="approved"){const L=await openSealed(r.priv,x.reply_ct);if(L){const f=joinFeed(L,L.me,L.mid);toast(r.kind==="contact"?"✅ "+r.name+" matched your email and phone to your roster spot.":"✅ "+r.name+" approved your request. You're in as "+(L.me||"yourself")+".");if(f&&!f.mid)pickName(f);try{if(r.kind==="contact"&&typeof window.mcRedraw==="function")window.mcRedraw()}catch(e){}}}
+    else{toast(r.kind==="contact"?"✖ "+r.name+" didn't match your email and phone.":"✖ "+r.name+" declined your request.");try{if(typeof window.mcRedraw==="function")window.mcRedraw()}catch(e){}}
     delete r.priv;delete r.tok;save();if(view==="askjoin")redrawA()}catch(e){}}}
 window.afCheckReqs=checkReqs;
 every(30000,()=>{if(!document.hidden&&myReqs().some(r=>r.status==="pending"))checkReqs()},"my-reqs");setTimeout(()=>{if(myReqs().some(r=>r.status==="pending"))checkReqs()},3000);

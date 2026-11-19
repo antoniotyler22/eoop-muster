@@ -116,7 +116,7 @@ function feedTab(){const f=typeof fdCur==="function"?fdCur():null;
   return `<div id="mpFeed">${L.map(p=>fdCard(f,p,false,false)).join("")}</div><button type="button" class="btn alt" data-go="feed" style="width:100%;margin-top:12px">Open Word of Mouth ▸</button>`}
 
 const H=n=>{try{return typeof window[n]==="function"?window[n]():""}catch(e){return""}};
-function settings(){if(!setOpen)return "";return `<div id="mpSet"><div class="sech" style="margin-top:18px"><h2>Settings for my page</h2></div>${H("ppPanelHtml")}${H("qhPanelHtml")}${(S.role!=="view")?H("gfLeadHtml"):""}${memberM()?memGf:""}${H("acctHtml")}</div>`}
+function settings(){if(!setOpen)return "";return `<div id="mpSet"><div class="sech" style="margin-top:18px"><h2>Settings for my page</h2></div>${H("ppPanelHtml")}${H("qhPanelHtml")}${(S.role!=="view")?H("gfLeadHtml"):""}${memberM()?memGf:""}${H("mcPanelHtml")}${H("acctHtml")}</div>`}
 /* Ask lives at the bottom of everyone's My Page (4.108.0): type a question, the newest answer shows right here.
    "All questions" opens the full Ask screen (history and the OIC controls). */
 function askCard(){try{if(typeof akHidden!=="function"||typeof renderAsk!=="function")return "";
