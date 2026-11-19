@@ -92,7 +92,7 @@ async function reqLoad(force){const f=feedOf(),A=ASK();if(!owner()||!f||!f.lk||!
     for(const r of rows){const o=await openSealed(A.priv,r.ct);if(!o)continue;out.push({id:+r.id,status:r.status,at:Date.parse(r.created_at)||0,dt:Date.parse(r.decided_at)||0,
       rank:String(o.rank||"").toUpperCase().slice(0,8),last:String(o.last||"").toUpperCase().slice(0,30),first:String(o.first||"").toUpperCase().slice(0,30),sec:String(o.sec||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6),
       phone:String(o.phone||"").replace(/\D/g,"").slice(-10),email:typeof normEmail==="function"?(normEmail(o.email)||""):"",note:String(o.note||"").slice(0,160),rpub:o.rpub,
-      kind:o.kind==="contact"?"contact":"join",mid:String(o.mid||"").slice(0,40)})}
+      kind:o.kind==="contact"?"contact":"join",rc:o.rankChange?1:0,mid:String(o.mid||"").slice(0,40)})}
     reqs=out;reqAt=Date.now();reqErr="";const n=out.filter(x=>x.status==="pending").length;if(n!==S.askWaiting){S.askWaiting=n;rawSave()}}
   catch(e){reqErr=why(e)}finally{reqBusy=false}if(view==="joinreqs")redrawR()}
 every(30000,()=>{if(!document.hidden&&ASK().on)reqLoad(false)},"join-reqs");setTimeout(()=>{if(ASK().on)reqLoad(true)},2500);
@@ -113,11 +113,12 @@ async function decide(id,ok){const r=reqs.find(x=>x.id===id),f=feedOf();if(!r||!
     const name=(r.last+(r.first?", "+r.first:"")).slice(0,60);const hit=matchOf(r);let m=hit?hit.m:null;if(m&&fillContact(m,r)){save();try{if(typeof window.afEmailsPub==="function")window.afEmailsPub(true)}catch(e){}}
     if(!m){const sec=SECTIONS.some(s=>s[0]===r.sec)?r.sec:SECTIONS[0][0];m=addMarine({rank:RANKS.includes(r.rank)?r.rank:(MODE().rankDef||"LCPL"),name,sec,phone:r.phone.length===10?r.phone:undefined},sec);
       if(!m)m=S.roster.find(x=>fullK(x)===fullK({name}));if(m){m.detail=m.detail||"Asked to join";if(r.email)m.email=r.email}}
+    if(m&&r.kind==="contact"&&r.rc&&RANKS.includes(r.rank)&&m.rank!==r.rank){m.rank=r.rank;save();try{if(S.board&&typeof rpPublish==="function")rpPublish(true)}catch(x){}}/* 4.131.0: a member's own rank change */
     if(!m)throw new Error("Couldn't add them to the roster.");
     const me=(m.rank+" "+lastOf(m)).trim();const reply=await sealTo(r.rpub,Object.assign(memberLink(f),{mid:m.id,me}));
     await SB.rpc("join_req_decide",{p_feed:f.id,p_leader_key:f.lk,p_id:id,p_status:"approved",p_reply_ct:reply});r.status="approved";save();
     try{if(typeof window.whoNamesPub==="function")window.whoNamesPub(true)}catch(e){}
-    reqMsg=r.kind==="contact"?"Matched: "+me+"'s email and phone are saved on your roster.":"Approved: "+me+" is on your roster and gets the team the next time they open the app.";redrawR()}
+    reqMsg=r.kind==="contact"?(r.rc?"Rank updated: "+me+".":"Matched: "+me+"'s email and phone are saved on your roster."):"Approved: "+me+" is on your roster and gets the team the next time they open the app.";redrawR()}
   catch(e){reqMsg="Couldn't "+(ok?"approve":"decline")+": "+why(e);redrawR()}}
 function reqsHTML(){if(!owner())return `<p class="note">Only the team's owner sees requests to join.</p>`;const A=ASK(),f=feedOf();
   const pend=reqs.filter(x=>x.status==="pending"),done=reqs.filter(x=>x.status!=="pending");
@@ -191,7 +192,7 @@ async function sendReq(){const t=jPick;if(!t)return;const g=id=>String(($("#"+id
 async function sendContact(f,d){const rows=await SB.rpc("team_dir_get",{p_feed:f.id});const t=rows&&rows[0];if(!t)throw new Error("team not taking requests");
   const kp=await genKP();const tok=b64url(crypto.getRandomValues(new Uint8Array(24)));
   const me=String(f.me||S.myName||"").trim().toUpperCase(),w=me.split(/\s+/).filter(Boolean),rk=typeof RANKS!=="undefined"&&w.length>1&&RANKS.includes(w[0])?w.shift():"";
-  const ct=await sealTo(t.pub,{kind:"contact",mid:f.mid||"",rank:rk,last:(w.join(" ")||me).slice(0,30),first:"",sec:"",phone:d.phone||"",email:d.email||"",note:"",rpub:JSON.parse(kp.pub)});
+  const ct=await sealTo(t.pub,{kind:"contact",mid:f.mid||"",rank:d.rank||rk,rankChange:d.rankChange?1:0,last:(w.join(" ")||me).slice(0,30),first:"",sec:"",phone:d.phone||"",email:d.email||"",note:"",rpub:JSON.parse(kp.pub)});
   const id=await SB.rpc("join_req_send",{p_feed:f.id,p_ct:ct,p_tok_hash:await sha(tok)});
   myReqs().unshift({id:+id,tok,feed:f.id,name:t.name,priv:kp.priv,at:Date.now(),status:"pending",kind:"contact"});S.myReqs=myReqs().slice(0,10);save();
   if(typeof view!=="undefined"&&view==="askjoin")redrawA();return {id:+id,name:t.name}}

@@ -40,14 +40,11 @@ test("members keep their own tab bar", async () => {
   } finally { await a.close(); }
 });
 
-test("Home shows What's new once, then a backup reminder until dismissed", async () => {
+test("Home has no What's new card (announcements go to the Official channel); a backup reminder shows until dismissed", async () => {
   const a = await openApp({});
   try {
     await lead(a, `S.roster=S.roster.slice(0,10)`);
-    assert.ok(a.$("#ftNew"), "what's new card");
-    a.$("#ftNewOk").click(); await sleep(150);
-    assert.equal(a.w.eval("S.seenVer"), a.w.eval("window.AV"));
-    assert.ok(!a.$("#ftNew"));
+    assert.ok(!a.$("#ftNew"), "no what's new card");
     assert.ok(a.$("#ftBk"), "backup reminder follows");
     a.$("#ftBkLater").click(); await sleep(100);
     assert.ok(!a.$("#ftBk"));

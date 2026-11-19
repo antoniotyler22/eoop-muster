@@ -25,7 +25,7 @@ const NEWS=["Join a team without a link: type the team's 6-character join code, 
   "Calendar: Everyone events reach every section; a section's events only reach that section.",
   "One People screen with section chips and Move to…; Email on the roster; Settings → Tools turns each tool on or off."];
 function cards(){if(!lead()||!S.onb||S.welcomed===0)return "";
-  if(S.seenVer!==window.AV)return `<div class="panel ft-card" id="ftNew" style="margin:12px 0"><b>What's new in ${esc(window.AV)}</b><ul style="margin:6px 0 8px;padding-left:18px">${NEWS.map(x=>`<li style="margin:3px 0">${esc(x)}</li>`).join("")}</ul><button class="btn alt" id="ftNewOk" style="width:100%">Got it</button></div>`;
+  /* 4.131.0: no "What's new" card at the top of the app. New features and changes are announced in the Official channel instead. */
   const synced=!!(S.sync&&S.sync.on);const due=!S.bkAt||Date.now()-S.bkAt>14*864e5;
   if(!synced&&S.source!=="sample"&&S.roster.length>=3&&due)return `<div class="panel ft-card" id="ftBk" style="margin:12px 0"><b>Back up your team</b><p class="note" style="margin:4px 0 8px">Your roster lives on this phone. Save a copy so a lost phone doesn't lose the team.</p><div class="row2"><button class="btn" id="ftBkGo">Back up now</button><button class="btn alt" id="ftBkLater">Later</button></div></div>`;
   return ""}
