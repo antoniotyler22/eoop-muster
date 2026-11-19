@@ -87,7 +87,7 @@ const V=window.VAULT={key:null,cfg:getCfg(),ok:!!(window.crypto&&crypto.subtle),
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.hidden){hiddenAt=Date.now();return}
   const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
-window.AV="4.125.1";
+window.AV="4.126.0";
 /* self-update: an installed web app resumes without reloading, so check the live version on open, on every return, and every 10 min */
 (()=>{const NAT=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());if(NAT||!/^https?:$/.test(location.protocol))return;
   let busy=false,last=0;const typing=()=>{const a=document.activeElement;return a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)};
@@ -109,7 +109,7 @@ async function startApp(){try{if(window.__RAW===undefined&&!window.VAULT.cfg){co
   const s=document.createElement("script");s.src="app.bundle.js?v="+window.AV;s.onerror=()=>{document.body.insertAdjacentHTML("beforeend",'<p style="padding:24px;font:16px system-ui">Couldn\'t load the app. Connect once, then reopen.</p>')};document.body.appendChild(s)}
 /* live check-ins: Supabase relay. Stores no names: only salted hashes of the words a person types, a code and a short note. */
 const NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
-const PUB=()=>!NATIVE&&/^https?:$/.test(location.protocol)?location.origin+location.pathname:"https://antoniotyler22.github.io/eoop-muster/";
+const PUB=()=>!NATIVE&&/^https?:$/.test(location.protocol)?location.origin+location.pathname:"https://accountedforteam.com/app.html";
 /* Android: push alerts need Firebase (google-services.json + FCM in the notify function); until then the Android app skips push. */
 const NP=n=>{try{if(n==="PushNotifications"&&NATIVE&&window.Capacitor.getPlatform&&window.Capacitor.getPlatform()==="android"&&!window.AF_ANDROID_PUSH)return null;return NATIVE&&window.Capacitor.registerPlugin?window.Capacitor.registerPlugin(n):null}catch(e){return null}};
 if(NATIVE){const shim={permission:(()=>{try{return localStorage.getItem("eop-nperm")||"default"}catch(e){return"default"}})(),requestPermission:async()=>nativePushPerm(true)};try{Object.defineProperty(window,"Notification",{value:shim,configurable:true,writable:true})}catch(e){window.Notification=shim}}

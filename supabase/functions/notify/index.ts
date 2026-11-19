@@ -62,6 +62,9 @@ async function apnsToken(): Promise<string> {
 // Tests load this block on its own (types stripped), so keep it free of other helpers.
 function apsFor(p: any, urgent: boolean, criticalOn: boolean): any {
   const aps: any = { alert: { title: p.title, body: p.body }, sound: "default", "interruption-level": urgent ? "time-sensitive" : "active" };
+  // 4.126.0 quieter defaults: routine section updates and team changes arrive silently (no sound, no screen wake).
+  const routine = !urgent && !p.help && (p.open === "live" || ((p.open === "board" || p.open === "co") && !/Test alert/.test(String(p.title || ""))));
+  if (routine) { delete aps.sound; aps["interruption-level"] = "passive"; }
   if (criticalOn && p.crit === true) { aps.sound = { critical: 1, name: "default", volume: 1.0 }; aps["interruption-level"] = "critical"; }
   return aps;
 }
@@ -89,11 +92,36 @@ function quietNow(sub: any): boolean {
   const m = (((Math.floor(Date.now() / 60000) + tz) % 1440) + 1440) % 1440;
   return a < b ? m >= a && m < b : m >= a || m < b;
 }
+// 4.126.0: per-type alert choices. A sign-up from app 4.126.0 on carries mute: the kinds that phone switched off
+// (word, checkins, messages, chat, sections, team). Urgent alerts (payload.help: SOS, need help, urgent posts, missed
+// deadlines, reports, alert failures) always go through. Sign-ups from older apps carry no mute and get everything.
+// deno-lint-ignore no-explicit-any
+function kindOf(p: any): string {
+  const o = String(p?.open || ""), t = String(p?.title || "");
+  if (/Test alert/.test(t)) return "";
+  if (o === "feed") return t.startsWith("📨") ? "checkins" : "word";
+  if (o === "recall" || o === "checkins") return "checkins";
+  if (o === "dm") return "messages";
+  if (o === "talk") return "chat";
+  if (o === "live") return "sections";
+  if (o === "board" || o === "co") return "team";
+  return "";
+}
+// deno-lint-ignore no-explicit-any
+function mutedFor(sub: any, p: any): boolean {
+  if (p?.help) return false;
+  const m = sub?.mute;
+  if (!Array.isArray(m) || !m.length) return false;
+  const k = kindOf(p);
+  return !!k && m.includes(k);
+}
 // deno-lint-ignore no-explicit-any
 async function pushAny(sub: any, payload: Record<string, unknown>, urgent: boolean, ttl: number): Promise<string> {
   if (quietNow(sub) && !payload.help) return "ok"; // Quiet hours (4.72.1): held back unless urgent
+  if (mutedFor(sub, payload)) return "ok"; // 4.126.0: this phone switched this kind of alert off
   if (sub && typeof sub.apns === "string") return apnsSend(sub.apns, payload, urgent);
-  try { await webpush.sendNotification(sub, JSON.stringify(payload), { TTL: ttl, urgency: urgent ? "high" : "normal" }); return "ok"; }
+  const quiet = !urgent && ["sections", "team"].includes(kindOf(payload));
+  try { await webpush.sendNotification(sub, JSON.stringify(payload), { TTL: ttl, urgency: urgent ? "high" : quiet ? "low" : "normal" }); return "ok"; }
   catch (e) { const c = (e as { statusCode?: number }).statusCode; return c === 404 || c === 410 ? "gone" : "fail"; }
 }
 

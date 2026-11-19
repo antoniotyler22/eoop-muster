@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import * as acorn from "acorn";
 import { transformSync } from "esbuild";
+import { syncIos } from "./ios-version.mjs";
 
 const root = path.resolve(new URL("..", import.meta.url).pathname);
 // Order matters: later files patch functions defined in earlier ones.
@@ -127,6 +128,9 @@ export const SOURCES = [
   "features/five-tabs.js",
   "features/my-profile.js",
   "features/no-signal-demo.js",
+  "features/acting-as.js",
+  "features/reconnect.js",
+  "features/notify-types.js",
   "features/a11y.js",
 ];
 
@@ -160,6 +164,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(im
   } else {
     fs.writeFileSync(file, out);
     fs.writeFileSync(vfile, vjson);
-    console.log("app.bundle.js written (" + Math.round(out.length / 1024) + " KB from " + SOURCES.length + " files)");
+    // the iPhone app's version and build number follow version.json (tools/ios-version.mjs)
+    const ios = syncIos({ vjsonText: vjson });
+    console.log("app.bundle.js written (" + Math.round(out.length / 1024) + " KB from " + SOURCES.length + " files); iPhone version " + ios.version + " build " + ios.build);
   }
 }

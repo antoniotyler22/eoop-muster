@@ -97,16 +97,26 @@
     try { await Share.share(opt); }
     catch (e) { if (!/cancel/i.test(String(e && e.message))) throw e; var err = new Error("Share canceled"); err.name = "AbortError"; throw err; }
   };
-  /* <a download> with a blob link (exports) -> share sheet, so the file can go to Files, Mail, Teams... */
+  /* <a download> with a blob link (exports) -> share sheet, so the file can go to Files, Mail, Teams...
+     4.126.0: if saving or sharing fails (not a cancel), the app says so instead of doing nothing. */
   var aClick = HTMLAnchorElement.prototype.click;
+  function failed(name, e, again) {
+    if (e && e.name === "AbortError") return false;
+    try { if (typeof window.exportFailed === "function") window.exportFailed(name, e, again); } catch (x) {}
+    return false;
+  }
+  N.shareBlob = function (b, name) {
+    name = name || "export";
+    return navigator.share({ files: [new File([b], name, { type: b.type })], title: name })
+      .then(function () { return true; }, function (e) { return failed(name, e, function () { N.shareBlob(b, name); }); });
+  };
+  N.exportFile = function (href, name) {
+    return fetch(href).then(function (r) { return r.blob(); })
+      .then(function (b) { return N.shareBlob(b, name); }, function (e) { return failed(name || "export", e, null); });
+  };
   HTMLAnchorElement.prototype.click = function () {
     var href = this.href || "", name = this.getAttribute("download");
-    if (name !== null && /^blob:/.test(href)) {
-      fetch(href).then(function (r) { return r.blob(); }).then(function (b) {
-        return navigator.share({ files: [new File([b], name || "export", { type: b.type })], title: name || "export" });
-      }).catch(function () {});
-      return;
-    }
+    if (name !== null && /^blob:/.test(href)) { N.exportFile(href, name); return; }
     return aClick.call(this);
   };
 

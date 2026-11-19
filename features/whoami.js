@@ -74,7 +74,7 @@ async function pick(c,id){
   else{S.who={id:String(m.id),n,t:Date.now()};S.myName=n;hubMe(m.id,n);
     if(c.k==="link"){S.link.me=n;save();linkPush(true)}
     else{if(canEdit()){syncSeen(String(m.id),n,roleHow());save()}else{save();viaFeed({k:"who",mid:String(m.id),me:n,how:roleHow(),t:Date.now()})}}}
-  closeSheet();render();toast("Thanks, "+n+". Your changes now show your name.")}
+  closeSheet();render();toast("Thanks, "+n+". Everything you do now shows as "+(typeof actorTag==="function"?actorTag():n)+".")}
 async function viaFeed0(f,o){try{await SB.rpc("feed_req",{p_feed:f.id,p_member_key:f.mk,p_ct:await fdEnc(f.ek,o)})}catch(e){}}
 async function addMe(c){const out=$("#whoOut");const say=t=>{if(out)out.textContent=t};
   const last=up($("#whoLast").value).replace(/[^A-Z' .-]/g,"").trim(),first=up($("#whoFirst").value).replace(/[^A-Z' .-]/g,"").trim();

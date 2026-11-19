@@ -19,7 +19,12 @@ function injectSeg(){if(!lead()||typeof window.chatSeg!=="function")return;const
 new MutationObserver(()=>{try{injectSeg()}catch(e){}}).observe(document.documentElement,{childList:true,subtree:true});
 
 /* ---------- Home cards: what's new, then backup ---------- */
-const NEWS=["Meet Tally: Ask is now Tally, your helper. Tap the little tally button on any page when you're stuck.","Voice: tap one name, or pick several people with no group needed, then talk. Saved groups still work.","A person's page (People → a name) has the My Page look: photo ring, stats, action circles and Plan, Details and More tabs.","New messages show a red number: on the Chat tab, and on Chat, Feed, Inbox, Official and Voice inside it.","Ask is now at the bottom of My Page. Type a question and the answer shows right there.","Word of Mouth takes memes (GIFs) and one short video per post, not just photos. Tap Photo, meme or video above Post.","Photos, memes and videos in chat. Tap the 📎 next to the message box in Team chat and in Messages and groups.","Videos can be about 10 seconds. A bigger clip is shrunk on your phone first. Memes (GIFs) keep moving.","The official Accounted For channel can now carry photos and videos too.","Everything you send in chat is still private to your team. Photos and videos are kept for 7 days."];
+const NEWS=["Links open the app: invite, check-in and team links on accountedforteam.com open straight in the iPhone app.",
+  "Reconnect to your roster: if your link stops working, every screen says so and shows how to get back in. Nothing on your phone is deleted.",
+  "One invite link (People → Live): pick view only, can edit or same as me, then share it, copy it or show a QR code.",
+  "Once you pick who you are, your posts, messages and status changes show your name and role.",
+  "Settings → Choose alerts: a switch for each kind of alert. Section updates and team changes start off and arrive silently; urgent alerts always come through.",
+  "The Dashboard shows the same numbers as Home, and a failed export now tells you why, with Try again."];
 function cards(){if(!lead()||!S.onb||S.welcomed===0)return "";
   if(S.seenVer!==window.AV)return `<div class="panel ft-card" id="ftNew" style="margin:12px 0"><b>What's new in ${esc(window.AV)}</b><ul style="margin:6px 0 8px;padding-left:18px">${NEWS.map(x=>`<li style="margin:3px 0">${esc(x)}</li>`).join("")}</ul><button class="btn alt" id="ftNewOk" style="width:100%">Got it</button></div>`;
   const synced=!!(S.sync&&S.sync.on);const due=!S.bkAt||Date.now()-S.bkAt>14*864e5;

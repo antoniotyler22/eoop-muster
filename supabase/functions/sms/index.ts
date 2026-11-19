@@ -166,7 +166,7 @@ export async function handle(req: Request): Promise<Response> {
   // Check-in link. With people ({to, w}) and part 26 in place, replies to this number check people in by themselves.
   const ppl = cleanPeople(b.ppl);
   const to = ppl.length ? ppl.map((p) => p.to) : cleanNumbers(b.to);
-  const apps = env("APP_URLS", "https://antoniotyler22.github.io/eoop-muster/").split(",").map((s) => s.trim()).filter(Boolean);
+  const apps = env("APP_URLS", "https://accountedforteam.com/app.html,https://accountedforteam.com/,https://antoniotyler22.github.io/eoop-muster/").split(",").map((s) => s.trim()).filter(Boolean);
   if (!to.length) return json({ error: "No valid US phone numbers." }, 400);
   let reply = false;
   if (ppl.length) {

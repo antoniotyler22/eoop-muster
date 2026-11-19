@@ -44,10 +44,10 @@ The iPhone app lives in `ios/` and wraps this same web app, with native Face ID 
 1. GitHub → this repo → Settings → Secrets and variables → Actions → New repository secret, four times:
    `APPLE_TEAM_ID`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` (paste the whole API key file, BEGIN to END).
 2. Supabase → Edge Functions → Secrets: `APNS_KEY` (whole APNs .p8 file), `APNS_KEY_ID`, `APNS_TEAM_ID`. Then redeploy the `notify` function from `supabase/functions/notify/index.ts`. Web push keeps working; iPhone-app users get Apple push.
-3. Universal links (taps on board/FEED/My page links open the app): put your Team ID into `store/root-site/.well-known/apple-app-site-association` and publish `store/root-site/` as a repo named `antoniotyler22.github.io`.
+3. Universal links (taps on invite, check-in, FEED and My page links open the app): done in 4.126.0. The site publishes `.well-known/apple-app-site-association` (Team ID ADNA5MPBGC) at https://accountedforteam.com, and the app's entitlement lists `applinks:accountedforteam.com`. `.nojekyll` makes GitHub Pages serve the dot-folder. Check it after the site deploys: https://accountedforteam.com/.well-known/apple-app-site-association should show the JSON, and https://app-site-association.cdn-apple.com/a/v1/accountedforteam.com shows what Apple has picked up (it can take up to a day). In the developer portal the App ID needs **Associated Domains** turned on.
 
 **D. Build and test**
-1. GitHub → Actions → **iPhone build** → Run workflow (version 1.0.0). About 15 minutes. **iPhone app build check** runs on every change and only checks that it compiles.
+1. GitHub → Actions → **iPhone build** → Run workflow. The App Store version and build number come from `version.json` (4.126.0 → build 4126000; `npm run bundle` keeps the Xcode project in step). About 15 minutes. **iPhone app build check** runs on every change and only checks that it compiles.
 2. App Store Connect → TestFlight: the build appears after Apple processes it (10–30 min). Add yourself and your section leaders as testers and install with the TestFlight app.
 3. Check on a real iPhone: alerts (allow when asked), Face ID (Tools → Security → Unlock with Face ID), share/export, daily reminder (Tools → Phone), and that a texted link opens the app.
 

@@ -1781,8 +1781,30 @@ function icsFor(list,name){const z=d=>d.replace(/-/g,"");const L=["BEGIN:VCALEND
     if(e.tm){const [h,mi]=e.tm.split(":");L.push("DTSTART:"+z(e.d)+"T"+h+mi+"00","DURATION:PT1H")}else{const end=parseD(e.end&&e.end>e.d?e.end:e.d);end.setDate(end.getDate()+1);L.push("DTSTART;VALUE=DATE:"+z(e.d),"DTEND;VALUE=DATE:"+z(dkey(end)))}
     L.push("SUMMARY:"+esc2(e.ti+(e.m&&!name?" - "+e.m.rank+" "+lastOf(e.m):"")));if(e.no)L.push("DESCRIPTION:"+esc2(e.no));L.push("END:VEVENT")});
   L.push("END:VCALENDAR");return L.join("\r\n")}
-function shareFile(text,name,type){const b=new Blob([text],{type});const f=new File([b],name,{type});if(navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f],title:name}).catch(()=>{});return}
-  const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();toast("Saved "+name)}
+function shareFile(text,name,type){const again=()=>shareFile(text,name,type);
+  try{const b=new Blob([text],{type});const f=new File([b],name,{type});if(navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f],title:name}).catch(e=>{if(!e||e.name!=="AbortError")exportFailed(name,e,again,text)});return}
+  const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();if(!(window.MBN&&MBN.on))toast("Saved "+name)}
+  catch(e){exportFailed(name,e,again,text)}}
+/* 4.126.0: an export that fails says so (it used to fail silently). Shows what went wrong, with Try again and, for text files, Copy instead.
+   Called by every export path: shareFile, the Excel export, the CSV export, and the iPhone app's save/share layer (native.js). */
+let expRetry=null,expText="";
+function expWhy(e){const t=String((e&&(e.message||e.errorMessage||e.code))||e||"").trim();
+  if(/quota|space|full|ENOSPC/i.test(t))return "This phone is out of storage space. Free some up and try again.";
+  if(/permission|denied|NotAllowed|not allowed/i.test(t))return "The phone didn't allow saving the file. Check the app's permissions, then try again.";
+  if(/share/i.test(t)&&/unavailable|not supported|unsupported/i.test(t))return "Sharing isn't available here. Try again, or copy it instead.";
+  return t?t.slice(0,140):"Something went wrong while saving the file."}
+function exportFailed(name,err,retry,text){expRetry=typeof retry==="function"?retry:null;expText=typeof text==="string"?text:"";
+  try{console.warn("export failed",name,err)}catch(e){}
+  try{if(typeof sheetCtx!=="undefined")sheetCtx={kind:"expfail"};const T=$("#sheetT"),O=$("#sheetOpts"),sh=$("#sheet");if(!T||!O||!sh){toast("Couldn't export "+name+". "+expWhy(err));return}
+    T.innerHTML=`<span role="alert">⚠️ Couldn't export ${esc(name||"the file")}</span><small>${esc(expWhy(err))}</small>`;
+    O.innerHTML=`<div class="panel" style="margin:0" data-noxl id="expFail">${expRetry?`<button class="btn" id="expAgain">Try again</button>`:""}${expText?`<button class="btn alt" id="expCopy">Copy instead</button>`:""}<button class="btn alt" data-sclose="1">Close</button></div>`;
+    /* opened at once (not on the next frame): an export started from another sheet fails right as that sheet closes, and its close mustn't hide this */
+    sh.hidden=false;void sh.offsetWidth;sh.classList.add("open")}
+  catch(e){toast("Couldn't export "+name)}}
+window.exportFailed=exportFailed;
+document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest)return;
+  if(t.closest("#expAgain")){const f=expRetry;expRetry=null;closeSheet();if(f)setTimeout(f,60);return}
+  if(t.closest("#expCopy")){const x=expText;try{navigator.clipboard.writeText(x).then(()=>{closeSheet();toast("Copied. Paste it into a note or email.")},()=>toast("Copy blocked here."))}catch(err){toast("Copy blocked here.")}return}});
 function renderCal(){let h=banner();if(calSec==null)calSec=calSecDefault();const now=new Date();if(!calM)calM=[now.getFullYear(),now.getMonth()];const [Y,Mo]=calM;
   const first=new Date(Y,Mo,1),last=new Date(Y,Mo+1,0);const from=dkey(first),to=dkey(last);const all=calEntries(from,to,calSec);const multi=calEntries(dkey(new Date(Y,Mo-2,1)),to,calSec).filter(e=>e.end&&e.end>e.d);
   const onDay=k=>all.filter(e=>e.d===k).concat(multi.filter(e=>e.d<k&&e.end>=k));const today=dkey();if(!calDay)calDay=today;
@@ -1846,9 +1868,9 @@ async function exportXL(kind){try{const X=await loadXLSX();const wb=X.utils.book
     for(const [n,rows] of Object.entries(sh)){const ws=X.utils.aoa_to_sheet(rows);ws["!cols"]=(rows[0]||[]).map((h,i)=>({wch:Math.min(40,Math.max(8,...rows.slice(0,200).map(r=>String(r[i]??"").length)))}));X.utils.book_append_sheet(wb,ws,n.replace(/[\\/?*\[\]:]/g," ").slice(0,31))}
     if(!wb.SheetNames.length){toast("Nothing to export yet.");return}
     const buf=X.write(wb,{type:"array",bookType:"xlsx"});const name="EOP_Numbers_"+(kind==="all"?"All":cap(kind))+"_"+dkey()+".xlsx";const type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";const b=new Blob([buf],{type});
-    const file=new File([b],name,{type});if(navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:name}).catch(()=>{});return}
-    const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();toast("Excel file saved")}
-  catch(e){toast(e.message||"Couldn't build the Excel file here.")}}
+    const file=new File([b],name,{type});if(navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:name}).catch(e=>{if(!e||e.name!=="AbortError")exportFailed(name,e,()=>exportXL(kind))});return}
+    const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();if(!(window.MBN&&MBN.on))toast("Excel file saved")}
+  catch(e){exportFailed("the Excel file",e,()=>exportXL(kind))}}
 const xlBtn=k=>`<button class="chip" data-xl="${k}" style="cursor:pointer;font-size:13px">⬇ Excel</button>`;
 
 /* ---------- backup + sync: encrypted with a recovery code; server stores an unreadable blob ---------- */
@@ -2238,7 +2260,7 @@ async function fdCreate(){const f={id:rndId(14),mk:rndId(32),lk:rndId(32),ek:b64
   await SB.rpc("create_feed",{p_id:f.id,p_member_key:f.mk,p_leader_key:f.lk});S.feeds.unshift(f);fdSel=f.id;save()}
 async function fdPoll(f,full){const ackN={};const after=full?0:Math.max(0,f.ctl||0,f.tlTop||0,...(f.posts||[]).map(p=>p.id));
   const rows=await SB.rpc("feed_get",{p_feed:f.id,p_member_key:f.mk,p_after:after});let fresh=0;const keep=full?[]:(f.posts||[]);const have=new Set(keep.map(p=>p.id));
-  let ctlTop=full?0:(f.ctl||0);for(const r of [...(rows||[])].sort((a,b)=>a.id-b.id)){if(have.has(+r.id))continue;const o=await fdDec(f.ek,r.ct);if(!o)continue;if(o.c==="tally"){f.tlTop=Math.max(f.tlTop||0,+r.id);if(o.pid&&o.cnt&&typeof o.cnt==="object"){f.tally=f.tally||{};const cur=f.tally[o.pid];if(!cur||+r.id>=(cur.rid||0))f.tally[o.pid]={cnt:o.cnt,n:+o.n||0,of:+o.of||0,t:Date.parse(r.created_at)||Date.now(),rid:+r.id}}continue}if(o.c==="pin"){if(+r.id>=ctlTop){ctlTop=+r.id;f.pins=Array.isArray(o.ids)?o.ids.map(Number).slice(0,5):[]}continue}const to=o.to&&["all","secs","one"].includes(o.to.k)?o.to:{k:"all"};if(to.k==="secs"&&!Array.isArray(to.s))to.s=[];if(o.sa&&!f.lk)f.secsAll=o.sa;const post={id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,1500),urg:!!o.u,to};if(o.pod&&o.pod.d)post.pod={d:String(o.pod.d).slice(0,10)};if(o.by)post.by=String(o.by).slice(0,30);if(typeof o.ci==="string"&&/^https:\/\/[^\s]+#ci=/.test(o.ci))post.ci=o.ci.slice(0,500);if(o.sl)post.sl=String(o.sl).replace(/[^A-Z0-9]/g,"").slice(0,6);if(o.mb)post.mb=1;if(Array.isArray(o.poll)&&o.poll.length>=2)post.poll=o.poll.slice(0,6).map(x=>String(x).slice(0,40));if(post.poll&&o.pq)post.pq=String(o.pq).slice(0,140);if(o.swap&&typeof o.swap==="object")post.swap={rid:String(o.swap.rid||"").slice(0,24),d:String(o.swap.d||"").slice(0,10),ro:String(o.swap.ro||"").slice(0,40),who:String(o.swap.who||"").slice(0,30),done:String(o.swap.done||"").slice(0,40)};if(Array.isArray(o.img))post.img=o.img.filter(x=>/^[a-z0-9]{6,24}$/i.test(String(x))).slice(0,4);keep.push(post);if(f.lk&&post.sl&&+r.id>(f.actTop||0)){f.actTop=+r.id;if(!full||f.actInit)actAdd("✎",post.sl+" leader "+(post.by||"")+" posted"+(post.to&&post.to.k==="secs"?" to "+fdToLabel(post.to):" to everyone")+": “"+post.txt.slice(0,80)+(post.txt.length>80?"…":"")+"”","feed")}if(+r.id>(f.seen||0)&&(f.lk||post.to.k!=="one"||fdForMe(f,post)))fresh++}
+  let ctlTop=full?0:(f.ctl||0);for(const r of [...(rows||[])].sort((a,b)=>a.id-b.id)){if(have.has(+r.id))continue;const o=await fdDec(f.ek,r.ct);if(!o)continue;if(o.c==="tally"){f.tlTop=Math.max(f.tlTop||0,+r.id);if(o.pid&&o.cnt&&typeof o.cnt==="object"){f.tally=f.tally||{};const cur=f.tally[o.pid];if(!cur||+r.id>=(cur.rid||0))f.tally[o.pid]={cnt:o.cnt,n:+o.n||0,of:+o.of||0,t:Date.parse(r.created_at)||Date.now(),rid:+r.id}}continue}if(o.c==="pin"){if(+r.id>=ctlTop){ctlTop=+r.id;f.pins=Array.isArray(o.ids)?o.ids.map(Number).slice(0,5):[]}continue}const to=o.to&&["all","secs","one"].includes(o.to.k)?o.to:{k:"all"};if(to.k==="secs"&&!Array.isArray(to.s))to.s=[];if(o.sa&&!f.lk)f.secsAll=o.sa;const post={id:+r.id,t:Date.parse(r.created_at)||Date.now(),txt:String(o.t||"").slice(0,1500),urg:!!o.u,to};if(o.pod&&o.pod.d)post.pod={d:String(o.pod.d).slice(0,10)};if(o.by)post.by=String(o.by).slice(0,30);if(o.br)post.br=String(o.br).slice(0,30);if(typeof o.ci==="string"&&/^https:\/\/[^\s]+#ci=/.test(o.ci))post.ci=o.ci.slice(0,500);if(o.sl)post.sl=String(o.sl).replace(/[^A-Z0-9]/g,"").slice(0,6);if(o.mb)post.mb=1;if(Array.isArray(o.poll)&&o.poll.length>=2)post.poll=o.poll.slice(0,6).map(x=>String(x).slice(0,40));if(post.poll&&o.pq)post.pq=String(o.pq).slice(0,140);if(o.swap&&typeof o.swap==="object")post.swap={rid:String(o.swap.rid||"").slice(0,24),d:String(o.swap.d||"").slice(0,10),ro:String(o.swap.ro||"").slice(0,40),who:String(o.swap.who||"").slice(0,30),done:String(o.swap.done||"").slice(0,40)};if(Array.isArray(o.img))post.img=o.img.filter(x=>/^[a-z0-9]{6,24}$/i.test(String(x))).slice(0,4);keep.push(post);if(f.lk&&post.sl&&+r.id>(f.actTop||0)){f.actTop=+r.id;if(!full||f.actInit)actAdd("✎",post.sl+" leader "+(post.by||"")+" posted"+(post.to&&post.to.k==="secs"?" to "+fdToLabel(post.to):" to everyone")+": “"+post.txt.slice(0,80)+(post.txt.length>80?"…":"")+"”","feed")}if(+r.id>(f.seen||0)&&(f.lk||post.to.k!=="one"||fdForMe(f,post)))fresh++}
   f.actInit=1;f.posts=keep.sort((a,b)=>b.id-a.id).slice(0,200);f.ctl=ctlTop;if(full&&!ctlTop)f.pins=[];f.err="";
   if(f.lk){try{const rq=await SB.rpc("feed_reqs_get",{p_feed:f.id,p_leader_key:f.lk,p_after:f.reqAfter||0});let nr=0;
       for(const r of rq||[]){f.reqAfter=Math.max(f.reqAfter||0,+r.id);const o=await fdDec(f.ek,r.ct);if(o&&o.k==="sos"&&typeof sosIn==="function"){sosIn(f,o,r);continue}if(o&&o.k==="rep"&&typeof repIn==="function"){repIn(f,o,r);continue}if(o&&o.k==="ck"&&typeof ckIn==="function"){ckIn(f,o,r);continue}if(o&&(o.k==="who"||o.k==="join")&&typeof whoIn==="function"){whoIn(f,o,r);continue}if(!o||o.k!=="req"||S.reqs.some(x=>x.rid===o.rid))continue;const m=matchMarine(String(o.me||""));
@@ -2334,7 +2356,7 @@ function fdStatCard(f,p){const st=fdStats(f,p);const pool=fdPool(p);const secs=S
     ${secs.slice().sort((a,b)=>(a.g/a.n)-(b.g/b.n)).slice(0,4).map(x=>`<div class="fcl"><span>${esc(x.k)}</span><span>${x.g}/${x.n} · ${Math.round(100*x.g/x.n)}%</span></div>`).join("")}</div>`}
 function fdCard(f,p,pinned,isNew){const mine=(f.mine||{})[p.id];const by=p.by||f.unit;const key=f.id+":"+p.id;const pop=fdShown.size&&!fdShown.has(key);
   let h=`<article class="fc${pop?" pop":""}" style="${p.urg?"border-color:var(--warn);":""}${p.pod?"border-color:var(--brass);":""}">
-    <div class="fch">${fdAv(by)}<div class="hd"><div><span class="nm">${esc(by)}</span> <span class="tm">· <span data-ago="${p.t}">${ago(p.t)}</span></span>${isNew?` <b style="color:var(--brass);font-size:12px">● NEW</b>`:""}</div>
+    <div class="fch">${fdAv(by)}<div class="hd"><div><span class="nm">${esc(by)}</span>${(br=>br&&p.by?` <span class="chip fc-role" title="Posted as">${esc(br)}</span>`:"")(p.br||(p.by&&typeof actorRole==="function"&&!p.sl&&!p.mb&&p.by===fdBy(f)?actorRole():""))} <span class="tm">· <span data-ago="${p.t}">${ago(p.t)}</span></span>${isNew?` <b style="color:var(--brass);font-size:12px">● NEW</b>`:""}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${p.pod?`<span class="fcchip" style="color:var(--brass)">📋 Plan of the Day</span>`:""}${p.urg?`<span class="fcchip" style="color:var(--warn)">URGENT</span>`:""}${pinned?`<span class="fcchip">📌 Pinned</span>`:""}${p.sl?`<span class="fcchip">✎ ${esc(p.sl)} leader</span>`:""}${p.to&&p.to.k!=="all"?`<span class="fcchip">To: ${esc(f.lk?fdToLabel(p.to):p.to.k==="one"?"you":fdToLabel(p.to))}</span>`:""}</div></div></div>`;
   if(p.pod){const o=podParse(p.txt);const d=parseD(p.pod.d);
     h+=`<div class="fci"><span class="ttl">${d?DOW[d.getDay()]+" "+short(d):"Plan of the Day"}</span>${o.f||o.u?`<div style="display:flex;gap:6px;flex-wrap:wrap">${o.f?`<span class="fcchip">⏱ ${esc(o.f)}</span>`:""}${o.u?`<span class="fcchip">👕 ${esc(o.u)}</span>`:""}</div>`:""}
@@ -3101,8 +3123,8 @@ document.addEventListener("submit",e=>{
 });
 
 const dl=Promise.resolve({save:({filename,data})=>new Promise((res,rej)=>{try{const b=new Blob([data],{type:"text/csv"});
-  if(navigator.canShare&&navigator.canShare({files:[new File([b],filename,{type:"text/csv"})]})){navigator.share({files:[new File([b],filename,{type:"text/csv"})],title:filename}).then(()=>res({status:"saved"}),()=>rej({code:"declined"}));return}
-  const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=filename;document.body.appendChild(a);a.click();a.remove();res({status:"saved"})}catch(e){rej({code:"unavailable"})}})});
+  if(navigator.canShare&&navigator.canShare({files:[new File([b],filename,{type:"text/csv"})]})){navigator.share({files:[new File([b],filename,{type:"text/csv"})],title:filename}).then(()=>res({status:"saved"}),e=>{if(e&&e.name==="AbortError"){rej({code:"declined"});return}exportFailed(filename,e,null,String(data));rej({code:"failed"})});return}
+  const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=filename;document.body.appendChild(a);a.click();a.remove();res({status:"saved"})}catch(e){exportFailed(filename,e,null,String(data));rej({code:"unavailable"})}})});
 /* ---------- onboarding ---------- */
 const ONB=[
  {ic:"📋",t:"Your board",b:["<b>On Hand</b> is who's here now. <b>Total Strength</b> is everyone you're responsible for.","Each tab across the top is a section. Tap a tab to see its Marines.","Tap anyone's status to change it. The numbers update right away."]},
