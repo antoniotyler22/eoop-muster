@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { openApp, sleep } from "./harness.mjs";
 
 const lead = async (a, extra = "") => {
-  await a.w.eval(`S.feeds=[{id:"feedabcdef12",mk:"m".repeat(30),lk:"l".repeat(30),ek:"",unit:"ALPHA",me:"CPL TEST",sec:"1ST",mine:{},seen:0,posts:[]}];S.myName="CPL TEST";S.mode="military";S.onb=true;S.welcomed=1;S.leaderMode=true;S.source="real";${extra};view="chat";render()`);
+  await a.w.eval(`S.feeds=[{id:"feedabcdef12",mk:"m".repeat(30),lk:"l".repeat(30),ek:"",unit:"ALPHA",me:"CPL TEST",sec:"1ST",mine:{},seen:0,posts:[]}];S.myName="CPL TEST";S.mode="military";S.onb=true;S.welcomed=1;S.leaderMode=true;S.source="real";S.unit="ALPHA";${extra};view="chat";render()`);
   await sleep(200);
 };
 
