@@ -903,10 +903,16 @@ async function livePollBoard(){const B=S.board;if(!B||lvBusy)return;livePollCal(
           const st={},du={};
           for(const it of r.items||[]){const [a,b,c]=it.split(":");const m=byI[a]?byI[a][0]:(byT[a]||[]).length===1?byT[a][0]:(!byT[a]&&(byL[b]||[]).length===1)?byL[b][0]:null;if(!m){res.miss++;continue}
             if(c==="LD")du[m.id]="Light Duty";else if(c==="LIM")du[m.id]="LIMDU";else if(SDEC[c])st[m.id]=okSt(SDEC[c])}
-          const chg=[];for(const m of ms){const ns=st[m.id]||"On Hand",nd=du[m.id]||"Full Duty";
+          const chg=[];B.lastSt=B.lastSt||{};const pvS=B.lastSt[sec]||{};const nxS={};
+          for(const m of ms){const ns=st[m.id]||"On Hand",nd=du[m.id]||"Full Duty";
+            /* 4.136.1: a leader's update only moves a person the leader actually changed. Someone missing from the list used to be read as
+               On Hand, and one still listed used to be re-applied every time, so a status set by hand somewhere else flipped back.
+               First update from a section: only people it lists with a status count; the rest are left as they are. */
+            const key=ns+"|"+nd,was=pvS[m.id];nxS[m.id]=key;
+            if(was===undefined?(st[m.id]===undefined&&du[m.id]===undefined):was===key)continue;
             /* a change made or seen here after this leader sent their update is newer: an older update can't put the person back On Hand */
             try{const tt=Math.max(+m.ckAt||0,(m.upd&&+m.upd.t)||0,+m.ut||0);if(tt&&tt>res.t)continue}catch(e){}
-            if(m.status!==ns||dutyOf(m)!==nd){chg.push(m.rank+" "+lastOf(m)+" → "+(m.status!==ns?(SHORT[ns]||ns):nd));m.status=ns;m.duty=nd;m.upd={t:res.t,sec};res.ch++}}res.chg=chg;
+            if(m.status!==ns||dutyOf(m)!==nd){chg.push(m.rank+" "+lastOf(m)+" → "+(m.status!==ns?(SHORT[ns]||ns):nd));m.status=ns;m.duty=nd;m.upd={t:res.t,sec};res.ch++}}B.lastSt[sec]=nxS;res.chg=chg;
           const set=new Set(r.sender||[]);if(set.size){const hit=[];for(const m of S.roster){const lw=SB.words(lastOf(m));if(!lw.length)continue;const hs=await Promise.all(lw.map(w=>SB.h(B.id,w)));if(hs.every(h=>set.has(h)))hit.push(m)}
             if(hit.length){const rk=await Promise.all(hit.map(m=>SB.h(B.id,String(m.rank).toUpperCase().replace(/[^A-Z0-9]/g,""))));const both=hit.filter((m,i)=>set.has(rk[i]));const pick=both.length===1?both[0]:hit.length===1?hit[0]:null;if(pick)res.by=pick.rank+" "+lastOf(pick)}}}
         else res.unknown=true;

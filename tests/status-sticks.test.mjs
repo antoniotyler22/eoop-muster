@@ -79,3 +79,20 @@ test("a phone that just opened with an old copy of the roster does not push ever
     assert.equal(await status(a, "lee"), "Leave", "the OIC's Leave is not overwritten");
   } finally { await a.close(); if (b) await b.close(); }
 });
+
+test("4.136.1: a leader's update sent AFTER a hand-picked status, that does not list the person, leaves the status alone", async () => {
+  const srv = server();
+  const a = await phone(srv, Date.now() - 3600000);
+  try {
+    await pick(a, "lee", "TAD");
+    const t = +(await a.w.eval(`S.roster.find(m=>m.id==="lee").ut`));
+    // the leader's phone was out of date and sent its section a moment AFTER the pick: Lee is not on the list
+    srv.D.updates.push({ id: 1, sec: "UT", sender: [], strength: 2, items: [], created_at: new Date(t + 5000).toISOString() });
+    await a.w.eval("livePollBoard()"); await sleep(300);
+    assert.equal(await status(a, "lee"), "TAD", "a missing name is not read as On Hand");
+    // and a second, later update still does not reset him
+    srv.D.updates.push({ id: 2, sec: "UT", sender: [], strength: 2, items: [], created_at: new Date(t + 9000).toISOString() });
+    await a.w.eval("livePollBoard()"); await sleep(300);
+    assert.equal(await status(a, "lee"), "TAD", "still TAD after another leader update");
+  } finally { await a.close(); }
+});
