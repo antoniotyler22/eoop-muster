@@ -142,6 +142,7 @@ export const SOURCES = [
   "features/tally-howto.js",
   "features/people-screen.js",
   "features/status-filter.js",
+  "features/feed-dock.js",
   "features/messages.js",
   "features/cal-scope.js",
   "features/a11y.js",
