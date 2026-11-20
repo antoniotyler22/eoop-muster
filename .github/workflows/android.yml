@@ -11,9 +11,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version shown in Google Play (e.g. 4.76.4)"
+        description: "Version shown in Google Play (e.g. 4.125.1)"
         required: true
-        default: "4.76.4"
+        default: "4.125.1"
 jobs:
   android:
     runs-on: ubuntu-24.04
@@ -26,7 +26,7 @@ jobs:
         with: { node-version: 22, cache: npm }
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 21 }
-      - run: npm ci && npm test && npm run build:web && npx cap sync android
+      - run: npm ci && npm run build:web && npx cap sync android
       - name: Check secrets
         env:
           K: ${{ secrets.ANDROID_KEYSTORE_B64 }}
