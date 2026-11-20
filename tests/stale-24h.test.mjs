@@ -1,4 +1,4 @@
-// A status that is 24 hours old stops counting; a new check-in starts a fresh 24 hours.
+// A status that is 15 hours old stops counting; a new check-in starts a fresh 15 hours.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { openApp, sleep } from "./harness.mjs";
@@ -7,7 +7,7 @@ const setup = `S.source="mol";S.welcomed=1;S.onb=true;S.role="co";S.sync={on:tru
   const R=S.roster.filter(m=>m.sec!=="ATT");R.forEach(m=>{m.status="On Hand";delete m.start;delete m.end;m.ckAt=Date.now()-36e5;m.upd=null});
   S.tl={};S.cks=[];window.mpNoLand=1;`;
 
-test("a status older than 24 hrs drops out of the numbers; check-in brings it back", async () => {
+test("a status older than 15 hrs drops out of the numbers; check-in brings it back", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     a.w.eval(`${setup}
@@ -23,7 +23,7 @@ test("a status older than 24 hrs drops out of the numbers; check-in brings it ba
     assert.ok(a.$(".st24t"), "row tagged Off Hand");
     assert.match(a.$(".st24t").textContent, /Off Hand/);
     assert.match(a.$(".st24 .pill").textContent, /Off Hand/, "status button reads Off Hand");
-    // checking in starts a fresh 24 hours
+    // checking in starts a fresh 15 hours
     a.w.eval(`const m=ckStaleList()[0];m.ckAt=Date.now();save();render()`);
     assert.equal(a.w.eval(`counts().T.stale`), 0);
     assert.equal(a.w.eval(`counts().T["On Hand"]`), n - 1);
@@ -47,12 +47,12 @@ test("a waiting check-in, ATT, sample data and the off switch are not expired", 
   } finally { await a.close(); }
 });
 
-test("Check-ins lists who missed the last 24 hrs and has the switch", async () => {
+test("Check-ins lists who missed the last 15 hrs and has the switch", async () => {
   const a = await openApp({ rpc: () => [] });
   try {
     a.w.eval(`${setup}
       R[0].ckAt=Date.now()-30*36e5;S.tl[R[0].id]=[[Date.now()-30*36e5,"On Hand","Full Duty"]];save();view="checkins";render()`);
-    assert.match(a.$("#ckMiss").textContent, /Last 24 hrs/);
+    assert.match(a.$("#ckMiss").textContent, /Last 15 hrs/);
     assert.ok(a.$("#exp24"), "switch under the panel");
     a.$("#exp24t").click(); await sleep(40);
     assert.equal(a.w.eval("S.exp24"), false);
@@ -135,6 +135,24 @@ test("4.123.1: the last-update time (ut) rides the roster, and a fresh ut keeps 
     assert.equal(a.w.eval(`ckStale(S.roster[0])`), false, "fresh ut counts");
     a.w.eval(`S.roster[0].ut=String(Date.now()-30*36e5)`);
     assert.equal(a.w.eval(`ckStale(S.roster[0])`), true, "old ut is expired");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
+
+test("4.137.0: Off Hand after 15 hrs; only a From and To date skips it", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    a.w.eval(`${setup}
+      R[0].ckAt=Date.now()-14*36e5;S.tl[R[0].id]=[[Date.now()-14*36e5,"On Hand","Full Duty"]];
+      R[1].ckAt=Date.now()-16*36e5;S.tl[R[1].id]=[[Date.now()-16*36e5,"On Hand","Full Duty"]];
+      R[2].status="Leave";R[2].start=dkey(new Date(Date.now()-864e5));R[2].end=dkey(new Date(Date.now()+864e5));R[2].ckAt=Date.now()-40*36e5;S.tl[R[2].id]=[[Date.now()-40*36e5,"Leave","Full Duty"]];
+      R[3].status="Leave";delete R[3].start;delete R[3].end;R[3].ckAt=Date.now()-40*36e5;S.tl[R[3].id]=[[Date.now()-40*36e5,"Leave","Full Duty"]];
+      save();view="board";render()`);
+    const f = (i) => a.w.eval(`ckStale(S.roster.filter(m=>m.sec!=="ATT")[${i}])`);
+    assert.equal(f(0), false, "14 hrs old is still fresh");
+    assert.equal(f(1), true, "16 hrs old is Off Hand");
+    assert.equal(f(2), false, "leave with From and To covering today holds");
+    assert.equal(f(3), true, "leave with no dates expires like anyone else");
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });

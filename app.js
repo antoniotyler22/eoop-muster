@@ -1857,8 +1857,8 @@ function logRow(x){return logEdit===x.id?`<div class="rrow"><textarea id="lgEd" 
 /* ---------- Excel export ---------- */
 const xd=s=>{const d=parseD(s);return d?dkey(d):(s||"")};
 function xlSheets(kind){const sh={};const isoNow=dkey();
-  if(kind==="all"||kind==="roster")sh.Roster=[["Rank","Name","Section","Status","Duty status","Status since","Detail","Location","Start","End / return","EDD","EAS","Phone","Alt phone","Email","Parent unit","Weapon","Rack","Notes"]].concat(sorted(S.roster).map(m=>{const sn=sinceOf(m);
-    return [m.rank,m.name,m.sec,m.status,dutyOf(m),sn?dkey(new Date(sn)):"",m.detail||"",m.loc||"",xd(m.start),xd(m.end),xd(m.edd),xd(m.eas),m.phone?fmtPh(m.phone):"",m.phone2?fmtPh(m.phone2):"",m.email||"",m.parent||"",m.wpn?m.wpn.t:"",m.wpn?m.wpn.rack:"",(m.notes||[]).map(n=>dkey(new Date(n.t))+": "+n.txt).join(" | ")]}));
+  if(kind==="all"||kind==="roster")sh.Roster=[["Rank","Name","Section","Status","Duty status","Status since","Detail","Location","Start","End / return","EDD","EAS","Phone","Alt phone","Email","Parent unit","Weapon","Rack","Weapon serial","RCO serial","Notes"]].concat(sorted(S.roster).map(m=>{const sn=sinceOf(m);
+    return [m.rank,m.name,m.sec,m.status,dutyOf(m),sn?dkey(new Date(sn)):"",m.detail||"",m.loc||"",xd(m.start),xd(m.end),xd(m.edd),xd(m.eas),m.phone?fmtPh(m.phone):"",m.phone2?fmtPh(m.phone2):"",m.email||"",m.parent||"",m.wpn?m.wpn.t:"",m.wpn?m.wpn.rack:"",m.wpn?wSer(m):"",m.wpn?wRco(m):"",(m.notes||[]).map(n=>dkey(new Date(n.t))+": "+n.txt).join(" | ")]}));
   if(kind==="all"||kind==="ready"){const its=readyItems();sh.Readiness=[["Rank","Name","Section"].concat(its.map(i=>i.n+" due"),["Overdue","Due in 30 days"])].concat(sorted(S.roster.filter(m=>m.sec!=="ATT")).map(m=>{const r=its.map(it=>dueState(m,it));
     return [m.rank,m.name,m.sec].concat(its.map((it,i)=>{const x=((m.due||{})[it.n])||{};return x.due||(x.done?"done "+x.done:"")}),[its.filter((it,i)=>r[i].st==="over").map(i=>i.n).join(", "),its.filter((it,i)=>r[i].st==="soon").map(i=>i.n).join(", ")])}))}
   if(kind==="all"||kind==="trends"){const ks=Object.keys(S.days).sort();sh.Trends=[["Date","Strength","On hand","Present","% on hand","% present"].concat(SECTIONS.flatMap(([k])=>[k+" on hand",k+" strength"]))].concat(ks.map(k=>{const d=S.days[k];return [k,d.str,d.oh,d.pr,d.str?Math.round(100*d.oh/d.str):0,d.str?Math.round(100*d.pr/d.str):0].concat(SECTIONS.flatMap(([s])=>{const x=(d.sec||{})[s];return x?[x[0],x[1]]:["",""]}))}))}
@@ -2121,7 +2121,7 @@ function renderPerson(){const m=S.roster.find(x=>x.id===pid);if(!m){view=pBack||
     <button class="btn warn" data-mpoff="${m.id}">${armed==="mpoff"+m.id?"Tap again: turn off and delete their page":"Turn off My page"}</button>`
     :`<p class="note">Give ${esc(m.rank+" "+lastOf(m))} a private page on their phone with their status, next duty, due-outs and calendar. It updates by itself as you change things here.</p><button class="btn" data-mpon="${m.id}">Turn on My page</button>`);
   // gear
-  if(m.wpn&&m.wpn.t)h+=pSec("Gear",`<div><b>${esc(m.wpn.t)}</b>${m.wpn.rack?" · rack "+esc(m.wpn.rack):""}${m.wpn.s4?" · serial …"+esc(m.wpn.s4):""}</div>`);
+  if(m.wpn&&m.wpn.t)h+=pSec("Gear",`<div><b>${esc(m.wpn.t)}</b>${m.wpn.rack?" · rack "+esc(m.wpn.rack):""}${wSer(m)?" · serial "+esc(wSer(m)):""}${wRco(m)?" · RCO "+esc(wRco(m)):""}</div>`);
   // accountability
   const acc=[];const ci=(S.rc.ci||{})[m.id];if(S.rc.start&&(S.rc.res||{})[m.id])acc.push(`Recall ${dtg(new Date(S.rc.start)).slice(0,7)}: ${ci?(ci.c===3?"⚠ NEED HELP":ci.c===2?"Delayed":"Checked in good"):({ok:"Reached",vm:"Voicemail",na:"No answer"})[S.rc.res[m.id]]||""}${ci&&ci.eta?" ("+esc(ci.eta)+")":""}`);
   if(S.mus.last&&S.mus.last.un)acc.push("Last muster "+dtg(new Date(S.mus.last.t)).slice(0,7)+": "+(S.mus.last.un.some(x=>x.includes(" "+m.rank+" "+m.name))?"<b style='color:var(--warn)'>unaccounted</b>":"accounted for"));
@@ -2649,29 +2649,31 @@ function renderEvents(){let h=banner();
 const WEAPONS=["M4","M4A1","M27 IAR","M16A4","M18","M17","M9","M249","M240B","M2","MK19","M320","M38 SDMR","Other"];
 let wEdit=null;
 const hasW=m=>m.wpn&&m.wpn.t;
+/* 4.137.0: full weapon serial (sn) and RCO serial (rco) beside the rack; s4 stays as the last 4 for older copies */
+const wSer=m=>(m.wpn&&(m.wpn.sn||m.wpn.s4))||"",wRco=m=>(m.wpn&&m.wpn.rco)||"",serKey=x=>String(x||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
 const rackNum=m=>{const n=parseInt((m.wpn&&m.wpn.rack)||"",10);return isNaN(n)?99999:n};
 function armText(){const A=S.arm;const ms=S.roster.filter(hasW).sort((a,b)=>rackNum(a)-rackNum(b));const st=A.st||{};
   const inn=ms.filter(m=>st[nkey(m)]==="in"),out=ms.filter(m=>st[nkey(m)]==="out"),ns=ms.filter(m=>!st[nkey(m)]);
-  const w=m=>"RACK "+(m.wpn.rack||"?")+" "+m.wpn.t+(m.wpn.s4?" ..."+m.wpn.s4:"")+" ("+m.rank+" "+m.name.split(",")[0]+")";
+  const w=m=>"RACK "+(m.wpn.rack||"?")+" "+m.wpn.t+(wSer(m)?" SN "+wSer(m):"")+(wRco(m)?" RCO "+wRco(m):"")+" ("+m.rank+" "+m.name.split(",")[0]+")";
   const L=["ARMORY MUSTER "+dtg(new Date(A.start||Date.now())),"ACCOUNTED: "+(inn.length+out.length)+"/"+ms.length+" (IN RACK "+inn.length+" · SIGNED OUT "+out.length+")"];
   if(out.length){L.push("");L.push("SIGNED OUT ("+out.length+")");out.forEach(m=>L.push("- "+w(m)))}
   L.push("");L.push("NOT SEEN ("+ns.length+")");ns.forEach(m=>L.push("- "+w(m)));
   return L.join("\n")}
 function importWeapons(text){const rows=parseCSV(text);const hi=rows.findIndex(r=>r.some(x=>/weapon/i.test(x))&&r.some(x=>/name/i.test(x)));
-  if(hi<0)throw new Error("Use the weapons template: columns Name, Weapon, Rack, Serial (last 4).");
-  const H=rows[hi].map(x=>x.toLowerCase());const ci=k=>H.findIndex(x=>x.includes(k));const wi=ci("weapon"),ri=ci("rack"),si=ci("serial");
+  if(hi<0)throw new Error("Use the weapons template: columns Name, Weapon, Rack, Serial, RCO Serial.");
+  const H=rows[hi].map(x=>x.toLowerCase());const ci=k=>H.findIndex(x=>x.includes(k));const isR=x=>/rco|optic|sight/.test(x);let wi=H.findIndex(x=>x.includes("weapon")&&!x.includes("serial"));if(wi<0)wi=ci("weapon");const ri=ci("rack"),si=H.findIndex(x=>x.includes("serial")&&!isR(x)),rci=H.findIndex(isR);
   let ok=0;const miss=[];
-  for(const r of rows.slice(hi+1)){const t=(r[wi]||"").trim();if(!t)continue;const rest=r.filter((_,j)=>j!==wi&&j!==ri&&j!==si).join(" , ");
+  for(const r of rows.slice(hi+1)){const t=(r[wi]||"").trim();if(!t)continue;const rest=r.filter((_,j)=>j!==wi&&j!==ri&&j!==si&&j!==rci).join(" , ");
     const m=matchMarine(rest.replace(/[^A-Za-z ,.'-]/g," "));if(!m){miss.push(rest.replace(/\s+/g," ").trim().slice(0,28));continue}
     const tt=WEAPONS.find(x=>x.replace(/\s/g,"").toUpperCase()===t.replace(/\s/g,"").toUpperCase())||t.toUpperCase();
-    m.wpn={t:tt,rack:(r[ri]||"").trim(),s4:digits(r[si]||"").slice(-4)};ok++}
+    {const sn=serKey(si>=0?r[si]:"").slice(0,24),rco=serKey(rci>=0?r[rci]:"").slice(0,24);m.wpn={t:tt,rack:(r[ri]||"").trim(),sn,rco,s4:digits(sn).slice(-4)}}ok++}
   save();return {ok,miss}}
 function renderArmory(){const A=S.arm;const ms=S.roster.filter(hasW).sort((a,b)=>rackNum(a)-rackNum(b));const st=A.st||{};let h=banner();
   if(A.open){const inn=ms.filter(m=>st[nkey(m)]==="in").length,out=ms.filter(m=>st[nkey(m)]==="out").length;
     h+=`<div class="mbar"><div class="ct">${inn+out}/${ms.length}<small>accounted · ${out} out</small></div><button class="btn" id="arClose">Close out</button></div>
       <label class="tog" style="margin:4px 0 8px"><input type="checkbox" id="arOnly"${A.only?" checked":""}> Show not seen only</label><div class="alist">`;
     for(const m of ms){const s=st[nkey(m)];if(A.only&&s)continue;
-      h+=`<div class="wrow" style="--sc:var(${s==="in"?"--s-onhand":s==="out"?"--s-aob":"--line"})"><div class="rk">${esc(m.wpn.rack||"–")}</div><div class="wi"><b>${esc(m.wpn.t)}</b>${m.wpn.s4?` <span class="s">…${esc(m.wpn.s4)}</span>`:""}<div class="s">${esc(m.rank+" "+m.name)} · ${m.sec}</div></div>
+      h+=`<div class="wrow" style="--sc:var(${s==="in"?"--s-onhand":s==="out"?"--s-aob":"--line"})"><div class="rk">${esc(m.wpn.rack||"–")}</div><div class="wi"><b>${esc(m.wpn.t)}</b>${wSer(m)?` <span class="s">SN ${esc(wSer(m))}</span>`:""}${wRco(m)?` <span class="s">RCO ${esc(wRco(m))}</span>`:""}<div class="s">${esc(m.rank+" "+m.name)} · ${m.sec}</div></div>
         <div class="wst"><button data-ws="in" data-wk="${esc(nkey(m))}" aria-pressed="${s==="in"}">In rack</button><button data-ws="out" data-wk="${esc(nkey(m))}" aria-pressed="${s==="out"}">Signed out</button></div></div>`}
     h+=`</div><button class="btn warn" id="arCancel" style="margin-top:16px;width:100%">${armed==="arcancel"?"Tap again to discard":"Discard armory muster"}</button>`;
     $("#main").innerHTML=h;return}
@@ -2681,12 +2683,12 @@ function renderArmory(){const A=S.arm;const ms=S.roster.filter(hasW).sort((a,b)=
     <button class="btn" id="arStart"${ms.length?"":" disabled"}>Start armory muster</button>
     <p class="note">Mark each weapon In rack or Signed out. Close out builds the report with anything not seen. Serials are last 4 only and stay on this phone.</p></div>`;
   if(A.last) h+=`<h2>Last armory muster</h2><div class="panel"><textarea readonly>${esc(A.last)}</textarea><div class="row2"><a class="btn" href="${esc(smsHref(A.last))}">Text it</a><button class="btn alt" id="arCopy">Copy</button></div></div>`;
-  h+=`<h2>Load weapon assignments</h2><div class="panel"><label for="wFile">Weapons file (.csv: Name, Weapon, Rack, Serial)</label><input type="file" id="wFile" accept=".csv,text/csv,text/plain"><div class="note" id="wOut"></div></div>`;
+  h+=`<h2>Load weapon assignments</h2><div class="panel"><label for="wFile">Weapons file (.csv: Name, Weapon, Rack, Serial, RCO Serial)</label><input type="file" id="wFile" accept=".csv,text/csv,text/plain"><div class="note" id="wOut"></div></div>`;
   h+=`<h2>Assign by Marine</h2><input class="search" id="wq" type="search" placeholder="Find a Marine" value="${esc(rq)}">`;
   const groups=SECTIONS.map(s=>s[0]).concat("ATT").map(k=>[k,sorted(S.roster.filter(m=>m.sec===k))]).filter(g=>g[1].length);
   for(const [k,list] of groups){const show=list.filter(m=>!rq||(m.rank+" "+m.name).toLowerCase().includes(rq));if(!show.length)continue;
-    h+=`<div class="mgrp"><h3><span>${k}</span><span class="note">${list.filter(hasW).length}/${list.length} assigned</span></h3>${show.map(m=>`<div class="wrow" style="--sc:var(${hasW(m)?"--olive":"--line"})"><div class="wi"><b>${esc(m.rank)}</b> ${esc(m.name)}<div class="s">${hasW(m)?esc(m.wpn.t)+" · rack "+esc(m.wpn.rack||"–")+(m.wpn.s4?" · …"+esc(m.wpn.s4):""):"No weapon assigned"}</div>
-      ${wEdit===m.id?`<div class="wedit"><select id="wT">${WEAPONS.map(w=>`<option${hasW(m)&&m.wpn.t===w?" selected":""}>${w}</option>`).join("")}</select><input id="wR" placeholder="Rack" value="${esc(hasW(m)?m.wpn.rack:"")}"><input id="wS" inputmode="numeric" maxlength="4" placeholder="Last 4" value="${esc(hasW(m)?m.wpn.s4:"")}">
+    h+=`<div class="mgrp"><h3><span>${k}</span><span class="note">${list.filter(hasW).length}/${list.length} assigned</span></h3>${show.map(m=>`<div class="wrow" style="--sc:var(${hasW(m)?"--olive":"--line"})"><div class="wi"><b>${esc(m.rank)}</b> ${esc(m.name)}<div class="s">${hasW(m)?esc(m.wpn.t)+" · rack "+esc(m.wpn.rack||"–")+(wSer(m)?" · SN "+esc(wSer(m)):"")+(wRco(m)?" · RCO "+esc(wRco(m)):""):"No weapon assigned"}</div>
+      ${wEdit===m.id?`<div class="wedit"><select id="wT">${WEAPONS.map(w=>`<option${hasW(m)&&m.wpn.t===w?" selected":""}>${w}</option>`).join("")}</select><input id="wR" placeholder="Rack" value="${esc(hasW(m)?m.wpn.rack:"")}"><input id="wS" maxlength="24" autocapitalize="characters" placeholder="Weapon serial #" value="${esc(hasW(m)?wSer(m):"")}"><input id="wO" maxlength="24" autocapitalize="characters" placeholder="RCO serial #" value="${esc(wRco(m))}">
         <div class="full"><button class="btn" data-wsave="${m.id}">Save</button><button class="btn alt" data-wclear="${m.id}">${hasW(m)?"Remove weapon":"Cancel"}</button></div></div>`:""}</div>
       ${wEdit===m.id?"":`<button class="btn alt" data-wedit="${m.id}" style="padding:8px 10px">${hasW(m)?"Edit":"Assign"}</button>`}</div>`).join("")}</div>`}
   $("#main").innerHTML=h}
@@ -2772,13 +2774,13 @@ function importCSV(text){
   const own=col("section")>=0&&col("status")>=0;
   const out=[];let n=0;
   for(const r of rows.slice(hi+1)){const rank=(r[col("rank")]||"").toUpperCase();const name=r[col("name")]||"";if(!rank||!name)continue;
-    if(own) out.push({id:"m"+(++n),rank,name,sec:(SECTIONS.some(s=>s[0]===r[col("section")])||r[col("section")]==="ATT")?r[col("section")]:SECTIONS[0][0],sub:(r[col("sub section")]||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6)||undefined,parent:col("parent unit")>=0?(r[col("parent unit")]||""):"",duty:col("duty")>=0&&DUTIES.includes(r[col("duty")])?r[col("duty")]:"Full Duty",status:mapStatus(r[col("status")]),detail:r[col("detail")]||"",loc:r[col("location")]||"",edd:r[col("edd")]||"",phone:normPh(r[col("phone")]||""),phone2:normPh(r[col("alt phone")]||""),email:col("email")>=0&&typeof normEmail==="function"?(normEmail(r[col("email")]||"")||undefined):undefined,wpn:(r[col("weapon")]||"")?{t:r[col("weapon")],rack:r[col("rack")]||"",s4:digits(r[col("serial4")]||"").slice(-4)}:undefined,start:r[col("start")]||"",end:r[col("end")]||""});
+    if(own) out.push({id:"m"+(++n),rank,name,sec:(SECTIONS.some(s=>s[0]===r[col("section")])||r[col("section")]==="ATT")?r[col("section")]:SECTIONS[0][0],sub:(r[col("sub section")]||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6)||undefined,parent:col("parent unit")>=0?(r[col("parent unit")]||""):"",duty:col("duty")>=0&&DUTIES.includes(r[col("duty")])?r[col("duty")]:"Full Duty",status:mapStatus(r[col("status")]),detail:r[col("detail")]||"",loc:r[col("location")]||"",edd:r[col("edd")]||"",phone:normPh(r[col("phone")]||""),phone2:normPh(r[col("alt phone")]||""),email:col("email")>=0&&typeof normEmail==="function"?(normEmail(r[col("email")]||"")||undefined):undefined,wpn:(r[col("weapon")]||"")?{t:r[col("weapon")],rack:r[col("rack")]||"",s4:digits(r[col("weapon serial")>=0?col("weapon serial"):col("serial4")]||"").slice(-4),sn:col("weapon serial")>=0?serKey(r[col("weapon serial")]||"").slice(0,24):"",rco:col("rco serial")>=0?serKey(r[col("rco serial")]||"").slice(0,24):""}:undefined,start:r[col("start")]||"",end:r[col("end")]||""});
     else{const det=r[col("duty status")]||"";const cm=S.level==="co"?mapCo(r[col("unit")]):null;out.push({id:"m"+(++n),rank,name,sec:cm?cm.sec:mapSec(r[col("unit")]),sub:cm&&cm.sub?cm.sub:undefined,status:mapStatus(det),detail:det,loc:r[col("location")]||"",start:fmtD(r[col("start date")]),end:fmtD(r[col("end date")]),edd:fmtD(r[col("edd")]||"")})}}
   if(!out.length)throw new Error("The file had a header but no Marines under it.");
   return {roster:out,own};
 }
 function exportCSV(){const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
-  return ["Rank,Name,Section,Status,Detail,Location,Start,End,Parent Unit,Duty,EDD,Phone,Alt Phone,Weapon,Rack,Serial4,Sub Section,Email"].concat(sorted(S.roster).map(m=>[m.rank,m.name,m.sec,m.status,m.detail,m.loc,m.start,m.end,m.parent||"",dutyOf(m),m.edd||"",m.phone||"",m.phone2||"",m.wpn?m.wpn.t:"",m.wpn?m.wpn.rack:"",m.wpn?m.wpn.s4:"",m.sub||"",m.email||""].map(q).join(","))).join("\n")}
+  return ["Rank,Name,Section,Status,Detail,Location,Start,End,Parent Unit,Duty,EDD,Phone,Alt Phone,Weapon,Rack,Serial4,Weapon Serial,RCO Serial,Sub Section,Email"].concat(sorted(S.roster).map(m=>[m.rank,m.name,m.sec,m.status,m.detail,m.loc,m.start,m.end,m.parent||"",dutyOf(m),m.edd||"",m.phone||"",m.phone2||"",m.wpn?m.wpn.t:"",m.wpn?m.wpn.rack:"",m.wpn?m.wpn.s4:"",m.wpn?wSer(m):"",m.wpn?wRco(m):"",m.sub||"",m.email||""].map(q).join(","))).join("\n")}
 
 /* ---------- events ---------- */
 document.addEventListener("click",e=>{
@@ -2813,7 +2815,7 @@ document.addEventListener("click",e=>{
   if(e.target.id==="arCancel"){if(armed==="arcancel"){S.arm.open=false;S.arm.st={};armed=null;save();toast("Armory muster discarded")}else armed="arcancel";renderArmory();return}
   if(e.target.id==="arCopy"){try{navigator.clipboard.writeText(S.arm.last).then(()=>toast("Copied"),()=>toast("Copy blocked here. Use Text it."))}catch(err){toast("Copy blocked here.")}return}
   const we=e.target.closest("[data-wedit]");if(we){wEdit=we.dataset.wedit;const y=window.scrollY;renderArmory();window.scrollTo(0,y);return}
-  const wsv=e.target.closest("[data-wsave]");if(wsv){const m=S.roster.find(x=>x.id===wsv.dataset.wsave);if(m){m.wpn={t:$("#wT").value,rack:$("#wR").value.trim(),s4:digits($("#wS").value).slice(-4)};save()}wEdit=null;const y=window.scrollY;renderArmory();window.scrollTo(0,y);toast("Weapon saved");return}
+  const wsv=e.target.closest("[data-wsave]");if(wsv){const m=S.roster.find(x=>x.id===wsv.dataset.wsave);if(m){{const sn=serKey($("#wS").value).slice(0,24),rco=serKey($("#wO").value).slice(0,24);m.wpn={t:$("#wT").value,rack:$("#wR").value.trim(),sn,rco,s4:digits(sn).slice(-4)};save()}}wEdit=null;const y=window.scrollY;renderArmory();window.scrollTo(0,y);toast("Weapon saved");return}
   const wc=e.target.closest("[data-wclear]");if(wc){const m=S.roster.find(x=>x.id===wc.dataset.wclear);if(m&&hasW(m)&&wEdit===m.id&&armed==="wclr"+m.id){delete m.wpn;save();armed=null;wEdit=null;toast("Weapon removed")}else if(m&&hasW(m)){armed="wclr"+m.id;toast("Tap Remove weapon again to confirm");return}else{wEdit=null}const y=window.scrollY;renderArmory();window.scrollTo(0,y);return}
   if(e.target.id==="rcStart"){S.rc.open=true;S.rc.start=Date.now();S.rc.rid=S.rc.start.toString(36)+rndId(4);S.rc.live=S.live===false?null:{key:rndId(32),ok:false,after:0,un:[]};liveIdx=null;setTimeout(livePoll,50);S.rc.end=0;S.rc.res={};S.rc.ci={};S.rc.sent={};S.rc.only=false;armed=null;save();renderRecall();window.scrollTo(0,0);return}
   const rr=e.target.closest("[data-rid]");if(rr){const id=rr.dataset.rid,c=rr.dataset.r;if(S.rc.res[id]===c)delete S.rc.res[id];else S.rc.res[id]=c;save();const y=window.scrollY;renderRecall();window.scrollTo(0,y);return}
