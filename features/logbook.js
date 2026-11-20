@@ -71,7 +71,9 @@ function sign(){grab();const m=S.roster.find(x=>x.id===who);if(!m)return;if(!all
   v={place:"",back:"",to:"",oth:""};save();try{if(S.board&&typeof rpPublish==="function")rpPublish(true)}catch(e){}
   again();try{buzz()}catch(e){}toast(nm(m)+": signed "+(mode==="out"?"OUT":"IN"))}
 {const _r=render;render=function(){if(view==="lb"){renderTabs();$("#main").innerHTML=html();if(typeof animateView==="function")animateView();return}return _r.apply(this,arguments)}}
-{const _t=tabOf;tabOf=function(x){return x==="lb"?(mem()?"today":"home"):_t.apply(this,arguments)}}
+{const _t=tabOf;tabOf=function(x){return x==="lb"?(mem()?"today":"people"):_t.apply(this,arguments)}}
+{const _rs=renderShell;renderShell=function(){const r=_rs.apply(this,arguments);try{if(mem())return r;const sn=document.getElementById("subnav");if(!sn||tabOf(view)!=="people"||sn.querySelector('[data-go="lb"]'))return r;
+  const b=document.createElement("button");b.setAttribute("data-go","lb");b.textContent="Logbook";if(view==="lb")b.setAttribute("aria-current","page");const f=sn.querySelector("button");if(f&&f.nextSibling)sn.insertBefore(b,f.nextSibling);else sn.appendChild(b)}catch(e){}return r}}
 try{STAY_VIEWS.push("lb")}catch(e){}
 document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest||view!=="lb")return;let b;
   if(b=t.closest("[data-lbtab]")){grab();tab=b.dataset.lbtab;who="";again();return}
@@ -82,7 +84,8 @@ document.addEventListener("change",e=>{if(view!=="lb"||e.target.id!=="lbWho")ret
 /* Home: a Logbook card under the check-in card, and a button on My page */
 function card(){const P=pool(),o=P.filter(isOut).length,l=P.filter(isLate).length;
   return `<div class="card" id="lbCard" style="margin-top:10px;display:flex;gap:10px;align-items:center"><div style="flex:1;min-width:0"><span class="lbl">LOGBOOK</span><div class="note" style="margin:2px 0 0">${o} out${l?` · <b style="color:var(--warn)">${l} late</b>`:""} · sign people out and in</div></div><button class="btn" data-go="lb" style="width:auto;flex:none;min-height:44px;padding:0 16px">Open</button></div>`}
+function lift(){try{const main=$("#main"),c=$("#lbCard");if(!main||!c||c.parentElement!==main)return;const h=main.querySelector(".greet,.hero");const to=h&&h.parentElement===main?h.nextElementSibling:main.firstElementChild;if(to&&to!==c)main.insertBefore(c,to)}catch(e){}}
 {const _rb=renderBoard;renderBoard=function(){const r=_rb.apply(this,arguments);try{if(!real()||mem()||$("#lbCard"))return r;const main=$("#main");if(!main)return r;
-  const a=main.querySelector("#myCk");if(a)a.insertAdjacentHTML("afterend",card());else{const h=main.querySelector(".greet,.hero");if(h&&h.parentElement===main)h.insertAdjacentHTML("afterend",card())}}catch(e){}return r}}
+  const h=main.querySelector(".greet,.hero");if(h&&h.parentElement===main)h.insertAdjacentHTML("afterend",card());else main.insertAdjacentHTML("afterbegin",card());setTimeout(lift,0);setTimeout(lift,250)}catch(e){}return r}}
 window.lbLate=()=>real()?pool().filter(isLate):[];window.lbBackTs=backTs;
 })();
