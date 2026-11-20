@@ -46,6 +46,12 @@ test("Home shows a Logbook card and My page has the button", async () => {
     a.w.eval(`${setup};view="board";render()`); await sleep(60);
     assert.ok(a.$("#lbCard"), "Home card");
     assert.ok(a.$('[data-go="lb"]'));
+    const kids = [...a.$("#main").children].map(x => x.id || x.className);
+    assert.ok(kids.indexOf("lbCard") <= 2, "card sits at the top of Home: " + kids.join(","));
+    a.w.eval(`view="people";render()`); await sleep(60);
+    assert.ok(a.$('#subnav [data-go="lb"]'), "Logbook button in the People sub-nav");
+    a.w.eval(`view="lb";render()`); await sleep(60);
+    assert.equal(a.w.eval(`tabOf("lb")`), "people");
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
