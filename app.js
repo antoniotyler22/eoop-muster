@@ -1362,11 +1362,12 @@ function renderAsk(){const ex=AK_EX[MODES[S.mode]?S.mode:"military"]||AK_EX.mili
     ${akErr?`<div class="note" style="color:var(--warn);font-weight:700">${esc(akErr)}</div>`:""}
     <p class="note">Searches official sources (.mil and .gov) and shows them. <b>Answers can be wrong or out of date: check the order or your admin shop before acting.</b> Don't type names, SSNs, phone numbers or anything sensitive or classified. Not official guidance.</p></div>`;
   if(!S.ask.length)h+=`<h2>Try</h2><div class="alist">${ex.map(x=>`<button class="rrow" data-akex="${esc(x)}" style="text-align:left;cursor:pointer">${esc(x)}</button>`).join("")}</div>`;
+  if(S.ask.length)h+=`<div class="panel" style="display:flex;gap:10px;align-items:center"><div class="note" style="flex:1;margin:0"><b>My history</b> · ${S.ask.length} question${S.ask.length>1?"s":""}, only on this phone</div><button class="btn alt" id="akClear" style="width:auto;flex:none;min-height:44px;padding:0 14px">${armed==="akclr"?"Tap again to delete all":"🗑 Delete all"}</button></div>`;
   h+=S.ask.map((x,i)=>`<div class="panel"><div class="note"><b>You</b> · ${ago(x.t)}</div><div style="font-weight:700">${esc(x.q)}</div>
     <div style="line-height:1.5">${akFmt(x.a)}</div>
     ${x.src.length?`<div class="note"><b>Sources</b>${x.src.map(s2=>`<div>• <a href="${esc(s2.url)}" target="_blank" rel="noopener">${esc(s2.title||s2.url)}</a></div>`).join("")}</div>`:`<div class="note" style="color:var(--s-duty)">No official source was cited for this answer. Verify it.</div>`}
-    <div class="row2"><button class="btn alt" data-akcopy="${i}">Copy</button>${navigator.share?`<button class="btn alt" data-akshare="${i}">Share</button>`:`<button class="btn alt" data-akdel="${i}">Remove</button>`}</div></div>`).join("");
-  if(S.ask.length)h+=`<button class="btn alt" id="akClear" style="width:100%;margin-top:8px">${armed==="akclr"?"Tap again to clear your questions":"Clear my questions"}</button><p class="note">Your questions stay on this phone only.</p>`;
+    <div class="row2"><button class="btn alt" data-akcopy="${i}">Copy</button>${navigator.share?`<button class="btn alt" data-akshare="${i}">Share</button>`:""}<button class="btn alt" data-akdel="${i}">Delete</button></div></div>`).join("");
+  if(S.ask.length)h+=`<p class="note">Your questions stay on this phone only.</p>`;
   $("#main").innerHTML=h}
 function akText(x){return "Q: "+x.q+"\n\n"+x.a+(x.src.length?"\n\nSources:\n"+x.src.map(s2=>"- "+(s2.title||"")+" "+s2.url).join("\n"):"")+"\n\n(Answer from Accounted For Ask. Verify with the current order.)"}
 
@@ -2896,7 +2897,7 @@ document.addEventListener("click",e=>{
   const akc=e.target.closest("[data-akcopy]");if(akc){const x=S.ask[+akc.dataset.akcopy];try{navigator.clipboard.writeText(akText(x)).then(()=>toast("Copied"),()=>toast("Copy blocked here."))}catch(err){toast("Copy blocked here.")}return}
   const aks=e.target.closest("[data-akshare]");if(aks){navigator.share({text:akText(S.ask[+aks.dataset.akshare])}).catch(()=>{});return}
   const akd=e.target.closest("[data-akdel]");if(akd){S.ask.splice(+akd.dataset.akdel,1);save();renderAsk();return}
-  if(e.target.id==="akClear"){if(armed==="akclr"){S.ask=[];armed=null;save()}else armed="akclr";renderAsk();return}
+  if(e.target.closest&&e.target.closest("#akClear")){if(armed==="akclr"){S.ask=[];S.sup=[];armed=null;save();toast("History deleted.")}else armed="akclr";renderAsk();return}
   if(e.target.id==="scAsk"){(async()=>{try{const r=await fetch("supabase/functions/ask/index.ts",{cache:"no-cache"});await navigator.clipboard.writeText(await r.text());toast("ask code copied. Edge Functions → new function named ask → paste → Deploy.")}catch(err){toast("Copy blocked here.")}})();return}
   if(e.target.closest("#bToday")){view="today";armed=null;tdLast=0;render();window.scrollTo(0,0);return}
   const tda=e.target.closest("[data-tdack]");if(tda){const [fid,pid2]=tda.dataset.tdack.split("|");const f=S.feeds.find(x=>x.id===fid);if(!f)return;tda.disabled=true;fdAck(f,+pid2,1).then(()=>{const y=window.scrollY;renderToday();window.scrollTo(0,y);toast("Got it sent")}).catch(err=>{tda.disabled=false;toast(/gone/.test(String(err&&err.message))?"That post was deleted.":"Couldn't send. Check signal and try again.")});return}

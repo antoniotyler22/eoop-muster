@@ -305,22 +305,25 @@ async function ciSend(c){const X=sheetCtx;if(!X||X.kind!=="v11ci")return;const n
   if(!X.live){sms();closeSheet();return}
   o.textContent="Sending…";try{const hs=await Promise.all(SB.words(n).map(w=>SB.h(X.rid,w)));await SB.rpc("checkin",{p_recall:X.rid,p_words:hs,p_code:c,p_note:eta});SB.notify(X.rid);closeSheet();toast("✓ Checked in: "+word)}
   catch(e){o.textContent="No signal for the live check-in. Opening a text instead…";setTimeout(()=>{sms();closeSheet()},800)}}
-function pushHelp(){const why=window.__pushWhy||"",err=window.__pushErr||"";const N=window.MBN&&MBN.on||window.NATIVE;
+function pushHelp(){const why=window.__pushWhy||"",err=window.__pushErr||"";const N=(window.MBN&&MBN.on)||(typeof NATIVE!=="undefined"&&NATIVE);
   let msg,btn="";
   if(!N&&!("Notification" in window&&"serviceWorker" in navigator))msg="This browser can't show alerts. Use the Accounted For iPhone app, or on iPhone open the web app from your Home Screen (Share → Add to Home Screen).";
   else if(!N&&typeof isIOS==="function"&&isIOS()&&!(typeof standalone==="function"&&standalone()))msg="On iPhone, web alerts only work from the Home Screen app: Share → Add to Home Screen, then open it from there. Or use the Accounted For iPhone app.";
   else if(why==="denied"||(!N&&"Notification" in window&&Notification.permission==="denied")){msg="Notifications are turned off for Accounted For. Turn them on: Settings → Notifications → Accounted For → Allow Notifications. Then come back and tap the alert button again.";if(N)btn=`<a class="btn" href="app-settings:">Open Settings</a>`}
+  else if(why==="plugerr")msg="This phone's alert service didn't answer"+(err?" ("+esc(err)+")":"")+". Close Accounted For fully (swipe it away), reopen it and tap the alert button again.";
+  else if(why==="noplugin")msg="Alerts aren't part of this copy of the app. Update Accounted For from the App Store or TestFlight and try again.";
   else if(why==="notoken")msg="Your phone allowed alerts, but Apple didn't register it yet"+(err?" ("+esc(err)+")":"")+". Check that you have signal and try again in a minute. If it keeps happening, send this message to support.";
   else if(why==="default")msg="The permission question was closed without an answer. Tap the alert button again and choose Allow.";
-  else msg="Alerts couldn't be turned on"+(err?": "+esc(err):"")+". Tap the alert button once more. If this shows again, take a screenshot of this message and send it to support.";
-  const D=["app="+(N?"iphone":"web"+((typeof standalone==="function"&&standalone())?"-home":"")),"perm="+(why||(("Notification" in window)&&Notification.permission)||"?"),"plugin="+(window.NP&&window.NATIVE&&NP("PushNotifications")?"yes":"no"),"token="+((()=>{try{return localStorage.getItem("eop-apns")?"yes":"no"}catch(e){return"?"}})()),"err="+(err||"none")].join(" · ");
+  else msg="Alerts couldn't be turned on"+(err?": "+esc(err):"")+". "+(N?"If iPhone never asked, open Settings → Accounted For → Notifications and turn on Allow Notifications, or tap Try again below. ":"")+"Tap the alert button once more. If this shows again, take a screenshot of this message and send it to support.";
+  const D=["app="+(N?"iphone":"web"+((typeof standalone==="function"&&standalone())?"-home":"")),"perm="+(why||(("Notification" in window)&&Notification.permission)||"?"),"raw="+(window.__pushRaw||"-"),"stage="+(window.__pushStage||"-"),"plugin="+(typeof NATIVE!=="undefined"&&NATIVE&&typeof NP==="function"&&NP("PushNotifications")?"yes":"no"),"token="+((()=>{try{return localStorage.getItem("eop-apns")?"yes":"no"}catch(e){return"?"}})()),"err="+(err||"none")].join(" · ");
   msg+=`<br><span class="note" style="font-size:11.5px;user-select:all">Details: ${esc(D)}</span>`;
+  if(N&&!btn)btn=`<button class="btn" id="v11PushRetry">Try again</button><a class="btn alt" href="app-settings:">Open Settings</a>`;
   sheetCtx={kind:"v11push"};$("#sheetT").innerHTML=`Alerts aren't on yet<small>Here's how to fix it</small>`;
   $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><p style="margin:0">${msg}</p>${btn}<button class="btn alt" data-sclose="1">OK</button></div>`;sheetOpen()}
 {const _ps=pushSub;pushSub=async function(ask){window.__pushWhy="";window.__pushErr="";let r=null;try{r=await _ps.apply(this,arguments);
-    if(!r&&ask&&window.NATIVE&&window.__pushWhy==="notoken"){window.__pushWhy="";r=await _ps.apply(this,arguments)}
-    if(!r&&!window.NATIVE&&!window.__pushWhy&&"Notification" in window)window.__pushWhy=Notification.permission==="granted"?"":Notification.permission}catch(e){window.__pushErr=String(e&&e.message||e).slice(0,160);if(ask)setTimeout(pushHelp,400);throw e}if(!r&&ask)setTimeout(pushHelp,400);return r}}
-document.addEventListener("click",e=>{const t=e.target;const b=t.closest("[data-v11ci]");if(b){const [fid,pid]=b.dataset.v11ci.split(":");const f=S.feeds.find(x=>x.id===fid);const p=f&&(f.posts||[]).find(x=>String(x.id)===pid);if(p)ciSheet(f,p);return}
+    if(!r&&ask&&typeof NATIVE!=="undefined"&&NATIVE&&window.__pushWhy==="notoken"){window.__pushWhy="";r=await _ps.apply(this,arguments)}
+    if(!r&&!(typeof NATIVE!=="undefined"&&NATIVE)&&!window.__pushWhy&&"Notification" in window)window.__pushWhy=Notification.permission==="granted"?"":Notification.permission}catch(e){window.__pushErr=String(e&&e.message||e).slice(0,160);if(ask)setTimeout(pushHelp,400);throw e}if(!r&&ask)setTimeout(pushHelp,400);return r}}
+document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest("#v11PushRetry")){closeSheet();setTimeout(()=>{try{pushSub(true)}catch(x){}},200);return}const t=e.target;const b=t.closest("[data-v11ci]");if(b){const [fid,pid]=b.dataset.v11ci.split(":");const f=S.feeds.find(x=>x.id===fid);const p=f&&(f.posts||[]).find(x=>String(x.id)===pid);if(p)ciSheet(f,p);return}
   const c=t.closest("[data-v11cic]");if(c){ciSend(+c.dataset.v11cic);return}});
 
 /* ================= 9. WELCOME / SIGN-IN SCREEN (first open, Tools, #login) ================= */
