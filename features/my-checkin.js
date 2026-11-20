@@ -91,7 +91,7 @@ window.myCkShow=show;window.myCkCard=cardHTML;
 })();
 
 /* Needs attention: a quiet section isn't a problem to fix. Its tile already says when it last updated, so the
-   "hasn't sent an update in 24 hr" line no longer sits on Home. */
+   "hasn't sent an update in 15 hr" line no longer sits on Home. */
 {const _hi=healthIssues;healthIssues=function(){return _hi.apply(this,arguments).filter(x=>!/hasn't sent an update in/.test(String(x&&x.t||"")))}}
 
 /* compact My check-in: status button and slider share one line */

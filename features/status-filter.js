@@ -1,7 +1,7 @@
 /* Accounted For 4.131.0: tap a status on Home to see just those names.
    The "off deck" legend under the rings (Appointment 2, Leave 1, At PT 3 ...) used to be plain text. Each one is now a
    button: tap it and a list opens with only the people in that status (rank and name, section, where and until when).
-   Tap a name to open that person. Off Hand = no check-in or update in 24 hours, same as the donut. */
+   Tap a name to open that person. Off Hand = no check-in or update in 15 hours, same as the donut. */
 (()=>{
 const SEG=[["Appointment","Appointment"],["duty","Duties"],["At PT","At PT"],["SIQ","SIQ"],["Operation","Operation"],["TAD","TAD"],["Leave","Leave"],["Other","Other"],["Off Hand","Off Hand"]];
 const DUTY=["Company Duties","OOD","Duty Driver","DNCO","DANCO","Duty Recovery"];

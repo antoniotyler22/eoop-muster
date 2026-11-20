@@ -26,7 +26,7 @@ function brief(){const t=dkey(),R=S.roster.filter(m=>m.sec!=="ATT");const aw=R.f
   const L=[`${new Date().toLocaleDateString([],{weekday:"long",month:"long",day:"numeric"})}: ${R.length} on the roster, ${R.length-aw.length} expected today.`];
   if(aw.length)L.push(`Away today (${aw.length}): ${aw.slice(0,5).map(m=>nm(m)+" ("+m.status+")").join(", ")}${aw.length>5?" and "+(aw.length-5)+" more":""}.`);
   if(soon.length)L.push(`Back within 3 days: ${soon.slice(0,5).map(m=>nm(m)+" "+m.end).join(", ")}.`);
-  if(stale.length&&R.some(m=>m.ckAt))L.push(`${stale.length} haven't checked in for 24 hours.`);
+  if(stale.length&&R.some(m=>m.ckAt))L.push(`${stale.length} haven't checked in for 15 hours.`);
   if(evs.length)L.push(`On the calendar: ${evs.map(e=>e.name+((isoOf(e.date)||e.date)===t?" today":" tomorrow")+(e.tm?" "+e.tm.replace(":",""):"")).join("; ")}.`);
   if(S.rc&&S.rc.open)L.push("A recall is open right now.");
   return L.join("\n")}

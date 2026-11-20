@@ -3,7 +3,7 @@
    - Filter chips: All, each section, ATT.
    - Select people (tick them), then "Move to…" on the bar at the bottom moves them all at once.
    - The owner sees a Sections summary first: each section's leader, how many are on hand, and who's missing (Off Hand:
-     no check-in or update in 24 hours). A section with no leader has "Assign leader": pick the person, then text them
+     no check-in or update in 15 hours). A section with no leader has "Assign leader": pick the person, then text them
      their section leader link.
    - A section leader (section leader link) sees and edits only their own section, and can't move people out of it.
    - Members don't have the People tab. */
@@ -24,7 +24,7 @@ function summary(){if(!own()||leaderLink())return "";const {c}=counts();
       <td style="text-align:right">${o["On Hand"]}/${o.total}</td>
       <td>${ms.length?`<span style="color:var(--warn);font-weight:700">${ms.length}</span> <span class="note" style="margin:0">${esc(ms.slice(0,3).map(m=>m.rank+" "+lastOf(m)).join(", "))}${ms.length>3?" +"+(ms.length-3):""}</span>`:`<span class="note" style="margin:0">None</span>`}</td></tr>`}).join("");
   return `<div class="panel" id="secSum"><b>Sections</b><table class="v11tb" style="width:100%"><thead><tr><th>Section</th><th>Leader</th><th style="text-align:right">On hand</th><th>Missing</th></tr></thead><tbody>${rows}</tbody></table>
-    <p class="note" style="margin:4px 0 0">Missing: no check-in or update in 24 hours (Off Hand).</p></div>`}
+    <p class="note" style="margin:4px 0 0">Missing: no check-in or update in 15 hours (Off Hand).</p></div>`}
 function chips(){const ks=mySecs();if(ks.length<2)return "";return `<div class="evts" id="pplChips" role="group" aria-label="Filter by section">${["all"].concat(ks).map(k=>`<button data-pchip="${esc(k)}" aria-pressed="${pf===k}">${k==="all"?"All":esc(k)}</button>`).join("")}</div>`}
 function rowsHTML(){const L=people();if(!L.length)return `<div class="panel"><p class="note">No one here yet.</p></div>`;
   return `<div class="alist" id="pplList">${L.slice(0,600).map(m=>{const st=stale(m)?"Off Hand":(typeof SHORT==="object"&&SHORT[m.status])||m.status;
