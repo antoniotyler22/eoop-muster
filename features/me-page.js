@@ -37,7 +37,7 @@ function musterHTML(){const f=typeof fdCur==="function"?fdCur():null;if(!f||!Arr
   return `<div class="card me-muster"><div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:12px;letter-spacing:.08em">🚨 EMERGENCY MUSTER</b><span style="font-size:12px;font-weight:800">${esc(ago(p.t))}</span></div>
     <div style="font-weight:700;line-height:1.35">${esc(txt)}</div>
     <button class="btn" data-meci="${esc(h)}" style="background:#fff;color:#b42318">Reply now · 1 I'm OK · 2 Delayed · 3 Need help</button></div>`}
-function bottomHTML(){return `<div class="me-bottom"><button class="btn alt" data-go="feed">📣 Word of Mouth</button><button class="btn alt" data-go="mecal">📅 Calendar</button><button class="btn alt" data-go="log">📓 My log</button><button class="btn alt" data-go="support">❓ Help</button></div>`}
+function bottomHTML(){return `<div class="me-bottom"><button class="btn alt" data-go="feed">📣 Word of Mouth</button><button class="btn alt" data-go="mecal">📅 Calendar</button><button class="btn alt" data-go="lb">📒 Logbook</button><button class="btn alt" data-go="log">📓 My log</button><button class="btn alt" data-go="support">❓ Help</button></div>`}
 /* collect the page the app built, then put it back together in order */
 function blocks(main){const out={};let cur=null;const kids=[...main.children];
   for(const el of kids){
