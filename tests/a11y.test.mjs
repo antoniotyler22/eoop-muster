@@ -33,7 +33,8 @@ test("fields and icon buttons get spoken names; tab rows use arrow keys; chat ro
     const rows = [...d.querySelectorAll("#chList .ch-row")].map((r) => r.getAttribute("aria-label"));
     assert.deepEqual(rows, ["SGT Ray at 10:00", "You at 10:01"]);
     const tabs = [...d.querySelectorAll(".ch-seg [role=tab]")];
-    assert.equal(tabs.filter((t) => t.tabIndex === 0).length, 1, "one tab stop in the switch");
+    const segs = [...d.querySelectorAll(".ch-seg")]; /* 4.139.0: on Feed/Inbox a docked copy exists beside the hidden top one; each switch has one tab stop */
+    assert.ok(segs.length >= 1 && segs.every((sg) => [...sg.querySelectorAll("[role=tab]")].filter((t) => t.tabIndex === 0).length === 1), "one tab stop in the switch");
     tabs[0].focus();
     tabs[0].dispatchEvent(new a.w.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
     await sleep(250);
