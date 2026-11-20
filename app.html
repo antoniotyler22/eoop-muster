@@ -87,7 +87,7 @@ const V=window.VAULT={key:null,cfg:getCfg(),ok:!!(window.crypto&&crypto.subtle),
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.hidden){hiddenAt=Date.now();return}
   const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
-window.AV="4.138.2";
+window.AV="4.138.3";
 /* self-update: an installed web app resumes without reloading, so check the live version on open, on every return, and every 10 min */
 (()=>{const NAT=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());if(NAT||!/^https?:$/.test(location.protocol))return;
   let busy=false,last=0;const typing=()=>{const a=document.activeElement;return a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)};
@@ -111,13 +111,17 @@ async function startApp(){try{if(window.__RAW===undefined&&!window.VAULT.cfg){co
 const NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
 const PUB=()=>!NATIVE&&/^https?:$/.test(location.protocol)?location.origin+location.pathname:"https://accountedforteam.com/app.html";
 /* Android: push alerts need Firebase (google-services.json + FCM in the notify function); until then the Android app skips push. */
-const NP=n=>{try{if(n==="PushNotifications"&&NATIVE&&window.Capacitor.getPlatform&&window.Capacitor.getPlatform()==="android"&&!window.AF_ANDROID_PUSH)return null;return NATIVE&&window.Capacitor.registerPlugin?window.Capacitor.registerPlugin(n):null}catch(e){return null}};
+const NP=n=>{try{if(!NATIVE||!window.Capacitor){window.__npWhy="web";return null}
+  const C=window.Capacitor;let pl="";try{pl=C.getPlatform?C.getPlatform():""}catch(e){}window.__plat=pl;
+  const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||pl==="ios";
+  if(n==="PushNotifications"&&!ios&&pl==="android"&&!window.AF_ANDROID_PUSH){window.__npWhy="android";return null}
+  const p=(C.Plugins&&C.Plugins[n])||(C.registerPlugin?C.registerPlugin(n):null);if(!p){window.__npWhy="no-register";return null}return p}catch(e){window.__npWhy="throw:"+String(e&&e.message||e).slice(0,80);return null}};
 if(NATIVE){const shim={permission:(()=>{try{return localStorage.getItem("eop-nperm")||"default"}catch(e){return"default"}})(),requestPermission:async()=>nativePushPerm(true)};try{Object.defineProperty(window,"Notification",{value:shim,configurable:true,writable:true})}catch(e){window.Notification=shim}}
 async function nativePushPerm(ask){const P=NP("PushNotifications");window.__pushStage="start";if(!P){window.__pushWhy="noplugin";return"denied"}
   let st;try{window.__pushStage="check";st=await P.checkPermissions();window.__pushRaw=String(st&&st.receive);if((st.receive==="prompt"||st.receive==="prompt-with-rationale")&&ask){window.__pushStage="request";st=await P.requestPermissions();window.__pushRaw=String(st&&st.receive)}}catch(e){window.__pushWhy="plugerr";window.__pushErr=String((e&&(e.message||e.code))||e).slice(0,160);return"denied"}
   const v=st.receive==="granted"?"granted":st.receive==="denied"?"denied":"default";window.__pushWhy=v==="granted"?"":v;window.Notification.permission=v;try{localStorage.setItem("eop-nperm",v)}catch(e){}return v}
 let apnsTok=null,apnsWait=[];
-async function nativeSub(ask){const P=NP("PushNotifications");if(!P)return null;const perm=await nativePushPerm(ask);if(perm!=="granted")return null;
+async function nativeSub(ask){const P=NP("PushNotifications");if(!P){window.__pushWhy="noplugin";window.__pushStage="np-null";return null}const perm=await nativePushPerm(ask);if(perm!=="granted")return null;
   if(!apnsTok){try{apnsTok=localStorage.getItem("eop-apns")}catch(e){}}
   if(!apnsTok||ask){const t=new Promise(res=>{apnsWait.push(res);setTimeout(()=>res(null),15000)});window.__pushStage="register";try{await P.register()}catch(e){window.__pushErr=String((e&&(e.message||e.code))||e).slice(0,160)}const tok=await t;if(tok)apnsTok=tok}
   if(!apnsTok){window.__pushWhy="notoken";return null}window.__pushWhy="";const j={endpoint:"apns:"+apnsTok,apns:apnsTok,keys:{}};return {toJSON:()=>j,endpoint:j.endpoint}}
