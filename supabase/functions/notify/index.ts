@@ -77,18 +77,18 @@ async function apnsSend(token: string, p: Record<string, unknown>, urgent: boole
   const first = Deno.env.get("APNS_SANDBOX") === "1" ? "api.sandbox.push.apple.com" : "api.push.apple.com";
   const second = first === "api.push.apple.com" ? "api.sandbox.push.apple.com" : "api.push.apple.com";
   try {
+    const jwt = await apnsToken();
     const body = JSON.stringify({ aps: apsFor(p, urgent, Deno.env.get("APNS_CRITICAL") === "1"), open: p.open, sos: p.sos });
     const send = (host: string) => fetch(`https://${host}/3/device/${token}`, {
       method: "POST",
-      headers: { authorization: "bearer " + apnsJwtSync, "apns-topic": Deno.env.get("APNS_TOPIC") || "com.antoniotyler.accountedfor", "apns-push-type": "alert", "apns-priority": urgent ? "10" : "5", "content-type": "application/json" },
+      headers: { authorization: "bearer " + jwt, "apns-topic": Deno.env.get("APNS_TOPIC") || "com.antoniotyler.accountedfor", "apns-push-type": "alert", "apns-priority": urgent ? "10" : "5", "content-type": "application/json" },
       body,
     });
-    apnsJwtSync = await apnsToken();
     let r = await send(first);
     let reason = "";
     if (!r.ok) {
       try { reason = String((await r.json())?.reason ?? ""); } catch { /* no body */ }
-      if (r.status === 403 && reason === "BadEnvironmentKeyInToken" || r.status === 400 && reason === "BadDeviceToken") {
+      if ((r.status === 403 && reason === "BadEnvironmentKeyInToken") || (r.status === 400 && reason === "BadDeviceToken")) {
         r = await send(second);
         reason = "";
         if (!r.ok) { try { reason = String((await r.json())?.reason ?? ""); } catch { /* no body */ } }
@@ -103,7 +103,6 @@ async function apnsSend(token: string, p: Record<string, unknown>, urgent: boole
     return dead ? "gone" : "fail";
   } catch (e) { console.error("apns push error:", String((e as Error)?.message ?? e).slice(0, 120)); return "fail"; }
 }
-let apnsJwtSync = "";
 // Quiet hours: the phone's sign-up carries qh [fromMin, toMin] (local minutes) and tz (minutes east of UTC).
 // deno-lint-ignore no-explicit-any
 function quietNow(sub: any): boolean {
