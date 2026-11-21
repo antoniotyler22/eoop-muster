@@ -5,7 +5,7 @@
   "description": "Accounted For (EOP Numbers) native shell",
   "scripts": {
     "bundle": "node tools/bundle.mjs",
-    "test": "node tools/bundle.mjs --check && node tools/ios-version.mjs --check && node tools/build-hub.mjs --check && node --test tests/*.test.mjs",
+    "test": "node tools/bundle.mjs --check && node tools/ios-version.mjs --check && node tools/build-hub.mjs --check && node tools/check-setup-parts.mjs && node tools/check-wrappers.mjs && node --test tests/*.test.mjs",
     "build:web": "npm run bundle && node native/build-web.js",
     "sync:ios": "npm run build:web && npx cap sync ios",
     "sync:android": "npm run build:web && npx cap sync android"

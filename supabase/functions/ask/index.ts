@@ -101,6 +101,12 @@ My rank: on My page → Settings, military versions pick their own rank; civilia
 Official channel: one-way updates from the app owner to everyone (what's new). Find it in Chat.
 Help guide: the ? on any screen. A person reads every email at administration@accountedforteam.com.`;
 
+/** 4.140.0: one network address can't use more than AI_IP_CAP calls a day across Ask, scan and support (a whole base on one Wi-Fi gets a generous default). */
+async function overIp(bump: (k: string) => Promise<number>, ip: string) {
+  if (!ip || ip === "unknown") return false;
+  return (await bump("n:" + await sha(ip + "|net"))) > Number(Deno.env.get("AI_IP_CAP") ?? 200);
+}
+
 function supportSystem(mode: string, leader: boolean) {
   return `You are the customer support assistant inside Accounted For, a team accountability app. You help ${leader ? "a team leader" : "a team member"} use the app (version: ${mode}).
 Only answer questions about using Accounted For, the account, Pro and troubleshooting. For anything else, say you can only help with the app and suggest the Ask feature for other questions.
@@ -122,6 +128,7 @@ async function support(body: any, req: Request, key: string): Promise<Response> 
   const dev = await sha(devId + "|" + (Deno.env.get("SUPABASE_URL") ?? ""));
   const bump = async (k: string) => { const r = await db.rpc("ai_bump", { p_k: k }); if (r.error) throw new Error("setup"); return r.data as number; };
   try {
+    if (await overIp(bump, ip)) return json({ error: "Too many requests from this network today. Email a person instead." }, 429);
     if ((await bump("s:" + dev)) > Number(Deno.env.get("AI_SUPPORT_PER_DEVICE") ?? 15)) return json({ error: "You've reached today's support chat limit on this phone. Email a person instead." }, 429);
     if ((await bump("support")) > Number(Deno.env.get("AI_SUPPORT_CAP") ?? 1000)) return json({ error: "Support chat is very busy today. Email a person instead." }, 429);
     if ((await bump("server")) > Number(Deno.env.get("AI_SERVER_CAP") ?? 5000)) return json({ error: "Support chat is very busy today. Email a person instead." }, 429);
@@ -164,6 +171,7 @@ async function scan(body: any, req: Request, key: string): Promise<Response> {
   const dev = await sha(devId + "|" + (Deno.env.get("SUPABASE_URL") ?? ""));
   const bump = async (k: string) => { const r = await db.rpc("ai_bump", { p_k: k }); if (r.error) throw new Error("setup"); return r.data as number; };
   try {
+    if (await overIp(bump, ip)) return json({ error: "Too many requests from this network today. Try again tomorrow." }, 429);
     if ((await bump("scan:" + dev)) > Number(Deno.env.get("AI_SCAN_PER_DEVICE") ?? 15)) return json({ error: "You've reached today's scan limit on this phone." }, 429);
     if ((await bump("server")) > Number(Deno.env.get("AI_SERVER_CAP") ?? 5000)) return json({ error: "Scan is very busy today. Try again tomorrow." }, 429);
   } catch {
@@ -298,6 +306,8 @@ Deno.serve(async (req) => {
   const dev = await sha(devId + "|" + (Deno.env.get("SUPABASE_URL") ?? ""));
   const bump = async (k: string) => { const r = await db.rpc("ai_bump", { p_k: k }); if (r.error) throw new Error("setup"); return r.data as number; };
   try {
+    // A phone ID is chosen by the caller, so a fresh ID per request would dodge the per-phone limit; the network address can't be faked as easily.
+    if (await overIp(bump, ip)) return json({ error: "Too many questions from this network today. Try again tomorrow." }, 429);
     // Check the phone's own limit first, so one phone hitting its limit doesn't use up the team's.
     if ((await bump("d:" + dev)) > per) return json({ error: "You've reached today's question limit on this phone. Try again tomorrow." }, 429);
     // Test purchases (TestFlight / Sandbox, Stripe test mode) are free to make, so they get a small daily limit.
