@@ -56,6 +56,7 @@ export const SOURCES = [
   "features/co-command.js",
   "features/adoption.js",
   "features/drills.js",
+  "features/pro-safety.js",
   "features/family.js",
   "features/roster-import.js",
   "features/add-people.js",
