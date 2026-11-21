@@ -13,6 +13,7 @@
 //  alerts: asks the Notify function whether alerts are going out ({stalled:1}) and whether this owner's phone is set to be warned.
 //  The "alerts not going out" buzz itself is sent by Notify's minute job (4.32.0), so it works even if this function is down.
 import webpush from "npm:web-push@3.6.7";
+import { hashPw, checkPw, isPw2, lockedFrom, LOCK_WINDOW_MS } from "./pw.ts";
 const URL0 = Deno.env.get("SUPABASE_URL") ?? "";
 const SRK = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const OWNER_USER = (Deno.env.get("OWNER_USER") ?? "").trim().toLowerCase();
@@ -32,20 +33,34 @@ async function rest(path: string, init: RequestInit = {}) {
 }
 
 /* ---- the owner's settings row (part 30 columns are optional: before part 30 the secret alone is used) ---- */
-type Own = { owner_hash?: string | null; owner_totp?: string | null; owner_totp_pending?: string | null; owner_codes?: string[]; owner_sub?: unknown; tok_epoch?: number; cron_token?: string; alert_at?: string | null };
+type Own = { owner_hash?: string | null; owner_hash2?: string | null; owner_totp?: string | null; owner_totp_pending?: string | null; owner_codes?: string[]; owner_sub?: unknown; tok_epoch?: number; cron_token?: string; alert_at?: string | null };
 let ownErr = "";
 async function own(): Promise<Own> {
-  try { const r = await rest("app_cfg?select=owner_hash,owner_totp,owner_totp_pending,owner_codes,owner_sub,tok_epoch,cron_token,alert_at&id=eq.1"); ownErr = Array.isArray(r) ? (r[0] ? "" : "no row") : "not a list"; return r && r[0] ? r[0] : {}; } catch (e) { ownErr = String((e as Error).message || e).slice(0, 120); return {}; }
+  const cols = "owner_hash,owner_totp,owner_totp_pending,owner_codes,owner_sub,tok_epoch,cron_token,alert_at";
+  for (const c of [cols + ",owner_hash2", cols]) { // owner_hash2 needs part 58; before it the old columns alone are read
+    try { const r = await rest("app_cfg?select=" + c + "&id=eq.1"); ownErr = Array.isArray(r) ? (r[0] ? "" : "no row") : "not a list"; return r && r[0] ? r[0] : {}; } catch (e) { ownErr = String((e as Error).message || e).slice(0, 120); }
+  }
+  return {};
 }
 const patchOwn = (p: Record<string, unknown>) => rest("app_cfg?id=eq.1", { method: "PATCH", body: JSON.stringify(p), headers: { Prefer: "return=minimal" } });
 const hashOf = (o: Own) => (o.owner_hash && /^[0-9a-f]{64}$/.test(o.owner_hash) ? o.owner_hash : OWNER_HASH);
+/** What the sign-in tokens are keyed from: the salted hash once part 58 has upgraded it, else the old hash. */
+const keyMat = (o: Own) => (isPw2(o.owner_hash2) ? o.owner_hash2 : hashOf(o));
+const REQUIRE_2STEP = (Deno.env.get("OWNER_REQUIRE_2STEP") ?? "1") !== "0";
+const is2stepFree = new Set(["stats", "errors", "cfg", "health", "log", "alerts", "comps", "subcount", "totp_start", "totp_on", "setpass", "signoutall"]);
+/** Password check: the salted hash when set, else the old SHA-256 (and the caller upgrades it on success). */
+async function pwOk(o: Own, user: string, pass: string) {
+  if (!same(user, OWNER_USER)) return false;
+  if (isPw2(o.owner_hash2)) return checkPw(user, pass, o.owner_hash2);
+  return same(await sha(user + ":" + pass), hashOf(o));
+}
 
 /* ---- sign in: a signed token, nothing stored. Changing the password or "sign out everywhere" bumps tok_epoch, which
    is part of the signing key, so every token issued before stops working. ---- */
-async function key(o: Own) { return crypto.subtle.importKey("raw", te.encode("owner:" + hashOf(o) + ":" + (o.tok_epoch || 0)), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]); }
+async function key(o: Own) { return crypto.subtle.importKey("raw", te.encode("owner:" + keyMat(o) + ":" + (o.tok_epoch || 0)), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]); }
 async function mint(o: Own) { const exp = Date.now() + 12 * 3600000; const sig = hex(await crypto.subtle.sign("HMAC", await key(o), te.encode(String(exp)))); return { tok: exp + "." + sig, exp }; }
 async function valid(o: Own, tok: unknown) {
-  if (typeof tok !== "string" || !hashOf(o)) return false; const [e, s] = tok.split("."); const exp = +e; if (!exp || exp < Date.now() || !s) return false;
+  if (typeof tok !== "string" || !keyMat(o)) return false; const [e, s] = tok.split("."); const exp = +e; if (!exp || exp < Date.now() || !s) return false;
   return same(s, hex(await crypto.subtle.sign("HMAC", await key(o), te.encode(String(exp)))));
 }
 /* 2-step: a 6-digit code from an authenticator app (TOTP, 30 s, SHA-1), or one of 8 recovery codes shown once. */
@@ -131,9 +146,17 @@ async function broadcast(b: Record<string, unknown>) {
   }
   return { phones: phones.length, sent, gone, failed, at: Date.now() };
 }
-const fails = new Map<string, { n: number; at: number }>();
-function locked(ip: string) { const f = fails.get(ip); return !!f && f.n >= 5 && Date.now() - f.at < 15 * 60000; }
-function fail(ip: string) { const f = fails.get(ip); fails.set(ip, { n: f && Date.now() - f.at < 15 * 60000 ? f.n + 1 : 1, at: Date.now() }); if (fails.size > 2000) fails.clear(); }
+const fails = new Map<string, { n: number; at: number }>(); // fallback only, for before part 30
+function failMem(ip: string) { const f = fails.get(ip); fails.set(ip, { n: f && Date.now() - f.at < LOCK_WINDOW_MS ? f.n + 1 : 1, at: Date.now() }); if (fails.size > 2000) fails.clear(); }
+/** Bad tries are counted from the owner log in the database, so a restart or a second server instance can't reset them. */
+async function locked(ip: string) {
+  try {
+    const since = new Date(Date.now() - LOCK_WINDOW_MS).toISOString();
+    const rows = await rest("owner_log?select=ip&op=eq.login&ok=eq.false&detail=neq.locked%20out&t=gte." + encodeURIComponent(since) + "&limit=200");
+    return Array.isArray(rows) && lockedFrom(rows, ip);
+  } catch { const f = fails.get(ip); return !!f && f.n >= 5 && Date.now() - f.at < LOCK_WINDOW_MS; }
+}
+const fail = (ip: string) => failMem(ip); // the log row written beside it is what the database count reads
 
 /* ---- what the owner can see and do ---- */
 async function stats() { const o = await rest("rpc/owner_stats", { method: "POST", body: "{}" }); return { ...o, at: Date.now() }; }
@@ -206,13 +229,13 @@ Deno.serve(async (req) => {
   const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "?";
   try {
     const o = await own(); const H = hashOf(o);
-    if (b.op === "ping") return json({ ok: 1, owner: 1, set: !!(OWNER_USER && /^[0-9a-f]{64}$/.test(H)), totp: !!o.owner_totp, p30: "tok_epoch" in o, ...(ownErr ? { p30err: ownErr } : {}) });
+    if (b.op === "ping") return json({ ok: 1, owner: 1, set: !!(OWNER_USER && (isPw2(o.owner_hash2) || /^[0-9a-f]{64}$/.test(H))), salted: isPw2(o.owner_hash2), p58: "owner_hash2" in o, need2step: REQUIRE_2STEP && !o.owner_totp, totp: !!o.owner_totp, p30: "tok_epoch" in o, ...(ownErr ? { p30err: ownErr } : {}) });
     if (b.op === "cron") { if (!o.cron_token || !same(String(b.key ?? ""), o.cron_token)) return json({ error: "not allowed" }, 403); return json(await cronCheck(o)); }
     if (b.op === "login") {
-      if (!OWNER_USER || !/^[0-9a-f]{64}$/.test(H)) return json({ error: "The owner isn't set up on the server (OWNER_USER and OWNER_HASH secrets)." }, 503);
-      if (locked(ip)) { await log(ip, "login", "locked out", false); return json({ error: "Too many tries. Wait 15 minutes." }, 429); }
+      if (!OWNER_USER || !(isPw2(o.owner_hash2) || /^[0-9a-f]{64}$/.test(H))) return json({ error: "The owner isn't set up on the server (OWNER_USER and OWNER_HASH secrets)." }, 503);
+      if (await locked(ip)) { await log(ip, "login", "locked out", false); return json({ error: "Too many tries. Wait 15 minutes." }, 429); }
       const u = String(b.user ?? "").trim().toLowerCase(), p = String(b.pass ?? "");
-      if (!u || !p || !same(u, OWNER_USER) || !same(await sha(u + ":" + p), H)) { fail(ip); await log(ip, "login", "wrong password", false); return json({ error: "Username or password is wrong." }, 401); }
+      if (!u || !p || !(await pwOk(o, u, p))) { fail(ip); await log(ip, "login", "wrong password", false); return json({ error: "Username or password is wrong." }, 401); }
       if (o.owner_totp) {
         if (b.code == null || b.code === "") return json({ need: "code" });
         const c = String(b.code).trim().toLowerCase().replace(/\s/g, "");
@@ -221,10 +244,15 @@ Deno.serve(async (req) => {
         if (!ok) { fail(ip); await log(ip, "login", "wrong 2-step code", false); return json({ error: "That code isn't right." }, 401); }
       }
       fails.delete(ip); await log(ip, "login", o.owner_totp ? "with 2-step" : "password only");
+      let oo = o;
+      if (!isPw2(o.owner_hash2) && "owner_hash2" in o) { // upgrade the old unsalted hash on a good sign-in (part 58 applied)
+        try { const nh2 = await hashPw(u, p); await patchOwn({ owner_hash2: nh2, owner_hash: null }); oo = { ...o, owner_hash2: nh2, owner_hash: null }; await log(ip, "login", "password hash upgraded"); } catch { /* keep the old hash */ }
+      }
       push(o, "🛡 Owner sign-in", "Someone signed in as the app owner from " + ip + ". Not you? Open the console → Security → Sign out everywhere.").catch(() => {});
-      return json(await mint(o));
+      return json({ ...(await mint(oo)), ...(REQUIRE_2STEP && !o.owner_totp ? { need2step: true } : {}) });
     }
     if (!(await valid(o, b.tok))) return json({ error: "Sign in again." }, 401);
+    if (REQUIRE_2STEP && !o.owner_totp && !is2stepFree.has(String(b.op))) { await log(ip, String(b.op).slice(0, 24), "blocked: 2-step is off", false); return json({ error: "Turn on 2-step sign-in first (console → Security). Until then the owner console is read-only.", need2step: true }, 403); }
     switch (b.op) {
       case "opost": { const r = await officialPost(b); await log(ip, "opost", String(b.body ?? "").slice(0, 80)); return json(r); }
       case "odel": { const r = await officialDel(b.id); await log(ip, "odel", String(b.id)); return json(r); }
@@ -243,11 +271,13 @@ Deno.serve(async (req) => {
       case "log": return json({ rows: await logs() });
       case "setpass": {
         const cur = String(b.cur ?? ""), nx = String(b.next ?? "");
-        if (!same(await sha(OWNER_USER + ":" + cur), H)) { await log(ip, "setpass", "wrong current password", false); return json({ error: "The current password is wrong." }, 401); }
+        if (!(await pwOk(o, OWNER_USER, cur))) { await log(ip, "setpass", "wrong current password", false); return json({ error: "The current password is wrong." }, 401); }
         if (nx.length < 12) return json({ error: "The new password needs at least 12 characters." }, 400);
         if (!("tok_epoch" in o)) return json({ error: "Run setup part 30 first." }, 503);
-        const nh = await sha(OWNER_USER + ":" + nx); const ep = (o.tok_epoch || 0) + 1; await patchOwn({ owner_hash: nh, tok_epoch: ep });
-        await log(ip, "setpass", "password changed; every other sign-in ended"); return json(await mint({ ...o, owner_hash: nh, tok_epoch: ep }));
+        const ep = (o.tok_epoch || 0) + 1; let no: Own;
+        if ("owner_hash2" in o) { const nh2 = await hashPw(OWNER_USER, nx); await patchOwn({ owner_hash2: nh2, owner_hash: null, tok_epoch: ep }); no = { ...o, owner_hash2: nh2, owner_hash: null, tok_epoch: ep }; }
+        else { const nh = await sha(OWNER_USER + ":" + nx); await patchOwn({ owner_hash: nh, tok_epoch: ep }); no = { ...o, owner_hash: nh, tok_epoch: ep }; } // before part 58
+        await log(ip, "setpass", "password changed; every other sign-in ended"); return json(await mint(no));
       }
       case "signoutall": { if (!("tok_epoch" in o)) return json({ error: "Run setup part 30 first." }, 503); await patchOwn({ tok_epoch: (o.tok_epoch || 0) + 1 }); await log(ip, "signoutall"); return json({ ok: 1 }); }
       case "totp_start": { if (!("tok_epoch" in o)) return json({ error: "Run setup part 30 first." }, 503); const secret = b32enc(crypto.getRandomValues(new Uint8Array(20))); await patchOwn({ owner_totp_pending: secret }); return json({ secret, uri: `otpauth://totp/Accounted%20For:owner?secret=${secret}&issuer=Accounted%20For&digits=6&period=30` }); }

@@ -1,7 +1,7 @@
 # Accounted For: security and data handling
 
 A plain-language description of how Accounted For protects data, for organizations evaluating it.
-Last updated for version 4.91 (November 2026).
+Last updated for version 4.140 (November 2026).
 
 ## Design in one paragraph
 The roster lives on the leader's phone, not on a server. Optional PIN lock encrypts it on the device (AES-256-GCM,
@@ -39,6 +39,20 @@ Stated plainly so there are no surprises:
    them. Nothing is stored this way unless the person signs in or is sent a team. Delete my account (Tools → Data and
    settings → Security) removes the sign-in and saved list. Sealing the saved list with a key only the phone holds is
    not built yet.
+6. **Sign in with Google or Apple, join codes, Ask to join and team email matching (4.127+).** The sign-in provider and
+   Supabase Auth hold the email address. Roster emails are stored as one-way hashes (`roster_emails.h`), and each
+   person's join details are encrypted with a key made from their own email, so the server can't list addresses.
+   Join codes are stored only as a hash plus the team link encrypted with a key made from the code; wrong guesses are
+   rate-limited. A team that chooses to be listed for "Ask to join" stores its **team name in readable form**.
+7. **Verified badges (4.117, 4.123).** A leader who asks for Organization confirmed sends an organization name, website,
+   role and contact that the server stores readable so the owner can approve it. A leader's vouch for a person stores
+   the leader's short display name and the person's roster id (no name) readable.
+8. **Armory serials (4.137).** Rack numbers, weapon serials and RCO serials live in the roster on the leader's phone and
+   in its encrypted backup, like other roster fields. Don't type anything into Accounted For that your command or
+   employer doesn't allow on a personal or commercial app.
+9. **Owner console (4.140).** The owner password is stored as a salted PBKDF2 hash. Sign-in locks after 5 bad tries from
+   one address (25 from all addresses) in 15 minutes, counted in the database. 2-step sign-in is required for the
+   console's write actions.
 
 ## Payments
 Apple (App Store) and Stripe (web) handle all payment data. The server verifies Apple's signed transactions itself
