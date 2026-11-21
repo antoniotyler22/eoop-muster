@@ -45,7 +45,8 @@ begin
     returning l.feed_id, l.who, l.due_at;
 end $$;
 
-grant execute on function public.lone_set(text, text, text, text, timestamptz) to anon;
+revoke all on function public.lone_set(text, text, text, text, timestamptz) from public;
+grant execute on function public.lone_set(text, text, text, text, timestamptz) to anon, authenticated;
 revoke all on function public.lone_due() from public, anon, authenticated;
 grant execute on function public.lone_due() to service_role;
 
