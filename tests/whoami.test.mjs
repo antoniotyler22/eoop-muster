@@ -19,7 +19,7 @@ test("an old section-leader link shows the Who are you banner; picking a name se
   try {
     a.w.eval(LINK);
     assert.ok(a.$("#whoBan"), "banner for a phone that hasn't picked");
-    assert.match(a.$("#whoBan").textContent, /role stays the same/);
+    assert.match(a.$("#whoBan").textContent, /permission stays the same/);
     a.$("#whoGo").click();
     const btns = a.$$("[data-whoid]");
     assert.equal(btns.length, 4, "the section's people");

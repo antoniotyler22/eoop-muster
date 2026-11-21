@@ -1946,7 +1946,7 @@ function syncHTML(){const Y=S.sync;
       <p class="note"><b>Write this down or save it in your password manager.</b> Without it, a lost phone means lost data; there is no reset. Anyone with it can read and change your board.</p>
       <div class="row2"><button class="btn alt" id="syCopy">Copy code</button><span></span></div>
       ${isOwner()?`<div class="note"><b>Add another phone:</b></div><div class="row2">${[["co","Same as me"],["sncoic","SNCOIC (can edit)"],["view","View only"]].map(([r,l])=>`<a class="btn alt" href="${esc("sms:?&body="+encodeURIComponent("Accounted For: open this on your phone to link to my board as "+ROLE_N[r]+" (keep it private): "+PUB()+"#sync="+normCode(Y.code)+"&r="+r))}">${l}</a>`).join("")}</div>`:""}`:""}
-    <div class="note">This phone: <b>${esc(ROLE_N[role()]||role())}</b>. Roles are enforced by the app; anyone holding the recovery code can read the board, so share it only with people you trust.</div>
+    <div class="note">This phone: <b>${esc(ROLE_N[role()]||role())}</b>. Permissions are enforced by the app; anyone holding the recovery code can read the board, so share it only with people you trust.</div>
     <div class="row2"><button class="btn alt" id="syOff">${armed==="syoff"?"Tap again to stop":"Stop on this phone"}</button>${isOwner()?`<button class="btn warn" id="syDel">${armed==="sydel"?"Tap again: delete cloud copy":"Delete cloud copy"}</button>`:"<span></span>"}</div></div>${turnoverHTML()}`}
 function turnoverHTML(){const Y=S.sync;if(!Y||!Y.on)return"";
   if(role()==="newoic")return `<h2>Complete turnover</h2><div class="panel" style="border-color:var(--brass)"><p class="note">You were handed this board. Taking over gives it a <b>new recovery code</b> and deletes the old cloud copy, so the outgoing leader's phone stops syncing.</p>
@@ -2348,7 +2348,10 @@ function renderFeed(){let h=S.source==="sample"?"":banner();const f=fdCur();
 
 /* ---------- Word of Mouth cards (social style) ---------- */
 const AV_COL=["#2f6fde","#0857e8","#b4532a","#7a4bd1","#c23a5b","#0f8b9c","#6b7a1f"];
-function fdBy(f){const w=S.who&&S.who.n&&role()!=="oic"?S.who.n:"";return (w||S.postAs||S.myName||(f&&f.unit)||unitName()).toUpperCase().slice(0,30)}
+/* 4.141.0: names belong to people, not to permissions. The picked name always wins, for the OIC too. With no name yet, a short code unique to this phone
+   ("LEADER 4F2A" / "MEMBER 4F2A") goes out, so two people with the same permission never show up as one person. */
+function noName(k){let d="";try{d=localStorage.getItem("af-dev")||""}catch(e){}if(!d)d=S.dev||(S.dev=rndId(24));return (k+" "+d.replace(/[^a-z0-9]/gi,"").slice(0,4)).toUpperCase()}
+function fdBy(f){const w=S.who&&S.who.n?S.who.n:"",own=role()==="oic";return ((own&&S.postAs)||w||S.postAs||S.myName||noName(role()==="oic"||role()==="co"||role()==="newoic"?"Leader":"Member")).toUpperCase().slice(0,30)}
 function fdAv(name){const w=String(name||"?").toUpperCase().split(/\s+/).filter(Boolean);const ini=(w.length>1?w[0][0]+w[w.length-1][0]:(w[0]||"?").slice(0,2));let hsh=0;for(const c of String(name))hsh=(hsh*31+c.charCodeAt(0))>>>0;
   return `<div class="av" style="background:${AV_COL[hsh%AV_COL.length]}" aria-hidden="true">${esc(ini)}</div>`}
 function podParse(txt){const L=txt.split("\n");const o={title:L[0]||"",f:"",u:"",sch:[],du:"",n:""};let inS=false;
@@ -3332,7 +3335,7 @@ function renderLogins(){let h=`<h2>Logins</h2>`;
   if(D.length){const groups=[...new Set(D.map(x=>x.g))];
     const RL=lgRoles(),cur=RL.find(r=>r.ds.some(x=>x.id===lgForm.dest))||RL.find(r=>r.ds.length);
     h+=`<label for="lgRole">Role</label><select id="lgRole" style="width:100%">${RL.map(r=>`<option value="${r.k}"${r===cur?" selected":""}${r.ds.length?"":" disabled"}>${esc(r.n)}${r.ds.length?"":" (not set up)"}</option>`).join("")}</select>
-      <p class="note" style="margin:4px 0 0">${esc(cur.d)}</p>${RL.some(r=>!r.ds.length)?`<details><summary class="note">More roles</summary><p class="note" style="margin:2px 0 0">${RL.filter(r=>!r.ds.length).map(r=>`<b>${esc(r.n)}</b>: ${esc(r.hint)}`).join("<br>")}</p></details>`:""}
+      <p class="note" style="margin:4px 0 0">${esc(cur.d)}</p>${RL.some(r=>!r.ds.length)?`<details><summary class="note">More permissions</summary><p class="note" style="margin:2px 0 0">${RL.filter(r=>!r.ds.length).map(r=>`<b>${esc(r.n)}</b>: ${esc(r.hint)}`).join("<br>")}</p></details>`:""}
       ${cur.ds.length>1?`<label for="lgDest">${cur.k==="member"?"Person":cur.k==="secl"?(S.level==="co"?"Platoon":"Section"):"Which one"}</label><select id="lgDest" style="width:100%">${cur.ds.map(x=>`<option value="${esc(x.id)}"${x.id===lgForm.dest?" selected":""}>${esc(x.l)}</option>`).join("")}</select>`:""}
       <label for="lgU">Username</label><input type="text" id="lgU" value="${esc(lgForm.user)}" autocomplete="off" autocapitalize="none" spellcheck="false">
       <label for="lgP">Password</label><input type="text" id="lgP" value="${esc(lgForm.pw)}" autocomplete="off" autocapitalize="none" spellcheck="false">
@@ -3375,7 +3378,7 @@ async function lgSignIn(from){const R=lgScope(from),q=s=>R.querySelector(s);cons
 /* sign-in for any role: add the unit Word of Mouth quietly (no prompt), under the name this phone already uses */
 function lgJoinFeed(fh,label){try{const q=new URLSearchParams(String(fh||""));const id=(q.get("feed")||"").replace(/[^a-z0-9]/g,"").slice(0,20),mk=(q.get("k")||"").replace(/[^a-z0-9]/g,"").slice(0,40),ek=(q.get("e")||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,60),unit=(q.get("u")||"").replace(/[|#<>]/g,"").slice(0,24)||"Your unit";
   if(id.length<10||mk.length<24||ek.length<40||(S.feeds||[]).some(f=>f.id===id))return;
-  const me=String((S.who&&S.who.n)||S.myName||S.postAs||label||"MEMBER").toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim().slice(0,30);
+  const me=String((S.who&&S.who.n)||S.myName||S.postAs||label||noName("Member")).toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim().slice(0,30);
   const secsL=(q.get("s")||"").toUpperCase().split(",").map(x=>x.replace(/[^A-Z0-9]/g,"").slice(0,6)).filter(Boolean).slice(0,10);
   const tf={id,mk,ek,unit,me,sec:"",secsLink:secsL,posts:[],seen:0,mine:{}};S.feeds=S.feeds||[];S.feeds.push(tf);save();
   fdMeHash(tf).then(()=>{try{renderTabs();fdPollAll(true)}catch(e){}}).catch(()=>{})}catch(e){}}

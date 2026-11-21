@@ -43,7 +43,7 @@ function panel(){
   let h="";
   if(eligible()){
     if(lowered()){
-      h+=`<div class="panel" id="alPanel"><h3 style="margin:0">Role on this phone</h3><p class="note">Showing <b>${esc(here())}</b>. Your own level is <b>${esc((typeof ROLE_N==="object"&&ROLE_N[S.roleFrom])||S.roleFrom)}</b>.</p>
+      h+=`<div class="panel" id="alPanel"><h3 style="margin:0">Permission on this phone</h3><p class="note">Showing <b>${esc(here())}</b>. Your own level is <b>${esc((typeof ROLE_N==="object"&&ROLE_N[S.roleFrom])||S.roleFrom)}</b>.</p>
       ${S.sync&&S.sync.on?`<input type="text" id="alCode" placeholder="Recovery code" autocapitalize="characters" autocomplete="off" style="text-transform:uppercase">`:""}
       <button class="btn" id="alUp">Step back up</button><div class="note" id="alOut">${esc(msg)}</div></div>`}
     else{
@@ -59,9 +59,9 @@ function panel(){
 
 /* ---- its own tile in Tools → Settings, and its own page, so nobody has to dig through Data ---- */
 {const _to=tabOf;tabOf=function(v){return v==="alvl"?"tools":_to.apply(this,arguments)}}
-{const _r=render;render=function(){if(view==="alvl"){renderTabs();const h=panel();$("#main").innerHTML=`<button class="chip" data-go="tools" style="cursor:pointer;margin-top:12px">◂ Tools</button><h2>Role and message keys</h2>`+(h||`<div class="panel"><p class="note">Nothing to change on this phone.</p></div>`);if(typeof animateView==="function")animateView();return}return _r.apply(this,arguments)}}
+{const _r=render;render=function(){if(view==="alvl"){renderTabs();const h=panel();$("#main").innerHTML=`<button class="chip" data-go="tools" style="cursor:pointer;margin-top:12px">◂ Tools</button><h2>Permissions and message keys</h2>`+(h||`<div class="panel"><p class="note">Nothing to change on this phone.</p></div>`);if(typeof animateView==="function")animateView();return}return _r.apply(this,arguments)}}
 {const _rt=renderTools;renderTools=function(){const r=_rt.apply(this,arguments);try{if(!panel())return r;let g=[...document.querySelectorAll("#main .tgrid")].find(x=>x.id!=="sgGrid");if(!g){g=document.createElement("div");g.className="tgrid";$("#main").appendChild(g)}
-  g.insertAdjacentHTML("beforeend",`<button data-go="alvl"><span class="ic">🔑</span><span><b>Role and message keys</b><small>${esc(here())} · show less, reset keys</small></span></button>`);if(typeof sgRegroup==="function")sgRegroup()}catch(e){}return r}}
+  g.insertAdjacentHTML("beforeend",`<button data-go="alvl"><span class="ic">🔑</span><span><b>Permissions and message keys</b><small>${esc(here())} · show less, reset keys</small></span></button>`);if(typeof sgRegroup==="function")sgRegroup()}catch(e){}return r}}
 const again=()=>{const y=window.scrollY;render();window.scrollTo(0,y)};
 document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest)return;
   const d=t.closest("[data-alDown]");if(d){e.stopImmediatePropagation();if(stepDown(d.dataset.aldown)){view="board";render();window.scrollTo(0,0);toast("This phone now shows "+here()+".")}return}
