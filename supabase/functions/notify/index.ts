@@ -71,18 +71,34 @@ function apsFor(p: any, urgent: boolean, criticalOn: boolean): any {
 // </aps>
 // Returns "ok", "gone" (token no longer valid: remove it) or "fail".
 async function apnsSend(token: string, p: Record<string, unknown>, urgent: boolean): Promise<string> {
+  // 4.141.0: a phone's token belongs to either the production or the sandbox APNs (App Store build vs TestFlight/Xcode build).
+  // Sending to the wrong one answers 403 BadEnvironmentKeyInToken or 400 BadDeviceToken. Try the configured host first, and on
+  // exactly those answers try the other one before giving up, so no phone is dropped or left without alerts for a mismatch.
+  const first = Deno.env.get("APNS_SANDBOX") === "1" ? "api.sandbox.push.apple.com" : "api.push.apple.com";
+  const second = first === "api.push.apple.com" ? "api.sandbox.push.apple.com" : "api.push.apple.com";
   try {
-    const host = Deno.env.get("APNS_SANDBOX") === "1" ? "api.sandbox.push.apple.com" : "api.push.apple.com";
-    const r = await fetch(`https://${host}/3/device/${token}`, {
+    const jwt = await apnsToken();
+    const body = JSON.stringify({ aps: apsFor(p, urgent, Deno.env.get("APNS_CRITICAL") === "1"), open: p.open, sos: p.sos });
+    const send = (host: string) => fetch(`https://${host}/3/device/${token}`, {
       method: "POST",
-      headers: { authorization: "bearer " + await apnsToken(), "apns-topic": Deno.env.get("APNS_TOPIC") || "com.antoniotyler.accountedfor", "apns-push-type": "alert", "apns-priority": urgent ? "10" : "5", "content-type": "application/json" },
-      body: JSON.stringify({ aps: apsFor(p, urgent, Deno.env.get("APNS_CRITICAL") === "1"), open: p.open, sos: p.sos }),
+      headers: { authorization: "bearer " + jwt, "apns-topic": Deno.env.get("APNS_TOPIC") || "com.antoniotyler.accountedfor", "apns-push-type": "alert", "apns-priority": urgent ? "10" : "5", "content-type": "application/json" },
+      body,
     });
+    let r = await send(first);
+    let reason = "";
+    if (!r.ok) {
+      try { reason = String((await r.json())?.reason ?? ""); } catch { /* no body */ }
+      if ((r.status === 403 && reason === "BadEnvironmentKeyInToken") || (r.status === 400 && reason === "BadDeviceToken")) {
+        r = await send(second);
+        reason = "";
+        if (!r.ok) { try { reason = String((await r.json())?.reason ?? ""); } catch { /* no body */ } }
+      }
+    }
     if (r.ok) return "ok";
     // 4.131.0: only an answer that says the token itself is dead removes the phone. A 400 for any other reason (wrong topic,
     // bad header) used to delete every iPhone's sign-up, and the app never signed up again.
-    let reason = ""; try { reason = String((await r.json())?.reason ?? ""); } catch { /* no body */ }
     console.error("apns push failed:", r.status, reason);
+    // BadDeviceToken only counts as dead after both hosts said so (the retry above ran for it).
     const dead = r.status === 410 || ["BadDeviceToken", "Unregistered", "DeviceTokenNotForTopic"].includes(reason);
     return dead ? "gone" : "fail";
   } catch (e) { console.error("apns push error:", String((e as Error)?.message ?? e).slice(0, 120)); return "fail"; }
