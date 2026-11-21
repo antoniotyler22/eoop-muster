@@ -10,7 +10,7 @@ const appLinks=()=>({ios:(typeof STORE_URL==="object"&&STORE_URL.ios)||"https://
 const startURL=()=>PUB()+"#start";
 function startText(){const L=appLinks();return "Try Accounted For to run your own team: headcount, check-ins and getting the word out.\n\niPhone app: "+L.ios+"\nOr on the web: "+startURL()+"\n\nIt sets up your own team. Nothing is shared with me."}
 window.invStartText=startText;
-function linkText(role,label,url){return unitName()+" · Accounted For\nRole: "+role+" · "+label+"\n\nOpen this link on your phone: "+url+"\n\nNo app yet? iPhone: "+appLinks().ios+" (install it, then tap the link again).\nKeep this link private: it opens "+label+"."}
+function linkText(role,label,url){return unitName()+" · Accounted For\nPermission: "+role+" · "+label+"\n\nOpen this link on your phone: "+url+"\n\nNo app yet? iPhone: "+appLinks().ios+" (install it, then tap the link again).\nKeep this link private: it opens "+label+"."}
 
 window.invLinkText=(...a)=>linkText(...a);
 /* a send box: any phone number or email, nothing saved */
@@ -32,12 +32,12 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-invgo]");i
 /* ---------- the Invite screen ---------- */
 function renderInvite(){let h=`<h2>Invite</h2>`;const so=typeof window.soHTML==="function";if(so)h+=window.soHTML()+`<details id="invOld"${inv.out||inv.msg||inv.busy?" open":""}><summary class="note" style="margin:10px 0">One at a time (the older Invite tools)</summary>`;
   const own=typeof isOwner==="function"&&isOwner();
-  h+=`<div class="panel"><b>Connect them to your team</b><p class="note" style="margin:0">They open the link and land on the page for their role. Their updates come to you.</p>`;
+  h+=`<div class="panel"><b>Connect them to your team</b><p class="note" style="margin:0">They open the link and land on the page for their permission. Their updates come to you.</p>`;
   if(!own){h+=`<p class="note">Only the phone that runs the board can invite people to it. You can still send the app so they can start their own team (below).</p></div>`}
   else{const RL=lgRoles();const cur=RL.find(r=>r.ds.some(x=>x.id===inv.dest))||RL.find(r=>r.ds.length);
     if(!cur){h+=`<p class="note">Nothing to share yet. Load your roster in DATA, or turn on Live sections, first.</p></div>`}
     else{if(!cur.ds.some(x=>x.id===inv.dest))inv.dest=cur.ds[0].id;
-      h+=`<label for="invRole">Role</label><select id="invRole" style="width:100%">${RL.map(r=>`<option value="${r.k}"${r===cur?" selected":""}${r.ds.length?"":" disabled"}>${esc(r.n)}${r.ds.length?"":" (not set up)"}</option>`).join("")}</select>
+      h+=`<label for="invRole">Permission</label><select id="invRole" style="width:100%">${RL.map(r=>`<option value="${r.k}"${r===cur?" selected":""}${r.ds.length?"":" disabled"}>${esc(r.n)}${r.ds.length?"":" (not set up)"}</option>`).join("")}</select>
         <p class="note" style="margin:4px 0 0">${esc(cur.d)}</p>${cur.k==="member"&&typeof window.invPvBtn==="function"?window.invPvBtn():""}
         ${cur.ds.length>1?`<label for="invDest">${cur.k==="member"?"Person":cur.k==="secl"?(S.level==="co"?"Platoon":"Section"):"Which one"}</label><select id="invDest" style="width:100%">${cur.ds.map(x=>`<option value="${esc(x.id)}"${x.id===inv.dest?" selected":""}>${esc(x.l)}</option>`).join("")}</select>`:""}
         <div class="row2"><button class="btn" id="invLink"${inv.busy?" disabled":""}>${inv.busy?"Making…":"Make a link"}</button><button class="btn alt" data-go="logins">Make a login instead</button></div>
@@ -49,7 +49,7 @@ function renderInvite(){let h=`<h2>Invite</h2>`;const so=typeof window.soHTML===
     <div class="note" style="word-break:break-all;user-select:all;margin:6px 0">${esc(startURL())}</div>${sendBox("S",startText(),"Try Accounted For")}</div>`;
   if(so)h+=`</details>`;
   $("#main").innerHTML=h}
-async function makeLink(){const RL=lgRoles();const d=lgDests().find(x=>x.id===inv.dest);if(!d){inv.msg="Pick a role first.";return renderInvite()}
+async function makeLink(){const RL=lgRoles();const d=lgDests().find(x=>x.id===inv.dest);if(!d){inv.msg="Pick a permission first.";return renderInvite()}
   inv.busy=true;inv.msg="";renderInvite();
   try{const hh=await lgHash(inv.dest,true);if(!hh)throw new Error("That page isn't available on this phone.");const url=PUB()+"#"+hh;const role=lgRoleOf(inv.dest);
     inv.out={dest:inv.dest,url,role,label:d.l,text:linkText(role,d.l,url)};actAdd("🔗","Made a "+role.toLowerCase()+" link for "+d.l+".","live")}
@@ -65,8 +65,8 @@ document.addEventListener("change",e=>{if(e.target.id==="invRole"){const r=lgRol
   renderTabs();renderInvite();if(typeof animateView==="function")animateView();
   if(again){window.scrollTo(0,y);if(keep){const el=document.getElementById(keep.id);if(el){if(el.value!==keep.v){el.value=keep.v;try{el.dispatchEvent(new Event("input",{bubbles:true}))}catch(e){}}try{el.focus({preventScroll:true});if(keep.s!=null&&el.setSelectionRange)el.setSelectionRange(keep.s,keep.e)}catch(e){}window.scrollTo(0,y)}}}return}return _render.apply(this,arguments)}}
 {const _rt=renderTools;renderTools=function(){_rt.apply(this,arguments);const g=document.querySelector("#main .tgrid");if(!g)return;
-  g.insertAdjacentHTML("afterbegin",`<button data-go="invite"><span class="ic">${svg("send")}</span><span><b>Invite</b><small>Link with a role, or their own team</small></span></button>`)}}
-if(typeof HELP==="object")HELP.invite=["Invite","Bring people onto your team, or send the app to someone who wants their own.",["Connect them to your team: pick a role and Make a link. Text or email it to any number or address. They don't have to be on your roster.","Make a login instead gives a username and password with the same role.","Let them start their own team: they get the app and their own board. Nothing connects back to you."]];
+  g.insertAdjacentHTML("afterbegin",`<button data-go="invite"><span class="ic">${svg("send")}</span><span><b>Invite</b><small>Link with a permission, or their own team</small></span></button>`)}}
+if(typeof HELP==="object")HELP.invite=["Invite","Bring people onto your team, or send the app to someone who wants their own.",["Connect them to your team: pick a permission and Make a link. Text or email it to any number or address. They don't have to be on your roster.","Make a login instead gives a username and password with the same permission.","Let them start their own team: they get the app and their own board. Nothing connects back to you."]];
 /* the login-ready card: send to any number or email too */
 if(typeof renderLogins==="function"){const _rl=renderLogins;renderLogins=function(){_rl.apply(this,arguments);if(typeof lgLast==="undefined"||!lgLast)return;const L=(S.logins||[]).find(x=>x.uid===lgLast);if(!L)return;
   const done=document.getElementById("lgDone");if(done)done.insertAdjacentHTML("beforebegin",sendBox("L",lgText(L),unitName()+" · Accounted For login"))}}

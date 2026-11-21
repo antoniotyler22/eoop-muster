@@ -28,8 +28,8 @@ const roles=()=>own()?lgRoles():[];
 function eff(p){let v=so.over[p.k]||so.role;if(v==="secl"&&p.m)v="secl:"+p.m.sec;return v}
 const multi=R=>R.k==="cmd"&&R.ds.length>1;
 function destFor(p){const v=eff(p),rk=v.split(":")[0],R=roles().find(r=>r.k===rk);
-  if(!R)return {err:"Pick a role."};if(!R.ds.length)return {err:R.n+": "+R.hint};
-  if(rk==="member"){if(!p.m)return own()&&S.source!=="sample"?{d:{id:"me:new",l:p.name},label:p.name+" · Member (added to the roster)",mid:p.k,add:true}:{err:"Not on your roster, so no Member page. Give them another role."};const d=R.ds.find(x=>x.id==="me:"+p.m.id);return d?{d,label:d.l,mid:p.m.id}:{err:"No Member page for them yet."}}
+  if(!R)return {err:"Pick a permission."};if(!R.ds.length)return {err:R.n+": "+R.hint};
+  if(rk==="member"){if(!p.m)return own()&&S.source!=="sample"?{d:{id:"me:new",l:p.name},label:p.name+" · Member (added to the roster)",mid:p.k,add:true}:{err:"Not on your roster, so no Member page. Give them another permission."};const d=R.ds.find(x=>x.id==="me:"+p.m.id);return d?{d,label:d.l,mid:p.m.id}:{err:"No Member page for them yet."}}
   if(rk==="secl"){const sec=v.split(":")[1]||"";const d=R.ds.find(x=>x.id==="sec:"+sec);return d?{d,label:p.name+" · "+sec+(S.level==="co"?" platoon":" section leader"),mid:p.m?p.m.id:p.k}:{err:S.level==="co"?"Pick their platoon.":"Pick their section."}}
   if(multi(R)){const id=v.slice(rk.length+1);const d=R.ds.find(x=>x.id===id);if(!d)return {err:"Pick which "+R.n.toLowerCase()+" seat for them."};return {d,label:p.name+" · "+d.l,mid:p.m?p.m.id:p.k}}
   const d=R.ds[0];return {d,label:p.name+" · "+d.l,mid:p.m?p.m.id:p.k}}
@@ -38,7 +38,7 @@ function roleOpts(p){const v=eff(p);let o="";for(const R of roles()){if(!R.ds.le
     if(R.k==="secl"){for(const d of R.ds){const s=d.id.slice(4);o+=`<option value="secl:${esc(s)}"${v==="secl:"+s?" selected":""}>${S.level==="co"?"Platoon":"Section leader"} · ${esc(s)}</option>`}continue}
     if(multi(R)){for(const d of R.ds){const val=R.k+":"+d.id;o+=`<option value="${esc(val)}"${v===val?" selected":""}>${esc(R.n+" · "+d.l.replace(/ · company dashboard$/,""))}</option>`}continue}
     o+=`<option value="${R.k}"${v===R.k?" selected":""}>${esc(R.n)}</option>`}
-  if(!/ selected/.test(o))o=`<option value="" selected>Pick a role…</option>`+o;return o}
+  if(!/ selected/.test(o))o=`<option value="" selected>Pick a permission…</option>`+o;return o}
 
 /* ---------- the box ---------- */
 const btn=(attr,on,label,dis)=>`<button type="button" ${attr} aria-pressed="${!!on}"${dis?" disabled":""}>${label}</button>`;
@@ -65,13 +65,13 @@ function soHTML(){
     <div class="note" style="margin:6px 0 0"><b id="soN">${ps.length}</b> ${ps.length===1?"person":"people"} picked</div>${fillBtn(ps)}`;
   /* 2 connection */
   h+=stepHead(2,"Connection")+`<div class="evts">${btn('data-soconn="team"',team,"Linked to this roster",!own())}${btn('data-soconn="own"',!team,"Building their own team")}</div>
-    <p class="note" style="margin:4px 0 0">${team?"They join your team and land on the page for their role. Their updates come to you.":"They get the app and set up their own board. <b>Nothing connects back to you</b>, and you don't see their information."}</p>
+    <p class="note" style="margin:4px 0 0">${team?"They join your team and land on the page for their permission. Their updates come to you.":"They get the app and set up their own board. <b>Nothing connects back to you</b>, and you don't see their information."}</p>
     ${own()?"":`<p class="note" style="margin:0">Only the phone that runs the board can link people to it.</p>`}`;
   if(team){
     /* 3 role */
     const RL=roles();
     h+=stepHead(3,"Role")+`<select id="soRole" style="width:100%">${RL.map(r=>`<option value="${r.k}"${r.k===so.role?" selected":""}${r.ds.length?"":" disabled"}>${esc(r.n)}${r.ds.length?"":" (not set up)"}</option>`).join("")}</select>
-      <p class="note" style="margin:4px 0 0">${esc((RL.find(r=>r.k===so.role)||{}).d||"")} One role covers everyone. Change anyone below.</p>`;
+      <p class="note" style="margin:4px 0 0">${esc((RL.find(r=>r.k===so.role)||{}).d||"")} One permission covers everyone. Change anyone below.</p>`;
     if(ps.length)h+=`<div class="alist" style="max-height:300px;overflow:auto;margin-top:6px">${ps.map(p=>{const r=destFor(p);
       return `<div class="rrow" style="--sc:var(${r.err?"--warn":"--line"})"><div class="who"><b>${esc(p.name)}</b><div class="ph">${esc(contact(p)||"no phone or email")}${r.err?` · <b>${esc(r.err)}</b>`:""}</div></div>
         <select data-sorole="${esc(p.k)}" aria-label="Role for ${esc(p.name)}" style="max-width:52%">${roleOpts(p)}</select></div>`}).join("")}</div>`;
@@ -81,7 +81,7 @@ function soHTML(){
   const ok=team?ps.filter(p=>!destFor(p).err):ps;const bad=ps.length-ok.length;
   const noun=!team?"message":so.as==="login"?"login":"link";const pro=team&&so.as==="login"&&typeof proOK==="function"&&!proOK();
   h+=`<button type="button" class="btn" id="soMake" style="width:100%;margin-top:12px"${ok.length&&!so.busy&&!pro?"":" disabled"}>${so.busy?"Making…":(team?"Make ":"Get ")+ok.length+" "+noun+(ok.length===1?"":"s")+(team?"":" ready")}</button>
-    ${bad?`<p class="note" style="margin:4px 0 0">${bad} flagged above (skipped until you give them another role).</p>`:""}<div class="note" role="status">${esc(so.msg)}</div></div>`;
+    ${bad?`<p class="note" style="margin:4px 0 0">${bad} flagged above (skipped until you give them another permission).</p>`:""}<div class="note" role="status">${esc(so.msg)}</div></div>`;
   return h}
 window.soHTML=soHTML;
 /* open Send out with these roster people picked (used by "On the app" and reminders) */
@@ -92,7 +92,7 @@ window.soRedraw=redraw;
 
 /* ---------- make the send list ---------- */
 const startText=()=>typeof window.invStartText==="function"?window.invStartText():"Try Accounted For: "+PUB()+"#start";
-const linkText=(role,label,url)=>typeof window.invLinkText==="function"?window.invLinkText(role,label,url):unitName()+" · Accounted For\nRole: "+role+" · "+label+"\n\nOpen this link on your phone: "+url;
+const linkText=(role,label,url)=>typeof window.invLinkText==="function"?window.invLinkText(role,label,url):unitName()+" · Accounted For\nPermission: "+role+" · "+label+"\n\nOpen this link on your phone: "+url;
 function loginText(L){const t=lgText(L);return L.self?t.replace(/Password: [^\n]*/,"Password: use the one you set yourself"):t}
 function findLogin(dest,mid){return (S.logins||[]).find(L=>L.dest===dest&&(dest.startsWith("me:")||L.mid===mid))}
 async function make(){const ps=people();const team=so.conn==="team";const todo=team?ps.filter(p=>!destFor(p).err):ps;if(!todo.length||so.busy)return;
@@ -204,5 +204,5 @@ if(typeof renderBoard==="function"){const _rb=renderBoard;renderBoard=function()
 if(typeof renderLogins==="function"){const _rl=renderLogins;renderLogins=function(){_rl.apply(this,arguments);if(!own())return;const h=document.querySelector("#main h2");
   if(h&&!document.getElementById("soLg"))h.insertAdjacentHTML("afterend",`<button type="button" class="btn" id="soLg" data-go="invite" style="width:100%;margin:0 0 10px">Send out to many people…</button>`)}}
 
-if(typeof HELP==="object"&&HELP.invite&&Array.isArray(HELP.invite[2]))HELP.invite[2].unshift("Send out (top of Invite): pick Everyone, sections or people, choose Linked to this roster or Building their own team, set a role (change anyone's), then a login or a link. Make them, then Send next texts or emails each person their own message.");
+if(typeof HELP==="object"&&HELP.invite&&Array.isArray(HELP.invite[2]))HELP.invite[2].unshift("Send out (top of Invite): pick Everyone, sections or people, choose Linked to this roster or Building their own team, set a permission (change anyone's), then a login or a link. Make them, then Send next texts or emails each person their own message.");
 })();

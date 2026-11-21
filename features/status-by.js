@@ -10,7 +10,7 @@ const key=m=>[m.status,m.start||"",m.end||"",m.loc||"",m.detail||""].join("|");
 let snap=new Map(),mute=0;
 const take=()=>{snap=new Map();if(Array.isArray(S.roster))for(const m of S.roster)if(m&&m.id!=null)snap.set(m.id,key(m))};
 const actor=()=>{const w=S.who&&S.who.id;const me=w&&S.roster.find(x=>x.id===w||x.uid===w);
-  const n=(S.who&&S.who.n)||S.myName||(me?me.rank+" "+lastOf(me):"")||"Leader";
+  const n=(S.who&&S.who.n)||S.myName||(me?me.rank+" "+lastOf(me):"")||(typeof noName==="function"?noName("Leader"):"Leader");
   const r=typeof window.actorRole==="function"?String(window.actorRole()||"").slice(0,24):""; /* 4.126.0: and in what role */
   return {id:me?me.id:"",n:String(n).slice(0,30),r}};
 function stamp(){if(!real()||mute)return;const a=actor(),now=Date.now();

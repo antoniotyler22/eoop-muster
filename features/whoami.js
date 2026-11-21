@@ -30,7 +30,7 @@ function need(){
 window.whoNeed=need;
 function teamName(c){if(c.k==="link")return S.link.unit||"your OIC";if(c.k==="feed"){const f=S.feeds.find(x=>x.id===c.id);return (f&&f.unit)||"your leader"}return unitName()}
 function whoBanner(){const c=need();if(!c)return"";
-  return `<div class="banner" id="whoBan" style="border-color:var(--brass)"><span>👤 <b>Who are you?</b> Pick your name on ${esc(teamName(c))}'s roster. Your changes will show your name and your leader sees you're on the app. Your role stays the same.</span><button id="whoGo">Pick my name</button></div>`}
+  return `<div class="banner" id="whoBan" style="border-color:var(--brass)"><span>👤 <b>Who are you?</b> Pick your name on ${esc(teamName(c))}'s roster. Your changes will show your name and your leader sees you're on the app. Your permission stays the same.</span><button id="whoGo">Pick my name</button></div>`}
 
 /* ---------- the list to pick from ---------- */
 function pool(c){
@@ -48,7 +48,7 @@ function listHTML(c){const q=up(wq);const L=pool(c).filter(m=>!q||up(m.rank+" "+
   if(!L.length)return `<p class="note">${pool(c).length?"No match. Check the spelling, or add yourself below.":c.k==="feed"?"Your leader's phone hasn't shared the names yet. You can add yourself, or try again later.":"No names yet."}</p>`;
   return L.slice(0,400).map(m=>`<button class="btn alt" data-whoid="${esc(m.id)}" style="width:100%;text-align:left;margin:3px 0"><b>${esc(m.rank)}</b> ${esc(m.name)} <span class="chip">${esc(m.sec)}</span></button>`).join("")}
 function whoSheet(c){c=c||need();if(!c)return;wq="";sheetCtx={kind:"who",c};
-  $("#sheetT").innerHTML=`Who are you?<small>Pick your name on ${esc(teamName(c))}'s roster. Your changes will show your name, and your leader sees you're on the app. Your role doesn't change.</small>`;
+  $("#sheetT").innerHTML=`Who are you?<small>Pick your name on ${esc(teamName(c))}'s roster. Your changes will show your name, and your leader sees you're on the app. Your permission doesn't change.</small>`;
   $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><input type="search" id="whoQ" placeholder="Search your name" autocomplete="off"><div id="whoList" style="max-height:46vh;overflow:auto;margin:6px 0">${listHTML(c)}</div>
     <button class="btn" id="whoNew">I'm not on the list: add me</button><button class="btn alt" data-sclose="1">Later</button></div>`;
   const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")))}

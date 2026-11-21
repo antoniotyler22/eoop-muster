@@ -5,7 +5,7 @@
 (()=>{
 const VIEWS=["me","mecal","today","log"];
 const isLeader=()=>typeof leader==="function"?leader():!(typeof memberMode==="function"&&memberMode());
-const asName=()=>String(isLeader()?(S.postAs||S.myName||(typeof unitName==="function"?unitName():"")||"Me"):(typeof myName==="function"?myName():(S.myName||"Me"))).slice(0,30);
+const asName=()=>String(isLeader()?(S.postAs||S.myName||(typeof noName==="function"?noName("Leader"):"")||"Me"):(typeof myName==="function"?myName():(S.myName||"Me"))).slice(0,30);
 const clean=v=>String(v||"").toUpperCase().replace(/[|#]/g," ").replace(/\s+/g," ").trim().slice(0,30);
 const unread=()=>{try{const M=S.dmMsgs||{},Sn=S.dmSeen||{};
   if(isLeader())return (S.roster||[]).reduce((a,m)=>a+(m.dm?(M[m.dm.id]||[]).filter(x=>x.by==="M"&&x.id>(Sn[m.dm.id]||0)).length:0),0);

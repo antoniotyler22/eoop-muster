@@ -18,7 +18,7 @@ const claimed=m=>!!(m.pk||(S.logins||[]).some(L=>L&&L.mid===m.id));
 const confirmed=m=>!!(+m.ckAt);
 const vouched=m=>!!(m&&m.vf&&m.vf.by);
 function level(m){return vouched(m)?3:confirmed(m)?2:claimed(m)?1:0}
-const nameOf=()=>String((S.myName||S.postAs||"")||((typeof unitName==="function"?unitName():"Unit")+" leader")).slice(0,30);
+const nameOf=()=>String((S.myName||S.postAs||"")||(typeof noName==="function"?noName("Leader"):"Leader")).slice(0,30);
 const dayOf=t=>{try{const d=new Date(+t);return d.toLocaleDateString("en-US",{weekday:"short"})+" "+d.getDate()+" "+d.toLocaleDateString("en-US",{month:"short"})}catch(e){return ""}};
 let filt="all",arm="",infoOpen=false;
 const LV=[["Unverified","Nothing yet. They're on the roster, but nobody has vouched for them."],["Claimed","They hold their own My page link or login, so someone has the page."],["Confirmed","They've checked in themselves and a leader confirmed it."],["Verified","A leader vouched that this is really them. Shows who vouched and when."]];
