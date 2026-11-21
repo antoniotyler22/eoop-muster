@@ -2,7 +2,7 @@
 //  {recall}: after a live recall check-in.  {board}: after a section leader's live update.  {feed, lk, urg}: after a Feed post.
 //  {team, k, what, skip}: something on the team changed (roster, statuses, calendar, duty). Every phone on the team's
 //    alert list gets "Team update" (at most one every 90 s per team). k is the team Feed's member or leader key.
-//  {alert, feed, mk}: a member's request or problem report, to the OIC.  {escalate:1}: missed check-in deadlines (pg_cron, part 22).
+//  {alert, feed, mk}: a member's request or problem report, to the OIC.  {escalate:1}: missed check-in deadlines (pg_cron, part 22), plus lone-worker timers (part 60).
 //  {recall|board, hook:1}: sent by the database itself after a check-in or board update (part 27), so alerts go out
 //    even when the sender's phone loses signal right after saving.
 //  {drain:1}: pg_cron (part 27) while the "push" queue has work. Handles Feed posts queued by the database
@@ -397,6 +397,34 @@ async function watchOwner() {
     await pushAny(data.owner_sub, { title: "⚠ Alerts not going out", body: "Accounted For: " + w + ". Open the Owner console → System check.", help: true, open: "owner" }, true, 3600);
   } catch (e) { console.error("watchOwner", e); }
 }
+// Pro Safety lone-worker timers (setup part 60): ones 5 min past due push "missed check-in" to the team. Each fires once.
+async function loneSweep(): Promise<number> {
+  const { data, error } = await db.rpc("lone_due");
+  if (error) return 0;
+  let sent = 0;
+  // deno-lint-ignore no-explicit-any
+  for (const r of (data ?? []) as any[]) {
+    const { data: f } = await db.from("feeds").select("id,leader_sub").eq("id", r.feed_id).maybeSingle();
+    if (!f) continue;
+    const who = cut(r.who, 30) || "Someone";
+    const mins = Math.max(5, Math.round((Date.now() - new Date(r.due_at).getTime()) / 60000));
+    const payload = { title: "\u{1F6A8} Missed check-in: " + who, body: who + " has not checked in for " + mins + " min. Open now.", help: true, crit: true, open: "feed" };
+    const keyOf = (x: any) => x?.apns ? "apns:" + x.apns : x?.endpoint ?? "";
+    if (f.leader_sub) {
+      const res = await pushAny(f.leader_sub, payload, true, 86400);
+      if (res === "gone") await db.from("feeds").update({ leader_sub: null }).eq("id", f.id);
+      if (res === "fail") await queueRetry("leader", f.id, payload, true, 86400);
+      if (res === "ok") sent++;
+    }
+    const lk = f.leader_sub ? keyOf(f.leader_sub) : "";
+    const { data: ls } = await db.from("feed_subs").select("id,sub").eq("feed_id", f.id).limit(500);
+    const { list, stale } = pickSubs((ls ?? []).filter((x: any) => x.sub && keyOf(x.sub) !== lk), "", "");
+    if (stale.length) await db.from("feed_subs").delete().in("id", stale);
+    sent += await sendSubs(list, payload, true, 86400);
+  }
+  return sent;
+}
+
 async function escalate() {
   await watchOwner();
   const { data, error } = await db.rpc("esc_due");
@@ -418,7 +446,8 @@ async function escalate() {
     if (res === "fail") await queueRetry("recalls", r.recall_id, payload, true, 3600);
     if (res === "ok") sent++;
   }
-  return out("escalated " + sent);
+  const lone = await loneSweep();
+  return out("escalated " + sent + (lone ? " lone " + lone : ""));
 }
 
 // One queued retry. Reads the phone's current subscription; "ok" and "gone" are finished, "fail" goes back

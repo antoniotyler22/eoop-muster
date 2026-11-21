@@ -91,9 +91,13 @@ function cancelAl(){try{window.MBN&&MBN.on&&MBN.LN.cancel({notifications:LIDS.ma
 function schedAl(){cancelAl();const a=sf().al;if(!a.on||!window.MBN||!MBN.on)return;
   const mk=(id,ms,title,body)=>({id,title,body,schedule:{at:new Date(a.due+ms),allowWhileIdle:true}});
   try{MBN.LN.schedule({notifications:[mk(LIDS[0],0,"Check in now","Tap I'm OK in Accounted For."),mk(LIDS[1],120000,"You missed your check-in","Call your supervisor or check in."),mk(LIDS[2],300000,"Your team is being alerted","You are 5 minutes late.")]})}catch(e){}}
-function alStart(min){const a=sf().al;a.min=min;a.on=true;a.due=Date.now()+min*60000;a.st=0;save();schedAl();redraw()}
-function alOK(){const a=sf().al;a.due=Date.now()+a.min*60000;a.st=0;save();schedAl();redraw();toast("Checked in. Next one in "+a.min+" min")}
-function alStop(){const a=sf().al;a.on=false;a.due=0;a.st=0;save();cancelAl();redraw();toast("Timer off")}
+/* tell the server when the next check-in is due, so the team is alerted even if this phone is off (setup part 60) */
+function srv(due){const c=sf(),a=c.al,f=typeof mainFeed==="function"&&mainFeed();if(!f||!f.mk||typeof SB==="undefined"||!SB.rpc){a.srv=false;return Promise.resolve(false)}
+  if(!c.dv)c.dv=rndId(16);
+  return Promise.resolve(SB.rpc("lone_set",{p_feed:f.id,p_mk:f.mk,p_dev:c.dv,p_who:fdBy(f),p_due:due?new Date(due).toISOString():null})).then(()=>{a.srv=!!due;save();redraw();return true}).catch(()=>{a.srv=false;save();return false})}
+function alStart(min){const a=sf().al;a.min=min;a.on=true;a.due=Date.now()+min*60000;a.st=0;a.srv=false;save();schedAl();srv(a.due);redraw()}
+function alOK(){const a=sf().al;a.due=Date.now()+a.min*60000;a.st=0;save();schedAl();srv(a.due);redraw();toast("Checked in. Next one in "+a.min+" min")}
+function alStop(){const a=sf().al;a.on=false;a.due=0;a.st=0;a.srv=false;save();cancelAl();srv(null);redraw();toast("Timer off")}
 function where(){return new Promise(res=>{if(!navigator.geolocation)return res("");navigator.geolocation.getCurrentPosition(p=>res(` Last location: https://maps.apple.com/?ll=${p.coords.latitude.toFixed(5)},${p.coords.longitude.toFixed(5)}`),()=>res(""),{timeout:6000,maximumAge:120000})})}
 async function postTeam(txt){const f=typeof mainFeed==="function"&&mainFeed();if(!f||!f.lk){toast("Word of Mouth isn't set up on this phone, so no team alert was sent.");return false}
   try{const ct=await fdEnc(f.ek,{t:txt,u:true,to:{k:"all"},sa:SECTIONS.map(x=>x[0]),by:fdBy(f)});const id=await SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct});SB.notify(null,{feed:f.id,lk:f.lk,urg:true});
@@ -101,18 +105,18 @@ async function postTeam(txt){const f=typeof mainFeed==="function"&&mainFeed();if
 async function alTick(){const a=sf().al;if(!a.on||!a.due)return;const late=Date.now()-a.due;if(late<0)return;
   if(a.st<1){a.st=1;save();try{navigator.vibrate&&navigator.vibrate([300,120,300])}catch(e){}toast("Check in now");redraw()}
   if(a.st<2&&late>=120000){a.st=2;save();redraw()}
-  if(a.st<3&&late>=300000){a.st=3;save();const loc=await where();const ok=await postTeam("MISSED CHECK-IN: "+fdBy(mainFeed())+" has not checked in for "+Math.round(late/60000)+" min."+loc);if(ok){actAdd("🚨","Missed check-in alert sent to the team","safety");toast("Your team was alerted")}redraw()}}
+  if(a.st<3&&late>=300000){a.st=3;save();const loc=await where();const ok=await postTeam("MISSED CHECK-IN: "+fdBy(mainFeed())+" has not checked in for "+Math.round(late/60000)+" min."+loc);if(ok){actAdd("🚨","Missed check-in alert sent to the team","safety");toast("Your team was alerted");srv(null)}redraw()}}
 function alHTML(){const a=sf().al;
   if(!a.on){return `<div class="panel"><b>Check-in timer</b><p class="note">For working alone. Pick how often you will check in. If you miss it, your phone reminds you, then your team gets an urgent alert with your location.</p>
     <div class="evts" role="group" aria-label="Start a timer">${[15,30,60,120].map(n=>`<button data-sf-al="${n}">${n<60?n+" min":n/60+" hr"}</button>`).join("")}</div>
     <label class="note" style="display:block">Supervisor phone (for the call button)<input type="tel" id="sfSup" inputmode="tel" value="${esc(a.sup)}" placeholder="808 555 0100"></label>
-    <p class="note">Steps: reminder at 0 min, call button at +2, team alert at +5. The team alert needs Word of Mouth set up and the app able to send. If the phone is off or has no signal, only the reminders can fire.</p></div>`}
+    <p class="note">Steps: reminder at 0 min, call button at +2, team alert at +5. With Word of Mouth set up, the server sends the team alert even if the app is closed or the phone is off. With no signal when you start, only this phone can alert.</p></div>`}
   const left=a.due-Date.now(),mm=Math.floor(Math.abs(left)/60000),ss=Math.floor(Math.abs(left)/1000)%60;
   return `<div class="panel" style="text-align:center;${left<0?"border-color:var(--warn)":""}"><b>${left<0?"Overdue":"Next check-in in"}</b>
     <div id="sfClock" style="font-size:48px;font-weight:800;margin:6px 0;color:${left<0?"var(--warn)":"inherit"}">${left<0?"-":""}${mm}:${String(ss).padStart(2,"0")}</div>
     <button class="btn" id="sfOK" style="width:100%;font-size:18px">I'm OK · check in</button>
     ${a.st>=2&&a.sup?`<a class="btn warn" href="tel:${esc(a.sup.replace(/[^\d+]/g,""))}" style="display:block;margin-top:8px;text-align:center">Call my supervisor</a>`:""}
-    ${a.st>=3?`<p class="note"><b>Your team was alerted.</b></p>`:""}
+    ${a.st>=3?`<p class="note"><b>Your team was alerted.</b></p>`:`<p class="note" style="margin:8px 0 0">${a.srv?"Server is watching: your team is alerted 5 min after a miss, even with the app closed.":"This phone only: the server isn't watching (no Word of Mouth, or no signal when you started)."}</p>`}
     <button class="btn alt" id="sfSOS" style="width:100%;margin-top:8px;color:var(--warn)">${armed==="sfsos"?"Tap again to alert my team now":"SOS: alert my team now"}</button>
     <button class="btn alt" id="sfStop" style="width:100%;margin-top:8px">Done working alone</button></div>`}
 
@@ -179,5 +183,5 @@ document.addEventListener("click",async e=>{const t=e.target;if(!t.closest||view
   if(t.closest("#sfWipe")){if(armed!=="sfwipe"){armed="sfwipe";renderSafety();setTimeout(()=>{if(armed==="sfwipe"){armed=null;if(view==="safety")renderSafety()}},4000);return}armed=null;S.drills=[];c.reun=[];c.act=null;save();renderSafety();toast("Safety records deleted")}
 });
 document.addEventListener("change",e=>{const t=e.target;if(!t.dataset||view!=="safety")return;if(t.dataset.sfCus){sf().custom[t.dataset.sfCus]=Math.max(0,Math.min(40,+t.value||0));save();renderSafety()}});
-window.proSafety={rules:RULES,progress,webText,reportPDF,posterPDF,alStart,alOK,alTick,doAct,ruleSet};
+window.proSafety={srv,rules:RULES,progress,webText,reportPDF,posterPDF,alStart,alOK,alTick,doAct,ruleSet};
 })();

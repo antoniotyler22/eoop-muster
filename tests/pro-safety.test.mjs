@@ -115,3 +115,24 @@ test("Data settings: retention prunes old records and delete wipes them after a 
     a.$("#sfWipe").click(); assert.equal(a.w.eval(`S.drills.length`), 0);
   } finally { await a.close(); }
 });
+
+test("Timer tells the server when the next check-in is due and clears it on OK-stop and on its own team alert", async () => {
+  const calls = [];
+  const a = await openApp({ rpc: (fn, b) => { if (fn === "lone_set") { calls.push(b); return null; } if (fn === "feed_post") return 90; return []; } });
+  try {
+    a.w.eval(setup + `S.feeds=[{id:"feedabcdef12",lk:"l".repeat(30),mk:"m".repeat(30),ek:"x",unit:"1ST",main:true,posts:[],acks:{},mine:{},pins:[]}];fdEnc=async(k,o)=>JSON.stringify(o);S.sf={tab:"alone"};view="safety";render()`);
+    a.$('[data-sf-al="30"]').click(); await sleep(120);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].p_feed, "feedabcdef12");
+    assert.equal(calls[0].p_mk, "m".repeat(30));
+    assert.match(calls[0].p_dev, /^[a-z0-9]{8,40}$/);
+    assert.ok(new Date(calls[0].p_due).getTime() > Date.now() + 29 * 60000);
+    assert.equal(a.w.eval(`S.sf.al.srv`), true);
+    a.$("#sfOK").click(); await sleep(80);
+    assert.equal(calls.length, 2, "OK moves the due time");
+    a.w.eval(`S.sf.al.due=Date.now()-310000`); await a.w.eval(`proSafety.alTick()`); await sleep(150);
+    assert.equal(calls.at(-1).p_due, null, "own team alert clears the server copy");
+    a.$("#sfStop") && a.$("#sfStop").click(); await sleep(80);
+    assert.equal(calls.at(-1).p_due, null);
+  } finally { await a.close(); }
+});
