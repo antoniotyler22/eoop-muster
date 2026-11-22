@@ -1,4 +1,4 @@
-// 4.119.1: free "Verified leader" levels (SQL part 49): Get verified screen, badge binding on a recall, badge on the member check-in page.
+// 4.119.1 / 4.142.0: badges already earned (SQL part 49) keep working: badge binding on a recall, badge on the member check-in page. The Get verified screen was removed in 4.142.0.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { openApp, sleep } from "./harness.mjs";
@@ -9,24 +9,14 @@ const boot = async (o = {}) => {
   return a;
 };
 
-test("Tools has Get verified; level 0 asks for sign-in, level 1 shows the organization form, level 2 shows the badge", async () => {
+test("4.142.0: the self-service Get verified screen is gone (no Tools tile, no screen)", async () => {
   const a = await boot();
   try {
     a.w.eval(`view="tools";render()`);
-    assert.ok(a.$('[data-go="verify"]'), "tile in Tools");
-    a.w.eval(`S.vf={level:0,at:Date.now()};view="verify";render()`);
-    let t = a.$("#main").textContent;
-    assert.match(t, /Get verified/); assert.match(t, /never ask for an ID/); assert.match(t, /Not verified yet/);
-    assert.ok(a.$('[data-vf="signin"]'), "signed-out: Sign in");
-    assert.match(t, /Confirm your contact first/);
-    a.w.eval(`S.vf={level:1,status:"none",contact:"l***@example.com",at:Date.now()};render()`);
-    assert.ok(a.$("#vfName") && a.$("#vfSite") && a.$('[data-vf="org"]'), "org form at level 1");
-    assert.match(a.$("#main").textContent, /l\*\*\*@example\.com/);
-    a.w.eval(`S.vf={level:1,status:"pending",org:"Maple Elementary",contact:"l***@example.com",at:Date.now()};render()`);
-    assert.match(a.$("#main").textContent, /Waiting for review/);
-    a.w.eval(`S.vf={level:2,status:"approved",org:"Maple Elementary",contact:"l***@example.com",at:Date.now()};render()`);
-    t = a.$("#main").textContent;
-    assert.match(t, /Organization confirmed: Maple Elementary/);
+    assert.ok(!a.$('[data-go="verify"]'), "no tile in Tools");
+    assert.doesNotMatch(a.$("#main").textContent, /Get verified/);
+    a.w.eval(`view="verify";render()`);
+    assert.ok(!a.$('[data-vf]'), "no verify form");
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });

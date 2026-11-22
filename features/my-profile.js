@@ -132,10 +132,14 @@ function askCard(){try{if(typeof akHidden!=="function"||typeof renderAsk!=="func
 /* while a question runs, or after an error, redraw the page it was asked from instead of jumping to the Ask screen */
 {const _as=akSend;akSend=async function(){try{return await _as.apply(this,arguments)}finally{if(view==="mypg"||view==="me"){try{render()}catch(e){}}}}}
 {const _ra=renderAsk;renderAsk=function(){if(view==="mypg"||view==="me"){try{render()}catch(e){}return}return _ra.apply(this,arguments)}}
+/* 4.142.0: members see whether their leader has verified them (the vouch rides in their page, see mpDigest) */
+function vfCard(D){if(!memberM()||!D)return "";const v=D.vf;
+  return v&&v.by?`<div class="mp-card" id="meVf" style="margin:10px 0;padding:12px;border:1px solid var(--line,rgba(128,128,128,.25));border-left:4px solid #1d9e75;border-radius:14px"><b style="color:#1d9e75">✓ Verified</b><div class="note" style="margin:4px 0 0">Verified by ${esc(v.by)}${v.at?" · "+esc(new Date(+v.at).toLocaleDateString("en-US",{weekday:"short",day:"numeric",month:"short"})):""}</div></div>`
+    :`<div class="mp-card" id="meVf" style="margin:10px 0;padding:12px;border:1px solid var(--line,rgba(128,128,128,.25));border-radius:14px"><b>Waiting for your leader</b><div class="note" style="margin:4px 0 0">Your leader can verify this page is really you. It shows here once they do.</div></div>`}
 function pageHTML(){const own=selfRow(),D=digest(own);
   const body=tab==="feed"?feedTab():tab==="cal"?calTab(D):planTab(D);
   let ban="";try{ban=!memberM()&&typeof banner==="function"?banner():""}catch(e){}
-  return ban+head(own,D,memberM())+ckBlock(own)+teamCard()+highlights(D)+tabs()+`<div class="mp-body" role="tabpanel">${body}</div>`+(pvOn?"":settings()+askCard())+`<p class="note" id="afVer" style="text-align:center;margin:18px 0 6px">Version ${esc(window.AV||"")}</p>`}
+  return ban+head(own,D,memberM())+vfCard(D)+ckBlock(own)+teamCard()+highlights(D)+tabs()+`<div class="mp-body" role="tabpanel">${body}</div>`+(pvOn?"":settings()+askCard())+`<p class="note" id="afVer" style="text-align:center;margin:18px 0 6px">Version ${esc(window.AV||"")}</p>`}
 
 /* ---------- render ---------- */
 {const _r=render;render=function(){
