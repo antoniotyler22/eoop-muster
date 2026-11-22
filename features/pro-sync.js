@@ -71,7 +71,7 @@ proPageHTML=function(){
     return h+`<p><b style="color:var(--s-onhand)">● Pro is on.</b>${e?` Renews or ends ${esc(e)}.`:""}</p>${proList()}${s.src==="stripe"?`<button class="btn alt" data-pro-portal>Manage subscription</button>`:`<p class="note">Billed through the App Store. Manage it on the iPhone that bought it.</p>`}${codeHTML()}</div>`}
   if(!webBilling())h+=`<p class="note">Everything is unlocked here for now.</p>`;
   else h+=`<p class="note">For the person running the team. Members and section leaders stay free.</p>${proList()}
-    <button class="btn pro-plan" data-pro-web="yearly">Pro yearly</button><button class="btn alt pro-plan" data-pro-web="monthly">Pro monthly</button>
+    ${planPickerHTML(planListWeb(),"web")}
     <p class="note">Secure checkout by Stripe. Cancel any time.</p>`;
   h+=`<details class="note" style="margin-top:12px"><summary>Already have Pro (iPhone or another browser)?</summary>
     <label for="proCode">Pro code</label><input type="text" id="proCode" placeholder="Paste your Pro code" autocomplete="off" style="font-family:ui-monospace,monospace">
@@ -84,7 +84,7 @@ document.addEventListener("click",async e=>{
   if(e.target.closest("[data-pro-sync]")){e.preventDefault();await syncApple(true);redraw();return}
   const w=e.target.closest("[data-pro-web]");
   if(w){e.preventDefault();w.disabled=true;proWebMsg="";
-    try{const r=await call("billing",{op:"checkout",plan:w.dataset.proWeb,back:PUB()});if(r.url)location.href=r.url;else throw new Error("No checkout link")}
+    try{const r=await call("billing",{op:"checkout",plan:w.dataset.proWeb,size:+w.dataset.size||100,back:PUB()});if(r.url)location.href=r.url;else throw new Error("No checkout link")}
     catch(err){proWebMsg=String(err.message||err);redraw()}return}
   if(e.target.closest("[data-pro-portal]")){e.preventDefault();try{const r=await call("billing",{op:"portal",tok:getTok(),back:PUB()});if(r.url)location.href=r.url}catch(err){proWebMsg=String(err.message||err);redraw()}return}
   if(e.target.closest("[data-pro-code]")){e.preventDefault();const v=(($("#proCode")||{}).value||"").trim().toLowerCase();

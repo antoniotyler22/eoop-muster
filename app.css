@@ -542,3 +542,17 @@ body.v12noai [data-go="ask"],body.v12noai [data-tab="ask"]{display:none!importan
 .sgw-peek-img img{display:block;width:100%;height:auto}
 .sgw-peek-img::after{content:"";position:absolute;left:0;right:0;bottom:0;height:70px;background:linear-gradient(to bottom,transparent,var(--bg))}
 #nlOut:empty{display:none}
+
+/* 4.143.0: plan picker (Pro / Team / Org, monthly or yearly): the blue outline follows the card you tap */
+.plan-picker{display:flex;flex-direction:column;gap:12px;margin:14px 0 10px}
+.plan-card{position:relative;display:flex;align-items:center;gap:12px;padding:14px;border:1.5px solid var(--line,rgba(128,128,128,.35));border-radius:16px;cursor:pointer;color:inherit;text-align:left;-webkit-tap-highlight-color:transparent;transition:border-color .15s,box-shadow .15s;min-height:64px}
+.plan-card.on{border-color:#0857E8;box-shadow:0 0 0 2px #0857E8}
+.plan-card:focus-visible{outline:2px solid #0857E8;outline-offset:3px}
+.plan-card .pc-dot{width:22px;height:22px;border-radius:50%;border:2px solid rgba(128,128,128,.55);flex:none}
+.plan-card.on .pc-dot{border-color:#0857E8;background:radial-gradient(circle,#0857E8 0 45%,transparent 50%)}
+.plan-card .pc-main{flex:1;min-width:0}.plan-card .pc-main small{display:block;opacity:.75;margin-top:2px}
+.plan-card .pc-price{text-align:right;font-weight:800;white-space:nowrap}.plan-card .pc-price small{display:block;font-weight:500;opacity:.7}
+.plan-card .pc-badge{position:absolute;top:-9px;right:12px;font-style:normal;font-size:11px;font-weight:800;background:#0857E8;color:#fff;border-radius:999px;padding:2px 9px}
+.pc-sizes{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}
+.pc-size{min-width:44px;min-height:36px;display:inline-flex;align-items:center;justify-content:center;padding:0 10px;border-radius:999px;border:1.5px solid rgba(128,128,128,.45);font-weight:700;font-size:14px}
+.pc-size[aria-pressed="true"]{background:#0857E8;border-color:#0857E8;color:#fff}

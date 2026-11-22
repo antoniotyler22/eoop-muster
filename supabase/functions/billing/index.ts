@@ -4,6 +4,9 @@
 //   STRIPE_SECRET_KEY        sk_live_... (or sk_test_... while testing)
 //   STRIPE_PRICE_MONTHLY     price_... for $4.99/month
 //   STRIPE_PRICE_YEARLY      price_... for $39.99/year
+//   STRIPE_PRICE_ORG_MONTHLY / STRIPE_PRICE_ORG_YEARLY   Org plans (optional)
+//   STRIPE_PRICE_TEAM        price_... for $12.99/month (Team, up to 100 people)  (4.143.0)
+//   STRIPE_PRICE_TEAM_EXTRA  price_... for $2.99/month: add one per extra 50 people (the app sends the size 100..350)
 //   STRIPE_WEBHOOK_SECRET    whsec_... from Stripe → Developers → Webhooks → add endpoint
 //                            https://<project>.supabase.co/functions/v1/billing  with events
 //                            customer.subscription.created, customer.subscription.updated, customer.subscription.deleted
@@ -123,7 +126,23 @@ async function grantAddon(s: any) {
   await rest("addon_ents?on_conflict=ref", { method: "POST", body: JSON.stringify(row), headers: { Prefer: "resolution=ignore-duplicates,return=minimal" } });
   return row;
 }
-const proPrices = () => [env("STRIPE_PRICE_MONTHLY"), env("STRIPE_PRICE_YEARLY")].filter(Boolean);
+const proPrices = () => [env("STRIPE_PRICE_MONTHLY"), env("STRIPE_PRICE_YEARLY"), env("STRIPE_PRICE_ORG_MONTHLY"), env("STRIPE_PRICE_ORG_YEARLY"), env("STRIPE_PRICE_TEAM"), env("STRIPE_PRICE_TEAM_EXTRA")].filter(Boolean);
+
+/** The Stripe line items for a plan. Team (4.143.0) = base price for up to 100 people ($12.99/month) + the "extra 50" price ($2.99/month)
+ *  times how many more steps of 50 people (sizes 100..350). Secrets: STRIPE_PRICE_TEAM, STRIPE_PRICE_TEAM_EXTRA, STRIPE_PRICE_ORG_MONTHLY, STRIPE_PRICE_ORG_YEARLY. */
+export function planItems(plan: string, size: unknown, e: (k: string) => string): { price: string; quantity: number }[] | null {
+  if (plan === "monthly") return e("STRIPE_PRICE_MONTHLY") ? [{ price: e("STRIPE_PRICE_MONTHLY"), quantity: 1 }] : null;
+  if (plan === "org_monthly") return e("STRIPE_PRICE_ORG_MONTHLY") ? [{ price: e("STRIPE_PRICE_ORG_MONTHLY"), quantity: 1 }] : null;
+  if (plan === "org_yearly") return e("STRIPE_PRICE_ORG_YEARLY") ? [{ price: e("STRIPE_PRICE_ORG_YEARLY"), quantity: 1 }] : null;
+  if (plan === "team") {
+    const n = Math.round(Number(size) || 100);
+    if (n < 100 || n > 350 || (n - 100) % 50 !== 0 || !e("STRIPE_PRICE_TEAM")) return null;
+    const extra = (n - 100) / 50;
+    if (extra > 0 && !e("STRIPE_PRICE_TEAM_EXTRA")) return null;
+    return extra > 0 ? [{ price: e("STRIPE_PRICE_TEAM"), quantity: 1 }, { price: e("STRIPE_PRICE_TEAM_EXTRA"), quantity: extra }] : [{ price: e("STRIPE_PRICE_TEAM"), quantity: 1 }];
+  }
+  return e("STRIPE_PRICE_YEARLY") ? [{ price: e("STRIPE_PRICE_YEARLY"), quantity: 1 }] : null;
+}
 
 export async function handle(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -152,13 +171,14 @@ export async function handle(req: Request): Promise<Response> {
     if (!env("STRIPE_SECRET_KEY")) return json({ error: "Web billing isn't set up yet." }, 503);
     const allowed = env("APP_URLS", "https://accountedforteam.com/app.html,https://accountedforteam.com/,https://antoniotyler22.github.io/eoop-muster/").split(",").map((s) => s.trim()).filter(Boolean);
     if (b.op === "checkout") {
-      const price = b.plan === "monthly" ? env("STRIPE_PRICE_MONTHLY") : env("STRIPE_PRICE_YEARLY");
+      const items = planItems(String(b.plan || "yearly"), b.size, env);
       const back = backOK(b.back, allowed) ?? allowed[0];
-      if (!price) return json({ error: "Web billing isn't set up yet." }, 503);
+      if (!items) return json({ error: "That plan isn't set up yet." }, 503);
       const form: Record<string, string> = {
-        mode: "subscription", "line_items[0][price]": price, "line_items[0][quantity]": "1",
+        mode: "subscription",
         success_url: back + "#pro_ok={CHECKOUT_SESSION_ID}", cancel_url: back + "#tools", allow_promotion_codes: "true",
       };
+      items.forEach((it, i) => { form[`line_items[${i}][price]`] = it.price; form[`line_items[${i}][quantity]`] = String(it.quantity); });
       const trial = Number(env("STRIPE_TRIAL_DAYS", "7"));
       if (trial > 0) form["subscription_data[trial_period_days]"] = String(Math.min(trial, 30));
       const s = await stripe("checkout/sessions", form);
