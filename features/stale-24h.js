@@ -14,8 +14,17 @@ function away(m){if(!AWAY.includes(m.status))return false;const s=isoOf(m.start)
   if(!s||!e)return false;
   return s<=d&&e>=d}
 function touched(m){let t=+m.ckAt||0;if(+m.ut>t)t=+m.ut;if(m.upd&&+m.upd.t>t)t=+m.upd.t;const L=(S.tl||{})[m.id];if(L&&L.length){const x=+L[L.length-1][0]||0;if(x>t)t=x}return t}
-function pending(){const p=new Set();for(const x of S.cks||[])if(x&&x.mid&&Date.now()-(+x.t||0)<DAY)p.add(x.mid);return p}
-function isStale(m,pend){if(!on()||!real()||!m||m.sec==="ATT"||away(m))return false;const p=pend||pending();if(p.has(m.id)||(m.uid&&p.has(m.uid)))return false;const t=touched(m);return !!t&&Date.now()-t>=DAY}
+/* 4.143.0: a leader can set everyone who is On Hand to Off Hand (S.offAt = the moment they did it, synced with the team).
+   Anyone On Hand whose last check-in or update is at or before that moment shows Off Hand; their next check-in or update brings them back.
+   It is a way to test that everyone is checking in and the check-in button works. Nothing is erased. */
+const reset=()=>+S.offAt||0;
+function pending(){const p=new Set();const R=reset();for(const x of S.cks||[])if(x&&x.mid&&Date.now()-(+x.t||0)<DAY&&(+x.t||0)>R)p.add(x.mid);return p}
+function isStale(m,pend){if(!on()||!real()||!m||m.sec==="ATT"||away(m))return false;const p=pend||pending();if(p.has(m.id)||(m.uid&&p.has(m.uid)))return false;const t=touched(m);const R=reset();if(R&&m.status==="On Hand"&&t<=R)return true;return !!t&&Date.now()-t>=DAY}
+const canReset=()=>real()&&!(typeof role==="function"&&role()==="view");
+let offArm=false;
+const onHandN=()=>(S.roster||[]).filter(m=>m&&m.status==="On Hand"&&m.sec!=="ATT").length;
+function offBtns(){if(!canReset())return "";const R=reset();
+  return `<div id="offRow" style="margin:8px 4px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="chip" id="offReset" style="cursor:pointer;min-height:40px">${offArm?"Tap again: set "+onHandN()+" On Hand to Off Hand":"Set everyone Off Hand"}</button>${R?`<button class="chip" id="offUndo" style="cursor:pointer;min-height:40px">Undo reset</button>`:""}</div><div class="note" style="margin:4px 4px 0">${R?"Reset at "+new Date(R).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})+". Each person goes back to On Hand when they check in.":"Test that everyone is checking in: everyone On Hand shows Off Hand until they check in again."}</div>`}
 window.ckStale=m=>isStale(m);
 /* 4.120.2: the last-update time travels with the roster (ut) so every phone with a link agrees on who is Off Hand */
 window.ckTouched=touched;
@@ -42,11 +51,19 @@ function tagRows(){if(!on()||!real())return;const p=pending();
     const pill=row&&row.querySelector('.pill[data-pick="s"]');if(pill){pill.style.setProperty("--pc","var(--warn)");const lb=pill.querySelector("span:last-child");if(lb)lb.textContent="Off Hand"}
     if(!who.querySelector(".st24t"))who.insertAdjacentHTML("beforeend",`<span class="tag st24t" title="Off Hand: no check-in or update in 15 hours. Last: ${esc(SHORT[m.status]||m.status)}">Off Hand</span>`)}}
 function note(){if(!real()||(typeof role==="function"&&role()==="view"))return "";const n=window.ckStaleList().length;
-  return `<div class="note" id="exp24" style="margin:6px 4px 0">${on()?`Status goes to Off Hand after 15 hrs without a check-in or update${n?" · <b style=\"color:var(--warn)\">"+n+" Off Hand now</b>":""}. `:"15-hour expiry is off. "}<button class="chip" id="exp24t" style="cursor:pointer">${on()?"Turn off":"Turn on"}</button></div>`}
+  return `<div class="note" id="exp24" style="margin:6px 4px 0">${on()?`Status goes to Off Hand after 15 hrs without a check-in or update${n?" · <b style=\"color:var(--warn)\">"+n+" Off Hand now</b>":""}. `:"15-hour expiry is off. "}<button class="chip" id="exp24t" style="cursor:pointer">${on()?"Turn off":"Turn on"}</button></div>`+offBtns()}
 {const _r=render;render=function(){try{oldNotes()}catch(e){}const r=_r.apply(this,arguments);try{tagRows();
   if(view==="checkins"&&!document.getElementById("exp24")){const a=document.getElementById("ckMiss");if(a)a.insertAdjacentHTML("afterend",note())}}catch(e){}return r}}
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest||!t.closest("#exp24t"))return;e.stopImmediatePropagation();
   S.exp24=on()?false:true;rawSave();const y=window.scrollY;render();window.scrollTo(0,y);toast(on()?"Off Hand after 15 hrs":"15-hour expiry off")},true);
+document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;
+  if(t.closest("#offReset")){e.stopImmediatePropagation();if(!canReset())return;
+    if(!offArm){offArm=true;const y=window.scrollY;render();window.scrollTo(0,y);setTimeout(()=>{if(offArm){offArm=false;if(view==="checkins")render()}},4000);return}
+    offArm=false;const n=onHandN();S.offAt=Date.now();S.exp24=true;try{save()}catch(x){}
+    try{if(typeof actAdd==="function")actAdd("🔄","Set "+n+" On Hand to Off Hand to test check-ins","checkins")}catch(x){}
+    const y=window.scrollY;render();window.scrollTo(0,y);toast(n+" set to Off Hand. They come back when they check in.");return}
+  if(t.closest("#offUndo")){e.stopImmediatePropagation();delete S.offAt;try{save()}catch(x){}const y=window.scrollY;render();window.scrollTo(0,y);toast("Reset undone")}},true);
+window.ckOffReset=()=>reset();
 /* every 10 min: redraw only when someone newly went Off Hand since the last draw, so typing and open forms aren't wiped */
 let seen="";const sig=()=>window.ckStaleList().map(m=>m.id).sort().join(",");
 {const _r2=render;render=function(){try{seen=sig()}catch(e){}return _r2.apply(this,arguments)}}

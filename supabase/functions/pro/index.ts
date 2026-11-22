@@ -224,7 +224,7 @@ export async function saveRow(row: any, secret: string) {
 
 const cfg = () => ({
   bundle: env("APPLE_BUNDLE_ID", "com.antoniotyler.accountedfor"),
-  products: env("PRO_PRODUCTS", "com.antoniotyler.accountedfor.pro.yearly,com.antoniotyler.accountedfor.pro.monthly,com.antoniotyler.accountedfor.org.yearly,com.antoniotyler.accountedfor.org.monthly").split(",").map((s) => s.trim()).filter(Boolean),
+  products: env("PRO_PRODUCTS", "com.antoniotyler.accountedfor.pro.yearly,com.antoniotyler.accountedfor.pro.monthly,com.antoniotyler.accountedfor.org.yearly,com.antoniotyler.accountedfor.org.monthly,com.antoniotyler.accountedfor.team.100,com.antoniotyler.accountedfor.team.150,com.antoniotyler.accountedfor.team.200,com.antoniotyler.accountedfor.team.250,com.antoniotyler.accountedfor.team.300,com.antoniotyler.accountedfor.team.350").split(",").map((s) => s.trim()).filter(Boolean),
 });
 const secret = () => env("PRO_SECRET") || SRK;
 

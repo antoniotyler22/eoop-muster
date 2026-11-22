@@ -3,7 +3,9 @@
    a place, and when they'll be back. It sets that person's status, place, dates and note on the roster, so the board, the
    section count, Home, Check-ins, the calendar, the activity feed and every synced phone show it, and it counts as a check-in.
    "Back by" travels in the note ("back 1745") so it syncs too; past that time with no sign-in the person shows LATE.
-   Sign IN puts them back On Hand and clears the place. Open it from Home (Logbook card) or My page (Logbook button). */
+   Sign IN puts them back On Hand and clears the place. Open it from Home (Logbook card) or My page (Logbook button).
+   4.143.0: History. Go back to any earlier day (arrows, a date, or the last 7 days with entries) and filter by person to see who signed out and in.
+   Each version names it its own way (mode-words.js: Duty Log, Crew Log, Sign-Out Sheet); the screen and functions are the same. */
 (()=>{
 const OUTS=["Appointment","At PT","Duty Recovery","SIQ","Operation","TAD","Leave","Other"],MULTI=["SIQ","Operation","TAD","Leave"];
 let tab="ALL",mode="out",st="Appointment",who="",v={place:"",back:"",to:"",oth:""};
@@ -28,6 +30,24 @@ function personPick(){const ps=inSec(tab==="ALL"?(S.link&&S.link.mysec&&!S.link.
   if(who&&!ps.some(m=>m.id===who)&&!pool().some(m=>m.id===who))who="";
   if(!who){const m=me();who=m&&pool().some(x=>x.id===m.id)?m.id:(ps[0]||{}).id||""}
   return `<label for="lbWho">Who</label><select id="lbWho" class="wsel">${(tab==="ALL"?pool():ps).map(m=>`<option value="${esc(m.id)}"${m.id===who?" selected":""}>${esc(m.rank+" "+m.name)}${isOut(m)?" · "+esc(SHORT[m.status]||m.status):""}</option>`).join("")}</select>`}
+const DOWN=t=>{try{return new Date(t).toLocaleDateString([],{weekday:"short",month:"short",day:"numeric"})}catch(e){return t}};
+function eRow(e){const p=S.roster.find(x=>x.id===e.mid);const lt=e.k==="out"&&p&&isLate(p)&&e.t>=day0();
+  return `<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)"><span class="note" style="margin:0;width:42px;font-weight:700">${hhmm(e.t)}</span><span style="flex:1;min-width:0"><b>${esc(e.n)}</b> <span class="note">${esc(lbl(e.sec))}${e.pl?" · "+esc(e.pl):""}${e.st&&e.k==="out"?" · "+esc(SHORT[e.st]||e.st):""}${e.bk?" · back "+esc(e.bk):""}</span></span>${lt?`<span class="chip" style="background:var(--warn);color:#fff;border:0">LATE</span>`:""}<span class="chip" style="${e.k==="out"?"background:var(--brass);color:#fff;border:0":""}">${e.k==="out"?"OUT":"IN"}</span></div>`}
+let hd="",hw="ALL";
+const dayK=t=>dkey(new Date(t));
+function histHtml(){const today=dkey();if(!hd||hd>today)hd=today;
+  const all=LOG().filter(e=>tab==="ALL"||e.sec===tab);
+  const people=[...new Map(all.map(e=>[e.mid,e.n])).entries()].sort((a,b)=>String(a[1]).localeCompare(String(b[1])));
+  if(hw!=="ALL"&&!people.some(x=>x[0]===hw))hw="ALL";
+  const sel=all.filter(e=>dayK(e.t)===hd&&(hw==="ALL"||e.mid===hw)).sort((a,b)=>b.t-a.t),outs=sel.filter(e=>e.k==="out").length;
+  const days=[...new Set(all.map(e=>dayK(e.t)))].sort().reverse().slice(0,7);
+  const btn="cursor:pointer;min-height:40px";
+  return `<div class="sech"><h2>History</h2></div><div class="panel" id="lbHist"><p class="note" style="margin:0 0 8px">Go back to any day to see who signed out and in.</p>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button type="button" class="chip" data-lbhd="-1" style="${btn}">‹ Day before</button><input type="date" id="lbHd" value="${esc(hd)}" max="${esc(today)}" style="flex:1;min-width:140px"><button type="button" class="chip" data-lbhd="1" style="${btn}"${hd>=today?" disabled":""}>Next day ›</button></div>
+    ${days.length?`<div class="evts" style="flex-wrap:wrap;margin-top:8px">${days.map(k=>`<button type="button" data-lbhday="${esc(k)}" aria-pressed="${k===hd}" style="min-height:40px">${k===today?"Today":esc(DOWN(k+"T12:00:00"))}</button>`).join("")}</div>`:""}
+    <label for="lbHw">Person</label><select id="lbHw" class="wsel"><option value="ALL"${hw==="ALL"?" selected":""}>Everyone</option>${people.map(([id,n])=>`<option value="${esc(id)}"${id===hw?" selected":""}>${esc(n)}</option>`).join("")}</select>
+    <p class="note" style="margin:8px 0 0"><b>${hd===today?"Today":esc(DOWN(hd+"T12:00:00"))}</b> · ${sel.length} ${sel.length===1?"entry":"entries"} · ${outs} out · ${sel.length-outs} in</p>
+    ${sel.length?sel.map(eRow).join(""):`<p class="note" style="margin:6px 0 0">No entries on this day.</p>`}</div>`}
 function entries(){const t0=day0();return LOG().filter(e=>e.t>=t0&&(tab==="ALL"||e.sec===tab)).sort((a,b)=>b.t-a.t).slice(0,40)}
 function html(){
   if(!real())return `<div class="card"><b>Logbook</b><p class="note">Add your people first, then sign them out and in here.</p></div>`;
@@ -49,8 +69,8 @@ function html(){
   else h+=`<p class="note" style="margin:0">${m&&isOut(m)?esc(nm(m))+" is "+esc(SHORT[m.status]||m.status)+(m.loc?" · "+esc(m.loc):"")+". Signing in puts them back On Hand and clears the place.":"Puts them back On Hand and clears the place."}</p>`;
   h+=`<button class="btn" id="lbGo" style="min-height:52px">${mode==="out"?"Sign out":"Sign in"}</button></div>`;
   const E=entries();
-  h+=`<div class="sech"><h2>Today's entries</h2></div><div class="panel" id="lbLog">${E.length?E.map(e=>{const p=S.roster.find(x=>x.id===e.mid);const lt=e.k==="out"&&p&&isLate(p);
-    return `<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)"><span class="note" style="margin:0;width:42px;font-weight:700">${hhmm(e.t)}</span><span style="flex:1;min-width:0"><b>${esc(e.n)}</b> <span class="note">${esc(lbl(e.sec))}${e.pl?" · "+esc(e.pl):""}${e.st&&e.k==="out"?" · "+esc(SHORT[e.st]||e.st):""}${e.bk?" · back "+esc(e.bk):""}</span></span>${lt?`<span class="chip" style="background:var(--warn);color:#fff;border:0">LATE</span>`:""}<span class="chip" style="${e.k==="out"?"background:var(--brass);color:#fff;border:0":""}">${e.k==="out"?"OUT":"IN"}</span></div>`}).join(""):`<p class="note" style="margin:0">No entries yet today.</p>`}</div>`;
+  h+=`<div class="sech"><h2>Today's entries</h2></div><div class="panel" id="lbLog">${E.length?E.map(eRow).join(""):`<p class="note" style="margin:0">No entries yet today.</p>`}</div>`;
+  h+=histHtml();
   return h}
 function grab(){for(const [k,id] of [["oth","lbO"],["place","lbP"],["back","lbB"],["to","lbT"]]){const el=document.getElementById(id);if(el)v[k]=el.value}}
 const again=()=>{const y=window.scrollY;render();window.scrollTo(0,y)};
@@ -66,7 +86,7 @@ function sign(){grab();const m=S.roster.find(x=>x.id===who);if(!m)return;if(!all
     const det=[st==="Other"?String(v.oth||"").trim().slice(0,30):"",bk?"back "+bk:""].filter(Boolean).join(" · ");if(det)m.detail=det;else delete m.detail}
   else{m.status="On Hand";delete m.start;delete m.end;delete m.loc;delete m.detail;delete m.noAuto}
   m.ckAt=now;m.ut=now;S.secAt=S.secAt||{};S.secAt[m.sec]=now;
-  const L=LOG();L.unshift({id:"l"+now.toString(36)+rndId(3),mid:m.id,n:nm(m),sec:m.sec,k:mode,t:now,st:m.status,pl:m.loc||"",bk});if(L.length>300)L.length=300;
+  const L=LOG();L.unshift({id:"l"+now.toString(36)+rndId(3),mid:m.id,n:nm(m),sec:m.sec,k:mode,t:now,st:m.status,pl:m.loc||"",bk});if(L.length>3000)L.length=3000;
   try{actAdd("📒",nm(m)+" signed "+(mode==="out"?"OUT":"IN")+": "+(SHORT[m.status]||m.status)+(m.loc?" · "+m.loc:"")+(bk?" · back "+bk:""),"board")}catch(e){}
   v={place:"",back:"",to:"",oth:""};save();try{if(S.board&&typeof rpPublish==="function")rpPublish(true)}catch(e){}
   again();try{buzz()}catch(e){}toast(nm(m)+": signed "+(mode==="out"?"OUT":"IN"))}
@@ -79,8 +99,13 @@ document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest||view!=
   if(b=t.closest("[data-lbtab]")){grab();tab=b.dataset.lbtab;who="";again();return}
   if(b=t.closest("[data-lbmode]")){grab();mode=b.dataset.lbmode;again();return}
   if(b=t.closest("[data-lbst]")){grab();st=b.dataset.lbst;again();return}
+  if(b=t.closest("[data-lbhd]")){const d=new Date((hd||dkey())+"T12:00:00");d.setDate(d.getDate()+(+b.dataset.lbhd));const k=dkey(d);hd=k>dkey()?dkey():k;again();return}
+  if(b=t.closest("[data-lbhday]")){hd=b.dataset.lbhday;again();return}
   if(t.closest("#lbGo")){sign();return}},true);
-document.addEventListener("change",e=>{if(view!=="lb"||e.target.id!=="lbWho")return;grab();who=e.target.value;again()});
+document.addEventListener("change",e=>{if(view!=="lb")return;const id=e.target.id;
+  if(id==="lbWho"){grab();who=e.target.value;again()}
+  else if(id==="lbHd"){if(/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)){hd=e.target.value>dkey()?dkey():e.target.value;again()}}
+  else if(id==="lbHw"){hw=e.target.value||"ALL";again()}});
 /* Home: a Logbook card under the check-in card, and a button on My page */
 function card(){const P=pool(),o=P.filter(isOut).length,l=P.filter(isLate).length;
   return `<div class="card" id="lbCard" style="margin-top:10px;display:flex;gap:10px;align-items:center"><div style="flex:1;min-width:0"><span class="lbl">LOGBOOK</span><div class="note" style="margin:2px 0 0">${o} out${l?` · <b style="color:var(--warn)">${l} late</b>`:""} · sign people out and in</div></div><button class="btn" data-go="lb" style="width:auto;flex:none;min-height:44px;padding:0 16px">Open</button></div>`}
