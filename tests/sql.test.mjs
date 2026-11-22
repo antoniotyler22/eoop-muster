@@ -310,6 +310,11 @@ test("Verified leader (part 49): contact needs a sign-in, org needs the owner, a
   pg.psql(`insert into auth.users(id, email) values (${q(u)}, 'lead@example.com') on conflict do nothing`);
   const as = (sql, claims = { email: "Lead@Example.com" }) => pg.psql(`set role authenticated; set "request.jwt.claims" to ${q(JSON.stringify(Object.assign({ sub: u, role: "authenticated" }, claims)))}; ${sql}`);
   assert.throws(() => anon(`select public.verify_contact(${q(tok)})`), /permission denied/, "anon can't confirm a contact");
+  // part 61 (4.142.0) retired the self-service path: a signed-in user can't call either function any more
+  assert.throws(() => as(`select public.verify_contact(${q(tok)})`), /permission denied/, "verify_contact is retired");
+  assert.throws(() => as(`select public.verify_org(${q(tok)}, 'Maple Elementary', 'https://maple.example', 'Principal')`), /permission denied/, "verify_org is retired");
+  // the badge logic itself (levels, recall badges, masking) is still covered: re-grant for the rest of this test only
+  pg.psql(`grant execute on function public.verify_contact(text), public.verify_org(text, text, text, text) to authenticated`);
   assert.throws(() => as(`select public.verify_contact(${q(tok)})`, { email: "", phone: "" }), /email or phone/, "needs a confirmed email or phone in the sign-in");
   assert.throws(() => as(`select public.verify_org(${q(tok)}, 'Maple Elementary', 'https://maple.example', 'Principal')`), /Confirm your contact first/);
   assert.equal(anon(`select count(*) from public.verify_status(${q(tok)})`), "0");
@@ -334,4 +339,5 @@ test("Verified leader (part 49): contact needs a sign-in, org needs the owner, a
   assert.throws(() => anon(`select * from public.org_verify`), /permission denied/);
   assert.throws(() => anon(`select * from public.recall_badges`), /permission denied/);
   assert.throws(() => anon(`select public._vf_level('x')`), /permission denied/);
+  pg.psql(`revoke execute on function public.verify_contact(text), public.verify_org(text, text, text, text) from authenticated`);
 });

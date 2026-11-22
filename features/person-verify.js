@@ -45,9 +45,10 @@ async function restore(){const t=tok();if(!t||!window.SB||!SB.rpc)return;
 function vouch(m){if(!leader())return toast("Only a leader can verify someone.");
   m.vf={by:nameOf(),at:Date.now()};arm="";try{save()}catch(e){}queue({op:"set",mid:m.id,by:m.vf.by,at:m.vf.at});
   try{if(S.board)rpPublish(true)}catch(e){}
+  try{mpSchedule()}catch(e){}
   toast("Verified")}
 function revoke(m){if(!leader())return toast("Only a leader can revoke.");
-  delete m.vf;arm="";try{save()}catch(e){}queue({op:"clear",mid:m.id});toast("Verification revoked")}
+  delete m.vf;arm="";try{save()}catch(e){}queue({op:"clear",mid:m.id});try{mpSchedule()}catch(e){}toast("Verification revoked")}
 
 /* the ladder: four steps, filled up to the person's level */
 function ladder(L){return `<span class="pv-lad" aria-hidden="true" style="display:inline-flex;gap:3px;vertical-align:middle">${[0,1,2,3].map(i=>`<i style="width:18px;height:5px;border-radius:3px;background:${i<=L&&L>0?COL[L]:"rgba(128,128,128,.28)"}"></i>`).join("")}</span>`}
