@@ -81,7 +81,7 @@ test("Logbook: History goes back to earlier days and filters by person; each ver
   try {
     const day = (n) => a.w.eval(`Date.now()-${n}*864e5`);
     a.w.eval(leader + `S.exp24=false;S.roster=[{id:"lee",rank:"SGT",name:"LEE, JAMIE",sec:"UT",status:"On Hand"},{id:"r1",rank:"CPL",name:"RIVERA, ANA",sec:"UT",status:"On Hand"}];
-      S.lb={log:[{id:"l1",mid:"lee",n:"SGT Lee",sec:"UT",k:"out",t:Date.now()-2*864e5,st:"Leave",pl:"Home",bk:""},{id:"l2",mid:"lee",n:"SGT Lee",sec:"UT",k:"in",t:Date.now()-2*864e5+36e5,st:"On Hand",pl:"",bk:""},{id:"l3",mid:"r1",n:"CPL Rivera",sec:"UT",k:"out",t:Date.now()-2*864e5+72e5,st:"Appointment",pl:"Medical",bk:""}]};save();view="lb";render()`);
+      /* anchor to 10:00 two days back so the +1h/+2h entries stay on that day whatever time the tests run */const B2=(()=>{const d=new Date();d.setHours(10,0,0,0);return d.getTime()-2*864e5})();S.lb={log:[{id:"l1",mid:"lee",n:"SGT Lee",sec:"UT",k:"out",t:B2,st:"Leave",pl:"Home",bk:""},{id:"l2",mid:"lee",n:"SGT Lee",sec:"UT",k:"in",t:B2+36e5,st:"On Hand",pl:"",bk:""},{id:"l3",mid:"r1",n:"CPL Rivera",sec:"UT",k:"out",t:B2+72e5,st:"Appointment",pl:"Medical",bk:""}]};save();view="lb";render()`);
     await sleep(60);
     assert.ok(a.$("#lbHist"), "History panel shows");
     a.$('[data-lbhd="-1"]').click(); await sleep(20); a.$('[data-lbhd="-1"]').click(); await sleep(20);
