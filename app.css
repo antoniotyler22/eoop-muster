@@ -556,3 +556,28 @@ body.v12noai [data-go="ask"],body.v12noai [data-tab="ask"]{display:none!importan
 .pc-sizes{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}
 .pc-size{min-width:44px;min-height:36px;display:inline-flex;align-items:center;justify-content:center;padding:0 10px;border-radius:999px;border:1.5px solid rgba(128,128,128,.45);font-weight:700;font-size:14px}
 .pc-size[aria-pressed="true"]{background:#0857E8;border-color:#0857E8;color:#fff}
+
+/* iPad (4.144): two-pane layouts for landscape and large iPads. Phones and portrait iPads are untouched.
+   Uses :has(); on the rare older iOS without it the screens simply stay one column. */
+@media (min-width:1000px){
+  .wrap,.top-in,#tabbar .in{max-width:1120px}
+  .sheet-panel{max-width:720px}
+  /* Home: the ring card on the left, the action buttons on the right */
+  #main:has(>.card.hero){display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);column-gap:16px;align-items:start}
+  #main:has(>.card.hero)>*{grid-column:1/-1}
+  #main:has(>.card.hero)>.card.hero{grid-column:1;grid-row:span 4}
+  #main:has(>.card.hero)>.qa,#main:has(>.card.hero)>#wDemoBtn,#main:has(>.card.hero)>#v11Em{grid-column:2}
+  /* People: sections on the left (stays in view), the list on the right */
+  #pplWrap{display:grid;grid-template-columns:minmax(0,400px) minmax(0,1fr);column-gap:16px;align-items:start}
+  #pplWrap>*{grid-column:1/-1}
+  #pplWrap>#secSum{grid-column:1;grid-row:2/span 3;position:sticky;top:124px;max-height:calc(100vh - 124px - 96px - env(safe-area-inset-bottom,0px));overflow:auto}
+  #pplWrap>.sech,#pplWrap>#pplChips,#pplWrap>#pplList{grid-column:2}
+  #pplWrap>.sech{grid-row:2}#pplWrap>#pplChips{grid-row:3}#pplWrap>#pplList{grid-row:4}
+}
+/* Pointer and trackpad: hover feedback only where a pointer exists */
+@media (hover:hover) and (pointer:fine){
+  #tabbar button:hover,.tgrid button:hover,.tgrid a:hover,.qa button:hover{filter:brightness(.97)}
+  .alist>*:hover{background:var(--surface-2)}
+}
+/* iPad keyboard: visible focus ring */
+@media (min-width:768px){button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--s-onhand,#0857e8);outline-offset:2px}}
