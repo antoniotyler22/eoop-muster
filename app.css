@@ -566,7 +566,7 @@ body.v12noai [data-go="ask"],body.v12noai [data-tab="ask"]{display:none!importan
   #main:has(>.card.hero){display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);column-gap:16px;align-items:start}
   #main:has(>.card.hero)>*{grid-column:1/-1}
   #main:has(>.card.hero)>.card.hero{grid-column:1;grid-row:span 4}
-  #main:has(>.card.hero)>.qa,#main:has(>.card.hero)>#wDemoBtn,#main:has(>.card.hero)>#v11Em{grid-column:2}
+  #main:has(>.card.hero)>.qa,#main:has(>.card.hero)>#wDemoBtn,#main:has(>.card.hero)>#v11Em,#main:has(>.card.hero)>#offHome{grid-column:2}
   /* People: sections on the left (stays in view), the list on the right */
   #pplWrap{display:grid;grid-template-columns:minmax(0,400px) minmax(0,1fr);column-gap:16px;align-items:start}
   #pplWrap>*{grid-column:1/-1}

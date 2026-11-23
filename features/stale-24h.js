@@ -53,12 +53,14 @@ function tagRows(){if(!on()||!real())return;const p=pending();
 function note(){if(!real()||(typeof role==="function"&&role()==="view"))return "";const n=window.ckStaleList().length;
   return `<div class="note" id="exp24" style="margin:6px 4px 0">${on()?`Status goes to Off Hand after 15 hrs without a check-in or update${n?" · <b style=\"color:var(--warn)\">"+n+" Off Hand now</b>":""}. `:"15-hour expiry is off. "}<button class="chip" id="exp24t" style="cursor:pointer">${on()?"Turn off":"Turn on"}</button></div>`+offBtns()}
 {const _r=render;render=function(){try{oldNotes()}catch(e){}const r=_r.apply(this,arguments);try{tagRows();
+  /* 4.144.2: the button is on Home too (leaders), so it is easy to find; it works the same as on Check-ins */
+  if(view==="board"&&canReset()&&!document.getElementById("offHome")){const m=document.getElementById("main"),em=document.getElementById("v11Em")||(m&&m.querySelector(".qa"));if(em)em.insertAdjacentHTML("afterend",`<div id="offHome" style="margin:2px 0 0">${offBtns()}</div>`)}
   if(view==="checkins"&&!document.getElementById("exp24")){const a=document.getElementById("ckMiss");if(a)a.insertAdjacentHTML("afterend",note())}}catch(e){}return r}}
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest||!t.closest("#exp24t"))return;e.stopImmediatePropagation();
   S.exp24=on()?false:true;rawSave();const y=window.scrollY;render();window.scrollTo(0,y);toast(on()?"Off Hand after 15 hrs":"15-hour expiry off")},true);
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;
   if(t.closest("#offReset")){e.stopImmediatePropagation();if(!canReset())return;
-    if(!offArm){offArm=true;const y=window.scrollY;render();window.scrollTo(0,y);setTimeout(()=>{if(offArm){offArm=false;if(view==="checkins")render()}},4000);return}
+    if(!offArm){offArm=true;const y=window.scrollY;render();window.scrollTo(0,y);setTimeout(()=>{if(offArm){offArm=false;if(view==="checkins"||view==="board")render()}},4000);return}
     offArm=false;const n=onHandN();S.offAt=Date.now();S.exp24=true;try{save()}catch(x){}
     try{if(typeof actAdd==="function")actAdd("🔄","Set "+n+" On Hand to Off Hand to test check-ins","checkins")}catch(x){}
     const y=window.scrollY;render();window.scrollTo(0,y);toast(n+" set to Off Hand. They come back when they check in.");return}
