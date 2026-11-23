@@ -13,7 +13,12 @@ function away(m){if(!AWAY.includes(m.status))return false;const s=isoOf(m.start)
   /* 4.137.0: only someone with a From and To date (an operation, leave, TAD) skips the 15-hour rule; with no dates they expire like anyone who hasn't updated */
   if(!s||!e)return false;
   return s<=d&&e>=d}
-function touched(m){let t=+m.ckAt||0;if(+m.ut>t)t=+m.ut;if(m.upd&&+m.upd.t>t)t=+m.upd.t;const L=(S.tl||{})[m.id];if(L&&L.length){const x=+L[L.length-1][0]||0;if(x>t)t=x}return t}
+/* 4.144.3: the status history (S.tl) is bookkeeping the app adds by itself, so it can't count as the person updating.
+   Before, any new history line (a duty that changed, a row the app re-added) restarted someone's 15 hours, so they never went Off Hand
+   and "Set everyone Off Hand" didn't stick. Now only a real update counts: their check-in, a status someone set, a leader's confirm, or an actual
+   change of status in the history. The first history line is only the starting point for someone who has never been updated. */
+function touched(m){let t=+m.ckAt||0;if(+m.ut>t)t=+m.ut;if(m.upd&&+m.upd.t>t)t=+m.upd.t;const L=((S.tl||{})[m.id]||[]).filter(Boolean);
+  if(L.length){let x=+L[0][0]||0;for(let i=L.length-1;i>0;i--){if(L[i][1]!==L[i-1][1]){x=Math.max(x,+L[i][0]||0);break}}if(x>t)t=x}return t}
 /* 4.143.0: a leader can set everyone who is On Hand to Off Hand (S.offAt = the moment they did it, synced with the team).
    Anyone On Hand whose last check-in or update is at or before that moment shows Off Hand; their next check-in or update brings them back.
    It is a way to test that everyone is checking in and the check-in button works. Nothing is erased. */
@@ -53,12 +58,14 @@ function tagRows(){if(!on()||!real())return;const p=pending();
 function note(){if(!real()||(typeof role==="function"&&role()==="view"))return "";const n=window.ckStaleList().length;
   return `<div class="note" id="exp24" style="margin:6px 4px 0">${on()?`Status goes to Off Hand after 15 hrs without a check-in or update${n?" · <b style=\"color:var(--warn)\">"+n+" Off Hand now</b>":""}. `:"15-hour expiry is off. "}<button class="chip" id="exp24t" style="cursor:pointer">${on()?"Turn off":"Turn on"}</button></div>`+offBtns()}
 {const _r=render;render=function(){try{oldNotes()}catch(e){}const r=_r.apply(this,arguments);try{tagRows();
+  /* 4.144.2: the button is on Home too (leaders), so it is easy to find; it works the same as on Check-ins */
+  if(view==="board"&&canReset()&&!document.getElementById("offHome")){const m=document.getElementById("main"),em=document.getElementById("v11Em")||(m&&m.querySelector(".qa"));if(em)em.insertAdjacentHTML("afterend",`<div id="offHome" style="margin:2px 0 0">${offBtns()}</div>`)}
   if(view==="checkins"&&!document.getElementById("exp24")){const a=document.getElementById("ckMiss");if(a)a.insertAdjacentHTML("afterend",note())}}catch(e){}return r}}
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest||!t.closest("#exp24t"))return;e.stopImmediatePropagation();
   S.exp24=on()?false:true;rawSave();const y=window.scrollY;render();window.scrollTo(0,y);toast(on()?"Off Hand after 15 hrs":"15-hour expiry off")},true);
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;
   if(t.closest("#offReset")){e.stopImmediatePropagation();if(!canReset())return;
-    if(!offArm){offArm=true;const y=window.scrollY;render();window.scrollTo(0,y);setTimeout(()=>{if(offArm){offArm=false;if(view==="checkins")render()}},4000);return}
+    if(!offArm){offArm=true;const y=window.scrollY;render();window.scrollTo(0,y);setTimeout(()=>{if(offArm){offArm=false;if(view==="checkins"||view==="board")render()}},4000);return}
     offArm=false;const n=onHandN();S.offAt=Date.now();S.exp24=true;try{save()}catch(x){}
     try{if(typeof actAdd==="function")actAdd("🔄","Set "+n+" On Hand to Off Hand to test check-ins","checkins")}catch(x){}
     const y=window.scrollY;render();window.scrollTo(0,y);toast(n+" set to Off Hand. They come back when they check in.");return}

@@ -11,17 +11,22 @@ on:
   workflow_dispatch:
 jobs:
   ios:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      # Newest Xcode on the runner, so the build uses the latest iOS SDK (needed for the "made for iPhone Duo" badge).
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
+      # iPhone Duo needs Xcode 27.1 (iOS 27.1 SDK): that is what makes the app fill the whole foldable screen
+      # and earns the "Made for iPhone Duo" badge. The xcode-27 runner image carries it.
+      - name: Use the newest Xcode 27
+        run: |
+          X=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$X" ]; then echo "::error::No Xcode 27 on this runner"; exit 1; fi
+          sudo xcode-select -s "$X"
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i "iphoneos"
       - name: Install
         run: npm ci
       - name: Copy the web app into the iPhone project
