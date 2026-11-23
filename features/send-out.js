@@ -107,7 +107,10 @@ async function make(){const ps=people();const team=so.conn==="team";const todo=t
         if(so.as==="link"){if(!links[dest]){const hh=await lgHash(dest,true);if(!hh)throw new Error("That page isn't available on this phone.");links[dest]=PUB()+"#"+hh}
           it.text=linkText(it.role,r.d.l,links[dest])}
         else{let L=findLogin(dest,r.mid);if(L)reused++;
-          else{let tries=0;while(!L&&tries<3){tries++;try{L=await lgCreate(dest,lgUser(p.m?String(p.m.name||"").split(",")[0]:p.name),lgPw(),{label:r.label,mid:r.mid})}catch(e){if(!/taken/.test(String(e&&e.message)))throw e}}
+          else{let tries=0;while(!L&&tries<6){tries++;const u=lgUser(p.m?String(p.m.name||"").split(",")[0]:p.name);
+            /* a name already used by a login on this phone would silently replace it, so pick another number (the server only catches names used elsewhere) */
+            if((S.logins||[]).some(x=>String(x.user||"").toLowerCase()===u.toLowerCase()))continue;
+            try{L=await lgCreate(dest,u,lgPw(),{label:r.label,mid:r.mid})}catch(e){if(!/taken/.test(String(e&&e.message)))throw e}}
             if(!L)throw new Error("Couldn't find a free username.");made++}
           it.uid=L.uid;it.self=!!L.self;it.text=loginText(L)}}}
     catch(e){it.err=typeof lgErr==="function"?lgErr(e):String(e&&e.message||e);bad++}
