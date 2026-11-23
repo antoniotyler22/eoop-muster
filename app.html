@@ -39,7 +39,7 @@
 <nav id="tabbar" aria-label="Main"><div class="in"></div></nav>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <button id="fdPill" hidden></button>
-<button id="helpBtn" aria-label="Help for this screen" style="position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:40;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:800;font-size:18px;box-shadow:0 4px 14px rgba(0,0,0,.15)">?</button>
+<button id="helpBtn" aria-label="Help for this screen" style="position:fixed;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom));z-index:40;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:800;font-size:18px;box-shadow:0 4px 14px rgba(0,0,0,.15)">?</button>
 <div class="sheet" id="sheet" hidden><div class="sheet-bg" data-sclose="1"></div><div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheetT"><div class="grab"></div><h3 id="sheetT"></h3><div class="sheet-opts" id="sheetOpts"></div></div></div>
 
 
@@ -87,7 +87,7 @@ const V=window.VAULT={key:null,cfg:getCfg(),ok:!!(window.crypto&&crypto.subtle),
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.hidden){hiddenAt=Date.now();return}
   const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
-window.AV="4.144.0";
+window.AV="4.144.1";
 /* 4.143.0: start downloading the app the moment the page opens, in parallel with the saved-data check below, so it runs without waiting */
 try{const l=document.createElement("link");l.rel="preload";l.as="script";l.href="app.bundle.js?v="+window.AV;document.head.appendChild(l)}catch(e){}
 /* self-update: an installed web app resumes without reloading, so check the live version on open, on every return, and every 10 min */

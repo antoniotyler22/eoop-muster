@@ -341,7 +341,7 @@ body{background:var(--bg)!important;padding-bottom:calc(84px + env(safe-area-ins
 #subnav{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:8px 0 10px}#subnav:empty{display:none}#subnav::-webkit-scrollbar{display:none}
 #subnav button{flex:0 0 auto;min-height:36px;border-radius:999px;border:1px solid var(--line);background:var(--surface-solid);color:var(--ink);font:inherit;font-weight:700;font-size:13.5px;padding:0 14px;white-space:nowrap}
 #subnav button[aria-current="page"]{background:var(--ink);color:var(--bg);border-color:transparent}
-#tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface-solid);border-top:1px solid var(--line);padding:6px 6px calc(8px + env(safe-area-inset-bottom,0px))}
+#tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface-solid);border-top:1px solid var(--line);padding:6px max(6px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px))}
 #tabbar .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(var(--n,5),minmax(0,1fr))}
 #tabbar button{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:48px;justify-content:center;color:var(--muted);font:inherit;font-size:11.5px;font-weight:700;position:relative}
 #tabbar button[aria-current="page"]{color:var(--ink);font-weight:800}
@@ -557,9 +557,9 @@ body.v12noai [data-go="ask"],body.v12noai [data-tab="ask"]{display:none!importan
 .pc-size{min-width:44px;min-height:36px;display:inline-flex;align-items:center;justify-content:center;padding:0 10px;border-radius:999px;border:1.5px solid rgba(128,128,128,.45);font-weight:700;font-size:14px}
 .pc-size[aria-pressed="true"]{background:#0857E8;border-color:#0857E8;color:#fff}
 
-/* iPad (4.144): two-pane layouts for landscape and large iPads. Phones and portrait iPads are untouched.
+/* iPad and iPhone Duo (4.144): two-pane layouts for landscape iPads and the Duo's open inner screen (about 950pt wide landscape). Phones and portrait iPads are untouched.
    Uses :has(); on the rare older iOS without it the screens simply stay one column. */
-@media (min-width:1000px){
+@media (min-width:900px){
   .wrap,.top-in,#tabbar .in{max-width:1120px}
   .sheet-panel{max-width:720px}
   /* Home: the ring card on the left, the action buttons on the right */
