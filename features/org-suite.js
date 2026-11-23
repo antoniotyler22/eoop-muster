@@ -202,7 +202,10 @@ function obHTML(){const st=obSteps(),n=st.filter(x=>x.ok).length,nx=st.find(x=>!
   return `<div class="card" id="obCard" style="margin-top:10px"><b>Run your first drill in 60 seconds</b><div style="display:flex;align-items:center;gap:10px;margin:8px 0"><div style="flex:1;height:8px;border-radius:6px;background:var(--line)"><div style="height:100%;width:${25*n}%;border-radius:6px;background:var(--brass)"></div></div><span class="note" style="margin:0">${n} of ${st.length}</span></div>
     ${st.map(x=>`<div style="display:flex;gap:8px;align-items:center;padding:3px 0;${x.ok?"opacity:.6":""}"><span aria-hidden="true">${x.ok?"✓":"○"}</span><span style="flex:1"><b>${E(x.t)}</b></span></div>`).join("")}
     <div class="row2" style="margin-top:8px">${nx?btn(`data-go="${nx.go}"`,E(nx.t),"btn"):""}${btn('id="obHide"',"Hide")}</div></div>`}
-function yrHTML(){return `<div class="card" id="yrCard" style="margin-top:10px"><b>Save with the yearly plan</b><p class="note" style="margin:4px 0 8px">Yearly Pro is $99.99 against $9.99 a month, about 17% less. Yearly Org is $249 against $29.99 a month, about 31% less.</p><div class="row2">${btn('data-pro-open="yr"',"See yearly","btn")}${btn('id="yrHide"',"Not now")}</div></div>`}
+function yrSave(tier){try{const get=id=>(typeof proProducts!=="undefined"&&proProducts||[]).find(p=>p.id===id),B="com.antoniotyler.accountedfor.",mo=get(B+tier+".monthly"),yr=get(B+tier+".yearly");
+  return mo&&yr&&mo.amount&&yr.amount?Math.round((1-yr.amount/(mo.amount*12))*100):0}catch(e){return 0}}
+function yrHTML(){const n=yrSave("pro")||yrSave("org");
+  return `<div class="card" id="yrCard" style="margin-top:10px"><b>Save with the yearly plan</b><p class="note" style="margin:4px 0 8px">${n>0?"Yearly costs about "+n+"% less than twelve monthly payments.":"Yearly costs less than twelve monthly payments. See the exact savings."}</p><div class="row2">${btn('data-pro-open="yr"',"See yearly","btn")}${btn('id="yrHide"',"Not now")}</div></div>`}
 const monthly=()=>{try{const N=window.MBN;return !!(N&&N.on&&N.pro&&N.pro.active&&/\.(pro|org)\.monthly$/.test(String(N.pro.pid||"")))}catch(e){return false}};
 {const _rb=renderBoard;renderBoard=function(){const r=_rb.apply(this,arguments);try{if(mem())return r;const main=$("#main");if(!main)return r;const o=os();
   const done=obSteps().every(x=>x.ok);

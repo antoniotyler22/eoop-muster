@@ -167,3 +167,16 @@ test("Share: a friend's ?ref link is remembered once; iPhone bridge hands the he
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("Console reads other teams on the phone, and the yearly nudge never quotes a made-up price", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    a.w.eval(leader + `S.ws={t1:{unit:"Bus 4",source:"mol",roster:[{id:"x",rank:"",name:"ORTIZ, KAI",sec:"UT",status:"On Hand"},{id:"y",rank:"",name:"CLARK, SARA",sec:"UT",status:"Leave"}],drills:[{id:"q",t:Date.now()-864e5,end:Date.now(),kind:"drill",n:2,ok:2}]}};S.teams={_o:["plt","t1"],t1:{name:"Bus 4"}};save()`);
+    await go(a, "org");
+    const txt = a.$("#osCon").textContent;
+    assert.match(txt, /2 teams/); assert.match(txt, /bus 4/i); assert.match(txt, /last drill/);
+    const src = await import("node:fs").then(f => f.readFileSync(new URL("../features/org-suite.js", import.meta.url), "utf8"));
+    assert.ok(!/\$99\.99|\$249|\$29\.99/.test(src.slice(src.indexOf("function yrHTML"), src.indexOf("function yrHTML") + 700)), "no hard-coded prices in the nudge");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
