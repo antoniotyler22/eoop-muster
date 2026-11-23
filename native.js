@@ -19,6 +19,9 @@
     set: function (k, v) { try { v == null ? localStorage.removeItem(KP + "-" + k) : localStorage.setItem(KP + "-" + k, v); } catch (e) {} }
   };
 
+  /* ---- Lock screen Live Activity + Home Screen widget (iPhone, 4.144.0): the headcount goes to the native MusterActivity plugin when it is installed (native-ios/MusterLiveActivity) ---- */
+  if (N.platform === "ios") { try { N.MusterActivity = P("MusterActivity"); } catch (e) {} }
+
   /* ---- Home-screen widget (Android): hand it the headcount whenever it changes ---- */
   if (N.platform === "android") {
     var Widget = P("HeadcountWidget"); N.Widget = Widget;

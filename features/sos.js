@@ -84,6 +84,8 @@ function show(force){const L=open();const old=document.getElementById("sosOv");i
       <button class="sos-b sos-ok" data-sosack="${esc(x.id)}">I'm responding</button></div>`}).join("")}<button class="sos-x" id="sosClose">Close for now</button></div>`;
   document.body.appendChild(d)}
 window.sosShow=show;
+/* 4.144.0: the Quiet alert (Safety > Quiet) sends through the same path */
+window.sosSend=()=>send();window.sosSetKind=k=>{if(KINDS.includes(k))kind=k};
 document.addEventListener("click",e=>{const a=e.target.closest&&e.target.closest("[data-sosack]");
   if(a){const x=list().find(y=>y.id===a.dataset.sosack);if(x){x.st="ack";x.ackAt=Date.now();save();try{actAdd("✓",x.who+" SOS: someone is responding","feed")}catch(er){}}show();return}
   if(e.target.closest&&e.target.closest("#sosClose")){const o=document.getElementById("sosOv");if(o)o.remove()}});

@@ -7,7 +7,7 @@
    5. Data & privacy: retention, delete, privacy links, Data Processing Agreement and single sign-on requests.
    Everything stays on this phone except the team alert, which goes through Word of Mouth like any urgent post. */
 (()=>{
-const TABS=[["drills","Drills"],["tapin","Tap-in"],["alone","Timer"],["actions","Actions"],["org","Data"]];
+const TABS=[["drills","Drills"],["plan","Plan"],["tapin","Tap-in"],["alone","Timer"],["actions","Actions"],["reunite","Reunite"],["quiet","Quiet"],["org","Data"]];
 const TYPES=[["fire","Fire"],["tornado","Tornado"],["lockdown","Lockdown"],["secure","Secure"],["evac","Evacuate"],["shelter","Shelter"]];
 const SEC_T=["lockdown","secure","shelter","evac"];
 /* Rules from state agency pages (checked Nov 2026). Districts can require more: confirm with yours. */
@@ -148,7 +148,7 @@ function orgHTML(){const c=sf();const mail=s=>"mailto:administration@accountedfo
 
 /* ---------- screen ---------- */
 function renderSafety(){const c=sf();prune();
-  const body={drills:drillsHTML,tapin:tapinHTML,alone:alHTML,actions:actHTML,org:orgHTML}[c.tab]||drillsHTML;
+  const body=({drills:drillsHTML,tapin:tapinHTML,alone:alHTML,actions:actHTML,org:orgHTML,...(window.osTabs||{})})[c.tab]||drillsHTML;
   $("#main").innerHTML=banner()+`<h2 style="display:flex;align-items:center;gap:8px"><span class="pro-badge">PRO</span> Safety</h2><div class="evts" role="tablist" aria-label="Safety sections">${TABS.map(([k,l])=>`<button role="tab" data-sf-tab="${k}" aria-selected="${c.tab===k}" aria-pressed="${c.tab===k}">${l}</button>`).join("")}</div>`+body()}
 function redraw(){if(view!=="safety"||!proOK())return;const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))return;const y=window.scrollY;renderSafety();window.scrollTo(0,y)}
 window.renderSafety=renderSafety;
