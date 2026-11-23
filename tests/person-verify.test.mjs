@@ -97,3 +97,18 @@ test("How it works explains the four levels, who can verify and what's kept", as
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("4.142.0: the vouch goes into the member's page, and the member sees Waiting / Verified by their leader", async () => {
+  const a = await boot();
+  try {
+    const un = a.w.eval(`mpDigest(S.roster[1]).vf`); assert.equal(un, null, "not vouched: no vf in the page");
+    a.w.eval(`S.roster[1].vf={by:"SGT Ruiz",at:Date.now()}`);
+    const v = a.w.eval(`mpDigest(S.roster[1]).vf`); assert.equal(v.by, "SGT Ruiz");
+    const base = `{v:1,mid:"r2",reqs:[],unit:"U",rank:"LCPL",name:"KIM, JO",sec:"HQ",secName:"HQ",status:"On Hand",statusShort:"On Hand",duty:"Full Duty",since:0,start:"",end:"",edd:"",eas:"",duties:[],due:[],cal:[],owe:[],events:[]`;
+    a.w.eval(`S.roster=[];S.who=null;S.source="sample";S.board=null;S.link=null;S.feeds=[];S.leaderMode=false;S.me={pk:"pagekey",unit:"U",t:Date.now(),d:${base},vf:null}};view="me";renderMe()`);
+    assert.match(a.$("#meVf").textContent, /Waiting for your leader/);
+    a.w.eval(`S.me.d.vf={by:"SGT Ruiz",at:Date.now()};renderMe()`);
+    assert.match(a.$("#meVf").textContent, /Verified by SGT Ruiz/);
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});

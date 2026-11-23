@@ -36,7 +36,9 @@ function signOut(id){const v=vlist().find(x=>x.id===id);if(!v||v.out)return;v.ou
 function csv(){const q=s=>'"'+String(s==null?"":s).replace(/"/g,'""')+'"';const L=[["Name","Type","Visiting","Company","Phone","Signed in","Signed out"].map(q).join(",")];
   for(const v of vlist())L.push([v.n,tyOf(v),v.host,v.org,v.ph,new Date(v.in).toLocaleString(),v.out?new Date(v.out).toLocaleString():"On site"].map(q).join(","));return L.join("\r\n")}
 
-function formHTML(){return `<div class="panel" id="vsForm"><b style="font-size:18px">${vv.kiosk?"Welcome! Please sign in":"Sign a visitor in"}</b>
+/* 4.143.0: a Close on the sign-in form (clears what was typed, leaves a "+ Sign a visitor in" button); kiosk mode, which has nothing else to show, gets Clear instead */
+function formHTML(){if(!vv.kiosk&&vv.open===false)return `<button type="button" class="btn" id="vsOpen" style="width:100%;min-height:52px;margin:8px 0">+ Sign a visitor in</button>`;
+  return `<div class="panel" id="vsForm"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b style="font-size:18px">${vv.kiosk?"Welcome! Please sign in":"Sign a visitor in"}</b>${vv.kiosk?`<button type="button" class="chip" id="vsClear" style="cursor:pointer;min-height:40px">Clear</button>`:`<button type="button" class="chip" id="vsClose" aria-label="Close without signing in" style="cursor:pointer;min-height:40px">✕ Close</button>`}</div>
   <div class="evts" role="group" aria-label="Who is signing in" style="margin-top:6px">${TYPES.map(([t,i])=>`<button type="button" data-vsty="${t}" aria-pressed="${vv.ty===t}">${i} ${t}</button>`).join("")}</div>
   <label for="vsName">Name</label><input id="vsName" type="text" maxlength="60" autocomplete="off" autocapitalize="words" placeholder="First and last name">
   <label for="vsHost">Visiting</label><input id="vsHost" type="text" maxlength="60" autocomplete="off" autocapitalize="words" placeholder="Who or which office">
@@ -69,13 +71,17 @@ function kiosk(on){vv.kiosk=on;vv.armed="";document.body.classList.toggle("vs-ki
   const r=_r.apply(this,arguments);try{homeChip()}catch(e){}return r}}
 document.addEventListener("click",e=>{if(!e.target.closest)return;const t=e.target;
   if(t.closest("#vsIn")){signIn();return}
+  if(t.closest("#vsClose")){vv.open=false;vv.msg="";vv.ty="Visitor";draw();return}
+  if(t.closest("#vsOpen")){vv.open=true;draw();setTimeout(()=>{const i=$("#vsName");if(i)i.focus({preventScroll:true})},60);return}
+  if(t.closest("#vsClear")){vv.msg="";vv.ty="Visitor";draw();return}
   const ty=t.closest("[data-vsty]");if(ty){vv.ty=ty.dataset.vsty;document.querySelectorAll("[data-vsty]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.vsty===vv.ty));return}
   const o=t.closest("[data-vsout]");if(o){signOut(o.dataset.vsout);return}
   if(t.closest("#vsKiosk")){kiosk(true);return}
   if(t.closest("#vsKioskEnd")){if(vv.armed!=="k"){vv.armed="k";draw();setTimeout(()=>{if(vv.armed==="k"){vv.armed="";draw()}},4000);return}kiosk(false);return}
   if(t.closest("#vsCsv")){shareFile(csv(),(unitName()+" visitors "+new Date().toISOString().slice(0,10)).replace(/[^\w -]+/g,"")+".csv","text/csv");return}
   const ok=t.closest("[data-vsok]");if(ok){const v=vlist().find(x=>x.id===ok.dataset.vsok);if(v&&S.rc){v.ok=v.ok===S.rc.rid?"":S.rc.rid;v.okc=0;v.okn="";save();if(typeof render==="function"){const y=window.scrollY;render();window.scrollTo(0,y)}}return}});
-document.addEventListener("keydown",e=>{if(e.key==="Enter"&&/^vs(Name|Host|Org|Ph)$/.test(e.target.id||"")){e.preventDefault();signIn()}},true);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&view==="visitors"&&!vv.kiosk&&vv.open!==false&&$("#vsForm")){vv.open=false;vv.msg="";vv.ty="Visitor";draw();return}
+  if(e.key==="Enter"&&/^vs(Name|Host|Org|Ph)$/.test(e.target.id||"")){e.preventDefault();signIn()}},true);
 {const css=document.createElement("style");css.textContent=`body.vs-kiosk header.top,body.vs-kiosk #tabbar,body.vs-kiosk #subnav{display:none!important}
 body.vs-kiosk #main{padding-top:calc(env(safe-area-inset-top,0px) + 12px)}
 .vs-kiosk-top{display:flex;justify-content:space-between;align-items:center;margin:4px 2px 10px;font-size:18px}

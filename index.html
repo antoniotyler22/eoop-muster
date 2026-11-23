@@ -2,7 +2,14 @@
 <html lang="en"><head>
 <script>
 /* Old links (invites, logins, payment returns, shared links) used to open the app at the site root. Anything with a # or ? goes straight to the app. */
-(function(){try{if(location.hash||location.search){location.replace("app.html"+location.search+location.hash)}}catch(e){}})();
+(function(){try{
+  /* 4.143.0: anyone who already uses the app (installed to the home screen, or has used it in this browser) goes straight to it, before this page paints. To see this page anyway: add ?site=1 */
+  if(/[?&]site=1\b/.test(location.search)||location.hash==="#site")return;
+  if(location.hash||location.search){location.replace("app.html"+location.search+location.hash);return}
+  var st=(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone===true,used=false;
+  try{used=!!localStorage.getItem("eoop-muster-v1")}catch(e){}
+  if(st||used)location.replace("app.html")
+}catch(e){}})();
 </script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">

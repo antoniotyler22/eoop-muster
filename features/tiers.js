@@ -1,21 +1,28 @@
 /* Accounted For 4.88.0: Free / Pro / Org tiers.
-   Free  = up to 10 people. Pro = up to 50 people + the leader tools. Org = unlimited people.
+   Free  = up to 10 people. Pro = up to 50 people + the leader tools. Team = 100 people (+50 per step, 4.143.0). Org = unlimited people.
    The cap is checked on the phone every time someone is added to the roster (manual add, pasted list, CSV import,
    Contacts, Send out, a person adding themselves). Nobody already on the team is ever removed or locked out, and
    emergency muster stays free on every tier. The web app and Android stay unlocked until billing exists there. */
 (()=>{
 const ORG_IDS=["com.antoniotyler.accountedfor.org.yearly","com.antoniotyler.accountedfor.org.monthly"];
-for(const id of ORG_IDS)if(!PRO_IDS.includes(id))PRO_IDS.push(id);
-const CAP={free:10,pro:50,org:Infinity};
-const NAME={free:"Free",pro:"Pro",org:"Org"};
+/* 4.143.0: Team = up to 100 people for $12.99 a month, then $2.99 a month more for every 50 more people (100, 150 ... 350; past that Org is cheaper).
+   One monthly App Store product per size: com.antoniotyler.accountedfor.team.100 ... team.350 (the number is the people cap). */
+const TEAM_SIZES=[100,150,200,250,300,350],TEAM_BASE=1299,TEAM_STEP=299;
+const teamCents=n=>TEAM_BASE+TEAM_STEP*Math.max(0,Math.round((n-100)/50));
+const TEAM_IDS=TEAM_SIZES.map(n=>"com.antoniotyler.accountedfor.team."+n);
+window.afTeam={sizes:TEAM_SIZES,cents:teamCents,id:n=>"com.antoniotyler.accountedfor.team."+n,ids:TEAM_IDS};
+for(const id of ORG_IDS.concat(TEAM_IDS))if(!PRO_IDS.includes(id))PRO_IDS.push(id);
+const CAP={free:10,pro:50,team:100,org:Infinity};
+const NAME={free:"Free",pro:"Pro",team:"Team",org:"Org"};
+const teamCap=()=>{const N=window.MBN,m=/\.team\.(\d+)$/.exec(String((N&&N.pro&&N.pro.pid)||""));return m?Math.max(100,+m[1]):100};
 const used=()=>S.source==="sample"?0:(S.roster||[]).length;
 
 function tier(){const N=window.MBN;
   if(window.afSiteOn&&window.afSiteOn())return "org"; /* site license (addons.js) */
   if(!proOK())return "free";
   if(!N||!N.on||!(N.pro&&N.pro.active))return "org"; /* web / Android / member views: unlocked */
-  return /\.org\./.test(String(N.pro.pid||""))?"org":"pro"}
-const cap=()=>Math.max(CAP[tier()],window.afPassCap?window.afPassCap():0); /* an Event Pass (addons.js) lifts the limit while it lasts */
+  const pid=String(N.pro.pid||"");return /\.org\./.test(pid)?"org":/\.team\.\d+$/.test(pid)?"team":"pro"}
+const cap=()=>Math.max(tier()==="team"?teamCap():CAP[tier()],window.afPassCap?window.afPassCap():0); /* an Event Pass (addons.js) lifts the limit while it lasts */
 const room=()=>Math.max(0,cap()-used());
 window.afTier=tier;window.afCap=cap;window.afRoom=room;
 
@@ -28,11 +35,12 @@ function meter(){const c=cap();if(!isFinite(c))return `<p class="note">${used()}
 proList=function(){return meter()
   +card("free","$0",["Live board and headcount ring","Check-in link for everyone","Emergency muster","Word of Mouth and Calendar","Offline mode","Up to 10 people"],false)
   +card("pro","$9.99/mo",["Everything in Free","Up to 50 people","Company roll-up","Recall drills and QR muster","Trends and Excel export","6W incident reports","Member logins","Ask (AI)"],true)
+  +card("team","$12.99/mo",["Everything in Pro","Up to 100 people","$2.99 a month more for every 50 more people"],false)
   +card("org","$29.99/mo",["Everything in Pro","Unlimited people","Texting (credits)","Priority support"],false)};
 
 /* ---- the "team is full" screen ---- */
-function fullHTML(adding){const t=tier(),c=cap(),next=t==="free"?"Pro":"Org";
-  const msg=t==="free"?"Free teams hold up to 10 people. Go Pro to add more.":"Pro teams hold up to 50 people. Go Org for no limit.";
+function fullHTML(adding){const t=tier(),c=cap(),next=t==="free"?"Pro":t==="pro"?"Team":"Org";
+  const msg=t==="free"?"Free teams hold up to 10 people. Go Pro to add more.":t==="pro"?"Pro teams hold up to 50 people. Go Team for up to 100, with room to grow.":"Your plan holds up to "+c+" people. Go up a size, or go Org for no limit.";
   return `<div class="panel pro-wall"><span class="pro-badge">${next.toUpperCase()}</span><h2 style="margin:0">Your team is full</h2><p class="note">${msg} Everyone already on the team keeps working, and emergency muster stays free.</p>${meter()}${adding?`<p class="note">${adding} not added.</p>`:""}<button class="btn" data-pro-open="cap">See ${next}</button></div>`}
 let shown=0;
 function showFull(adding){if(Date.now()-shown<1500)return;shown=Date.now();

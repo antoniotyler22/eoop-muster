@@ -60,7 +60,7 @@ function sweepVisitor(){let ch=false;for(const f of S.feeds||[])if(!f.lk&&pend[f
 
 /* ---------- Visitors screen panel ---------- */
 function panelHTML(){if(typeof isOwner!=="function"||!isOwner())return "";const L=vis();const f=teamFeed();
-  let h=`<div class="panel" id="vlBox" style="border-color:var(--brass)"><div style="display:flex;justify-content:space-between;align-items:center"><b>🪪 Visitor logins</b>${vf.open?"":`<button class="btn" id="vlOpen" style="width:auto;padding:8px 14px;margin:0">+ Visitor login</button>`}</div>
+  let h=`<div class="panel" id="vlBox" style="border-color:var(--brass)"><div style="display:flex;justify-content:space-between;align-items:center"><b>🪪 Visitor logins</b>${vf.open?`<button type="button" class="chip" data-vlx="1" aria-label="Close without making a login" style="cursor:pointer;min-height:40px">✕ Close</button>`:`<button class="btn" id="vlOpen" style="width:auto;padding:8px 14px;margin:0">+ Visitor login</button>`}</div>
     <p class="note" style="margin:4px 0 0">A login that opens your Word of Mouth only and cuts off at the time you set. No roster, no numbers.</p>`;
   if(!f)h+=`<p class="note" style="color:var(--warn)">Start your team Word of Mouth first (Word of Mouth tab): visitors sign in to it.</p>`;
   if(vf.open)h+=`<label for="vlName">Visitor's name</label><input type="text" id="vlName" maxlength="60" placeholder="Jordan Lee" autocomplete="off">
@@ -80,7 +80,7 @@ function draw(){const y=window.scrollY;if(view==="visitors"){const keep=vf.open&
 new MutationObserver(()=>{if(view==="visitors"&&!$("#vlBox")&&$("#main")&&$("#main").childElementCount)try{place()}catch(e){}}).observe(document.documentElement,{childList:true,subtree:true});
 document.addEventListener("click",e=>{const t=e.target;if(!t.closest||!t.closest("#vlBox"))return;let b;
   if(t.closest("#vlOpen")){vf.open=true;vf.msg="";draw();const i=$("#vlName");if(i)i.focus();return}
-  if(t.closest("#vlX")){vf={open:false,h:vf.h,end:"",msg:"",busy:false,armed:""};draw();return}
+  if(t.closest("#vlX,[data-vlx]")){vf={open:false,h:vf.h,end:"",msg:"",busy:false,armed:""};draw();return}
   if((b=t.closest("[data-vlh]"))){vf.h=+b.dataset.vlh;draw();return}
   if(t.closest("#vlMake")){make();return}
   if((b=t.closest("[data-vlcopy]"))){const L=vis().find(x=>x.uid===b.dataset.vlcopy);if(L)try{navigator.clipboard.writeText(text(L)).then(()=>toast("Copied"),()=>toast("Copy blocked here"))}catch(e2){}return}

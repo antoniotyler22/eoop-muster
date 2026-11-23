@@ -337,6 +337,38 @@ let proProducts=null,proBusy=false,proMsg="";
 function proOK(){const N=window.MBN;if(!N||!N.on)return !PRO_GATE_WEB;if(S&&S.role==="view")return true;const p=N.pro||{};return !!p.active&&(!p.exp||p.exp>Date.now()-3*864e5)}
 function proList(){return `<ul class="pro-list"><li>Company roll-up: platoons and sections feed one company page</li><li>Member logins: username and password instead of links</li><li>Recall drills with live Good / Delayed / Need help</li><li>QR formation muster</li><li>Safety suite: state drill reports, check-in timer, one-tap Hold / Lockdown / Evacuate, reunification log</li><li>Excel export, trends and 6W incident reports</li></ul>`}
 function proWallHTML(k){return `<div class="panel pro-wall"><span class="pro-badge">PRO</span><h2 style="margin:0">${PRO_FEAT[k]||"Accounted For Pro"}</h2><p class="note">Part of <b>Accounted For Pro</b>, for the person running the team. Members and section leaders always use the app free.</p>${proList()}<button class="btn" data-pro-open="${k}">See Pro</button></div>`}
+/* 4.143.0: plan picker. Every plan is a card; tap one and the blue outline moves to it, then Continue buys the one that is outlined.
+   Pro / Team / Org, monthly or yearly. Team = up to 100 people for $12.99 a month, then $2.99 more a month for every 50 more people (afTeam, tiers.js). */
+let planSel="pro.year",teamSize=100;
+const TEAMX=()=>window.afTeam||{sizes:[100],cents:()=>1299,id:n=>"com.antoniotyler.accountedfor.team."+n};
+const planMoney=c=>"$"+(c/100).toFixed(2);
+function planListIOS(){const get=id=>(proProducts||[]).find(p=>p.id===id),B="com.antoniotyler.accountedfor.",T=TEAMX(),out=[];
+  const one=(tier,name,per,sub)=>{const mo=get(B+tier+".monthly"),yr=get(B+tier+".yearly");
+    if(mo)out.push({k:tier+".month",name,label:"Monthly",price:mo.price,per:"/ "+proPer(mo),sub:(mo.trial&&mo.introDays?mo.introDays+" days free, then ":"")+sub,id:mo.id,avail:true});
+    if(yr){const save=mo&&yr.amount&&mo.amount?Math.round((1-yr.amount/(mo.amount*12))*100):0;
+      out.push({k:tier+".year",name,label:"Yearly",price:yr.price,per:"/ "+proPer(yr),sub:(yr.trial&&yr.introDays?yr.introDays+" days free, then ":"")+sub,id:yr.id,avail:true,badge:save>0?"Save "+save+"%":""})}};
+  one("pro","Pro","","Up to 50 people");
+  const tp=get(T.id(teamSize));out.push({k:"team",name:"Team",label:"Monthly",price:tp?tp.price:planMoney(T.cents(teamSize)),per:"/ month",sub:"Up to "+teamSize+" people · +$2.99 a month per extra 50",id:T.id(teamSize),avail:!!tp,team:true});
+  one("org","Org","","Unlimited people");
+  return out}
+function planListWeb(){const T=TEAMX();
+  return [{k:"pro.month",name:"Pro",label:"Monthly",price:"$9.99",per:"/ month",sub:"Up to 50 people",web:"monthly",avail:true},
+    {k:"pro.year",name:"Pro",label:"Yearly",price:"Yearly",per:"billed once a year",sub:"Up to 50 people",web:"yearly",avail:true,badge:"Best value"},
+    {k:"team",name:"Team",label:"Monthly",price:planMoney(T.cents(teamSize)),per:"/ month",sub:"Up to "+teamSize+" people · +$2.99 a month per extra 50",web:"team",avail:true,team:true},
+    {k:"org.month",name:"Org",label:"Monthly",price:"$29.99",per:"/ month",sub:"Unlimited people",web:"org_monthly",avail:true},
+    {k:"org.year",name:"Org",label:"Yearly",price:"Yearly",per:"billed once a year",sub:"Unlimited people",web:"org_yearly",avail:true}]}
+function planPickerHTML(plans,kind){if(!plans.length)return "";
+  const sel=plans.find(p=>p.k===planSel)||plans.find(p=>p.k==="pro.year")||plans[0];planSel=sel.k;const T=TEAMX();
+  const sizes=p=>p.team&&p.k===planSel?`<div class="pc-sizes" role="group" aria-label="How many people">${T.sizes.map(n=>`<span class="pc-size" role="button" tabindex="0" data-team-size="${n}" aria-pressed="${n===teamSize}">${n}${n===T.sizes[T.sizes.length-1]?"":""}</span>`).join("")}</div><small>Need more than ${T.sizes[T.sizes.length-1]}? Org has no limit.</small>`:"";
+  const cards=plans.map(p=>`<div class="plan-card${p.k===planSel?" on":""}" role="radio" tabindex="0" aria-checked="${p.k===planSel}" data-plan="${esc(p.k)}">${p.badge?`<i class="pc-badge">${esc(p.badge)}</i>`:""}<span class="pc-dot" aria-hidden="true"></span><span class="pc-main"><b>${esc(p.name)} · ${esc(p.label)}</b><small>${esc(p.sub)}</small>${sizes(p)}</span><span class="pc-price">${esc(p.price)}<small>${esc(p.per)}</small></span></div>`).join("");
+  const label=`${sel.name} ${sel.label.toLowerCase()}${sel.team?" · "+teamSize+" people":""} · ${sel.price}${kind==="ios"&&sel.avail?" "+sel.per:""}`;
+  const go=kind==="ios"?`<button type="button" class="btn pro-plan" id="planGo" data-pro-buy="${esc(sel.id)}"${proBusy||!sel.avail?" disabled":""}>${sel.avail?"Continue · "+esc(label):"Not available yet"}</button>`
+    :`<button type="button" class="btn pro-plan" id="planGo" data-pro-web="${esc(sel.web)}" data-size="${teamSize}">Continue · ${esc(label)}</button>`;
+  return `<div class="plan-picker" role="radiogroup" aria-label="Choose a plan">${cards}</div>${go}`}
+function planRedraw(){const y=window.scrollY;const m=$("#main");if(m&&$(".pro-wall")){m.innerHTML=proPageHTML();window.scrollTo(0,y)}}
+document.addEventListener("click",e=>{if(!e.target.closest||!$(".pro-wall"))return;const sz=e.target.closest("[data-team-size]"),c=e.target.closest("[data-plan]");if(!sz&&!c)return;e.preventDefault();
+  if(sz){teamSize=+sz.dataset.teamSize||100;planSel="team"}else planSel=c.dataset.plan;planRedraw()});
+document.addEventListener("keydown",e=>{if(e.key!=="Enter"&&e.key!==" ")return;const c=e.target.closest&&e.target.closest("[data-plan],[data-team-size]");if(c&&$(".pro-wall")){e.preventDefault();c.click()}});
 function proPer(p){const n=p.periodCount||1;return n>1?`${n} ${p.period}s`:p.period}
 function proPageHTML(){const N=window.MBN||{};let h=`<div class="panel pro-wall"><span class="pro-badge">PRO</span><h2 style="margin:0">Accounted For Pro</h2>`;
   if(!N.on){return h+`<p class="note">Pro is available in the iPhone app. Everything is unlocked here for now.</p></div>`}
@@ -344,9 +376,7 @@ function proPageHTML(){const N=window.MBN||{};let h=`<div class="panel pro-wall"
   h+=`<p class="note">For the person running the team. Members and section leaders stay free.</p>${proList()}`;
   if(!proProducts)h+=`<p class="note">Loading prices from the App Store…</p>`;
   else if(!proProducts.length)h+=`<p class="note">Pro isn't available yet. Try again later.</p>`;
-  else{const ps=PRO_IDS.map(id=>proProducts.find(p=>p.id===id)).filter(Boolean);
-    for(const p of ps){const yr=p.period==="year";const mo=ps.find(x=>x.period==="month");const save=yr&&mo&&p.amount&&mo.amount?Math.round((1-p.amount/(mo.amount*12))*100):0;
-      h+=`<button class="btn${yr?"":" alt"} pro-plan" data-pro-buy="${esc(p.id)}"${proBusy?" disabled":""}><span>${/\.org\./.test(p.id)?"Org · ":"Pro · "}${p.trial&&p.introDays?`${p.introDays} days free, then `:""}${esc(p.price)} / ${esc(proPer(p))}</span>${save>0?`<small> · save ${save}%</small>`:""}</button>`}}
+  else h+=planPickerHTML(planListIOS(),"ios");
   if(proMsg)h+=`<p class="note" style="color:var(--warn)">${esc(proMsg)}</p>`;
   h+=`<button class="btn alt" data-pro-restore="1"${proBusy?" disabled":""}>Restore purchases</button>`;
   h+=`<p class="note pro-legal">Payment is charged to your Apple ID. The subscription renews automatically unless canceled at least 24 hours before the end of the current period; your account is charged for renewal within 24 hours before the period ends. Manage or cancel any time in Settings → your name → Subscriptions. <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank">Terms of Use</a> · <a href="privacy.html" target="_blank">Privacy Policy</a></p></div>`;
@@ -1684,7 +1714,7 @@ function mpDigest(m){const t=dkey();const to=dkey(new Date(Date.now()+60*8640000
   const events=(S.events||[]).filter(e=>evReq(e).some(x=>x.id===m.id)&&(isoOf(e.date)||e.date||"")>=t).map(e=>({n:e.name,d:isoOf(e.date)||e.date||"",all:SECTIONS.every(x=>(e.secs||[]).includes(x[0]))})).sort((a,b)=>a.d.localeCompare(b.d)).slice(0,20);
   const reqs=S.reqs.filter(r=>r.mid===m.id).slice(0,10).map(r=>({rid:r.rid,ty:r.ty,from:r.from,to:r.to,st:r.st,dnote:r.dnote||""}));const pod=latestPod();
   const hf=mainFeed();const feed=hf?{id:hf.id,mk:hf.mk,ek:hf.ek,unit:hf.unit,secs:SECTIONS.map(x=>x[0])}:null;const cf=coFeedDown();const cofeed=cf?Object.assign({},cf,{mid:m.uid||""}):null;
-  return {v:1,mid:m.id,feed,cofeed,reqs,pod,unit:unitName(),rank:m.rank,name:m.name,sec:m.sec,secName:((SECTIONS.find(x=>x[0]===m.sec)||[])[1]||m.sec),status:m.status,statusShort:SHORT[m.status]||m.status,duty:dutyOf(m),since:sn||0,start:isoOf(m.start),end:isoOf(m.end),edd:isoOf(m.edd),eas:isoOf(m.eas),duties:duties.sort((a,b)=>a.d.localeCompare(b.d)),due,cal,owe,events}}
+  return {v:1,mid:m.id,feed,cofeed,reqs,pod,unit:unitName(),rank:m.rank,name:m.name,sec:m.sec,secName:((SECTIONS.find(x=>x[0]===m.sec)||[])[1]||m.sec),status:m.status,statusShort:SHORT[m.status]||m.status,vf:(m.vf&&m.vf.by)?{by:String(m.vf.by).slice(0,30),at:+m.vf.at||0}:null,duty:dutyOf(m),since:sn||0,start:isoOf(m.start),end:isoOf(m.end),edd:isoOf(m.edd),eas:isoOf(m.eas),duties:duties.sort((a,b)=>a.d.localeCompare(b.d)),due,cal,owe,events}}
 function mpSchedule(){if(!S.roster.some(m=>m.pk))return;clearTimeout(mpT);mpT=setTimeout(mpPublish,5000)}
 async function mpPutOne(m){const d=mpDigest(m);const sg=sigF(d);d.at=Date.now();const K=await mpKeys(m.pk);const ct=await sealObj(K,d);await SB.rpc("put_page",{p_id:K.id,p_wk:K.wk,p_ct:ct});m.pkSig=sg;m.pkAt=Date.now()}
 async function mpPublish(force){if(mpBusy){clearTimeout(mpT);mpT=setTimeout(()=>mpPublish(force),4000);return 0}mpBusy=true;let n=0,err="";

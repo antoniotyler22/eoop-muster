@@ -1,16 +1,20 @@
-/* Accounted For 4.141.0: each version calls Word of Mouth by its own name.
+/* Accounted For 4.141.0 (4.143.0: the Logbook too): each version calls Word of Mouth, and the Logbook, by its own name.
    Military keeps "Word of Mouth". Police: Roll Call Board. Jobs: Toolbox Board. HR, Civilian (schools, teams, clubs) and Custom: Bulletin Board.
    Works everywhere the name shows (tab, headings, notes, toasts, buttons) by rewriting the words on screen, so no screen has to be edited one by one.
-   S.womName (if someone sets one) wins over the version's name. Reports and exports built outside the screen keep their own wording. */
+   Logbook: Military keeps "Logbook". Police: Duty Log. Jobs: Crew Log. HR, Civilian and Custom: Sign-Out Sheet. Same screen and functions everywhere.
+   S.womName / S.lbName (if someone sets one) win over the version's name. Reports and exports built outside the screen keep their own wording. */
 (()=>{
 const NAMES={military:"Word of Mouth",police:"Roll Call Board",jobs:"Toolbox Board",hr:"Bulletin Board",civilian:"Bulletin Board",custom:"Bulletin Board"};
+const LB_NAMES={military:"Logbook",police:"Duty Log",jobs:"Crew Log",hr:"Sign-Out Sheet",civilian:"Sign-Out Sheet",custom:"Sign-Out Sheet"};
 const esc2=t=>t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
-let last="Word of Mouth"; /* the name currently on screen, so switching versions swaps it again */
-const rx=()=>new RegExp("word of mouth"+(last!=="Word of Mouth"&&last!==womName()?"|"+esc2(last):""),"gi");
-function womName(){const own=typeof S!=="undefined"&&S&&typeof S.womName==="string"?S.womName.replace(/[\u0000-\u001f<>]/g," ").trim().slice(0,24):"";
-  if(own)return own;const m=typeof S!=="undefined"&&S&&NAMES[S.mode]?S.mode:"military";return NAMES[m]}
-const swap=s=>{const n=womName();return s.replace(rx(),x=>x===x.toLowerCase()?n.toLowerCase():n)};
-const has=s=>!!s&&rx().test(s)&&swap(s)!==s;
+/* each term: the words in the code (base), the name per version, the setting that overrides it, and the name currently on screen (last), so switching versions swaps it again */
+const T=[{base:"Word of Mouth",tbl:NAMES,own:"womName",last:"Word of Mouth"},{base:"Logbook",tbl:LB_NAMES,own:"lbName",last:"Logbook"}];
+function nameOf(t){const own=typeof S!=="undefined"&&S&&typeof S[t.own]==="string"?S[t.own].replace(/[\u0000-\u001f<>]/g," ").trim().slice(0,24):"";
+  if(own)return own;const m=typeof S!=="undefined"&&S&&t.tbl[S.mode]?S.mode:"military";return t.tbl[m]}
+const rx=t=>new RegExp(esc2(t.base)+(t.last!==t.base&&t.last!==nameOf(t)?"|"+esc2(t.last):""),"gi");
+const cased=(x,n)=>x===x.toLowerCase()?n.toLowerCase():(x.length>2&&x===x.toUpperCase()?n.toUpperCase():n);
+const swap=s=>{for(const t of T){const n=nameOf(t);s=s.replace(rx(t),x=>cased(x,n))}return s};
+const has=s=>!!s&&T.some(t=>rx(t).test(s))&&swap(s)!==s;
 const ATTR=["aria-label","placeholder","title","alt"];
 function fix(root){
   if(!root)return;
@@ -25,14 +29,16 @@ function fix(root){
   }while((n=w.nextNode()));
 }
 let q=false;
-function sweep(){q=false;try{fix(document.body);if(has(document.title))document.title=swap(document.title);last=womName()}catch(e){}}
+const idle=()=>T.every(t=>nameOf(t)===t.base&&t.last===t.base);
+function sweep(){q=false;try{fix(document.body);if(has(document.title))document.title=swap(document.title);for(const t of T)t.last=nameOf(t)}catch(e){}}
 function later(){if(q)return;q=true;(window.requestAnimationFrame||setTimeout)(sweep)}
 function start(){
   if(typeof MutationObserver==="undefined"||!document.body)return;
-  new MutationObserver(ms=>{if(womName()==="Word of Mouth"&&last==="Word of Mouth")return;for(const m of ms){if(m.type==="characterData"){if(has(m.target.nodeValue)){later();return}}else if(m.addedNodes.length||m.type==="attributes"){later();return}}})
+  new MutationObserver(ms=>{if(idle())return;for(const m of ms){if(m.type==="characterData"){if(has(m.target.nodeValue)){later();return}}else if(m.addedNodes.length||m.type==="attributes"){later();return}}})
     .observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:ATTR});
   later();
 }
-window.womName=womName;window.womNames=NAMES;
+window.womName=()=>nameOf(T[0]);window.womNames=NAMES;
+window.lbName=()=>nameOf(T[1]);window.lbNames=LB_NAMES;
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();
 })();
