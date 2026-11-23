@@ -35,6 +35,22 @@ test("a section as Member logins: one login each, sent again (not duplicated) th
   } finally { await a.close(); }
 }, { timeout: 120000 });
 
+test("two people who draw the same username number each still get their own login (nobody's login is replaced)", async () => {
+  const a = await openApp({ rpc: () => null });
+  try {
+    a.w.eval(prep); await sleep(20);
+    const sec = a.w.eval(`S.roster[0].sec`), n = a.w.eval(`S.roster.filter(m=>m.sec===S.roster[0].sec).length`);
+    // force the first three draws to be the same name, as a random clash would
+    a.w.eval(`{const real=lgUser;let c=0;window.lgUser=function(b){return c++<3?"sample101":real(b)}}`);
+    click(a, `[data-sosec="${sec}"]`);
+    click(a, "#soMake");
+    await waitFor(() => a.$("#soNext"), 60000);
+    assert.equal(a.w.eval(`S.logins.length`), n, "every person has a login");
+    assert.equal(a.w.eval(`new Set(S.logins.map(L=>L.user)).size`), n, "all usernames differ");
+    assert.deepEqual(navErr(a.errors), []);
+  } finally { await a.close(); }
+}, { timeout: 120000 });
+
 test("someone off the roster can be sent a Member link (added to the roster) or given another role; links work for them", async () => {
   const a = await openApp({ rpc: () => null });
   try {
