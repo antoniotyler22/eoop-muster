@@ -25,21 +25,24 @@ let running=Promise.resolve(0),lastErr="";
 function attachAll(force){const go=()=>attachOnce(force);running=running.then(go,go);return running}
 async function attachOnce(force){if(!S.pushOn)return 0;let n=0;lastErr="";
   try{const s=await pushSub(false);if(!s){lastErr=window.__pushWhy==="notoken"?"this phone didn't get an alert token from Apple. Close the app fully, open it and try again.":window.__pushWhy==="noplugin"?"alerts aren't in this build of the app.":"alerts aren't allowed for this app in Settings.";return 0}
-    const j=Object.assign({},s.toJSON(),{dev:devId()});myEnd=j.endpoint||myEnd;const M=subMap();
+    const j=Object.assign({},s.toJSON(),{dev:devId()});myEnd=j.endpoint||myEnd;const M=subMap();let ok=0,stale=0;
     /* v2: leader phones are marked "lead" so member check-ins, requests and problem reports reach them (co-leaders
        too), and the OIC's phone is also Word of Mouth's leader alert phone. Phones attached before re-attach once. */
     if(M.__v!==4){force=true;M.__v=4}M.__nm=M.__nm||{};
     /* 4.131.0: re-send this phone's sign-up once a day, so one the server dropped comes back by itself */
     if(!M.__t||Date.now()-M.__t>864e5){force=true;M.__t=Date.now()}
-    for(const f of S.feeds||[]){if(!f.mk)continue;const nm=String(typeof fdBy==="function"?fdBy(f):(S.myName||"")).toUpperCase().slice(0,30);if(!force&&M[f.id]===j.endpoint&&M.__nm[f.id]===nm){f.push=true;continue}
-      try{const jf=Object.assign({},j,nm?{nm}:{});await SB.rpc("feed_sub",{p_feed:f.id,p_member_key:f.mk,p_sub:f.lk?Object.assign({},jf,{lead:1}):jf});M[f.id]=j.endpoint;M.__nm[f.id]=nm;f.push=true;n++;
+    for(const f of S.feeds||[]){if(!f.mk)continue;const nm=String(typeof fdBy==="function"?fdBy(f):(S.myName||"")).toUpperCase().slice(0,30);if(!force&&M[f.id]===j.endpoint&&M.__nm[f.id]===nm){f.push=true;ok++;continue}
+      try{const jf=Object.assign({},j,nm?{nm}:{});await SB.rpc("feed_sub",{p_feed:f.id,p_member_key:f.mk,p_sub:f.lk?Object.assign({},jf,{lead:1}):jf});M[f.id]=j.endpoint;M.__nm[f.id]=nm;f.push=true;n++;ok++;
         if(f.lk&&(!S.role||S.role==="oic"||S.role==="newoic"))try{await SB.rpc("set_feed_leader_sub",{p_feed:f.id,p_leader_key:f.lk,p_sub:j})}catch(e2){}}
-      catch(e){const msg=String(e&&e.message||e);lastErr=/full/.test(msg)?"the team's alert list is full (500 phones).":/find the function|schema|does not exist/i.test(msg)?"alerts aren't set up on the server yet (DATA → System check).":/fetch|network|Failed/i.test(msg)?"no signal reaching the server. Try again.":msg.slice(0,80)}}
+      catch(e){const msg=String(e&&e.message||e);if(/not allowed/i.test(msg)){stale++;continue}lastErr=/full/.test(msg)?"the team's alert list is full (500 phones).":/find the function|schema|does not exist/i.test(msg)?"alerts aren't set up on the server yet (DATA → System check).":/fetch|network|Failed/i.test(msg)?"no signal reaching the server. Try again.":msg.slice(0,80)}}
+    /* 4.141.1: "not allowed" means the server no longer knows this phone's saved key for that Word of Mouth (an old or
+       replaced link). That one feed is skipped so it can't block the rest; only if no feed worked do we say so. */
+    if(stale&&!ok&&!lastErr)lastErr="this phone's link to the team is out of date. Open Word of Mouth and join again with the team's link or code.";
     putMap(M);if(n)rawSave()}catch(e){lastErr=String(e&&e.message||e).slice(0,80)}return n}
 window.taLastErr=()=>lastErr;
 window.taAttach=attachAll;
 fdPushAttach=async function(f){return attachAll()};
-const hasAlerts=()=>{const f=teamFeed();return !!(f&&S.pushOn&&subMap()[f.id])};
+const hasAlerts=()=>{const f=teamFeed(),M=subMap();return !!(S.pushOn&&f&&(M[f.id]||(S.feeds||[]).some(x=>x.mk&&M[x.id])))};
 
 /* 2) team changes: only what a person did on this phone counts (not data arriving from other phones) */
 let touchT=0;["click","change","input","submit","keydown"].forEach(t=>document.addEventListener(t,()=>{touchT=Date.now()},true));
