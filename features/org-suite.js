@@ -19,6 +19,7 @@ const os=()=>{S.os=S.os&&typeof S.os==="object"?S.os:{};const o=S.os;
   if(!o.sync||typeof o.sync!=="object")o.sync={url:"",drop:false,auto:false,last:0,err:"",msg:""};
   if(!o.hook||typeof o.hook!=="object")o.hook={url:"",drill:true,late:true,last:0,err:"",sentLate:{}};
   if(!o.ref||typeof o.ref!=="object")o.ref={code:"",list:[]};
+  if(!o.ref.dev)o.ref.dev=rndId(16);
   if(!Array.isArray(o.plan))o.plan=[];
   if(!o.reun||typeof o.reun!=="object")o.reun={site:"",state:{},guard:{},sel:""};
   if(!o.ob||typeof o.ob!=="object")o.ob={hide:0,shared:0};
@@ -142,6 +143,13 @@ function trustHTML(){const mail=s=>"mailto:administration@accountedforteam.com?s
 function refCode(){const r=os().ref;if(!r.code){r.code=rndId(6).toLowerCase();save()}return r.code}
 const refLink=()=>"https://accountedforteam.com/?ref="+refCode();
 (function capture(){try{const q=new URLSearchParams(location.search.slice(1)||location.hash.replace(/^#/,""));const c=q.get("ref");if(c&&/^[a-z0-9]{4,12}$/i.test(c)){const o=os();if(!o.refBy){o.refBy=c.toLowerCase();save()}}}catch(e){}})();
+/* Server counts (Supabase part 62). Every call is best effort: if the part is not installed the app just shows the manual list. */
+async function refSync(){try{const o=os(),r=o.ref;if(typeof SB==="undefined"||!SB.rpc)return;
+  if(r.code&&!r.reg){await SB.rpc("ref_register",{p_code:r.code,p_dev:r.dev});r.reg=1;save()}
+  if(o.refBy&&!o.refSent){await SB.rpc("ref_join",{p_code:o.refBy,p_dev:r.dev});o.refSent=1;save()}
+  if(o.refBy&&o.refSent&&!o.refAct&&Array.isArray(S.drills)&&S.drills.some(d=>d.kind!=="real")){await SB.rpc("ref_active",{p_dev:r.dev});o.refAct=1;save()}
+  if(r.reg){const x=await SB.rpc("ref_stats",{p_code:r.code,p_dev:r.dev}),row=Array.isArray(x)?x[0]:x;if(row&&row.joined!=null){r.srv={joined:+row.joined||0,active:+row.active||0,t:Date.now()};save()}}}catch(e){}}
+every(300000,refSync,"os-ref");
 const STS=["Invited","Joined","Ran a drill"];
 function shareHTML(){const r=os().ref;
   return `<div class="panel" id="osRef"><b>Share Accounted For</b><p class="note">Know another leader who runs a group? Send them your link.</p>
@@ -150,7 +158,8 @@ function shareHTML(){const r=os().ref;
     <p class="note" style="margin:10px 0 4px"><b>Who you sent it to</b></p>
     ${r.list.map((x,i)=>`<div style="display:flex;gap:8px;align-items:center;padding:4px 0"><span style="flex:1;min-width:0">${E(x.n)}</span>${btn(`data-os-rst="${i}"`,E(STS[x.s||0]),"chip","cursor:pointer")}${btn(`data-os-rdel="${i}"`,"✕","chip","cursor:pointer")}</div>`).join("")||`<p class="note" style="margin:0">Nobody yet.</p>`}
     <div class="row2" style="margin-top:8px"><input id="osRefName" maxlength="40" placeholder="Name" aria-label="Who you sent it to">${btn('id="osRefAdd"',"Add","btn")}</div>
-    <p class="note" style="margin:8px 0 0">This list is a note for you; sign-ups are not counted automatically yet, and no reward is promised.${os().refBy?" You joined through a link from a friend.":""}</p></div>`}
+    ${r.srv?`<p class="note" style="margin:10px 0 0"><b>From your link:</b> ${r.srv.joined} opened the app, ${r.srv.active} ran a first drill. Counted by a random device id only, no names.</p>`:""}
+    <p class="note" style="margin:8px 0 0">The list above is a note for you.${r.srv?"":" Sign-ups are counted on a server once it is set up."} No reward is promised.${os().refBy?" You joined through a link from a friend.":""}</p></div>`}
 
 /* ================= Data room (owner) ================= */
 function metrics(){const R=teamRows(),all=[];for(const k of (window.TEAMS&&TEAMS.list?TEAMS.list():["plt"])){const b=(k===((S.wsCur==="co"||!S.wsCur)?"plt":S.wsCur))?S:((S.ws||{})[k]||{});for(const d of (Array.isArray(b.drills)?b.drills:[]))all.push(d)}
@@ -298,5 +307,5 @@ every(4000,actBeat,"os-activity");
 window.osActBeat=actBeat;
 
 setTimeout(()=>{try{os();autoSync();remind()}catch(e){}},2200);
-window.orgSuite={parseRoster,diff,exportAll,planIcs,atRisk,obSteps,metrics,refLink};
+window.orgSuite={refSync,parseRoster,diff,exportAll,planIcs,atRisk,obSteps,metrics,refLink};
 })();

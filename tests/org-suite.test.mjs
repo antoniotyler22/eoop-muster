@@ -180,3 +180,51 @@ test("Console reads other teams on the phone, and the yearly nudge never quotes 
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("Referral counts: joins once, reports the first drill, shows server counts, and survives a server without part 62", async () => {
+  const calls = [];
+  const a = await openApp({ hash: "ref=abc123", rpc: (fn, args) => { calls.push([fn, args]); if (fn === "ref_stats") return [{ joined: 3, active: 1 }]; return null; } });
+  try {
+    a.w.eval(leader);
+    await a.w.eval(`orgSuite.refLink();orgSuite.refSync()`); await sleep(50);
+    const names = calls.map(c => c[0]);
+    assert.ok(names.includes("ref_register") && names.includes("ref_join"), "registers own code and joins the friend's");
+    assert.ok(!names.includes("ref_active"), "no drill yet");
+    assert.equal(calls.find(c => c[0] === "ref_join")[1].p_code, "abc123");
+    a.w.eval(`S.drills=[{id:"d",t:Date.now(),end:Date.now(),kind:"drill",n:3,ok:3}];save()`);
+    await a.w.eval(`orgSuite.refSync()`); await sleep(50);
+    await a.w.eval(`orgSuite.refSync()`); await sleep(50);
+    assert.equal(calls.filter(c => c[0] === "ref_join").length, 1, "join sent once");
+    assert.equal(calls.filter(c => c[0] === "ref_active").length, 1, "active sent once");
+    assert.deepEqual(JSON.parse(JSON.stringify(a.w.eval(`S.os.ref.srv`))), { joined: 3, active: 1, t: a.w.eval(`S.os.ref.srv.t`) });
+    assert.match(a.w.eval(`/^[a-z0-9]{8,40}$/.test(S.os.ref.dev)`) + "", /true/);
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+  const b = await openApp({ hash: "ref=abc123", rpc: () => { throw new Error("function not found"); } });
+  try {
+    b.w.eval(leader);
+    await b.w.eval(`orgSuite.refSync()`); await sleep(50);
+    assert.equal(b.w.eval(`!!S.os.refSent`), false, "retries later when the server part is missing");
+    assert.deepEqual(b.errors, []);
+  } finally { await b.close(); }
+});
+
+test("More states: every rule has a source, counts and a note, and the picker switches rules", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    a.w.eval(leader);
+    const keys = JSON.parse(a.w.eval(`JSON.stringify(Object.keys(proSafety.rules))`));
+    for (const k of ["MI", "TX", "CA_E", "CA_M", "CA_H", "IL", "NY", "OH", "WA", "GA", "PA"]) assert.ok(keys.includes(k), k);
+    for (const k of keys) { const r = a.w.eval(`proSafety.rules["${k}"]`); assert.ok(r.src && r.name && r.items.length, k); for (const it of r.items) assert.ok(it.n > 0 && it.of.length, k + " " + it.k); }
+    assert.equal(a.w.eval(`proSafety.rules.NY.items.map(i=>i.n).join()`), "8,4");
+    assert.equal(a.w.eval(`proSafety.rules.IL.items.map(i=>i.n).join()`), "3,1,1");
+    a.w.eval(`S.sf={tab:"drills",rule:"NY"};save();`);
+    await go(a, "safety");
+    assert.match(a.w.document.body.textContent, /Education Law §807/);
+    const sel = a.$("#sfMore"); assert.ok(sel, "picker is there");
+    sel.value = "WA"; sel.dispatchEvent(new a.w.Event("change", { bubbles: true })); await sleep(30);
+    assert.equal(a.w.eval(`S.sf.rule`), "WA");
+    assert.match(a.w.document.body.textContent, /RCW 28A\.320\.125/);
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
