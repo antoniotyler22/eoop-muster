@@ -133,3 +133,21 @@ test("Visitor login form has a Close at the top", async () => {
     assert.deepEqual(a.errors, []);
   } finally { await a.close(); }
 });
+
+test("Off Hand: a new status-history line that is only bookkeeping (a duty change) does not restart the 15 hours or undo Set everyone Off Hand", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    a.w.eval(leader + `S.exp24=true;S.sync={on:true,code:"X"};S.cks=[];S.tl={};
+      const old=Date.now()-20*36e5;
+      S.roster=[{id:"a",rank:"CPL",name:"DIAZ, ANA",sec:"UT",status:"On Hand",ckAt:old},{id:"b",rank:"PFC",name:"LEE, SAM",sec:"UT",status:"On Hand",ckAt:Date.now()-36e5}];
+      S.tl={a:[[old,"On Hand","Full Duty"],[Date.now()-1000,"On Hand","Watch"]],b:[[Date.now()-36e5,"On Hand","Full Duty"]]};
+      save();view="checkins";render()`);
+    await sleep(60);
+    assert.deepEqual(JSON.parse(a.w.eval(`JSON.stringify(ckStaleList().map(m=>m.id))`)), ["a"], "20 hours with no update is Off Hand even though a duty line was added a second ago");
+    a.w.eval(`S.offAt=Date.now()-500;S.tl.b.push([Date.now(),"On Hand","Watch"]);render()`);
+    assert.deepEqual(JSON.parse(a.w.eval(`JSON.stringify(ckStaleList().map(m=>m.id).sort())`)), ["a", "b"], "the manual reset holds after a bookkeeping line");
+    a.w.eval(`S.tl.b.push([Date.now(),"Leave","Full Duty"]);S.roster[1].status="Leave";render()`);
+    assert.equal(a.w.eval(`ckStale(S.roster[1])`), false, "a real status change still counts");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});

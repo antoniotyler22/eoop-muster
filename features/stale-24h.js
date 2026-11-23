@@ -13,7 +13,12 @@ function away(m){if(!AWAY.includes(m.status))return false;const s=isoOf(m.start)
   /* 4.137.0: only someone with a From and To date (an operation, leave, TAD) skips the 15-hour rule; with no dates they expire like anyone who hasn't updated */
   if(!s||!e)return false;
   return s<=d&&e>=d}
-function touched(m){let t=+m.ckAt||0;if(+m.ut>t)t=+m.ut;if(m.upd&&+m.upd.t>t)t=+m.upd.t;const L=(S.tl||{})[m.id];if(L&&L.length){const x=+L[L.length-1][0]||0;if(x>t)t=x}return t}
+/* 4.144.3: the status history (S.tl) is bookkeeping the app adds by itself, so it can't count as the person updating.
+   Before, any new history line (a duty that changed, a row the app re-added) restarted someone's 15 hours, so they never went Off Hand
+   and "Set everyone Off Hand" didn't stick. Now only a real update counts: their check-in, a status someone set, a leader's confirm, or an actual
+   change of status in the history. The first history line is only the starting point for someone who has never been updated. */
+function touched(m){let t=+m.ckAt||0;if(+m.ut>t)t=+m.ut;if(m.upd&&+m.upd.t>t)t=+m.upd.t;const L=((S.tl||{})[m.id]||[]).filter(Boolean);
+  if(L.length){let x=+L[0][0]||0;for(let i=L.length-1;i>0;i--){if(L[i][1]!==L[i-1][1]){x=Math.max(x,+L[i][0]||0);break}}if(x>t)t=x}return t}
 /* 4.143.0: a leader can set everyone who is On Hand to Off Hand (S.offAt = the moment they did it, synced with the team).
    Anyone On Hand whose last check-in or update is at or before that moment shows Off Hand; their next check-in or update brings them back.
    It is a way to test that everyone is checking in and the check-in button works. Nothing is erased. */
