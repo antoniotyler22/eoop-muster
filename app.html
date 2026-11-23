@@ -87,7 +87,7 @@ const V=window.VAULT={key:null,cfg:getCfg(),ok:!!(window.crypto&&crypto.subtle),
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.hidden){hiddenAt=Date.now();return}
   const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
-window.AV="4.143.0";
+window.AV="4.143.1";
 /* 4.143.0: start downloading the app the moment the page opens, in parallel with the saved-data check below, so it runs without waiting */
 try{const l=document.createElement("link");l.rel="preload";l.as="script";l.href="app.bundle.js?v="+window.AV;document.head.appendChild(l)}catch(e){}
 /* self-update: an installed web app resumes without reloading, so check the live version on open, on every return, and every 10 min */

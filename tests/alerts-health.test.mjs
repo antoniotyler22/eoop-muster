@@ -102,3 +102,10 @@ test("a notify function newer than the required version counts as current", asyn
     assert.equal(st("").ok, 0, "no version answer is older");
   } finally { await a.close(); }
 });
+
+test("team alerts: a stale roster Word of Mouth is dropped and re-pulled instead of showing 'not allowed'", () => {
+  const t = readFileSync(new URL("../features/team-alerts.js", import.meta.url), "utf8");
+  assert.match(t, /not allowed/);
+  assert.match(t, /rosterPull\(true\)/);
+  assert.match(t, /out of date\. Open Word of Mouth and join again/);
+});
