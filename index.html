@@ -16,7 +16,7 @@
 <title>Accounted For: live team check-in for iPhone</title>
 <meta name="description" content="Know who's accounted for, live. Everyone taps once and you see the count. Free on iPhone for youth teams, event staff, field crews, schools and businesses.">
 <meta name="apple-itunes-app" content="app-id=6826541947">
-<meta name="theme-color" content="#0b1220">
+<meta name="theme-color" content="#f4f7fc">
 <link rel="canonical" href="https://accountedforteam.com/">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
@@ -31,174 +31,197 @@
 @font-face{font-family:pjs;font-weight:400;font-display:swap;src:url(fonts/pjs-400.woff2) format("woff2")}
 @font-face{font-family:pjs;font-weight:600;font-display:swap;src:url(fonts/pjs-600.woff2) format("woff2")}
 @font-face{font-family:pjs;font-weight:800;font-display:swap;src:url(fonts/pjs-800.woff2) format("woff2")}
-:root{--navy:#0b1220;--navy2:#141f33;--blue:#6aa2ff;--ink:#0f1a2b;--mut:#4a5871;--line:#dfe6f0;--bg:#f5f8fc;--green:#13805a}
+:root{--ink:#0b1b33;--mut:#41536f;--soft:#5b6b85;--line:#e3eaf5;--bg:#f4f7fc;--blue:#2563eb;--blue2:#1d4ed8;--tint:#eaf1ff;--navy:#0b1b33}
 *{box-sizing:border-box}html{scroll-behavior:smooth}
-body{margin:0;font-family:pjs,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:#fff;line-height:1.55;-webkit-text-size-adjust:100%}
+body{margin:0;font-family:pjs,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);line-height:1.55;-webkit-text-size-adjust:100%}
 a{color:inherit}img{max-width:100%;height:auto;display:block}
-.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
-.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 22px;border-radius:14px;font-weight:800;font-size:17px;text-decoration:none;border:2px solid transparent;cursor:pointer}
-.btn.store{background:#fff;color:#0b1220}
-.btn.ghost{border-color:rgba(255,255,255,.55);color:#fff}
+.wrap{max-width:1160px;margin:0 auto;padding:0 20px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:52px;padding:0 28px;border-radius:999px;font-weight:800;font-size:17px;text-decoration:none;border:1px solid transparent;cursor:pointer}
+.btn.primary{background:var(--blue);color:#fff;box-shadow:0 12px 28px rgba(37,99,235,.35)}
+.btn.light{background:#fff;color:var(--ink);border-color:#d5deec}
 .btn.dark{background:var(--navy);color:#fff}
-.btn.outline{border-color:var(--navy);color:var(--navy)}
-.btn:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+.btn.white{background:#fff;color:var(--ink)}
+.btn:focus-visible,a:focus-visible,summary:focus-visible,button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+h1,h2,h3{margin:0}
 /* nav */
-.nav{position:sticky;top:0;z-index:5;background:rgba(11,18,32,.94);backdrop-filter:blur(8px)}
-.nav .wrap{display:flex;align-items:center;justify-content:space-between;min-height:60px}
-.brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:800;font-size:18px}
-.brand img{width:32px;height:32px;border-radius:8px}
-.nav a.lnk{color:#c9d4e6;text-decoration:none;font-weight:600;padding:12px 10px;display:none}
-.nav .btn{min-height:44px;padding:0 16px;font-size:15px}
+.navbar{position:sticky;top:0;z-index:5;padding:14px 0 0}
+.nav{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:10px 12px 10px 20px;box-shadow:0 8px 30px rgba(11,27,51,.07)}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:800;font-size:18px;letter-spacing:-.01em}
+.brand img{width:34px;height:34px;border-radius:9px}
+.nav nav{display:flex;align-items:center;gap:6px}
+.nav a.lnk{color:var(--mut);text-decoration:none;font-weight:600;font-size:15px;padding:12px 12px;display:none}
+.nav .btn{min-height:44px;padding:0 20px;font-size:15px}
 @media(min-width:760px){.nav a.lnk{display:inline-block}}
 /* hero */
-.hero{background:radial-gradient(1200px 500px at 80% -10%,#1d3358 0,transparent 60%),var(--navy);color:#fff;padding:44px 0 56px;overflow:hidden}
-.hero .wrap{display:grid;gap:34px;align-items:center}
-.hero h1{font-size:clamp(36px,8vw,60px);line-height:1.04;margin:0 0 14px;font-weight:800;letter-spacing:-.02em}
-.hero h1 span{color:var(--blue)}
-.hero p.sub{font-size:clamp(18px,3.6vw,21px);color:#c9d4e6;margin:0 0 24px;max-width:34em}
-.cta{display:flex;flex-wrap:wrap;gap:12px}
-.soon{margin:14px 0 0;color:#9fb0cb;font-size:15px}
-.phone{justify-self:center;width:min(300px,72vw);border-radius:34px;border:6px solid #1c2740;overflow:hidden;box-shadow:0 30px 70px rgba(0,0,0,.5);background:#000}
-@media(min-width:860px){.hero .wrap{grid-template-columns:1.15fr .85fr}.hero{padding:70px 0 80px}}
+.hero{padding:48px 0 28px}
+.hero .wrap{display:grid;gap:40px;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:14px;font-weight:600;color:var(--blue2);box-shadow:0 4px 14px rgba(11,27,51,.05)}
+.pill:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--blue)}
+.hero h1{font-size:clamp(40px,9vw,68px);line-height:1.02;letter-spacing:-.035em;font-weight:800;margin:20px 0 0}
+.hero p.sub{font-size:clamp(18px,3.6vw,21px);color:var(--mut);margin:20px 0 0;max-width:30em;line-height:1.5}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+.soon{margin:20px 0 0;color:var(--soft);font-size:15px}
+.phone{justify-self:center;width:min(300px,74vw);border-radius:44px;border:10px solid var(--navy);overflow:hidden;box-shadow:0 40px 80px rgba(11,27,51,.28);background:#000}
+@media(min-width:900px){.hero .wrap{grid-template-columns:1.1fr .9fr}.hero{padding:64px 0 36px}}
+.quote{text-align:center;padding:30px 0 6px;font-size:clamp(22px,4.4vw,30px);font-style:italic;color:var(--mut);letter-spacing:-.01em}
+.chips{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;padding:18px 0 4px}
+.chips span{background:#fff;border:1px solid var(--line);border-radius:999px;padding:11px 20px;font-size:16px;font-weight:600}
+.eyebrow{text-align:center;font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);padding-top:34px}
 /* sections */
-section{padding:60px 0}
-section.alt{background:var(--bg)}
-h2{font-size:clamp(28px,5.4vw,40px);line-height:1.1;margin:0 0 10px;font-weight:800;letter-spacing:-.015em}
-.lead{color:var(--mut);font-size:19px;margin:0 0 30px;max-width:40em}
-.steps{display:grid;gap:16px;counter-reset:s}
-.step{background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px 22px 22px 70px;position:relative}
-.step:before{counter-increment:s;content:counter(s);position:absolute;left:20px;top:20px;width:36px;height:36px;border-radius:50%;background:var(--navy);color:#fff;font-weight:800;display:grid;place-items:center}
-.step b{display:block;font-size:19px;margin-bottom:2px}
-.step span{color:var(--mut)}
-@media(min-width:800px){.steps{grid-template-columns:repeat(3,1fr)}}
-.who{display:grid;gap:14px}
-.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px}
-.card h3{margin:0 0 4px;font-size:19px}.card p{margin:0;color:var(--mut)}
-@media(min-width:700px){.who{grid-template-columns:repeat(2,1fr)}}
-@media(min-width:980px){.who{grid-template-columns:repeat(4,1fr)}}
+section{padding:64px 0 8px}
+h2{font-size:clamp(30px,6vw,44px);line-height:1.08;font-weight:800;letter-spacing:-.03em;text-align:center}
+.lead{color:var(--mut);font-size:19px;margin:12px auto 0;max-width:34em;text-align:center;line-height:1.5}
+.grid{display:grid;gap:18px;margin-top:40px}
+.tile{background:#fff;border:1px solid var(--line);border-radius:28px;padding:28px;box-shadow:0 10px 30px rgba(11,27,51,.05)}
+.tile h3{font-size:23px;letter-spacing:-.02em;margin:8px 0 0}
+.tile p{margin:10px 0 0;color:var(--mut);font-size:16px}
+.num{font-size:14px;font-weight:800;color:var(--blue);letter-spacing:.06em}
+@media(min-width:800px){.grid.three{grid-template-columns:repeat(3,1fr)}.grid.two{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:700px){.grid.four{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1000px){.grid.four{grid-template-columns:repeat(4,1fr)}}
+.bento{display:grid;gap:18px;margin-top:40px}
+@media(min-width:760px){.bento{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1040px){.bento{grid-template-columns:repeat(3,1fr)}}
+.bento .tile{min-height:200px}
+.ico{width:44px;height:44px;border-radius:14px;background:var(--tint);display:grid;place-items:center}
+.ico svg{width:22px;height:22px;stroke:var(--blue);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tile.navy{background:var(--navy);border-color:var(--navy);color:#fff}
+.tile.navy p{color:#c7d6ee}.tile.navy .ico{background:rgba(147,197,253,.18)}.tile.navy .ico svg{stroke:#93c5fd}
+.tile.tint{background:var(--tint);border-color:var(--tint)}
+.tile.tint .ico{background:#fff}
 /* screenshots */
-.shots{display:flex;gap:16px;overflow-x:auto;padding:4px 20px 18px;margin:0 -20px;scroll-snap-type:x mandatory}
+.shots{display:flex;gap:16px;overflow-x:auto;padding:4px 20px 18px;margin:36px -20px 0;scroll-snap-type:x mandatory}
 .shots figure{margin:0;flex:0 0 min(270px,70vw);scroll-snap-align:center}
-.shots img{border-radius:22px;border:1px solid var(--line);box-shadow:0 10px 30px rgba(15,26,43,.12)}
+.shots img{border-radius:26px;border:1px solid var(--line);box-shadow:0 10px 30px rgba(11,27,51,.12)}
 .shots figcaption{margin-top:10px;color:var(--mut);font-size:15px;text-align:center}
 @media(min-width:1000px){.shots{overflow:visible;flex-wrap:nowrap;justify-content:center}.shots figure{flex:1 1 0}}
-.feat{display:grid;gap:10px;margin:26px 0 0;padding:0;list-style:none}
-.feat li{padding-left:30px;position:relative;font-size:18px}
-.feat li:before{content:"\2713";position:absolute;left:0;color:var(--green);font-weight:800}
-@media(min-width:700px){.feat{grid-template-columns:repeat(2,1fr)}}
-/* pricing */
-.price{display:grid;gap:16px}
-.plan{background:#fff;border:2px solid var(--line);border-radius:20px;padding:24px}
-.plan.pro{border-color:var(--navy)}
-.plan h3{margin:0;font-size:22px}
-.plan .p{font-size:34px;font-weight:800;margin:8px 0 2px;letter-spacing:-.02em}
-.plan .p small{font-size:16px;font-weight:600;color:var(--mut)}
-.plan ul{margin:14px 0 0;padding-left:20px;color:var(--mut)}
-@media(min-width:820px){.price{grid-template-columns:repeat(3,1fr)}}
-.note{color:var(--mut);font-size:15px;margin-top:16px}
-/* faq */
-details{background:#fff;border:1px solid var(--line);border-radius:14px;margin:10px 0;padding:0 18px}
-summary{cursor:pointer;min-height:56px;display:flex;align-items:center;font-weight:700;font-size:18px;list-style:none}
-summary::-webkit-details-marker{display:none}
-summary:after{content:"+";margin-left:auto;font-size:26px;color:var(--mut)}
-details[open] summary:after{content:"\2212"}
-details p{margin:0 0 16px;color:var(--mut)}
-/* final */
-.final{background:var(--navy);color:#fff;text-align:center;padding:64px 0}
-.final h2{color:#fff}.final p{color:#c9d4e6;font-size:19px;margin:0 0 24px}
-.contact{display:grid;gap:12px;margin-top:8px;grid-template-columns:minmax(0,1fr)}
-.cbtns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.cbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:112px;padding:18px 10px;border-radius:18px;text-decoration:none;text-align:center;-webkit-tap-highlight-color:transparent}
-.cbtn i{font-style:normal;font-size:28px;line-height:1}
-.cbtn b{font-size:18px;font-weight:800}
-.cbtn span{font-size:13px;overflow-wrap:anywhere}
-.cbtn.call{background:var(--navy);color:#fff}.cbtn.call i{color:var(--blue)}.cbtn.call span{color:#b9c6dc}
-.cbtn.mail{border:2px solid var(--navy);color:var(--navy);background:#fff}.cbtn.mail span{color:var(--mut)}
-.cbtn:active{transform:scale(.98)}
-.caddr{display:block;text-align:center;color:var(--navy);font-weight:700;font-size:clamp(15px,4.4vw,18px);overflow-wrap:anywhere;text-decoration:underline;text-underline-offset:3px;padding:6px 0}
 /* live demo */
-.demo{background:var(--navy);color:#fff}
-.demo .wrap{display:grid;gap:34px;align-items:center}
-.demo h2{color:#fff}.demo .lead{color:#c9d4e6}
-.demo .steps2{margin:0 0 22px;padding:0;list-style:none;display:grid;gap:8px;color:#c9d4e6;font-size:17px}
+.demo{padding:56px 0 8px}
+.demo .box{background:linear-gradient(135deg,#1d4ed8 0%,#0b1b33 100%);border-radius:36px;padding:32px 24px;color:#fff;display:grid;gap:32px;align-items:center}
+.demo h2{color:#fff;text-align:left}.demo .lead{color:#d6e2f7;text-align:left;margin-left:0}
+.demo .steps2{margin:22px 0;padding:0;list-style:none;display:grid;gap:8px;color:#d6e2f7;font-size:17px}
 .demo .steps2 b{color:#fff}
-@media(min-width:860px){.demo .wrap{grid-template-columns:1fr 380px}}
-.dphone{justify-self:center;width:min(360px,100%);background:#f5f6f8;color:var(--ink);border:6px solid #1c2740;border-radius:34px;padding:18px 16px 16px;box-shadow:0 30px 70px rgba(0,0,0,.5)}
-.dtag{margin:0;text-align:center;font-size:12px;letter-spacing:.08em;font-weight:800;color:#5b6577;text-transform:uppercase}
-.dphone h3{margin:2px 0 0;text-align:center;font-size:20px;font-weight:800}
-.dsub{margin:2px 0 6px;text-align:center;font-size:13px;color:#5b6577}
+@media(min-width:900px){.demo .box{grid-template-columns:1fr 380px;padding:48px}}
+.dphone{justify-self:center;width:min(360px,100%);background:#f4f7fc;color:var(--ink);border:8px solid var(--navy);border-radius:40px;padding:18px 16px 16px;box-shadow:0 30px 70px rgba(0,0,0,.45)}
+.dtag{margin:0;text-align:center;font-size:12px;letter-spacing:.08em;font-weight:800;color:var(--soft);text-transform:uppercase}
+.dphone h3{margin:2px 0 0;text-align:center;font-size:20px;font-weight:800;letter-spacing:-.02em}
+.dsub{margin:2px 0 6px;text-align:center;font-size:13px;color:var(--soft)}
 .ring{position:relative;width:190px;height:190px;margin:6px auto 0}
 .ring svg{width:100%;height:100%;transform:rotate(-90deg)}
 .ring circle{fill:none;stroke-width:20}
-.ring .bg{stroke:#dfe1e6}.ring .fg{stroke:var(--green);stroke-linecap:round;transition:stroke-dashoffset .35s ease}
+.ring .bg{stroke:#dce6f6}.ring .fg{stroke-linecap:round;transition:stroke-dashoffset .35s ease}
 .ring .mid{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
-.ring .mid b{font-size:54px;line-height:1;font-weight:800}.ring .mid span{font-size:14px;font-weight:800;color:#5b6577}
-.dpct{text-align:center;margin-top:6px;font-size:12px;font-weight:800;letter-spacing:.08em;color:#5b6577}
-.dpct b{display:block;font-size:30px;color:var(--green);letter-spacing:0}
-.dpct span{display:block;font-size:13px;font-weight:600;letter-spacing:0;color:#5b6577}
+.ring .mid b{font-size:54px;line-height:1;font-weight:800;letter-spacing:-.03em}.ring .mid span{font-size:14px;font-weight:800;color:var(--soft)}
+.dpct{text-align:center;margin-top:6px;font-size:12px;font-weight:800;letter-spacing:.08em;color:var(--soft)}
+.dpct b{display:block;font-size:30px;color:var(--blue2);letter-spacing:0}
+.dpct span{display:block;font-size:13px;font-weight:600;letter-spacing:0;color:var(--soft)}
 .dctl{display:flex;gap:8px;margin:12px 0 8px}
-.dctl button{flex:1;min-height:46px;border-radius:12px;font:inherit;font-weight:800;font-size:16px;cursor:pointer;border:1.5px solid var(--navy);background:#fff;color:var(--navy)}
-.dctl button.go{background:var(--navy);color:#fff}
-.dctl button:focus-visible,.dlist button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.dctl button{flex:1;min-height:46px;border-radius:999px;font:inherit;font-weight:800;font-size:16px;cursor:pointer;border:1.5px solid var(--navy);background:#fff;color:var(--navy)}
+.dctl button.go{background:var(--blue);border-color:var(--blue);color:#fff}
 .dlist{list-style:none;margin:0;padding:0;max-height:190px;overflow-y:auto;display:grid;gap:6px}
-.dlist button{width:100%;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border:0;border-radius:10px;background:#fff;font:inherit;font-size:15px;text-align:left;cursor:pointer;color:var(--ink)}
-.dlist button b{font-weight:800}.dlist button small{color:#5b6577;font-size:13px}
-.dlist button .st{margin-left:auto;font-size:12px;color:#8a93a3}
-.dlist button.on .st{color:var(--green);font-weight:800}
-.dlist button .ck{width:18px;color:var(--green);font-weight:800}
-.ddone{display:none;margin-top:10px;text-align:center;border:2px solid var(--green);border-radius:14px;padding:12px;background:#fff}
+.dlist button{width:100%;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:14px;background:#fff;font:inherit;font-size:15px;text-align:left;cursor:pointer;color:var(--ink)}
+.dlist button b{font-weight:800}.dlist button small{color:var(--soft);font-size:13px}
+.dlist button .st{margin-left:auto;font-size:12px;color:#6b7a93}
+.dlist button.on .st{color:var(--blue2);font-weight:800}
+.dlist button .ck{width:18px;color:var(--blue2);font-weight:800}
+.ddone{display:none;margin-top:10px;text-align:center;border:2px solid var(--blue);border-radius:18px;padding:12px;background:#fff}
 .ddone.show{display:block}
 .ddone b{display:block;font-size:19px}
-.ddone a{display:inline-flex;margin-top:8px;min-height:44px;align-items:center;padding:0 16px;border-radius:12px;background:var(--navy);color:#fff;font-weight:800;text-decoration:none}
-.dfoot{margin:10px 0 0;text-align:center;font-size:12px;color:#8a93a3}
+.ddone a{display:inline-flex;margin-top:8px;min-height:44px;align-items:center;padding:0 18px;border-radius:999px;background:var(--navy);color:#fff;font-weight:800;text-decoration:none}
+.dfoot{margin:10px 0 0;text-align:center;font-size:12px;color:#6b7a93}
 @media(prefers-reduced-motion:reduce){.ring .fg{transition:none}}
-footer{background:#070c16;color:#9fb0cb;padding:30px 0 40px;font-size:15px}
-footer a{color:#c9d4e6;text-decoration:none;display:inline-block;padding:8px 12px 8px 0}
+/* pricing */
+.plan{background:#fff;border:1px solid var(--line);border-radius:28px;padding:30px;display:flex;flex-direction:column}
+.plan h3{font-size:16px;font-weight:800;color:var(--soft)}
+.plan .p{font-size:46px;font-weight:800;margin:6px 0 2px;letter-spacing:-.03em}
+.plan .p small{font-size:18px;font-weight:600;color:var(--soft)}
+.plan ul{margin:16px 0 0;padding-left:20px;color:var(--mut)}
+.plan li{margin:6px 0}
+.plan.pro{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:0 24px 50px rgba(11,27,51,.28)}
+.plan.pro h3{color:#93c5fd}.plan.pro .p small,.plan.pro ul,.plan.pro .alt2{color:#c7d6ee}
+.plan .alt2{font-size:15px;color:var(--soft)}
+.plan .p a{text-decoration:none}
+.note{color:var(--soft);font-size:15px;margin:22px 0 0;text-align:center}
+/* faq */
+.faq{max-width:820px;margin:0 auto;padding:0 20px}
+details{background:#fff;border:1px solid var(--line);border-radius:20px;margin:12px 0;padding:0 24px}
+summary{cursor:pointer;min-height:60px;display:flex;align-items:center;font-weight:800;font-size:18px;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary:after{content:"+";margin-left:auto;font-size:26px;color:var(--soft)}
+details[open] summary:after{content:"\2212"}
+details p{margin:0 0 18px;color:var(--mut)}
+details a{color:var(--blue2)}
+/* final + contact */
+.final{text-align:center;padding:80px 0 8px}
+.final h2{font-size:clamp(34px,7vw,52px)}
+.final p{color:var(--mut);font-size:19px;margin:12px 0 0}
+.final .cta{justify-content:center}
+.contact{display:grid;gap:12px;margin:36px auto 0;max-width:560px}
+.cbtns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.cbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:112px;padding:18px 10px;border-radius:24px;text-decoration:none;text-align:center;-webkit-tap-highlight-color:transparent}
+.cbtn i{font-style:normal;font-size:28px;line-height:1}
+.cbtn b{font-size:18px;font-weight:800}
+.cbtn span{font-size:13px;overflow-wrap:anywhere}
+.cbtn.call{background:var(--navy);color:#fff}.cbtn.call i{color:#93c5fd}.cbtn.call span{color:#b9c6dc}
+.cbtn.mail{border:1px solid #d5deec;color:var(--ink);background:#fff}.cbtn.mail span{color:var(--soft)}
+.cbtn:active{transform:scale(.98)}
+.caddr{display:block;text-align:center;color:var(--blue2);font-weight:700;font-size:clamp(15px,4.4vw,18px);overflow-wrap:anywhere;text-decoration:underline;text-underline-offset:3px;padding:6px 0}
+#contact .note{text-align:center;margin:0}
+footer{margin-top:64px;border-top:1px solid var(--line);color:var(--soft);padding:28px 0 44px;font-size:15px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between;align-items:center}
+footer a{color:var(--mut);text-decoration:none;display:inline-block;padding:8px 12px 8px 0}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 </style>
 </head>
 <body>
-<header class="nav"><div class="wrap">
-  <a class="brand" href="./"><img src="icon-192.png" alt="" width="32" height="32">Accounted For</a>
-  <nav><a class="lnk" href="#how">How it works</a><a class="lnk" href="#demo">Try it</a><a class="lnk" href="#pricing">Pricing</a><a class="lnk" href="#faq">FAQ</a><a class="btn store" href="https://apps.apple.com/app/id6826541947">Get the app</a></nav>
-</div></header>
+<div class="navbar"><div class="wrap"><div class="nav">
+  <a class="brand" href="./"><img src="icon-192.png" alt="" width="34" height="34">Accounted For</a>
+  <nav><a class="lnk" href="#how">How it works</a><a class="lnk" href="#demo">Try it</a><a class="lnk" href="#pricing">Pricing</a><a class="lnk" href="#faq">FAQ</a><a class="btn dark" href="https://apps.apple.com/app/id6826541947">Get the app</a></nav>
+</div></div></div>
 
 <main>
 <div class="hero"><div class="wrap">
   <div>
-    <h1>Know who's <span>accounted for.</span> Live.</h1>
-    <p class="sub">Start a check-in, everyone taps once, and you see the count as it happens. For youth teams, event staff, field crews, schools and businesses.</p>
+    <span class="pill">Live team check-in for iPhone and web</span>
+    <h1>Know who's accounted for. In one tap.</h1>
+    <p class="sub">Everyone checks in from their own phone and you watch the ring fill to 100%. For youth teams, event staff, field crews, schools and businesses.</p>
     <div class="cta">
-      <a class="btn store" href="https://apps.apple.com/app/id6826541947">Download free on the App Store</a>
-      <a class="btn ghost" href="app.html">Open the web app</a>
+      <a class="btn primary" href="https://apps.apple.com/app/id6826541947"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12M6 11l6 6 6-6M5 20h14"/></svg>Download free on the App Store</a>
+      <a class="btn light" href="#demo">Try the 30-second demo</a>
     </div>
-    <p class="soon">Free on iPhone. Android is in testing on Google Play.</p>
+    <p class="soon">Free on iPhone for up to 10 people. Android is in testing on Google Play.</p>
   </div>
   <img class="phone" src="landing/ring.jpg" width="560" height="1214" alt="Accounted For on iPhone showing a team at 100 percent accounted for">
 </div></div>
 
+<div class="wrap">
+  <p class="quote">&ldquo;It's roll call, built for your pocket.&rdquo;</p>
+  <div class="eyebrow">Built for anyone who has to count heads</div>
+  <div class="chips"><span>Field trips</span><span>Youth sports</span><span>Job sites</span><span>Events and staff</span><span>Scouts and clubs</span><span>Schools and businesses</span></div>
+</div>
+
 <section id="how"><div class="wrap">
-  <h2>How it works</h2>
-  <p class="lead">Three steps. No spreadsheet, no group-text chaos.</p>
-  <div class="steps">
-    <div class="step"><b>Start a check-in</b><span>Pick a template or add your team. It takes one tap to set up.</span></div>
-    <div class="step"><b>Everyone taps once</b><span>Members confirm they are accounted for from their phone.</span></div>
-    <div class="step"><b>See who's accounted for</b><span>A live count shows who is here and who still needs to check in.</span></div>
+  <h2>Three steps to a full headcount</h2>
+  <p class="lead">No spreadsheet, no group-text chaos.</p>
+  <div class="grid three">
+    <div class="tile"><div class="num">01</div><h3>Start a check-in</h3><p>Pick a template or add your team. It takes one tap to set up.</p></div>
+    <div class="tile"><div class="num">02</div><h3>Everyone taps once</h3><p>Members confirm they are accounted for from their phone.</p></div>
+    <div class="tile"><div class="num">03</div><h3>See who's accounted for</h3><p>A live count shows who is here and who still needs to check in.</p></div>
   </div>
 </div></section>
 
-<section class="alt" id="who"><div class="wrap">
+<section id="who"><div class="wrap">
   <h2>Built for the people who count heads</h2>
   <p class="lead">Wherever someone has to know everyone is where they should be.</p>
-  <div class="who">
-    <div class="card"><h3>Youth sports &amp; scouts</h3><p>Field trips, practices and pickups. See at a glance who has checked in and who hasn't.</p></div>
-    <div class="card"><h3>Event staff</h3><p>Gates, security and concessions. See who has checked in at a glance.</p></div>
-    <div class="card"><h3>Construction &amp; field crews</h3><p>Job-site head counts and safety drills, even when signal is spotty.</p></div>
-    <div class="card"><h3>Schools &amp; businesses</h3><p>Fire drills and assembly points with a record you can export.</p></div>
+  <div class="grid four">
+    <div class="tile"><h3>Youth sports &amp; scouts</h3><p>Field trips, practices and pickups. See at a glance who has checked in and who hasn't.</p></div>
+    <div class="tile"><h3>Event staff</h3><p>Gates, security and concessions. See who has checked in at a glance.</p></div>
+    <div class="tile"><h3>Construction &amp; field crews</h3><p>Job-site head counts and safety drills, even when signal is spotty.</p></div>
+    <div class="tile"><h3>Schools &amp; businesses</h3><p>Fire drills and assembly points with a record you can export.</p></div>
   </div>
 </div></section>
 
-<section class="demo" id="demo"><div class="wrap">
+<div class="demo" id="demo"><div class="wrap"><div class="box">
   <div>
     <h2>Try it right here</h2>
     <p class="lead">A working sample of the check-in screen with 24 made-up people. Nothing you tap here is sent anywhere.</p>
@@ -207,8 +230,8 @@ footer a{color:#c9d4e6;text-decoration:none;display:inline-block;padding:8px 12p
       <li><b>Or press Start drill</b> and watch the ring fill on its own.</li>
       <li><b>At 100%</b> everyone is accounted for.</li>
     </ul>
-    <div class="cta">
-      <a class="btn store" href="https://apps.apple.com/app/id6826541947">Download free on the App Store</a>
+    <div class="cta" style="margin-top:0">
+      <a class="btn white" href="https://apps.apple.com/app/id6826541947">Download free on the App Store</a>
     </div>
   </div>
   <div class="dphone" id="dphone">
@@ -216,7 +239,7 @@ footer a{color:#c9d4e6;text-decoration:none;display:inline-block;padding:8px 12p
     <h3>Watch everyone check in</h3>
     <p class="dsub">This is what you see during a real check-in.</p>
     <div class="ring" role="img" aria-label="Check-in progress ring">
-      <svg viewBox="0 0 200 200" aria-hidden="true"><circle class="bg" cx="100" cy="100" r="80"/><circle class="fg" id="dfg" cx="100" cy="100" r="80" stroke-dasharray="502.65" stroke-dashoffset="502.65"/></svg>
+      <svg viewBox="0 0 200 200" aria-hidden="true"><defs><linearGradient id="dgr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#93c5fd"/><stop offset="1" stop-color="#1d4ed8"/></linearGradient></defs><circle class="bg" cx="100" cy="100" r="80"/><circle class="fg" id="dfg" cx="100" cy="100" r="80" stroke="url(#dgr)" stroke-dasharray="502.65" stroke-dashoffset="502.65"/></svg>
       <div class="mid"><b id="dn">0</b><span>of 24</span></div>
     </div>
     <div class="dpct">CHECKED IN<b id="dp">0%</b><span id="dleft">24 to go</span></div>
@@ -225,10 +248,10 @@ footer a{color:#c9d4e6;text-decoration:none;display:inline-block;padding:8px 12p
     <div class="ddone" id="ddone" role="status"><b>All 24 accounted for &#10003;</b><span>That's the whole check-in. Run one with your own team.</span><br><a href="https://apps.apple.com/app/id6826541947">Get the app</a></div>
     <p class="dfoot">Sample people. Not real data.</p>
   </div>
-</div></section>
+</div></div></div>
 
 <section id="features"><div class="wrap">
-  <h2>See it in the app</h2>
+  <h2>Everything stays in one app</h2>
   <p class="lead">Real screens from the iPhone app.</p>
   <div class="shots">
     <figure><img src="landing/live.jpg" loading="lazy" width="560" height="1214" alt="A live check-in with members confirming"><figcaption>Watch check-ins arrive</figcaption></figure>
@@ -236,30 +259,30 @@ footer a{color:#c9d4e6;text-decoration:none;display:inline-block;padding:8px 12p
     <figure><img src="landing/share.jpg" loading="lazy" width="560" height="1214" alt="A shareable All accounted for card"><figcaption>Share the result</figcaption></figure>
     <figure><img src="landing/spanish.jpg" loading="lazy" width="560" height="1214" alt="The app in Spanish"><figcaption>Also in Spanish</figcaption></figure>
   </div>
-  <ul class="feat">
-    <li>Live check-in with a running count</li>
-    <li>Templates for trips, races, job sites, events, youth teams and drills</li>
-    <li>Visitors and guests</li>
-    <li>Drill history and export</li>
-    <li>Spanish language support</li>
-    <li>No ads</li>
-  </ul>
+  <div class="bento">
+    <div class="tile navy"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9a16 16 0 0 1 20 0M5 13a11 11 0 0 1 14 0M8.5 16.5a6 6 0 0 1 7 0M4 4l16 16"/></svg></div><h3>Works with no signal</h3><p>A check-in saves on the phone and sends when you're back in signal.</p></div>
+    <div class="tile"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></div><h3>Team chat and bulletin board</h3><p>Post the plan of the day and see who has seen it.</p></div>
+    <div class="tile"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></div><h3>Leader-verified people</h3><p>Only leaders can verify members, so you know whose numbers you are looking at.</p></div>
+    <div class="tile tint"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5l3 2"/></svg></div><h3>Logbook</h3><p>Sign out with where you are going and a back-by time. Late people get flagged.</p></div>
+    <div class="tile"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6c0 5-2 6-2 6h16s-2-1-2-6a6 6 0 0 0-6-6z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg></div><h3>One-tap emergency muster</h3><p>Alert everyone and start the count. Run it as a drill any time.</p></div>
+    <div class="tile"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/></svg></div><h3>Drill history and export</h3><p>Keep a record of every drill and export it when someone asks.</p></div>
+  </div>
 </div></section>
 
-<section class="alt" id="pricing"><div class="wrap">
+<section id="pricing"><div class="wrap">
   <h2>Simple pricing</h2>
-  <p class="lead">Start free. Upgrade when your team grows.</p>
-  <div class="price">
+  <p class="lead">Start free. Upgrade when your team grows. No ads, ever.</p>
+  <div class="grid three" style="align-items:stretch">
     <div class="plan"><h3>Free</h3><div class="p">$0</div><ul><li>Teams up to 10 people</li><li>Live check-in</li><li>No ads</li></ul></div>
-    <div class="plan pro"><h3>Pro</h3><div class="p">$9.99 <small>/ month</small></div><div><small>or $99.99 / year</small></div><ul><li>7-day free trial</li><li>Teams up to 50 people, plus more tools</li><li>Cancel any time in your Apple subscription settings</li></ul></div>
+    <div class="plan pro"><h3>Pro</h3><div class="p">$9.99 <small>/ month</small></div><div class="alt2">or $99.99 / year</div><ul><li>7-day free trial</li><li>Teams up to 50 people, plus more tools</li><li>Cancel any time in your Apple subscription settings</li></ul></div>
     <div class="plan"><h3>Organizations</h3><div class="p"><a href="#contact">Contact us</a></div><ul><li>Schools, leagues, companies and agencies</li><li>We'll set it up with you</li></ul></div>
   </div>
   <p class="note">Prices are for the iPhone app and may differ by country. Subscriptions are managed through Apple.</p>
 </div></section>
 
-<section id="faq"><div class="wrap">
+<section id="faq"><div class="faq">
   <h2>Questions</h2>
-  <p class="lead"></p>
+  <div style="height:24px"></div>
   <details><summary>What happens to our data?</summary><p>Your roster stays on your phone. What goes to the server is encrypted or scrambled on your phone, so the server can't read names, posts or your roster. A few optional features store what you give them: a sign-in email or phone number, a team name you choose to list, and a leader's contact for the Verified badge. Read the full <a href="privacy.html">privacy policy</a>.</p></details>
   <details><summary>Can I rely on it for emergencies?</summary><p>Accounted For is a tool that helps you count people. It does not replace your emergency plan, your school or employer's procedures, or calling 911. Always follow your official procedures.</p></details>
   <details><summary>Who can see my team?</summary><p>People you invite. You choose who joins.</p></details>
@@ -272,9 +295,9 @@ footer a{color:#c9d4e6;text-decoration:none;display:inline-block;padding:8px 12p
 <div class="final"><div class="wrap">
   <h2>Know everyone's accounted for.</h2>
   <p>Free on iPhone. Set up in one tap.</p>
-  <div class="cta" style="justify-content:center">
-    <a class="btn store" href="https://apps.apple.com/app/id6826541947">Download free on the App Store</a>
-    <a class="btn ghost" href="app.html">Open the web app</a>
+  <div class="cta">
+    <a class="btn primary" href="https://apps.apple.com/app/id6826541947">Download free on the App Store</a>
+    <a class="btn light" href="app.html">Open the web app</a>
   </div>
 </div></div>
 
@@ -287,13 +310,13 @@ footer a{color:#c9d4e6;text-decoration:none;display:inline-block;padding:8px 12p
       <a class="cbtn mail" href="mailto:administration@accountedforteam.com?subject=Accounted%20For"><i aria-hidden="true">&#9993;</i><b>Email</b><span>Send a message</span></a>
     </div>
     <a class="caddr" href="mailto:administration@accountedforteam.com?subject=Accounted%20For">administration@<wbr>accountedforteam.com</a>
-    <p class="note" style="margin:0">An AI assistant answers the phone and takes a message for the team. Calls are recorded, and the assistant says so at the start of every call. Don't want to be recorded? Email us instead.</p>
+    <p class="note">An AI assistant answers the phone and takes a message for the team. Calls are recorded, and the assistant says so at the start of every call. Don't want to be recorded? Email us instead.</p>
   </div>
 </div></section>
 </main>
 
 <footer><div class="wrap">
-  <a href="support.html">Support</a> <a href="privacy.html">Privacy</a> <a href="terms.html">Terms</a> <a href="help.html">Help</a> <a href="app.html">Web app</a>
+  <div><a href="support.html">Support</a> <a href="privacy.html">Privacy</a> <a href="terms.html">Terms</a> <a href="help.html">Help</a> <a href="app.html">Web app</a></div>
   <div>&copy; 2026 Accounted For</div>
 </div></footer>
 <script>
