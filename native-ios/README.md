@@ -23,3 +23,9 @@
 - iOS control: `native-ios/AccountedForControls/SafeControl.swift` (iOS 18 ControlWidget). In Xcode: File → New → Target → Widget Extension (untick Live Activity), name `AccountedForControls`, replace its Swift file with this one, set the extension's deployment target to iOS 18. Then long-press the Lock Screen / Control Center / Action button settings to add "I'm safe".
 - This was written without being able to build iOS here, so treat the Swift as untested until you run it once.
 - On a phone that doesn't yet know which person you are, it asks you to pick yourself first instead of guessing.
+
+## 4. Lock screen Live Activity + Home Screen headcount widget (app side done; Xcode steps needed)
+- App side (4.144.0): while a check-in is open, the web app calls the native `MusterActivity` plugin every few seconds with who is accounted for. With no plugin installed it does nothing.
+- Files in `native-ios/MusterLiveActivity/`: `MusterAttributes.swift` (add to BOTH the App target and the widget extension), `MusterActivityPlugin.swift` (App target only; register it next to the other plugin in `MainViewController.capacitorDidLoad()` with `bridge?.registerPluginInstance(MusterActivityPlugin())`), `MusterWidgets.swift` (widget extension only).
+- In Xcode: File → New → Target → Widget Extension named `MusterWidgets` (tick Include Live Activity), replace its Swift files with `MusterWidgets.swift` and the shared attributes. Add the App Group `group.com.antoniotyler.accountedfor` to the App and the extension (Signing & Capabilities), and add `NSSupportsLiveActivities` = YES to the app's Info.plist (already added). Deployment target iOS 16.2 or later (the widget uses iOS 17 `containerBackground`).
+- Written without being able to build iOS here: treat the Swift as untested until you run it once on a device. Live Activities do not run in the Simulator on every Xcode version.
