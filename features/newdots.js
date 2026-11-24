@@ -1,9 +1,21 @@
-/* Accounted For 1.3 — green "new" dots.
-   Anything new in this version gets a small green dot beside it. The dot goes away for good once the person taps
+/* Accounted For 1.3 — blue "new" dots (blue since 4.144.0).
+   Anything new in this version gets a small blue dot beside it. The dot goes away for good once the person taps
    that item (remembered on this phone), and all dots retire on their own 45 days after this phone first shows them.
    To mark something new in a later version, add a line to NEW: [key, where the dot goes, what counts as "opened it"]. */
 (()=>{
 const NEW=[
+  ["orgs",   ".tgrid [data-go='org'] b",            "[data-go='org']"],
+  ["orgcon", "#osCon > b",                          "#osCon"],
+  ["orgsync","#osSync > b",                         "#osSync"],
+  ["orghook","#osHook > b",                         "#osHook"],
+  ["orgtrust","#osTrust > b",                       "#osTrust"],
+  ["orgref", "#osRef > b",                          "#osRef"],
+  ["orgroom","#osRoom > b",                         "#osRoom"],
+  ["sfplan", "[data-sf-tab='plan']",                "[data-sf-tab='plan']"],
+  ["sfreun", "[data-sf-tab='reunite']",             "[data-sf-tab='reunite']"],
+  ["sfquiet","[data-sf-tab='quiet']",               "[data-sf-tab='quiet']"],
+  ["onbcard","#obCard > b",                         "#obCard"],
+  ["yrcard", "#yrCard > b",                         "#yrCard"],
   ["integ",  ".tgrid [data-go='integ'] b",          "[data-go='integ']"],
   ["pdf",    ".tgrid [data-pdf-report] b",          "[data-pdf-report]"],
   ["pdf",    "button.btn[data-pdf-report]",         "[data-pdf-report]"],
