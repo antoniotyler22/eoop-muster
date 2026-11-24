@@ -133,14 +133,16 @@ h2{font-size:clamp(30px,6vw,44px);line-height:1.08;font-weight:800;letter-spacin
 /* pricing */
 .plan{background:#fff;border:1px solid var(--line);border-radius:28px;padding:30px;display:flex;flex-direction:column}
 .plan h3{font-size:16px;font-weight:800;color:var(--soft)}
-.plan .p{font-size:46px;font-weight:800;margin:6px 0 2px;letter-spacing:-.03em}
-.plan .p small{font-size:18px;font-weight:600;color:var(--soft)}
-.plan ul{margin:16px 0 0;padding-left:20px;color:var(--mut)}
+.plan .p{font-size:40px;font-weight:800;margin:6px 0 2px;letter-spacing:-.03em}
+.plan .p small{font-size:16px;font-weight:600;color:var(--soft);white-space:nowrap}
+.plan ul{margin:16px 0 22px;padding-left:20px;color:var(--mut)}
 .plan li{margin:6px 0}
 .plan.pro{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:0 24px 50px rgba(11,27,51,.28)}
 .plan.pro h3{color:#93c5fd}.plan.pro .p small,.plan.pro ul,.plan.pro .alt2{color:#c7d6ee}
 .plan .alt2{font-size:15px;color:var(--soft)}
 .plan .p a{text-decoration:none}
+.plan .btn{min-height:48px}
+@media(min-width:1000px){.grid.four.pricing{grid-template-columns:repeat(4,1fr)}}
 .note{color:var(--soft);font-size:15px;margin:22px 0 0;text-align:center}
 /* faq */
 .faq{max-width:820px;margin:0 auto;padding:0 20px}
@@ -272,12 +274,13 @@ footer a{color:var(--mut);text-decoration:none;display:inline-block;padding:8px 
 <section id="pricing"><div class="wrap">
   <h2>Simple pricing</h2>
   <p class="lead">Start free. Upgrade when your team grows. No ads, ever.</p>
-  <div class="grid three" style="align-items:stretch">
-    <div class="plan"><h3>Free</h3><div class="p">$0</div><ul><li>Teams up to 10 people</li><li>Live check-in</li><li>No ads</li></ul></div>
-    <div class="plan pro"><h3>Pro</h3><div class="p">$9.99 <small>/ month</small></div><div class="alt2">or $99.99 / year</div><ul><li>7-day free trial</li><li>Teams up to 50 people, plus more tools</li><li>Cancel any time in your Apple subscription settings</li></ul></div>
-    <div class="plan"><h3>Organizations</h3><div class="p"><a href="#contact">Contact us</a></div><ul><li>Schools, leagues, companies and agencies</li><li>We'll set it up with you</li></ul></div>
+  <div class="grid four pricing" style="align-items:stretch">
+    <div class="plan"><h3>Free</h3><div class="p">$0</div><div class="alt2">Up to 10 people</div><ul><li>Live check-in and headcount ring</li><li>Emergency muster</li><li>No ads</li></ul></div>
+    <div class="plan pro"><h3>Pro</h3><div class="p">$9.99 <small>/ month</small></div><div class="alt2">or $99.99 / year</div><ul><li>Up to 50 people</li><li>7-day free trial</li><li>Cancel any time in your Apple subscription settings</li></ul><a class="btn white" style="margin-top:auto" href="https://apps.apple.com/app/id6826541947">Get the app</a></div>
+    <div class="plan"><h3>Team</h3><div class="p">$12.99 <small>/ month</small></div><div class="alt2">Up to 100 people</div><ul><li>+$2.99 a month for every 50 more people</li><li>Everything in Pro</li></ul><a class="btn light" style="margin-top:auto" href="#contact">Talk to us</a></div>
+    <div class="plan"><h3>Org</h3><div class="p">$29.99 <small>/ month</small></div><div class="alt2">or $249 / year</div><ul><li>Unlimited people</li><li>Schools, leagues, companies and agencies</li></ul><a class="btn light" style="margin-top:auto" href="#contact">Talk to us</a></div>
   </div>
-  <p class="note">Prices are for the iPhone app and may differ by country. Subscriptions are managed through Apple.</p>
+  <p class="note">Pro is available in the iPhone app now. Team and Org are set up with us for now, so contact us to start. Prices are in US dollars and may differ by country. iPhone subscriptions are managed through Apple.</p>
 </div></section>
 
 <section id="faq"><div class="faq">
@@ -288,7 +291,7 @@ footer a{color:var(--mut);text-decoration:none;display:inline-block;padding:8px 
   <details><summary>Who can see my team?</summary><p>People you invite. You choose who joins.</p></details>
   <details><summary>What if there's no signal?</summary><p>A check-in saves on the phone and sends when you're back in signal.</p></details>
   <details><summary>Is there an Android version?</summary><p>Android is in testing on Google Play now. The iPhone app is live, and the web app works in a browser.</p></details>
-  <details><summary>How much does it cost?</summary><p>Free for teams up to 10 people. Pro is $9.99 a month or $99.99 a year with a 7-day free trial. Organizations can contact us.</p></details>
+  <details><summary>How much does it cost?</summary><p>Free for teams up to 10 people. Pro is $9.99 a month or $99.99 a year with a 7-day free trial, for up to 50 people. Team is $12.99 a month for up to 100 people, plus $2.99 a month for every 50 more. Org is $29.99 a month or $249 a year for unlimited people.</p></details>
   <details><summary>How do I delete my data?</summary><p>In the app, use Security, then Erase all app data on this phone, or delete the app. For anything stored on the server, email us and we'll delete what we can find within 30 days.</p></details>
 </div></section>
 
