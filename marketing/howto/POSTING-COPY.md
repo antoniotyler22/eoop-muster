@@ -1,7 +1,7 @@
 # Accounted For how-to videos: YouTube and Instagram copy
 
 Files: `NN_name_youtube.mp4` (16:9) goes to YouTube. `NN_name_vertical.mp4` (9:16) goes to Instagram Reels, YouTube Shorts and the Official channel.
-All videos use made-up sample people. Post order: 5, 2, 12, 4, 9, 10, 6, 15 (one a day).
+All videos use made-up sample people. Post order: 4, 5, 6, 9, 10, 11, 12, 14, 15 (one a day; Ep 2 is already published).
 
 Common YouTube tags: Accounted For, team check-in app, headcount app, attendance app, accountability app, team roll call, iPhone app
 Common Instagram hashtags: #AccountedFor #TeamCheckIn #Headcount #TeamManagement #Coaches #Teachers #Crew #Leadership #iPhoneApp #Productivity
@@ -63,6 +63,20 @@ accountedforteam.com
 Open Tools, then Reports for a share card, share headcount, PDF report, incident report, trends and scan.
 accountedforteam.com
 **Instagram caption:** Reports in one tap: headcount, PDF, incident report and more. Link in bio.
+
+## 14. Tally, the in-app helper
+**YouTube title:** Meet Tally, the Accounted For in-app helper
+**YouTube description:**
+Stuck? Tap the Tally button and ask a question about the app or about planning an event. Answers can be wrong or out of date, so check official sources before acting.
+accountedforteam.com
+**Instagram caption:** Stuck? Tap Tally and ask. Link in bio.
+
+## 11. Verified levels
+**YouTube title:** Who is really who? Verified levels in Accounted For
+**YouTube description:**
+Open a person to see how verified they are. Leaders tap Verify once they know it is really that person. Tap How it works for the levels.
+accountedforteam.com
+**Instagram caption:** Know who is really who. Verified levels, one tap. Link in bio.
 
 ---
 ## Posting checklist
