@@ -73,7 +73,7 @@ export function familyTexts(list: unknown, unit: unknown, at: unknown, place: un
   const join = (a: string[]) => a.length < 2 ? a[0] : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
   return [...by].map(([to, names]) => ({
     to,
-    body: `${u}: ${join(names)} ${names.length > 1 ? "are" : "is"} accounted for and safe as of ${t}.` + (pl ? ` Pickup: ${pl}.` : "") + " More updates will come by text.",
+    body: `${u}: ${join(names)} ${names.length > 1 ? "are" : "is"} accounted for and safe as of ${t}.` + (pl ? ` Pickup: ${pl}.` : "") + " More updates will come by text. Reply STOP to opt out.",
   }));
 }
 /** The server writes the text itself; the app only supplies its check-in link, which is checked and rebuilt here
@@ -99,7 +99,7 @@ export function buildText(link: unknown, recall: string, appUrls: string[], repl
   if (l != null) { if (l !== "1") return null; out.set("l", "1"); }
   const g = q.get("g");
   if (g != null) { if (!/^-?[0-9]{1,3}\.[0-9]{1,6},-?[0-9]{1,3}\.[0-9]{1,6},[0-9]{1,5}$/.test(g)) return null; out.set("g", g); }
-  return `${u} recall: tap to check in. ${base}#${out.toString()}` + (reply ? " Or reply 1 = OK, 2 = delayed, 3 = need help." : "");
+  return `${u} recall: tap to check in. ${base}#${out.toString()}` + (reply ? " Or reply 1 = OK, 2 = delayed, 3 = need help." : "") + " Reply STOP to opt out.";
 }
 
 function hdrs() {
