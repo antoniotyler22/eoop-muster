@@ -17,11 +17,17 @@ function tally(){const rc=S.rc,res=rc.res||{},ci=rc.ci||{},p=pool();const got=p.
 function watchAll(){const rc=S.rc;if(!rc||!rc.open||rc.allAt)return;const T=tally();if(T.p.length&&T.got.length===T.p.length&&T.visOk===T.vis.length){rc.allAt=Date.now();save();
   try{navigator.vibrate&&navigator.vibrate([80,60,80])}catch(e){}toast("✓ Everyone accounted for in "+mins(rc.allAt-rc.start))}}
 function firstAt(){let t=0;for(const x of Object.values(S.rc.ci||{}))if(x&&x.t&&(!t||x.t<t))t=x.t;return t}
+/* 4.148.0: for the reconciliation report. curve = how many were accounted for at 6 even points from the start to the end
+   (or to the moment everyone was in), counted from each person's check-in time; late3 = how many came in during the last quarter. */
+function stamps(){const ci=S.rc.ci||{},res=S.rc.res||{};const a=[];for(const m of pool()){const x=ci[m.id];const t=x&&x.t?+x.t:(res[m.id]==="ok"?(S.rc.start||0):0);if(t&&res[m.id]==="ok"||(x&&x.t))a.push(t)}return a.filter(Boolean).sort((p,q)=>p-q)}
+function curveOf(st,end,all){const to=all||end,span=Math.max(1,to-st),T=stamps();const out=[];for(let i=1;i<=6;i++){const lim=st+span*i/6;out.push(T.filter(t=>t<=lim).length)}return out}
+function lateN(st,end,all){const to=all||end,span=Math.max(1,to-st),T=stamps();return T.filter(t=>t>st+span*.75).length}
 function record(){const rc=S.rc;if(!rc.open||!rc.start)return;watchAll();const T=tally();const end=Date.now();
   const miss=T.p.filter(m=>(rc.res||{})[m.id]!=="ok");
   const d={id:rc.rid||rc.start.toString(36),t:rc.start,end,kind:rc.kind==="real"?"real":"drill",n:T.p.length,ok:T.got.length,
     good:T.codes[1],late:T.codes[2],help:T.codes[3],vis:T.vis.length,visOk:T.visOk,
     first:firstAt()?firstAt()-rc.start:null,all:rc.allAt?rc.allAt-rc.start:null,
+    curve:curveOf(rc.start,end,rc.allAt),late3:lateN(rc.start,end,rc.allAt),
     miss:miss.slice(0,60).map(nameOf),missN:miss.length,mode:S.mode||"military",unit:typeof unitName==="function"?unitName():""};
   const L=dl();const i=L.findIndex(x=>x.id===d.id);if(i>=0)L[i]=d;else L.unshift(d);S.drills=L.slice(0,KEEP)}
 window.drillRecord=record;

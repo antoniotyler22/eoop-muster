@@ -22,6 +22,8 @@ function makePDF(title){
       for(const c of cells)api.text(c.x,c.t,{size,bold:o.bold||c.bold,max:c.w,gray:c.gray});y-=size*0.3},
     rule(){api.need(8);y-=4;cur.push(`0.8 0.8 0.8 RG 0.6 w ${M} ${y.toFixed(1)} m ${W-M} ${y.toFixed(1)} l S`);y-=4},
     gap(h){y-=h},
+    /* 4.148.0: a filled bar on the current line (x, width, height in points) for the drill reconciliation chart */
+    bar(x,w,h){cur.push(`0.17 0.42 0.69 rg ${x.toFixed(1)} ${(y+2).toFixed(1)} ${Math.max(0.5,w).toFixed(1)} ${h} re f`)},
     out(){const objs=[];const add=s=>{objs.push(s);return objs.length};
       add("<< /Type /Catalog /Pages 2 0 R >>");add("");
       add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>");

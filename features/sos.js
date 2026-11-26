@@ -12,8 +12,8 @@ let kind="Help",hold=null,note="",busy=false,pos=null;
 const hhmm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
 
 /* ---------- sender ---------- */
-function warm(){try{if(!navigator.geolocation)return;navigator.geolocation.getCurrentPosition(p=>{pos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy,t:Date.now()}},()=>{},{timeout:6000,maximumAge:60000,enableHighAccuracy:true})}catch(e){}}
-function where(){return new Promise(ok=>{if(pos&&Date.now()-pos.t<120000)return ok(pos);if(!navigator.geolocation)return ok(null);
+function warm(){try{if(!navigator.geolocation)return;window.locAllow&&window.locAllow();navigator.geolocation.getCurrentPosition(p=>{pos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy,t:Date.now()}},()=>{},{timeout:6000,maximumAge:60000,enableHighAccuracy:true})}catch(e){}}
+function where(){window.locAllow&&window.locAllow();return new Promise(ok=>{if(pos&&Date.now()-pos.t<120000)return ok(pos);if(!navigator.geolocation)return ok(null);
   let done=false;const fin=v=>{if(!done){done=true;ok(v)}};setTimeout(()=>fin(pos),5500);
   try{navigator.geolocation.getCurrentPosition(p=>{pos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy,t:Date.now()};fin(pos)},()=>fin(pos),{timeout:5000,maximumAge:30000,enableHighAccuracy:true})}catch(e){fin(pos)}})}
 function paintNote(){const e=document.getElementById("sosNote");if(e)e.textContent=note}

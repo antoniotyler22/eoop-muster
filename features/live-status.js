@@ -53,7 +53,10 @@ async function push(){const w=wire();if(!w||!w.write||off||busy)return;busy=true
   try{const K=known(),items=[];
     for(const m of S.roster){if(m.sec==="ATT"&&!w.mine(m))continue;if(!w.mine(m))continue;const p=await pidOf(w,m);if(!p)continue;
       const f=FIELDS(m),sg=sigOf(m),last=K[p];if(last&&last.sg===sg)continue;
-      const t=last?Date.now():Math.max(1,refreshed(m))||1;
+      /* 4.148.0: only a real update (a check-in, a hand-picked status, a leader's confirm: anything that stamps refreshed()) goes out stamped "now".
+         Any other change on this phone (the app tidying a note, clearing a finished status on an old copy) rides one tick after the time this phone last
+         agreed with the server, so it lands only if nobody has changed that person since and can never cover a newer status from another phone. */
+      const t=last?(refreshed(m)>(+last.t||0)?Date.now():(+last.t||0)+1):Math.max(1,refreshed(m))||1;
       items.push({p,s:w.sec||m.sec,c:await fdEnc(w.ek,f),t,_sg:sg})}
     if(!items.length)return;
     for(let i=0;i<items.length;i+=100){const part=items.slice(i,i+100);
