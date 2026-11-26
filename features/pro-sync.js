@@ -16,6 +16,15 @@ async function call(name,b){const r=await fetch(fn(name),{method:"POST",headers:
   const t=await r.text();let j={};try{j=t?JSON.parse(t):{}}catch(e){}if(!r.ok)throw new Error(j.error||("HTTP "+r.status));return j}
 window.proTok=getTok;
 window.proCall=call;
+/* A code from the owner portal (or a Stripe/Apple token) that the server says is active Pro: counts as a Pro purchase on every platform. */
+const srvPro=()=>{const w=S&&S.proSrv;return !!(getTok()&&w&&w.on&&(!w.exp||w.exp>Date.now()-864e5))};
+window.afSrvPro=srvPro;
+window.afUseProCode=async function(raw){
+  const v=String(raw||"").trim().toLowerCase();
+  if(!/^[0-9a-f]{64}$/.test(v))return {ok:false,msg:"That doesn't look like a Pro code."};
+  try{const r=await call("pro",{op:"status",tok:v});if(!r.active)return {ok:false,msg:"That code isn't active Pro."};
+    setTok(v);S.proSrv={on:true,exp:r.exp||0,at:Date.now(),src:r.source||""};save();try{linkFeeds()}catch(e){}return {ok:true,exp:r.exp||0}}
+  catch(err){return {ok:false,msg:String(err.message||err)}}};
 
 /* ---- send the team token with Ask and server-hub requests ---- */
 const _fetch=window.fetch;
@@ -51,7 +60,7 @@ setInterval(()=>refresh(),6*36e5);
 /* ---- who counts as Pro on this device ---- */
 const _ok=proOK;
 proOK=function(){
-  if(isIOS())return _ok.apply(this,arguments);
+  if(isIOS())return _ok.apply(this,arguments)||srvPro();
   if(S&&S.role==="view")return true;
   if(!isWeb()||!webBilling())return true; /* Android, and the web until web billing is on */
   const w=S.proSrv;return !!(getTok()&&w&&w.on&&(!w.exp||w.exp>Date.now()-864e5))};
@@ -63,6 +72,8 @@ proPageHTML=function(){
   if(isIOS()){let h=_page.apply(this,arguments);const s=S.proSrv;
     if(window.MBN.pro&&MBN.pro.active){const line=s&&s.err?`<p class="note" style="color:var(--warn)">Server check: ${esc(s.err)} <button class="btn alt" data-pro-sync>Try again</button></p>`:s&&s.on?`<p class="note">✓ Server knows your team has Pro (Ask and the server hub work).</p>`:`<p class="note">Telling the server about your Pro… <button class="btn alt" data-pro-sync>Check now</button></p>`;
       h=h.replace(/<\/div>\s*$/,line+codeHTML()+"</div>")}
+    else if(srvPro()){h=h.replace(/<\/div>\s*$/,`<p class="note"><b style="color:var(--s-onhand)">● Pro is on</b>${s&&s.exp?" until "+esc(new Date(s.exp).toLocaleDateString()):""} (code).</p>`+codeHTML()+"</div>")}
+    else{h=h.replace(/<\/div>\s*$/,`<details class="note" style="margin-top:12px"${proWebMsg?" open":""}><summary>Have a code?</summary><label for="proCode">Code</label><input type="text" id="proCode" placeholder="Paste your code" autocomplete="off" autocapitalize="off" style="font-family:ui-monospace,monospace"><button class="btn alt" data-pro-code>Use this code</button>${proWebMsg?`<p class="note" style="color:var(--warn)">${esc(proWebMsg)}</p>`:""}</details></div>`)}
     return h}
   let h=`<div class="panel pro-wall"><span class="pro-badge">PRO</span><h2 style="margin:0">Accounted For Pro</h2>`;
   const s=S.proSrv;
@@ -87,11 +98,8 @@ document.addEventListener("click",async e=>{
     try{const r=await call("billing",{op:"checkout",plan:w.dataset.proWeb,size:+w.dataset.size||100,back:PUB()});if(r.url)location.href=r.url;else throw new Error("No checkout link")}
     catch(err){proWebMsg=String(err.message||err);redraw()}return}
   if(e.target.closest("[data-pro-portal]")){e.preventDefault();try{const r=await call("billing",{op:"portal",tok:getTok(),back:PUB()});if(r.url)location.href=r.url}catch(err){proWebMsg=String(err.message||err);redraw()}return}
-  if(e.target.closest("[data-pro-code]")){e.preventDefault();const v=(($("#proCode")||{}).value||"").trim().toLowerCase();
-    if(!/^[0-9a-f]{64}$/.test(v)){proWebMsg="That doesn't look like a Pro code.";redraw();return}
-    try{const r=await call("pro",{op:"status",tok:v});if(!r.active){proWebMsg="That code isn't active Pro.";redraw();return}
-      setTok(v);S.proSrv={on:true,exp:r.exp||0,at:Date.now(),src:r.source||""};save();proWebMsg="";toast("Pro is on");render()}
-    catch(err){proWebMsg=String(err.message||err);redraw()}return}
+  if(e.target.closest("[data-pro-code]")){e.preventDefault();const r=await window.afUseProCode(($("#proCode")||{}).value);
+    if(!r.ok){proWebMsg=r.msg;redraw();return}proWebMsg="";toast("Pro is on");render();return}
 });
 
 /* ---- back from Stripe checkout: #pro_ok=<session> ---- */

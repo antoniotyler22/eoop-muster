@@ -50,6 +50,8 @@ async function buy(key){
   try{const r=await call("billing",{op:"addon",key,tok:tok(),back:location.href.split("#")[0]});if(r.url)location.href=r.url}
   catch(e){toast(String(e.message||e).slice(0,90))}}
 async function redeem(code){
+  if(/^[0-9a-f]{64}$/i.test(String(code||"").trim())&&window.afUseProCode){ /* an owner-portal Pro code */
+    const r=await window.afUseProCode(code);if(!r.ok){toast(String(r.msg).slice(0,90));return false}toast("Pro is on");try{await refresh()}catch(e){}return true}
   try{const sku=await SB.rpc("addon_redeem",{p_tok:tok(),p_code:String(code||"").trim()});await refresh();toast("Code accepted"+(sku?": "+sku:""));return true}
   catch(e){toast(String(e.message||e).replace(/^.*exception:?\s*/i,"").slice(0,90)||"That code didn't work");return false}}
 /* returning from Stripe: #addon_ok=cs_... */
@@ -155,7 +157,7 @@ function brandCard(){const b=B().brand;
     <p class="note">${has("verified")?'<b style="color:var(--s-onhand,#2a7)">Verified organization ✓</b>':`<a href="mailto:administration@accountedforteam.com?subject=${encodeURIComponent("Verify my team: "+(b.name||(typeof unitName==="function"?unitName():"")))}">Ask for the Verified badge</a>`}</p>`
     :price("brand","Unlock for a year","$59.99")}`)}
 function siteCard(){return card("Site license",siteOn()?`<p class="note"><b style="color:var(--s-onhand,#2a7)">Active ✓</b> Everything is unlocked on this phone${B().ents.site&&B().ents.site.exp?" until "+new Date(B().ents.site.exp).toLocaleDateString():""}.</p>`
-  :`<p class="note">For a school district, scout council, union or company: one license, every phone. Have a code?</p><div class="row2"><input type="text" id="abCode" placeholder="Enter code" autocapitalize="characters" autocomplete="off" value="${esc2(ui.code)}"><button class="btn" data-aopen="redeem">Redeem</button></div><p class="note"><a href="mailto:administration@accountedforteam.com?subject=Accounted%20For%20site%20license">Ask about a site license</a></p>`)}
+  :`<p class="note">For a school district, scout council, union or company: one license, every phone. Have a Pro or site license code?</p><div class="row2"><input type="text" id="abCode" placeholder="Enter code" autocapitalize="characters" autocomplete="off" value="${esc2(ui.code)}"><button class="btn" data-aopen="redeem">Redeem</button></div><p class="note"><a href="mailto:administration@accountedforteam.com?subject=Accounted%20For%20site%20license">Ask about a site license</a></p>`)}
 function tipCard(){return card("Keep it going",`<p class="note">Accounted For is built by one person. If it earns its place on your phone, you can chip in. Nothing unlocks; it just helps.</p>${price("tip_2","$2")}${price("tip_5","$5")}${price("tip_10","$10")}`)}
 function keyCard(){return card("Use on another phone",`<p class="note">Add-ons belong to this phone's key. To use them on another phone, copy the key here and paste it there.</p><div class="row2"><button class="btn alt" data-aopen="copykey">Copy my key</button><button class="btn alt" data-aopen="pastekey">Paste a key</button></div>`)}
 function storeHTML(){
