@@ -31,7 +31,7 @@ test("server texting: valid US numbers only, deduplicated, capped", () => {
 test("server texting: the server writes the text; only the app's own check-in link gets through", () => {
   const app = ["https://antoniotyler22.github.io/eoop-muster/"];
   const base = app[0] + "#";
-  assert.equal(buildText(base + "ci=abc12345&u=1ST+PLT&l=1", "abc12345", app), "1ST PLT recall: tap to check in. " + base + "ci=abc12345&u=1ST+PLT&l=1");
+  assert.equal(buildText(base + "ci=abc12345&u=1ST+PLT&l=1", "abc12345", app), "1ST PLT recall: tap to check in. " + base + "ci=abc12345&u=1ST+PLT&l=1" + " Reply STOP to opt out.");
   assert.ok(buildText(base + "ci=abc12345&u=1ST&to=8085550100&g=21.4500,-157.7600,100", "abc12345", app));
   assert.equal(buildText("https://evil.example/#ci=abc12345&u=X", "abc12345", app), null);
   assert.equal(buildText(base + "ci=abc12345&u=X&msg=win+a+prize", "abc12345", app), null);
@@ -45,10 +45,10 @@ test("server texting: reply routes and family texts are written by the server, i
   const { cleanPeople, familyTexts, phKey } = await import("../supabase/functions/sms/index.ts");
   const ppl = cleanPeople([{ to: "(808) 555-0100", w: ["0123456789abcdef", "bad", 5] }, { to: "808-555-0100", w: ["0123456789abcdef"] }, { to: "123", w: ["0123456789abcdef"] }, { to: "8085550199", w: [] }]);
   assert.deepEqual(ppl, [{ to: "+18085550100", w: ["0123456789abcdef"] }]);
-  assert.match(buildText("https://antoniotyler22.github.io/eoop-muster/#ci=abcdefgh1&u=1ST", "abcdefgh1", ["https://antoniotyler22.github.io/eoop-muster/"], true), /Or reply 1 = OK, 2 = delayed, 3 = need help\.$/);
+  assert.match(buildText("https://antoniotyler22.github.io/eoop-muster/#ci=abcdefgh1&u=1ST", "abcdefgh1", ["https://antoniotyler22.github.io/eoop-muster/"], true), /Or reply 1 = OK, 2 = delayed, 3 = need help\. Reply STOP to opt out\.$/);
   const f = familyTexts([{ to: "8085550101", n: "Ana R." }, { to: "808-555-0101", n: "Leo R." }, { to: "8085550199", n: "Max L." }, { to: "8085550188", n: "<script>" }], "Lincoln Elem", "10:42 AM", "North gym doors");
   assert.equal(f.length, 2);
-  assert.equal(f[0].body, "Lincoln Elem: Ana R. and Leo R. are accounted for and safe as of 10:42 AM. Pickup: North gym doors. More updates will come by text.");
+  assert.equal(f[0].body, "Lincoln Elem: Ana R. and Leo R. are accounted for and safe as of 10:42 AM. Pickup: North gym doors. More updates will come by text. Reply STOP to opt out.");
   assert.equal(familyTexts([], "Lincoln Elem", "soon", ""), null, "the time is checked");
   assert.equal(familyTexts([], "Lincoln Elem", "10:42", "http://evil.example/?x=1"), null, "no links in the pickup place");
   assert.equal(familyTexts([], "<b>", "10:42", ""), null);
