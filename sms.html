@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Text Messages (SMS) · Accounted For</title>
+<style>
+@font-face{font-family:"Plus Jakarta Sans";font-weight:400;font-display:swap;src:url(fonts/pjs-400.woff2) format("woff2")}
+@font-face{font-family:"Plus Jakarta Sans";font-weight:800;font-display:swap;src:url(fonts/pjs-800.woff2) format("woff2")}
+:root{--bg:#eef2f6;--card:#fff;--ink:#0f1720;--muted:#5b6673;--line:rgba(15,23,32,.1);--acc:#0857e8;--warn:#b3261e}
+@media (prefers-color-scheme:dark){:root{--bg:#0b1016;--card:#18202a;--ink:#e8eef5;--muted:#93a1b1;--line:rgba(255,255,255,.1);--acc:#4d8dff;--warn:#ff8a80}}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
+main{max-width:720px;margin:0 auto;padding:28px 16px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 20px 8px;margin-top:14px}
+h1{font-size:28px;font-weight:800;margin:0}h2{font-size:18px;font-weight:800;margin:0 0 6px}
+p,li{margin:0 0 12px}.muted{color:var(--muted)}a{color:var(--acc);font-weight:700}
+.key{border-left:4px solid var(--warn)}
+.backbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;border-bottom:1px solid var(--line)}.backbar a{display:inline-flex;align-items:center;min-height:44px;font-weight:800;text-decoration:none;font-size:17px}
+</style></head><body><nav class="backbar"><a href="app.html" id="backApp">&#8592; Back to app</a></nav>
+<script>document.getElementById("backApp").addEventListener("click",function(e){e.preventDefault();try{if(window.opener&&!window.opener.closed){window.close();return}}catch(x){}if(history.length>1&&document.referrer&&new URL(document.referrer).origin===location.origin){history.back()}else{location.href="app.html"}});</script><main>
+<h1>Text Messages (SMS)</h1>
+<p class="muted">Accounted For. Effective November 26, 2026.</p>
+
+<div class="card key"><h2>What these texts are</h2>
+<p>Accounted For is a team check-in and headcount app. Team leaders (for example a teacher, coach, supervisor or unit leader) can have the app text the people on their own team roster. These are <b>operational texts only</b>, never advertising or marketing. We do not sell or share phone numbers.</p>
+<p>The texts are sent from our toll-free number, <b>+1 (888) 675-7006</b>, in two situations:</p>
+<ul>
+<li><b>A check-in the leader started.</b> Example: <i>"Alpha Team recall: tap to check in. [link] Or reply 1 = OK, 2 = delayed, 3 = need help."</i> The person can tap the link or reply 1, 2 or 3 to be counted.</li>
+<li><b>A "safe" notice (school version).</b> A one-time message to a parent or guardian that their student is accounted for, and where pickup is.</li>
+</ul></div>
+
+<div class="card"><h2>How people agree (opt-in)</h2>
+<p>Texts go only to people a team leader has added to that leader's own roster in the app, and only when the leader starts a check-in. Before adding a phone number, the leader confirms that the person agreed to receive these texts from their team (for example by joining the team, filling in a sign-up or contact form, or telling the leader their number). The app shows this reminder next to the button that sends texts.</p>
+<p>No one is texted for any other reason, and numbers are not collected from the public.</p></div>
+
+<div class="card"><h2>Frequency, cost and opting out</h2>
+<ul>
+<li><b>Frequency:</b> only when a leader starts a check-in. Message frequency varies by team and is low, with a daily per-team limit.</li>
+<li><b>Cost:</b> message and data rates may apply. Accounted For does not charge you to receive a text.</li>
+<li><b>Stop:</b> reply <b>STOP</b> to any text and you will receive no more from this number. You can also ask your team leader to remove your number.</li>
+<li><b>Help:</b> reply <b>HELP</b>, or email <a href="mailto:administration@accountedforteam.com">administration@accountedforteam.com</a> or call <a href="tel:+18885060639">1-888-506-0639</a>.</li>
+</ul></div>
+
+<div class="card"><h2>Your privacy</h2>
+<p>Phone numbers are used only to deliver the text and to match your reply to your check-in. They are passed to our text provider (Twilio) for delivery and are not kept for texting. Mobile numbers and opt-in information are not shared with third parties or affiliates for their marketing. See the <a href="privacy.html">Privacy Policy</a> and the <a href="terms.html">Terms of Use</a>.</p></div>
+
+<div class="card"><h2>Contact</h2><p><a href="mailto:administration@accountedforteam.com">administration@accountedforteam.com</a> · <a href="tel:+18885060639">1-888-506-0639</a> · <a href="support.html">Support</a></p></div>
+</main></body></html>
