@@ -7,7 +7,7 @@
    5. Data & privacy: retention, delete, privacy links, Data Processing Agreement and single sign-on requests.
    Everything stays on this phone except the team alert, which goes through Word of Mouth like any urgent post. */
 (()=>{
-const TABS=[["drills","Drills"],["plan","Plan"],["tapin","Tap-in"],["alone","Timer"],["actions","Actions"],["reunite","Reunite"],["quiet","Quiet"],["org","Data"]];
+const TABS=[["drills","Drills"],["plan","Plan"],["tapin","Tap-in"],["alone","Timer"],["chain","Chain"],["actions","Actions"],["reunite","Reunite"],["quiet","Quiet"],["org","Data"]];
 const TYPES=[["fire","Fire"],["tornado","Tornado"],["lockdown","Lockdown"],["secure","Secure"],["evac","Evacuate"],["shelter","Shelter"]];
 const SEC_T=["lockdown","secure","shelter","evac"];
 /* Rules from state agency pages (checked Nov 2026). Districts can require more: confirm with yours. */
@@ -62,7 +62,7 @@ function drillsHTML(){const c=sf(),R=ruleSet(),P=progress(),L=yearDrills();
   h+=`</div><div class="panel"><b>This drill is a…</b><div class="evts" role="group" aria-label="Drill type for the next check-in you close">${TYPES.map(([k,l])=>`<button data-sf-dty="${k}" aria-pressed="${c.dtype===k}">${l}</button>`).join("")}</div>
     <p class="note">Close out a check-in on the Recall screen and it is logged with this type. You can fix the type below.</p></div>`;
   h+=`<div class="panel"><b>This school year (${L.length})</b>${L.length?L.slice(0,10).map(d=>`<div class="rrow" style="--sc:var(--s-onhand);margin-top:8px"><div class="rtop"><div class="who"><b>${esc(dd(d.t))} ${esc(hm(d.t))}</b> · ${d.ok}/${d.n} accounted${d.all!=null?` · ${dur(d.all)} to everyone`:""}
-      <div class="evts" style="margin-top:6px">${TYPES.map(([k,l])=>`<button data-sf-tag="${esc(d.id)}|${k}" aria-pressed="${d.type===k}">${l}</button>`).join("")}</div></div></div></div>`).join(""):`<p class="note">No drills logged yet this year. Run one from Recall.</p>`}
+      <div class="evts" style="margin-top:6px">${TYPES.map(([k,l])=>`<button data-sf-tag="${esc(d.id)}|${k}" aria-pressed="${d.type===k}">${l}</button>`).join("")}<button class="chip" data-sf-recon="${esc(d.id)}" style="cursor:pointer">Reconciliation PDF</button></div></div></div></div>`).join(""):`<p class="note">No drills logged yet this year. Run one from Recall.</p>`}
     <div class="row2" style="margin-top:10px"><button class="btn" id="sfPdf">Export report (PDF)</button><button class="btn alt" id="sfWeb">Text for website</button></div>
     ${R.post?`<p class="note">${esc(R.name)} asks schools to post each drill within about ${R.post} school days. The website text has the date, time and drill type.</p>`:""}</div>`;
   return h}
@@ -84,8 +84,8 @@ const safeName=s=>String(s).replace(/[^\w -]+/g,"").trim()||"report";
 function tapinHTML(){const c=sf(),live=S.rc&&S.rc.open;
   return `<div class="panel"><b>Muster points</b><p class="note">One poster per assembly point. People scan it with their phone camera to check in at that point. No app needed to check in.</p>
     <div class="row2"><input id="sfPt" maxlength="30" placeholder="Assembly Point B, Front lot…" aria-label="Muster point name"><button class="btn" id="sfPtAdd">Add</button></div>
-    ${c.pts.map((p,i)=>`<div class="rrow" style="--sc:var(--brass);margin-top:8px"><div class="rtop"><div class="who"><b>${esc(p)}</b></div><div class="evts"><button data-sf-poster="${i}"${live?"":" disabled"}>Poster</button><button data-sf-ptdel="${i}" aria-label="Remove ${esc(p)}">✕</button></div></div></div>`).join("")||`<p class="note">No points yet. Add your first one above.</p>`}
-    <p class="note">${live?"Posters use the live check-in link for the check-in that is open now.":"Start a check-in on Recall first: each poster carries that check-in's link, so print them when you start a drill."}</p></div>`}
+    ${c.pts.map((p,i)=>`<div class="rrow" style="--sc:var(--brass);margin-top:8px"><div class="rtop"><div class="who"><b>${esc(p)}</b></div><div class="evts"><button data-sf-nfc="${i}" aria-pressed="${c.nfc===i}">Tag</button><button data-sf-poster="${i}"${live?"":" disabled"}>Poster</button><button data-sf-ptdel="${i}" aria-label="Remove ${esc(p)}">✕</button></div></div></div>`).join("")||`<p class="note">No points yet. Add your first one above.</p>`}
+    ${window.spNfcHtml?window.spNfcHtml(c):""}<p class="note">${live?"Posters use the live check-in link for the check-in that is open now.":"Start a check-in on Recall first: each poster carries that check-in's link, so print them when you start a drill."}</p></div>`}
 async function posterPDF(name){await loadLib("lib/qrcode.js","qrcode");const qr=qrcode(0,"M");qr.addData(ciLink()+"&pt="+encodeURIComponent(name));qr.make();
   const n=qr.getModuleCount(),size=360,cs=size/n,ox=126,oy=330;let ops="0 0 0 rg\n";
   for(let r=0;r<n;r++)for(let q=0;q<n;q++)if(qr.isDark(r,q))ops+=`${(ox+q*cs).toFixed(2)} ${(oy+(n-1-r)*cs).toFixed(2)} ${(cs+.2).toFixed(2)} ${(cs+.2).toFixed(2)} re f\n`;
@@ -109,7 +109,7 @@ function srv(due){const c=sf(),a=c.al,f=typeof mainFeed==="function"&&mainFeed()
 function alStart(min){const a=sf().al;a.min=min;a.on=true;a.due=Date.now()+min*60000;a.st=0;a.srv=false;save();schedAl();srv(a.due);redraw()}
 function alOK(){const a=sf().al;a.due=Date.now()+a.min*60000;a.st=0;save();schedAl();srv(a.due);redraw();toast("Checked in. Next one in "+a.min+" min")}
 function alStop(){const a=sf().al;a.on=false;a.due=0;a.st=0;a.srv=false;save();cancelAl();srv(null);redraw();toast("Timer off")}
-function where(){return new Promise(res=>{if(!navigator.geolocation)return res("");navigator.geolocation.getCurrentPosition(p=>res(` Last location: https://maps.apple.com/?ll=${p.coords.latitude.toFixed(5)},${p.coords.longitude.toFixed(5)}`),()=>res(""),{timeout:6000,maximumAge:120000})})}
+function where(){window.locAllow&&window.locAllow();return new Promise(res=>{if(!navigator.geolocation)return res("");navigator.geolocation.getCurrentPosition(p=>res(` Last location: https://maps.apple.com/?ll=${p.coords.latitude.toFixed(5)},${p.coords.longitude.toFixed(5)}`),()=>res(""),{timeout:6000,maximumAge:120000})})}
 async function postTeam(txt){const f=typeof mainFeed==="function"&&mainFeed();if(!f||!f.lk){toast("Word of Mouth isn't set up on this phone, so no team alert was sent.");return false}
   try{const ct=await fdEnc(f.ek,{t:txt,u:true,to:{k:"all"},sa:SECTIONS.map(x=>x[0]),by:fdBy(f)});const id=await SB.rpc("feed_post",{p_feed:f.id,p_leader_key:f.lk,p_ct:ct});SB.notify(null,{feed:f.id,lk:f.lk,urg:true});
     f.posts=[{id:+id,t:Date.now(),txt,urg:true,to:{k:"all"},by:fdBy(f)}].concat(f.posts||[]);save();return true}catch(e){toast("Couldn't reach the team. Try again.");return false}}
@@ -159,7 +159,7 @@ function orgHTML(){const c=sf();const mail=s=>"mailto:administration@accountedfo
 
 /* ---------- screen ---------- */
 function renderSafety(){const c=sf();prune();
-  const body=({drills:drillsHTML,tapin:tapinHTML,alone:alHTML,actions:actHTML,org:orgHTML,...(window.osTabs||{})})[c.tab]||drillsHTML;
+  const body=({drills:drillsHTML,tapin:tapinHTML,alone:alHTML,actions:actHTML,org:orgHTML,...(window.osTabs||{}),...(window.spTabs||{})})[c.tab]||drillsHTML;
   $("#main").innerHTML=banner()+`<h2 style="display:flex;align-items:center;gap:8px"><span class="pro-badge">PRO</span> Safety</h2><div class="evts" role="tablist" aria-label="Safety sections">${TABS.map(([k,l])=>`<button role="tab" data-sf-tab="${k}" aria-selected="${c.tab===k}" aria-pressed="${c.tab===k}">${l}</button>`).join("")}</div>`+body()}
 function redraw(){if(view!=="safety"||!proOK())return;const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))return;const y=window.scrollY;renderSafety();window.scrollTo(0,y)}
 window.renderSafety=renderSafety;
@@ -194,5 +194,5 @@ document.addEventListener("click",async e=>{const t=e.target;if(!t.closest||view
   if(t.closest("#sfWipe")){if(armed!=="sfwipe"){armed="sfwipe";renderSafety();setTimeout(()=>{if(armed==="sfwipe"){armed=null;if(view==="safety")renderSafety()}},4000);return}armed=null;S.drills=[];c.reun=[];c.act=null;save();renderSafety();toast("Safety records deleted")}
 });
 document.addEventListener("change",e=>{const t=e.target;if(t&&t.id==="sfMore"&&view==="safety"&&RULES[t.value]){sf().rule=t.value;save();renderSafety();return}if(!t.dataset||view!=="safety")return;if(t.dataset.sfCus){sf().custom[t.dataset.sfCus]=Math.max(0,Math.min(40,+t.value||0));save();renderSafety()}});
-window.proSafety={srv,rules:RULES,progress,webText,reportPDF,posterPDF,alStart,alOK,alTick,doAct,ruleSet};
+window.proSafety={postTeam,where,savePDF,dd,hm,dur,typeName,srv,rules:RULES,progress,webText,reportPDF,posterPDF,alStart,alOK,alTick,doAct,ruleSet};
 })();
