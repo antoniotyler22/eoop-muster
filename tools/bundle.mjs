@@ -95,6 +95,7 @@ export const SOURCES = [
   "features/harp.js",
   "features/ck-missing.js",
   "features/stale-24h.js",
+  "features/nudge.js",
   "features/status-by.js",
   "features/live-status.js",
   "features/ask-roster.js",

@@ -124,6 +124,7 @@ async function dmSend(th,txt,img,by,name,aud,dur,ti,grp){const o={t:String(txt||
 function dmPush(tid,msg){const L=S.dmMsgs[tid]=S.dmMsgs[tid]||[];if(L.some(x=>x.id===msg.id))return false;L.push(msg);L.sort((a,b)=>a.id-b.id);if(L.length>200)L.splice(0,L.length-200);return true}
 function dmRxSet(o,by){const id=+o.r;by=String(by||"").slice(0,24);if(!id||!by)return false;const e=RX.includes(o.e)?o.e:"";const M=S.dmRx[id]=S.dmRx[id]||{};if(e)M[by]=e;else delete M[by];if(!Object.keys(M).length)delete S.dmRx[id];return true}
 async function dmReact(th,id,e,by){const o={t:"",by,n:"",r:+id,e:RX.includes(e)?e:""};const ct=await fdEnc(th.ek,o);await SB.rpc("dm_send",{p_id:th.id,p_key:th.k,p_ct:ct});dmRxSet(o,by)}
+window.dmApi={open:dmOpenSrv,send:dmSend,push:dmPush};
 window.dmRx={set:dmRxSet,open:id=>{dmWith=id;view="dm";render()},grp:id=>{grpCur=id;view="grp";render()}};
 let grpCur=null,grpBusy=false;
 const gDev=()=>window.dmDev?window.dmDev():"";
