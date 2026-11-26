@@ -20,6 +20,7 @@ const used=()=>S.source==="sample"?0:(S.roster||[]).length;
 function tier(){const N=window.MBN;
   if(window.afSiteOn&&window.afSiteOn())return "org"; /* site license (addons.js) */
   if(!proOK())return "free";
+  if(N&&N.on&&!(N.pro&&N.pro.active)&&window.afSrvPro&&window.afSrvPro())return "pro"; /* a Pro code (owner portal) or a web purchase, used on iPhone */
   if(!N||!N.on||!(N.pro&&N.pro.active))return "org"; /* web / Android / member views: unlocked */
   const pid=String(N.pro.pid||"");return /\.org\./.test(pid)?"org":/\.team\.\d+$/.test(pid)?"team":"pro"}
 const cap=()=>Math.max(tier()==="team"?teamCap():CAP[tier()],window.afPassCap?window.afPassCap():0); /* an Event Pass (addons.js) lifts the limit while it lasts */
