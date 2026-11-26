@@ -32,7 +32,7 @@ const call=(n,b)=>typeof proCall==="function"?proCall(n,b):Promise.reject(new Er
 
 /* ---------- what the team has ---------- */
 const has=k=>{const e=B().ents[k];return !!(e&&e.q>0&&(!e.exp||e.exp>NOW()))};
-const siteOn=()=>has("site");
+const siteOn=()=>has("site")||!!(window.afCodeOrg&&window.afCodeOrg()); /* a site license, or an owner-portal code */
 const bal=()=>Math.max(0,+((B().ents.credits||{}).q)||0);
 const kitOn=k=>siteOn()||has("kits")||has("kit_"+k);
 const compOn=()=>siteOn()||has("compliance");

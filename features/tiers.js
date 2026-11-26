@@ -19,6 +19,7 @@ const used=()=>S.source==="sample"?0:(S.roster||[]).length;
 
 function tier(){const N=window.MBN;
   if(window.afSiteOn&&window.afSiteOn())return "org"; /* site license (addons.js) */
+  if(window.afCodeOrg&&window.afCodeOrg())return "org"; /* owner-portal code: everything, top level */
   if(!proOK())return "free";
   if(N&&N.on&&!(N.pro&&N.pro.active)&&window.afSrvPro&&window.afSrvPro())return "pro"; /* a Pro code (owner portal) or a web purchase, used on iPhone */
   if(!N||!N.on||!(N.pro&&N.pro.active))return "org"; /* web / Android / member views: unlocked */

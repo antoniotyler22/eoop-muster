@@ -19,11 +19,13 @@ window.proCall=call;
 /* A code from the owner portal (or a Stripe/Apple token) that the server says is active Pro: counts as a Pro purchase on every platform. */
 const srvPro=()=>{const w=S&&S.proSrv;return !!(getTok()&&w&&w.on&&(!w.exp||w.exp>Date.now()-864e5))};
 window.afSrvPro=srvPro;
+/* A code from the owner portal opens everything at the top level (Org), on every platform. */
+window.afCodeOrg=()=>!!(srvPro()&&S.proSrv&&S.proSrv.code);
 window.afUseProCode=async function(raw){
   const v=String(raw||"").trim().toLowerCase();
   if(!/^[0-9a-f]{64}$/.test(v))return {ok:false,msg:"That doesn't look like a Pro code."};
   try{const r=await call("pro",{op:"status",tok:v});if(!r.active)return {ok:false,msg:"That code isn't active Pro."};
-    setTok(v);S.proSrv={on:true,exp:r.exp||0,at:Date.now(),src:r.source||""};save();try{linkFeeds()}catch(e){}return {ok:true,exp:r.exp||0}}
+    setTok(v);S.proSrv={on:true,exp:r.exp||0,at:Date.now(),src:r.source||"",code:true};save();try{linkFeeds()}catch(e){}return {ok:true,exp:r.exp||0}}
   catch(err){return {ok:false,msg:String(err.message||err)}}};
 
 /* ---- send the team token with Ask and server-hub requests ---- */
@@ -38,7 +40,7 @@ window.fetch=function(u,init){
 let lastJws="",syncing=false;
 async function syncApple(force){const N=window.MBN;if(!isIOS()||!N.pro||!N.pro.active||!N.pro.jws||syncing)return;
   if(!force&&N.pro.jws===lastJws&&getTok())return;syncing=true;
-  try{const r=await call("pro",{op:"apple",jws:N.pro.jws});if(r.tok){setTok(r.tok);lastJws=N.pro.jws;S.proSrv={on:!!r.active,exp:r.exp||0,at:Date.now(),src:"apple"};save();linkFeeds()}}
+  try{const r=await call("pro",{op:"apple",jws:N.pro.jws});if(r.tok){setTok(r.tok);lastJws=N.pro.jws;S.proSrv={on:!!r.active,exp:r.exp||0,at:Date.now(),src:"apple",code:false};save();linkFeeds()}}
   catch(e){S.proSrv=Object.assign({},S.proSrv||{},{err:String(e.message||e).slice(0,140),at:Date.now()});save()}
   finally{syncing=false}}
 /* Leader: let members of each FEED this phone runs use Ask under this Pro. */
