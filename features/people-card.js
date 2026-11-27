@@ -45,6 +45,7 @@ function dress(){
     const st=pick.querySelector('[data-pick="s"]');if(st&&/^\s*off hand\s*$/i.test(st.textContent))row.dataset.st="off";
     const av=document.createElement("span");av.className="pc5-av"+(row.dataset.pv==="1"?" vf":"");av.setAttribute("aria-hidden","true");
     const nm=row.querySelector(".nm");av.textContent=initials(nm?nm.textContent:m.name);
+    try{const ph=window.afPhoto&&window.afPhoto(((m.rank||"")+" "+lastOf(m)).trim());if(ph){av.textContent="";av.classList.add("ph");av.style.backgroundImage="url("+ph+")"}}catch(e){}
     const h=document.createElement("div");h.className="pc5-h";h.append(av,who,pick);
     row.prepend(h);row.insertAdjacentHTML("beforeend",bar(row,m));
   })}
@@ -90,6 +91,7 @@ const css=document.createElement("style");css.id="pc5css";css.textContent=`
 .m.pc5{display:block;padding:0;overflow:hidden;border:1px solid var(--line);border-left:1px solid var(--line);border-radius:24px;margin-bottom:14px}
 .pc5-h{display:flex;align-items:center;gap:13px;padding:16px 16px 14px}
 .pc5-av{position:relative;flex:none;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:var(--surface-2);color:var(--ink);font-weight:700;font-size:16px;letter-spacing:.02em}
+.pc5-av.ph{background-size:cover;background-position:center}
 .pc5-av.vf::after{content:"\\2713";position:absolute;right:-3px;bottom:-3px;width:20px;height:20px;border-radius:50%;background:#1d9e75;color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;border:2px solid var(--surface)}
 .pc5 .who{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .pc5 .nmrow{justify-content:flex-start}

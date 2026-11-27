@@ -156,12 +156,20 @@ function askJoinHTML(){const pend=myReqs().filter(r=>r.status==="pending"),done=
 window.askJoinHTML=askJoinHTML;
 function redrawA(){const w=document.getElementById("ajWrap");if(w)w.outerHTML=askJoinHTML()}
 const sayA=t=>{jMsg=t;const o=document.getElementById("ajOut");if(o)o.textContent=t};
-async function byCode(){const c=cleanCode(($("#ajCode")||{}).value);if(!codeOK(c)){sayA("A join code is 6 letters and numbers, like ABC234 (never 0, O, 1 or I).");return}
-  jBusy=true;sayA("Checking…");
-  try{const rows=await SB.rpc("join_code_get",{p_h:await codeHash(c)});const r=rows&&rows[0];if(!r){jBusy=false;sayA("That code didn't work. Check it with your leader; it may have been changed or turned off.");return}
-    const L=await fdDec(await codeKey(c),r.ct);if(!L||L.id!==r.feed_id){jBusy=false;sayA("That code didn't work.");return}
+async function byCode(sel){const inp=sel||"#ajCode",say=t=>{if(inp==="#ajCode2"){const o=$("#ajc2Out");if(o)o.textContent=t}else sayA(t)};
+  const c=cleanCode(($(inp)||{}).value);if(!codeOK(c)){say("A join code is 6 letters and numbers, like ABC234 (never 0, O, 1 or I).");return}
+  jBusy=true;say("Checking…");
+  try{const rows=await SB.rpc("join_code_get",{p_h:await codeHash(c)});const r=rows&&rows[0];if(!r){jBusy=false;say("That code didn't work. Check it with your leader; it may have been changed or turned off.");return}
+    const L=await fdDec(await codeKey(c),r.ct);if(!L||L.id!==r.feed_id){jBusy=false;say("That code didn't work.");return}
     jBusy=false;jFound=L;confirmJoin(L)}
-  catch(e){jBusy=false;sayA(why(e))}}
+  catch(e){jBusy=false;say(why(e))}}
+/* 4.153: after Apple/Google sign-in, always offer "Join a team with a code" (even when the email already matched a roster) */
+function offerCode(who){sheetCtx={kind:"ajcode"};
+  $("#sheetT").innerHTML=`Signed in${who?" as "+esc(who):""}<small>Have a team code? Join another team with it.</small>`;
+  $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><input id="ajCode2" type="text" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="8" placeholder="ABC 234" style="text-transform:uppercase;font:700 22px ui-monospace,Menlo,monospace;letter-spacing:.12em;text-align:center">
+    <button class="btn" id="ajc2Go">Join with code</button><button class="btn alt" data-sclose="1">Skip</button><p class="note" id="ajc2Out" role="status"></p></div>`;
+  const sh=$("#sheet");sh.hidden=false;requestAnimationFrame(()=>requestAnimationFrame(()=>sh.classList.add("open")))}
+window.afOfferCode=offerCode;
 function confirmJoin(L){sheetCtx={kind:"ajoin"};
   $("#sheetT").innerHTML=`Join ${esc(L.unit||"this team")}?<small>You'll see ${esc(L.unit||"the team")}'s Word of Mouth and pick your name on their roster.</small>`;
   $("#sheetOpts").innerHTML=`<div class="panel" style="margin:0" data-noxl><p class="note" style="margin:0 0 6px">Team: <b id="ajTeam">${esc(L.unit||"")}</b></p>
@@ -233,7 +241,7 @@ async function claim(){const A=window.AUTH;if(!A||!A.rpc)return {n:0};const em=S
 window.afClaim=claim;
 async function afterSignIn(){let wanted=false;try{wanted=sessionStorage.getItem("af-join-signin")==="1";sessionStorage.removeItem("af-join-signin")}catch(e){}
   if(!wanted)return;/* only Apple/Google sign-ins and sign-ins started from Join a team look for a roster spot */
-  try{const r=await claim();if(r.n){view="feed";render();toast("Found you on "+(r.f&&r.f.unit||"your team")+"'s roster. You're in.");return}
+  try{const r=await claim();if(r.n){view="feed";render();toast("Found you on "+(r.f&&r.f.unit||"your team")+"'s roster. You're in.");setTimeout(()=>offerCode(r.email),900);return}
     view="askjoin";jMsg=(r.email?"We didn't find "+r.email+" on a roster. ":"")+"Type the join code your leader gave you to link to your roster spot.";render();setTimeout(()=>{const c=$("#ajCode");if(c){try{c.scrollIntoView({block:"center"});c.focus()}catch(x){}}},150)}
   catch(e){view="askjoin";jMsg=NOFN.test(String(e.message||e))?"Signing in to join needs setup part 52 on the server.":"Find your team and ask to join.";render()}}
 window.addEventListener("af-signed-in",()=>{setTimeout(afterSignIn,300)});
@@ -259,7 +267,8 @@ document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest)return;
   const ok=c("[data-reqok]");if(ok){e.stopImmediatePropagation();decide(+ok.dataset.reqok,true);return}
   const no=c("[data-reqno]");if(no){e.stopImmediatePropagation();decide(+no.dataset.reqno,false);return}
   if(c("#ajJoin")){e.stopImmediatePropagation();byCode();return}
-  if(c("#v11WJoin")){e.stopImmediatePropagation();S.welcomed=1;if(!S.mode)S.mode="military";save();try{hideWelcome()}catch(x){}view="askjoin";render();window.scrollTo(0,0);return}
+  if(c("#ajc2Go")){e.stopImmediatePropagation();byCode("#ajCode2");return}
+  if(c("#v11WJoin,#v11PJoin")){e.stopImmediatePropagation();S.welcomed=1;if(!S.mode)S.mode="military";save();try{hideWelcome()}catch(x){}view="askjoin";render();window.scrollTo(0,0);return}
   if(c("#ajYes")){e.stopImmediatePropagation();doJoin();return}
   if(c("#ajFind")){e.stopImmediatePropagation();search();return}
   const at=c("[data-askteam]");if(at){e.stopImmediatePropagation();const tm=(jRes||[]).find(x=>x.feed_id===at.dataset.askteam);if(tm)askForm(tm);return}
@@ -268,7 +277,7 @@ document.addEventListener("click",e=>{const t=e.target;if(!t||!t.closest)return;
   if(c("#ajApple")){e.stopImmediatePropagation();oauth("apple");return}
   if(c("#ajGoogle")){e.stopImmediatePropagation();oauth("google");return}},true);
 document.addEventListener("change",e=>{if(e.target&&e.target.id==="askOn"){const on=!!e.target.checked;askList(on).then(()=>{reqMsg=on?unitName()+" is listed. People can find it by name and ask.":"Taken off the list. Nobody new can ask.";if(on)reqLoad(true);redrawR()}).catch(err=>{reqMsg=why(err);e.target.checked=!on;redrawR()})}});
-document.addEventListener("keydown",e=>{if(e.key!=="Enter")return;if(e.target.id==="ajCode"){e.preventDefault();byCode()}else if(e.target.id==="ajQ"){e.preventDefault();search()}});
+document.addEventListener("keydown",e=>{if(e.key!=="Enter")return;if(e.target.id==="ajCode"){e.preventDefault();byCode()}else if(e.target.id==="ajCode2"){e.preventDefault();byCode("#ajCode2")}else if(e.target.id==="ajQ"){e.preventDefault();search()}});
 /* when the team's name changes, the listing follows */
 every(120000,()=>{try{const A=S.ask;if(owner()&&A&&A.on&&A.name!==unitName())askList(true).catch(()=>{})}catch(e){}},"ask-name");
 if(typeof SC==="object"&&Array.isArray(SC))SC.push({k:"join",n:"4.127: join codes and Ask to join",f:["53_join"],t:[["team_dir_find",{p_q:"zzz"}]]},{k:"remail",n:"4.127: sign in finds your roster spot",f:["52_roster_email"],t:[["roster_email_put",{p_feed:"zz",p_leader_key:"x",p_rows:[]}]]});

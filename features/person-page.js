@@ -23,7 +23,7 @@ function restyle(){const m=S.roster.find(x=>x.id===pid);const main=document.getE
   const c=(n,l)=>`<div><b>${n}</b><span>${l}</span></div>`;
   const h=(ic,l,k)=>`<button type="button" class="mp-hl" data-pgc="${k}"><span class="mp-hc">${svg(ic,24)}</span><span>${l}</span></button>`;
   const html=`<section class="mp-head pg-head" aria-label="Person"><div class="mp-top"><span class="mp-eye">${esc(String(m.sec||"")+(typeof SECNAME!=="undefined"&&SECNAME[m.sec]?" · "+SECNAME[m.sec]:""))}</span></div>
-    <div class="mp-prof"><div class="mp-av"><div class="mp-ring"><span class="mp-face">${esc(ini(m))}</span></div></div><div class="mp-stats">${c(over,"Overdue")}${c(duty,"Duty")}${c(up,"Upcoming")}</div></div>
+    <div class="mp-prof"><div class="mp-av"><div class="mp-ring">${(p=>p?`<img src="${esc(p)}" alt="" class="mp-face">`:`<span class="mp-face">${esc(ini(m))}</span>`)(window.afPhoto&&window.afPhoto((m.rank+" "+lastOf(m)).trim()))}</div></div><div class="mp-stats">${c(over,"Overdue")}${c(duty,"Duty")}${c(up,"Upcoming")}</div></div>
     <div class="mp-name">${esc(nm(m))}</div>${stl}
     <div class="mp-hls">${h("recall","Call","call")}${h("text","Text","text")}${h("feed","Message","msg")}${h("muster","Status","status")}${h("me","My page","page")}</div></section>
     <div class="mp-tabs" role="tablist">${[["plan","Plan","log"],["det","Details","people"],["more","More","tools"]].map(([k,l,ic])=>`<button type="button" role="tab" aria-selected="${pgTab===k}" data-pgtab="${k}">${svg(ic,20)}${l}</button>`).join("")}</div>`;
