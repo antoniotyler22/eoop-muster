@@ -20,7 +20,7 @@ async function send(ids,quiet){const R=ids.map(id=>S.roster.find(m=>m.id===id)).
   for(const m of R){if(!m.pk){noapp++;continue}if(recent(m)){wait++;continue}
     try{const d=await dmApi.open(m);const txt=body(m);const msg=await dmApi.send(d,txt,null,"L",nm,null,0,nm);
       dmApi.push(d.id,{id:msg.id,t:Date.now(),txt,by:"L",n:nm});m.nudgeAt=Date.now();m.nudgeHow="app";sent++}catch(e){fail++;why=why||reason(e);failed.push(m.id)}}
-  if(sent)save();
+  if(sent){save();/* the person learns their new chat only when their My page is republished: without this they get no alert */try{if(typeof mpPublish==="function")await mpPublish(true)}catch(e){}}
   const r={sent,wait,noapp,fail,failed,why};if(quiet)return r;
   const bits=[];if(sent)bits.push("Nudged "+sent);if(wait)bits.push(wait+" nudged within the hour");if(noapp)bits.push(noapp+" not on the app, use Text them a reminder");if(fail)bits.push(fail+" didn't send. "+(WHY[why]||WHY.server));
   toast(bits.join(" · ")||"Nobody to nudge");render();return r}
@@ -80,6 +80,9 @@ const STOPS=m=>m.pk?[["app","In app",.5],["both","Both",.75],["text","Text",1]]:
 const btn=m=>{if(recent(m))return `<span class="ndg-done" aria-label="Nudged">✓ Nudged${m.nudgeHow?": "+esc(m.nudgeHow):""}</span>`;
   const st=STOPS(m);return `<div class="ndgs" data-ndgs="${esc(m.id)}" role="group" aria-label="Slide to nudge ${esc(who(m))}"><div class="ndgs-hint">Slide to nudge  →</div>${st.map(([k,l,f])=>`<span class="ndgs-st" data-k="${k}" style="left:calc(4px + 44px + (100% - 52px - 44px) * ${f} - 22px)">${l}</span>`).join("")}<button type="button" class="ndgs-knob" aria-label="Slide to nudge ${esc(who(m))}">${BELL}</button></div>`};
 function dress(){if(!leader())return;const main=$("#main");if(!main)return;
+  /* "Set everyone Off Hand" belongs right under Ask your roster, at the top where it never shifts when the lists below change */
+  {const ar=$("#arCard"),ex=$("#exp24");if(view==="checkins"&&ar&&ex&&ar.nextElementSibling!==ex){const grp=[ex];let n=ex.nextElementSibling;while(n&&grp.length<3&&(n.id==="offRow"||n.classList.contains("note"))){grp.push(n);n=n.nextElementSibling}
+    const f=document.createDocumentFragment();grp.forEach(x=>f.appendChild(x));ar.after(f)}}
   if(typeof ckStaleList==="function"&&typeof SECTIONS!=="undefined"&&SECTIONS.some(x=>x[0]===view)&&!$("#ndgSec")){const n=ckStaleList().filter(m=>m.sec===view).length;const lst=main.querySelector(".list");
     if(n&&lst)lst.insertAdjacentHTML("beforebegin",`<button type="button" class="btn alt" id="ndgSec" data-nudge-sec="${esc(view)}" style="margin:8px 0">🔔 Nudge everyone Off Hand in ${esc(view)} (${n})</button>`)}
   if(typeof ckStale==="function"){
