@@ -122,6 +122,7 @@ export const SOURCES = [
   "features/geofence.js","features/my-top.js",
   "features/member-feed.js",
   "features/person-page.js",
+  "features/online.js",
   "features/swipe-tiles.js",
   "features/today-ticker.js",
   "features/duty-swap.js",
