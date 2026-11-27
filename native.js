@@ -19,6 +19,23 @@
     set: function (k, v) { try { v == null ? localStorage.removeItem(KP + "-" + k) : localStorage.setItem(KP + "-" + k, v); } catch (e) {} }
   };
 
+  /* ---- daily muster reminder (local notification, no server) ----
+     Set up first, before the platform blocks below, so an error in one of them can't leave
+     MBN.on true with no MBN.reminder (the 4.125.1 Android crash on Data and settings). */
+  N.reminder = {
+    get: function () { try { return JSON.parse(store.get("rem") || "null"); } catch (e) { return null; } },
+    set: async function (hhmm, text) {
+      await LN.cancel({ notifications: [{ id: 77 }] }).catch(function () {});
+      if (!hhmm) { store.set("rem", null); return true; }
+      var p = await LN.requestPermissions().catch(function () { return {}; });
+      if (p.display !== "granted") return false;
+      var hm = hhmm.split(":");
+      await LN.schedule({ notifications: [{ id: 77, title: "Muster", body: text || "Time to take the numbers.", schedule: { on: { hour: +hm[0], minute: +hm[1] }, repeats: true, allowWhileIdle: true }, extra: { open: "board" } }] });
+      store.set("rem", JSON.stringify({ t: hhmm, x: text || "" }));
+      return true;
+    }
+  };
+
   /* ---- Lock screen Live Activity + Home Screen widget (iPhone, 4.144.0): the headcount goes to the native MusterActivity plugin when it is installed (native-ios/MusterLiveActivity) ---- */
   if (N.platform === "ios") { try { N.MusterActivity = P("MusterActivity"); } catch (e) {} }
 
@@ -157,20 +174,5 @@
     var x = (a && a.notification && a.notification.extra) || {};
     if (x.open && typeof window.__mbOpen === "function") window.__mbOpen(String(x.open));
   });
-
-  /* ---- daily muster reminder (local notification, no server) ---- */
-  N.reminder = {
-    get: function () { try { return JSON.parse(store.get("rem") || "null"); } catch (e) { return null; } },
-    set: async function (hhmm, text) {
-      await LN.cancel({ notifications: [{ id: 77 }] }).catch(function () {});
-      if (!hhmm) { store.set("rem", null); return true; }
-      var p = await LN.requestPermissions().catch(function () { return {}; });
-      if (p.display !== "granted") return false;
-      var hm = hhmm.split(":");
-      await LN.schedule({ notifications: [{ id: 77, title: "Muster", body: text || "Time to take the numbers.", schedule: { on: { hour: +hm[0], minute: +hm[1] }, repeats: true, allowWhileIdle: true }, extra: { open: "board" } }] });
-      store.set("rem", JSON.stringify({ t: hhmm, x: text || "" }));
-      return true;
-    }
-  };
 
 })();

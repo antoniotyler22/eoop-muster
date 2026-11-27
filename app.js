@@ -3244,11 +3244,11 @@ document.addEventListener("change",e=>{const V=window.VAULT;if(!V||!V.on())retur
 
 /* iPhone app extras: Face ID unlock and a daily muster reminder */
 window.__mbOpen=o=>{if(typeof render!=="function")return;if(typeof window.openFromAlert==="function"){window.openFromAlert(o);return}view=o;render();window.scrollTo(0,0)};
-function nativeHTML(){if(!(window.MBN&&MBN.on))return"";const r=MBN.reminder.get()||{};
+function nativeHTML(){if(!(window.MBN&&MBN.on&&MBN.reminder))return"";const r=MBN.reminder.get()||{};
   return `<h2>Phone</h2><div class="panel"><label for="natRem">Daily muster reminder</label>
     <div class="row2"><input type="time" id="natRem" value="${esc(r.t||"")}"><button class="btn alt" id="natRemSet">${r.t?"Update":"Set reminder"}</button></div>
     ${r.t?`<p class="note">🔔 Every day at ${esc(r.t)}. <button class="btn alt" id="natRemOff" style="display:inline-block;width:auto;min-height:0;padding:4px 10px">Turn off</button></p>`:`<p class="note">This phone reminds you to take the numbers at the same time every day. Works with no signal.</p>`}</div>`}
-document.addEventListener("click",async e=>{if(!(window.MBN&&MBN.on))return;const id=e.target.id;
+document.addEventListener("click",async e=>{if(!(window.MBN&&MBN.on&&MBN.reminder))return;const id=e.target.id;
   if(id==="natRemSet"){const t=($("#natRem")||{}).value;if(!/^\d\d:\d\d$/.test(t||""))return toast("Pick a time first.");
     const ok=await MBN.reminder.set(t,"Time to take the "+unitName()+" numbers.");toast(ok?"Reminder set for "+t+" daily.":"Allow notifications for Accounted For in Settings.");tabRedraw();return}
   if(id==="natRemOff"){await MBN.reminder.set(null);toast("Reminder off.");tabRedraw();return}});
