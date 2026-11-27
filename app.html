@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en"><head>
 <script src="native.js"></script>
+<script src="ota.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -87,7 +88,8 @@ const V=window.VAULT={key:null,cfg:getCfg(),ok:!!(window.crypto&&crypto.subtle),
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{if(!V.key)return;if(document.hidden){hiddenAt=Date.now();return}
   const m=+(V.cfg&&V.cfg.auto);if(m>=0&&hiddenAt&&Date.now()-hiddenAt>=m*60000)location.reload()});
-window.AV="4.150.0";
+window.AV="4.151.0";
+
 /* 4.143.0: start downloading the app the moment the page opens, in parallel with the saved-data check below, so it runs without waiting */
 try{const l=document.createElement("link");l.rel="preload";l.as="script";l.href="app.bundle.js?v="+window.AV;document.head.appendChild(l)}catch(e){}
 /* self-update: an installed web app resumes without reloading, so check the live version on open, on every return, and every 10 min */
@@ -108,6 +110,8 @@ function mirrorRead(){return new Promise(res=>{try{if(!window.indexedDB)return r
 async function startApp(){try{if(window.__RAW===undefined&&!window.VAULT.cfg){const m=await Promise.race([mirrorRead(),new Promise(r=>setTimeout(()=>r(null),600))]);
   if(m&&typeof m.raw==="string"){let cur=null,mv=null;try{cur=JSON.parse(localStorage.getItem("eoop-muster-v1")||"null")}catch(e){}try{mv=JSON.parse(m.raw)}catch(e){}
     if(mv&&Array.isArray(mv.roster)&&(!cur||!Array.isArray(cur.roster)||(+mv.savedAt||0)>(+cur.savedAt||0)))window.__RAW=m.raw}}}catch(e){}
+  {const o=window.AFOTA&&AFOTA.native?await AFOTA.boot():null;if(o){try{AFOTA.apply(o);AFOTA.start();return}catch(e){}}}
+  if(window.AFOTA)AFOTA.start();
   const s=document.createElement("script");s.src="app.bundle.js?v="+window.AV;s.onerror=()=>{document.body.insertAdjacentHTML("beforeend",'<p style="padding:24px;font:16px system-ui">Couldn\'t load the app. Connect once, then reopen.</p>')};document.body.appendChild(s)}
 /* live check-ins: Supabase relay. Stores no names: only salted hashes of the words a person types, a code and a short note. */
 const NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());

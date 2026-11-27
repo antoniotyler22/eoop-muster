@@ -177,7 +177,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(im
   const file = path.join(root, "app.bundle.js");
   // version.json tells installed web apps a newer version is live (app.html checks it on open and on return)
   const av = (fs.readFileSync(path.join(root, "app.html"), "utf8").match(/window\.AV="([^"]+)"/) || [])[1];
-  const vfile = path.join(root, "version.json"), vjson = JSON.stringify({ v: av }) + "\n";
+  // "nb" = the oldest store-app build that can run this code over the air (ota.js). Raise tools/ota-min.txt when a change needs a new native piece.
+  const nb = fs.readFileSync(path.join(root, "tools/ota-min.txt"), "utf8").trim();
+  const vfile = path.join(root, "version.json"), vjson = JSON.stringify({ v: av, nb }) + "\n";
   if (process.argv.includes("--check")) {
     if (!av || (fs.existsSync(vfile) ? fs.readFileSync(vfile, "utf8") : "") !== vjson) { console.error("version.json is out of date. Run: npm run bundle"); process.exit(1); }
     const cur = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
