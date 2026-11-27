@@ -3,7 +3,7 @@
    reached them through an App Store or Google Play update. From this build on, a store app:
    1. checks accountedforteam.com/version.json when it opens, when you return to it, and every 10 minutes,
    2. downloads the newer app.bundle.js and app.css, checks they look whole, and keeps them on the phone,
-   3. runs them the next time it opens (or when you come back to it), instead of the copy inside the app,
+   3. shows an "Update ready" banner with a Restart button, and runs them the next time it opens (or when Restart is tapped), instead of the copy inside the app; after the restart a small "Updated to X" toast shows once,
    4. goes back to the copy inside the app by itself if the downloaded code doesn't start within 12 seconds.
    version.json can carry "nb": the oldest app build the new code works with (raise it when a change needs a new native
    piece); older builds then wait for a store update instead of downloading code they can't run.
@@ -49,18 +49,34 @@ O.check=async function(){if(!O.native||O.busy||Date.now()-O.last<20000)return "s
     const j=await r.json(),v=String(j&&j.v||"");if(!v||cmp(v,O.run)<=0)return "current";
     if(v===bad())return "bad";
     if(j.nb&&cmp(O.bin,String(j.nb))<0)return "needs-store-update";
-    if(O.pending===v)return "ready";
+    if(O.pending===v){O.banner(v);return "ready"}
     const [a,b]=await Promise.all([fetch(O.base+"app.bundle.js?v="+encodeURIComponent(v),{cache:"no-store"}),fetch(O.base+"app.css?v="+encodeURIComponent(v),{cache:"no-store"})]);
     if(!a.ok||!b.ok)return "offline";
     const rec={v,nb:j.nb?String(j.nb):"",js:await a.text(),css:await b.text(),at:Date.now()};
     if(!whole(rec))return "incomplete";
-    await O.store.set(rec);O.pending=v;return "ready"}
+    await O.store.set(rec);O.pending=v;O.banner(v);return "ready"}
   catch(e){return "offline"}finally{O.busy=false}};
+
+
+/* ---------- what the person sees ---------- */
+O.banner=function(v){if(document.getElementById("otaBanner"))return;
+  if(!document.getElementById("otaCssUi")){const c=document.createElement("style");c.id="otaCssUi";c.textContent=`#otaBanner{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:99999;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:#0f1b2d;color:#e8eef7;font:14px/1.3 system-ui,-apple-system,sans-serif;box-shadow:0 10px 30px -10px rgba(0,0,0,.5)}
+#otaBanner b{display:block;font-weight:600}#otaBanner small{display:block;color:#9fb3d1;font-size:12px}
+#otaBanner .ok{width:22px;height:22px;border-radius:50%;background:#378ADD;color:#042C53;display:flex;align-items:center;justify-content:center;font-weight:700;flex:none}
+#otaBanner button{font:inherit;border:0;border-radius:999px;cursor:pointer}#otaBanner .go{margin-left:auto;background:#378ADD;color:#042C53;font-weight:600;padding:7px 14px}
+#otaBanner .x{background:transparent;color:#9fb3d1;padding:4px 6px;font-size:18px;line-height:1}`;document.head.appendChild(c)}
+  const d=document.createElement("div");d.id="otaBanner";d.setAttribute("role","status");
+  d.innerHTML=`<span class="ok" aria-hidden="true">\u2713</span><div><b>Update ready</b><small>New features in ${v}</small></div><button type="button" class="go">Restart</button><button type="button" class="x" aria-label="Later">\u00d7</button>`;
+  d.querySelector(".go").onclick=()=>O.reload();d.querySelector(".x").onclick=()=>d.remove();
+  document.body.appendChild(d)};
+O.justUpdated=function(){if(O.run===O.bin)return;let seen="";try{seen=localStorage.getItem("eop-ota-seen")||""}catch(e){}if(seen===O.run)return;
+  try{localStorage.setItem("eop-ota-seen",O.run)}catch(e){}
+  setTimeout(()=>{try{if(typeof toast==="function")toast("Updated to "+O.run)}catch(e){}},2500)};
 
 /* a downloaded version is waiting: switch to it when the person comes back, not while they're typing */
 O.switchIfReady=function(){if(!O.native||!O.pending||cmp(O.pending,O.run)<=0||typing())return false;try{O.reload()}catch(e){return false}return true};
-O.start=function(){if(!O.native)return;
+O.start=function(){if(!O.native)return;O.justUpdated();
   setTimeout(O.check,4000);setInterval(O.check,10*60000);
-  document.addEventListener("visibilitychange",()=>{if(document.hidden)return;O.check().then(()=>O.switchIfReady())});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)O.check()});
   window.addEventListener("online",()=>{O.check()})};
 })();

@@ -70,3 +70,27 @@ test("downloaded code that doesn't start is dropped and marked bad", async () =>
     assert.equal(a.w.localStorage.getItem("eop-ota-bad"), "4.152.0"); assert.equal(O.store.peek(), null); assert.equal(reloaded, 1);
   } finally { await a.close(); }
 });
+
+test("when a download finishes a banner offers Restart; Later hides it; nothing reloads by itself", async () => {
+  const { a, O } = await native("4.151.0");
+  try {
+    let reloaded = 0; O.reload = () => { reloaded++; };
+    stubFetch(a.w, "4.152.0", { nb: "4.151.0" });
+    assert.equal(await O.check(), "ready");
+    const b = a.$("#otaBanner"); assert.ok(b, "banner shown");
+    assert.match(b.textContent, /Update ready/); assert.match(b.textContent, /4\.152\.0/);
+    assert.equal(reloaded, 0);
+    b.querySelector(".go").click(); assert.equal(reloaded, 1);
+    b.querySelector(".x").click(); assert.ok(!a.$("#otaBanner"));
+  } finally { await a.close(); }
+});
+
+test("after a restart onto downloaded code a toast says so once", async () => {
+  const { a, O } = await native("4.151.0");
+  try {
+    let said = []; a.w.toast = (m) => said.push(m); a.w.AV = "4.152.0"; O._run = "4.152.0"; O._bin = "4.151.0";
+    let cb; a.w.setTimeout = (f) => { cb = f; return 1; };
+    O.justUpdated(); cb(); assert.deepEqual(said, ["Updated to 4.152.0"]);
+    O.justUpdated(); assert.equal(a.w.localStorage.getItem("eop-ota-seen"), "4.152.0");
+  } finally { await a.close(); }
+});
