@@ -12,14 +12,14 @@ const leader=()=>!(typeof memberMode==="function"&&memberMode())&&S.source!=="sa
 const who=m=>(m.rank?m.rank+" ":"")+lastOf(m);
 const body=m=>"⏰ "+(typeof unitName==="function"?unitName():"Team")+": you haven't checked in. Open My page → 📍 Check in.";
 const recent=m=>m.nudgeAt&&Date.now()-m.nudgeAt<HOUR;
-async function send(ids,quiet){const R=ids.map(id=>S.roster.find(m=>m.id===id)).filter(Boolean);let sent=0,wait=0,noapp=0,fail=0;
+async function send(ids,quiet){const R=ids.map(id=>S.roster.find(m=>m.id===id)).filter(Boolean);let sent=0,wait=0,noapp=0,fail=0,why="";
   const nm=S.postAs||S.myName||(typeof unitName==="function"?unitName():"Leader");
   for(const m of R){if(!m.pk){noapp++;continue}if(recent(m)){wait++;continue}
     try{const d=await dmApi.open(m);const txt=body(m);const msg=await dmApi.send(d,txt,null,"L",nm,null,0,nm);
-      dmApi.push(d.id,{id:msg.id,t:Date.now(),txt,by:"L",n:nm});m.nudgeAt=Date.now();m.nudgeHow="app";sent++}catch(e){fail++}}
+      dmApi.push(d.id,{id:msg.id,t:Date.now(),txt,by:"L",n:nm});m.nudgeAt=Date.now();m.nudgeHow="app";sent++}catch(e){fail++;if(!why)why=String(e&&e.message||e).replace(/\s+/g," ").slice(0,70)}}
   if(sent)save();
-  const r={sent,wait,noapp,fail};if(quiet)return r;
-  const bits=[];if(sent)bits.push("Nudged "+sent);if(wait)bits.push(wait+" nudged within the hour");if(noapp)bits.push(noapp+" not on the app, use Text them a reminder");if(fail)bits.push(fail+" didn't send, check signal");
+  const r={sent,wait,noapp,fail,why};if(quiet)return r;
+  const bits=[];if(sent)bits.push("Nudged "+sent);if(wait)bits.push(wait+" nudged within the hour");if(noapp)bits.push(noapp+" not on the app, use Text them a reminder");if(fail)bits.push(fail+" didn't send"+(navigator.onLine===false?", no signal":(why?": "+why:"")));
   toast(bits.join(" · ")||"Nobody to nudge");render();return r}
 window.nudgeSend=send;
 /* one person, one choice: mode is "app", "both" or "text" */
@@ -27,7 +27,7 @@ async function act(id,mode){const m=S.roster.find(x=>x.id===id);if(!m)return {ok
   const how=[];
   if(mode!=="text"){if(!m.pk){if(mode==="app"){toast("Not on the app yet. Use Text.");return {ok:false}}}
     else if(recent(m)){toast("Already nudged within the hour");return {ok:false}}
-    else{const r=await send([id],true);if(r.sent)how.push("app");else{toast("Didn't send, check signal");return {ok:false}}}}
+    else{const r=await send([id],true);if(r.sent)how.push("app");else{toast("Didn't send"+(navigator.onLine===false?", no signal":(r.why?": "+r.why:"")));return {ok:false}}}}
   if(mode!=="app"){if(!m.phone){toast(how.length?"Nudged in the app. No phone number for a text.":"No phone number on file");if(!how.length)return {ok:false}}
     else{how.push("text");const href=bcBatches([m],body(m))[0].href;m.nudgeAt=Date.now();m.nudgeHow=how.join(" + ");save();toast("Nudged: "+how.join(" + "));render();try{location.href=href}catch(e){}return {ok:true,how}}}
   m.nudgeAt=Date.now();m.nudgeHow=how.join(" + ");save();toast("Nudged: "+how.join(" + "));render();return {ok:true,how}}
