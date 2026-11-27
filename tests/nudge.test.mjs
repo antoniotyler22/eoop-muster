@@ -53,3 +53,17 @@ test("Nudge everyone sheet lists late people, sends in app, and falls back to te
     assert.ok(a.$('#nbOut a[href^="sms:"]'), "falls back to a text link");
   } finally { await a.close(); }
 });
+
+test("Set everyone Off Hand sits right under Ask your roster, and an in-app nudge republishes My page so the person gets the alert", async () => {
+  const a = await openApp({ rpc: (fn) => (fn === "dm_send" ? 1 : []) });
+  try {
+    a.w.eval(setup + `;view="checkins";render();window.__pub=0;mpPublish=async()=>{window.__pub++;return 0}`);
+    await sleep(150);
+    assert.equal(a.$("#arCard").nextElementSibling.id, "exp24", "Off Hand row follows Ask your roster");
+    const sc = a.w.scrollY; a.$("#offReset").click(); await sleep(30);
+    assert.match(a.$("#offReset").textContent, /Tap again/); assert.equal(a.w.scrollY, sc, "first tap does not redraw or jump");
+    a.$("#offReset").click(); await sleep(60);
+    const r = await a.w.eval(`nudgeSend([__ids[0]],true)`);
+    assert.ok(a.w.__pub >= 1 || r.sent === 0, "publishes after a sent nudge");
+  } finally { await a.close(); }
+});
