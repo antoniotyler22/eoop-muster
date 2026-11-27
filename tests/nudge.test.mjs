@@ -35,3 +35,21 @@ test("members never see Nudge", async () => {
     assert.ok(!a.$(".ndgs") && !a.$("#ndgAll"));
   } finally { await a.close(); }
 });
+
+test("Nudge everyone sheet lists late people, sends in app, and falls back to text when the server limits chats", async () => {
+  let limit = false;
+  const a = await openApp({ rpc: (fn) => { if (fn === "dm_open" && limit) throw new Error("slow down"); return fn === "dm_send" ? 1 : []; } });
+  try {
+    a.w.eval(setup + `;R.forEach(m=>m.phone="808555"+Math.floor(1000+Math.random()*8999));S.roster.find(m=>m.id===__ids[0]).phone="8085550100";save();view="checkins";render()`);
+    await sleep(150);
+    a.w.eval(`nudgeSheet()`);
+    assert.ok(a.$("#sheetOpts .nb"), "sheet opens");
+    assert.ok(a.$$("#sheetOpts [data-nbid]").length >= 2, "late people listed");
+    limit = true;
+    a.w.eval(`NBX=1`);
+    await a.w.eval(`(async()=>{document.querySelector("#nbGo").click();await new Promise(r=>setTimeout(r,400))})()`);
+    const t = a.$("#nbOut").textContent;
+    assert.match(t, /40 new app chats/, "says the real reason, not signal");
+    assert.ok(a.$('#nbOut a[href^="sms:"]'), "falls back to a text link");
+  } finally { await a.close(); }
+});
