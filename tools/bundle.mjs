@@ -153,6 +153,7 @@ export const SOURCES = [
   "features/feed-dock.js",
   "features/messages.js",
   "features/cal-scope.js",
+  "features/people-card.js",
   "features/a11y.js",
 ];
 
