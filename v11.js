@@ -333,6 +333,9 @@ function welcomeHTML(){const L=APP_LINKS();
   return `<div class="v11w-in sgw" data-noxl><img src="icon-192.png" alt="" width="72" height="72" style="border-radius:18px">
   <h1>Accounted For</h1><p class="note" style="margin:0">Know who's here, who's not, and who got the word.</p>
   <div class="sgw-card">
+    <div class="panel sgw-code" style="margin:0 0 12px;padding:14px;border:2px solid var(--blue,#0b5bea);border-radius:18px"><div style="font-weight:800;font-size:18px;margin-bottom:2px">I have a team code</div><p class="note" style="margin:0 0 6px">Fastest way in. 6 letters and numbers from your leader.</p>
+      <input id="ajCode2" type="text" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="8" placeholder="ABC 234" style="text-transform:uppercase;font:700 22px ui-monospace,Menlo,monospace;letter-spacing:.12em;text-align:center">
+      <button class="btn" id="ajc2Go">Join with code</button><p class="note" id="ajc2Out" role="status" style="margin:6px 0 0"></p></div>
     <div class="sgw-pick" role="group" aria-label="Sign in, use an invite link, or start a team">
       <button type="button" class="sgw-tab" data-sgt="signin" data-sgjoin="1" aria-pressed="true">Sign in</button>
       <button type="button" class="sgw-tab" data-sgt="link" data-sglink="1" aria-pressed="false">Invite link</button>
