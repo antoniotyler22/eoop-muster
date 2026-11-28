@@ -177,7 +177,7 @@ function confirmJoin(L){sheetCtx={kind:"ajoin"};
     <button class="btn" id="ajYes">Join ${esc(L.unit||"team")}</button><button class="btn alt" data-sclose="1">Not now</button></div>`;
   const sh=$("#sheet");sh.hidden=false;void sh.offsetWidth;sh.classList.add("open")}
 async function doJoin(){const L=jFound;if(!L)return;const t=$("#ajTos");if(t&&!t.checked){toast("Agree to the Terms of Use to join.");return}
-  if(typeof TERMS_VER!=="undefined")S.tos=TERMS_VER;const f=joinFeed(L);closeSheet();view="feed";render();toast("You're in "+(L.unit||"the team")+". Pick your name on the roster.");jFound=null;if(f)pickName(f)}
+  if(typeof TERMS_VER!=="undefined")S.tos=TERMS_VER;S.welcomed=1;if(!S.mode)S.mode="military";try{hideWelcome()}catch(x){}const f=joinFeed(L);closeSheet();view="feed";render();toast("You're in "+(L.unit||"the team")+". Pick your name on the roster.");jFound=null;if(f)pickName(f)}
 async function search(){jq=String(($("#ajQ")||{}).value||"").trim();if(jq.length<3){sayA("Type at least 3 letters of the team's name.");return}
   jBusy=true;sayA("Searching…");try{jRes=await SB.rpc("team_dir_find",{p_q:jq})||[];jMsg=""}catch(e){jRes=null;jMsg=why(e)}jBusy=false;redrawA()}
 function askForm(t){jPick=t;sheetCtx={kind:"askform"};
