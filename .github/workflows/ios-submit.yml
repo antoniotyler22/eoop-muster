@@ -1,0 +1,28 @@
+# Submits the newest iPhone build to App Review (run "iPhone build" first; this waits for Apple to finish processing it).
+# Uses the same ASC_KEY_ID, ASC_ISSUER_ID and ASC_KEY_P8 secrets as the build. Run it from GitHub: Actions → "iPhone submit" → Run workflow.
+name: iPhone submit
+on:
+  workflow_dispatch:
+    inputs:
+      whats_new:
+        description: "What's New text (leave empty for the default)"
+        required: false
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Submit to App Review
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          WHATS_NEW: ${{ github.event.inputs.whats_new }}
+        run: |
+          read VERSION BUILD < <(node tools/ios-version.mjs --print)
+          echo "Submitting $VERSION (build $BUILD)"
+          VERSION="$VERSION" BUILD="$BUILD" node tools/asc-submit.mjs
