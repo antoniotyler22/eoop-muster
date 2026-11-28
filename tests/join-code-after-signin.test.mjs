@@ -24,3 +24,17 @@ test("a saved photo replaces initials in search results", async () => {
     assert.match(a.w.eval(`window.afPhoto(${JSON.stringify(nm)})`), /^data:image\/jpeg/);
   } finally { await a.close(); }
 });
+
+test("B: code switch above Google/Apple is checked before sign-in and kept for after", async () => {
+  const a = await openApp({ rpc: () => [] });
+  try {
+    a.w.eval(`showWelcome()`); await sleep(150);
+    assert.equal(a.w.eval(`document.querySelector("#pvCodeBox").hidden`), true);
+    a.w.eval(`const c=document.querySelector("#pvCodeOn");c.checked=true;c.dispatchEvent(new Event("change",{bubbles:true}))`);
+    assert.equal(a.w.eval(`document.querySelector("#pvCodeBox").hidden`), false);
+    a.w.eval(`document.querySelector("#pvCode").value="zz"`);
+    a.w.eval(`window.afOauth("google")`);
+    assert.equal(a.w.eval(`localStorage.getItem("af-join-code")`), null, "bad code is not kept and sign-in does not start");
+    assert.deepEqual(a.errors, []);
+  } finally { await a.close(); }
+});
